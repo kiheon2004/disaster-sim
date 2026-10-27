@@ -1,0 +1,80 @@
+:root {
+  --bg-0: #0b0f14;
+  --bg-1: #10161d;
+  --bg-2: #161e27;
+  --bg-3: #1d2732;
+  --bg-4: #253140;
+  --line: #24303d;
+  --line-strong: #33424f;
+  --text-0: #e8eef5;
+  --text-1: #b4c0cc;
+  --text-2: #7d8b99;
+  --text-3: #56636f;
+  --accent: #4f8cff;
+  --accent-strong: #6fa1ff;
+  --accent-soft: rgba(79, 140, 255, 0.14);
+  --warn: #f5b84b;
+  --danger: #ef5b5b;
+  --ok: #3fbf7f;
+  --sim: #f08a3c;
+  --sim-soft: rgba(240, 138, 60, 0.15);
+
+  --state-normal: #3fbf7f;
+  --state-stressed: #e6d14a;
+  --state-damaged: #f5973b;
+  --state-critical: #ef4d4d;
+  --state-destroyed: #8a8f98;
+
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --font-ui: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-3);
+  border-radius: var(--radius-s);
+  padding: 5px 10px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+button:hover:not(:disabled) { background: var(--bg-4); border-color: #44566a; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input, select, textarea {
+  background: var(--bg-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  padding: 4px 7px;
+  min-width: 0;
+}
+input:disabled, select:disabled { opacity: 0.6; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #2b3845; border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

@@ -1,0 +1,22 @@
+.panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.header {
+  display: flex; align-items: center; gap: 8px;
+  height: 34px; padding: 0 12px; flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-2);
+}
+.header .actions { margin-left: auto; display: flex; gap: 4px; }
+.body { flex: 1; min-height: 0; overflow: auto; }
+
+.section { border-bottom: 1px solid var(--line); }
+.sectionHeader {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 8px 12px; background: none; border: none; border-radius: 0;
+  font-size: 11px; font-weight: 600; color: var(--text-1); text-align: left;
+}
+.sectionHeader:hover:not(:disabled) { background: var(--bg-2); border: none; }
+.chev { transition: transform 0.15s; color: var(--text-3); width: 10px; }
+.chev.open { transform: rotate(90deg); }
+.sectionBody { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.sectionAside { margin-left: auto; font-weight: 400; color: var(--text-3); }

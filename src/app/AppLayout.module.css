@@ -1,0 +1,21 @@
+.root {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 46px minmax(0, 1fr);
+  grid-template-columns: 236px minmax(0, 1fr) 304px;
+  grid-template-areas:
+    'top top top'
+    'left center right';
+}
+.top { grid-area: top; }
+.left { grid-area: left; border-right: 1px solid var(--line); background: var(--bg-1); min-height: 0; }
+.right { grid-area: right; border-left: 1px solid var(--line); background: var(--bg-1); min-height: 0; }
+.center {
+  grid-area: center;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  min-width: 0;
+}
+.viewport { position: relative; min-height: 0; background: #0d1218; }
+.bottom { border-top: 1px solid var(--line); background: var(--bg-1); }

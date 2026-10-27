@@ -1,0 +1,26 @@
+.bar {
+  height: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  background: var(--bg-2); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: var(--text-0); white-space: nowrap; }
+.logo { width: 22px; height: 22px; }
+.name {
+  width: 190px; background: transparent; border-color: transparent; font-weight: 500;
+}
+.name:hover { border-color: var(--line-strong); }
+.name:focus { background: var(--bg-1); border-color: var(--accent); }
+.sep { width: 1px; height: 22px; background: var(--line-strong); }
+.group { display: flex; align-items: center; gap: 4px; }
+.iconBtn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; background: transparent; border-color: transparent; color: var(--text-1); }
+.iconBtn:hover:not(:disabled) { background: var(--bg-3); border-color: var(--line-strong); color: var(--text-0); }
+.center { flex: 1; display: flex; justify-content: center; }
+.right { display: flex; align-items: center; gap: 8px; }
+.menuWrap { position: relative; }
+.menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 220px;
+  background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius-m);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45); padding: 4px; display: flex; flex-direction: column;
+}
+.menu button { text-align: left; background: transparent; border-color: transparent; padding: 7px 10px; display: flex; gap: 8px; align-items: center; }
+.menu button:hover:not(:disabled) { background: var(--bg-4); border-color: transparent; }
+.menuSep { height: 1px; background: var(--line); margin: 4px 0; }

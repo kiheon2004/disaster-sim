@@ -1,0 +1,20 @@
+.wrap { position: absolute; inset: 0; }
+.overlay { position: absolute; pointer-events: none; display: flex; gap: 8px; }
+.overlay > * { pointer-events: auto; }
+.topLeft { top: 10px; left: 10px; flex-direction: column; align-items: flex-start; }
+.topRight { top: 10px; right: 10px; flex-direction: column; align-items: flex-end; }
+.bottomLeft { bottom: 10px; left: 10px; align-items: flex-end; }
+.bottomRight { bottom: 10px; right: 10px; align-items: flex-end; }
+.badge {
+  padding: 4px 9px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  background: rgba(79, 140, 255, 0.85); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.badge.sim { background: rgba(240, 138, 60, 0.92); }
+.hint {
+  padding: 5px 9px; border-radius: 4px; font-size: 11.5px; color: var(--text-1);
+  background: rgba(11, 15, 20, 0.62); backdrop-filter: blur(4px);
+}
+.loading {
+  position: absolute; inset: 0; display: grid; place-items: center; background: rgba(11,15,20,0.5);
+  font-size: 13px; color: var(--text-1);
+}

@@ -1,0 +1,14 @@
+.compass {
+  position: relative; width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(11, 15, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+}
+.dial { position: absolute; inset: 0; transition: transform 0.08s linear; }
+.letter {
+  position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  display: grid; place-items: center; font-size: 10px; font-weight: 700; color: var(--text-1);
+}
+.letter.n { color: #ff6b6b; }
+.tick { position: absolute; left: 50%; top: 4px; width: 2px; height: 6px; margin-left: -1px; background: #ff6b6b; border-radius: 1px; }
+.center { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: var(--text-2); }
+.windArrow { position: absolute; inset: 0; pointer-events: none; }
