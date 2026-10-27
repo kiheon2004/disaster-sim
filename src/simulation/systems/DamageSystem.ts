@@ -1,0 +1,68 @@
+import type { SimulationSystem, SystemContext } from './SimulationSystem';
+import { updateHuman, knockDown } from '../damage/behaviors/human';
+import { updateTree } from '../damage/behaviors/tree';
+import { updateCar } from '../damage/behaviors/car';
+import { updateBuilding } from '../damage/behaviors/building';
+import type { RuntimeEntity } from '../SimulationRuntime';
+import type { BodyUserData } from '@/physics/PhysicsEngine';
+
+/**
+ * Damage evaluation (postPhysics): fatigue, state transitions and per-type reactions,
+ * plus impact damage from contact forces (debris hitting people and cars).
+ */
+export class DamageSystem implements SimulationSystem {
+  readonly name = 'damage';
+  readonly phase = 'postPhysics' as const;
+
+  update(ctx: SystemContext, dt: number) {
+    for (const e of ctx.runtime.entities.values()) {
+      switch (e.source.type) {
+        case 'human':
+          updateHuman(e, ctx, dt);
+          break;
+        case 'tree':
+          updateTree(e, ctx, dt);
+          break;
+        case 'car':
+          updateCar(e, ctx);
+          break;
+        case 'building':
+          updateBuilding(e, ctx, dt);
+          break;
+      }
+    }
+    this.processImpacts(ctx);
+  }
+
+  private processImpacts(ctx: SystemContext) {
+    const events = ctx.physics.drainContactEvents();
+    for (const ev of events) {
+      this.impact(ctx, ev.a, ev.b, ev.force);
+      this.impact(ctx, ev.b, ev.a, ev.force);
+    }
+  }
+
+  /** `target` was hit by `other` with the given contact force. */
+  private impact(ctx: SystemContext, target: BodyUserData | null, other: BodyUserData | null, force: number) {
+    if (!target || !other || target.debrisId) return;
+    // Only moving things (debris or another entity) cause impact damage; ignore self-contacts.
+    if (other.entityId === target.entityId && !other.debrisId) return;
+    const e: RuntimeEntity | undefined = ctx.runtime.entities.get(target.entityId);
+    if (!e) return;
+    if (e.source.type === 'human') {
+      if (force > 1200) {
+        e.health = Math.max(0, e.health - force / 20000);
+        if (!e.flags.fallen) knockDown(e, ctx, 'impact');
+      }
+    } else if (e.source.type === 'car') {
+      const dmg = force / (e.source.physics.mass * 9.81 * 30);
+      if (dmg > 0.02) {
+        e.health = Math.max(0, e.health - dmg);
+        if (!e.counters.hitLogged && dmg > 0.05) {
+          e.counters.hitLogged = 1;
+          ctx.log(e.id, 'warn', { key: 'log.car.hit' });
+        }
+      }
+    }
+  }
+}

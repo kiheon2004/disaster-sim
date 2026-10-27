@@ -45,7 +45,7 @@ export const treeDefinition = defineObject<TreeParams>({
     dragCoefficient: 0.6,
     windResistance: p.species === 'conifer' ? 33 : 30,
     durability: 50,
-    breakThreshold: 1.6,
+    breakThreshold: 2.0,
   }),
   getDimensions: (p) => [p.canopyRadius * 2, p.height, p.canopyRadius * 2],
   centerOfPressure: (p) => [0, p.height - p.canopyRadius * (p.species === 'conifer' ? 1.6 : 0.95), 0],

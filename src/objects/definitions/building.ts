@@ -131,7 +131,7 @@ export const buildingDefinition = defineObject<BuildingParams>({
             size: facadeSize(f, w, h, 0.08),
             normal: f.normal,
             mass: Math.round(w * h * 25),
-            windResistance: vary(isShop ? 30 : 34, 0.12),
+            windResistance: vary(isShop ? 42 : 46, 0.12),
             durability: 40,
             detachable: false,
             color: '#8fb8d8',

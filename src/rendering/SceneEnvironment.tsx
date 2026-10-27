@@ -19,8 +19,9 @@ export function SceneEnvironment({ showGrid = true }: { showGrid?: boolean }) {
     <>
       <color attach="background" args={[SKY_COLOR]} />
       <fog attach="fog" args={[SKY_COLOR, 180, 650]} />
-      <hemisphereLight args={['#dbe9ff', '#5a6b48', 0.9]} />
+      <hemisphereLight name="hemi" args={['#dbe9ff', '#5a6b48', 0.9]} />
       <directionalLight
+        name="sun"
         position={[60, 90, 40]}
         intensity={2.1}
         castShadow

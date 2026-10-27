@@ -12,6 +12,9 @@ import { sampleTown } from '@/world/sampleScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
 import { t } from '@/i18n/i18n';
+import { simulationController } from '@/simulation/SimulationController';
+import { useSimStore } from '@/simulation/simStore';
+import type { EventSpec } from '@/events/specs';
 
 export function focusObject(id: EntityId) {
   const o = useWorldStore.getState().doc.objects[id];
@@ -106,4 +109,45 @@ export function bootstrapWorld() {
     clearTimeout(timer);
     timer = setTimeout(() => storage.autosave(useWorldStore.getState().doc), 800);
   });
+}
+
+// ── Simulation actions ────────────────────────────────────────────────────
+
+
+/** Switch to simulation mode: snapshot the world and build the runtime (paused at t = 0). */
+export async function enterSimulation() {
+  const ed = useEditorStore.getState();
+  if (ed.mode === 'simulation') return;
+  ed.setMode('simulation');
+  try {
+    await simulationController.load(useWorldStore.getState().doc);
+  } catch (err) {
+    console.error(err);
+    toast('error', { key: 'toast.physicsFailed' }, String(err));
+    exitSimulation();
+  }
+}
+
+/** Back to the editor. The document was never modified, so this is also a full restore. */
+export function exitSimulation() {
+  simulationController.unload();
+  useEditorStore.getState().setMode('editor');
+}
+
+/** Add events (now, or at their startTime) and play. Enters simulation mode if needed. */
+export async function runSimulation(specs: EventSpec[]) {
+  if (useEditorStore.getState().mode === 'editor') await enterSimulation();
+  if (!simulationController.isLoaded()) return;
+  for (const s of specs) simulationController.addEvent(s);
+  simulationController.play();
+}
+
+export async function resetSimulation() {
+  await simulationController.reset();
+  toast('info', { key: 'toast.reset' });
+}
+
+export function togglePlay() {
+  if (useSimStore.getState().status === 'loading') return;
+  simulationController.togglePlay();
 }

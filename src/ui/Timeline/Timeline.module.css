@@ -1,0 +1,23 @@
+.bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-shrink: 0; }
+.ctrl { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
+.play { background: var(--sim); border-color: var(--sim); color: #fff; }
+.play:hover:not(:disabled) { background: #f59a52; border-color: #f59a52; }
+.time { font-family: var(--font-mono); font-size: 12px; color: var(--text-1); min-width: 118px; white-space: nowrap; }
+.time b { color: var(--text-0); font-weight: 600; }
+.track { position: relative; flex: 1; height: 26px; border-radius: 4px; background: var(--bg-1); border: 1px solid var(--line); overflow: hidden; min-width: 120px; }
+.progress { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(240, 138, 60, 0.12); }
+.head { position: absolute; top: -1px; bottom: -1px; width: 2px; margin-left: -1px; background: var(--sim); box-shadow: 0 0 6px rgba(240,138,60,0.8); }
+.evt { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; background: rgba(79, 140, 255, 0.16); border: 1px solid rgba(79, 140, 255, 0.55); overflow: hidden; }
+.evt.active { background: rgba(240, 138, 60, 0.2); border-color: rgba(240, 138, 60, 0.8); }
+.evt.superseded { opacity: 0.45; }
+.evtLabel { position: absolute; left: 4px; top: 50%; transform: translateY(-50%); font-size: 10.5px; color: var(--text-0); white-space: nowrap; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.ticks { position: absolute; inset: 0; pointer-events: none; }
+.tick { position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--line-strong); }
+.empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; color: var(--text-3); }
+.status { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; letter-spacing: 0.04em; white-space: nowrap; }
+.s-idle { color: var(--text-2); background: var(--bg-3); }
+.s-loading { color: var(--warn); background: rgba(245,184,75,0.12); }
+.s-running { color: #fff; background: var(--sim); }
+.s-paused { color: var(--text-0); background: var(--bg-4); }
+.s-finished { color: var(--ok); background: rgba(63,191,127,0.14); }
+.windNow { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-1); white-space: nowrap; display: flex; align-items: center; gap: 5px; }

@@ -1,4 +1,4 @@
-.row { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 26px; }
+.row { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 25px; }
 .label { color: var(--text-2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .label.scrub { cursor: ew-resize; user-select: none; }
 .label.scrub:hover { color: var(--text-0); }

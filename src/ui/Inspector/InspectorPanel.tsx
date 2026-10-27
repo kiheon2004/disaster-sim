@@ -5,6 +5,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { allDefinitions } from '@/objects/registry';
 import { Panel, Section } from '@/ui/common/Panel';
 import { ObjectInspector } from './ObjectInspector';
+import { LiveStatusSection, SimSummary } from './SimInspector';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -12,10 +13,20 @@ export function InspectorPanel() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const mode = useEditorStore((s) => s.mode);
   const obj = useWorldStore((s) => (selectedId ? s.doc.objects[selectedId] : undefined));
+  const inSim = mode === 'simulation';
 
   return (
     <Panel title={t('panel.inspector')}>
-      {obj ? <ObjectInspector obj={obj} readOnly={mode !== 'editor'} /> : <NoSelection />}
+      {obj ? (
+        <>
+          {inSim && <LiveStatusSection id={obj.id} />}
+          <ObjectInspector obj={obj} readOnly={inSim} />
+        </>
+      ) : inSim ? (
+        <SimSummary />
+      ) : (
+        <NoSelection />
+      )}
     </Panel>
   );
 }

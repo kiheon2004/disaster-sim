@@ -1,6 +1,20 @@
-import { useT } from '@/i18n/i18n';
+import { Timeline } from '@/ui/Timeline/Timeline';
+import { WindForm } from './WindForm';
+import { CommandPanel } from './CommandPanel';
+import styles from './BottomPanel.module.css';
 
 export function BottomPanel() {
-  const t = useT();
-  return <div style={{ height: 180, padding: 12, color: 'var(--text-2)' }}>{t('panel.timeline')}</div>;
+  return (
+    <div className={styles.root}>
+      <Timeline />
+      <div className={styles.body}>
+        <div className={styles.col}>
+          <WindForm />
+        </div>
+        <div className={styles.col}>
+          <CommandPanel />
+        </div>
+      </div>
+    </div>
+  );
 }

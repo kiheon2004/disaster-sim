@@ -44,9 +44,9 @@ export function buildCanopy(p: TreeParams, seed: number): Voxel[] {
 
 export function TreeView({
   obj,
-  upperRef,
+  part = 'all',
   canopyRef,
-}: ViewProps & { upperRef?: React.Ref<THREE.Group>; canopyRef?: React.Ref<THREE.Group> }) {
+}: ViewProps & { part?: 'all' | 'stump' | 'upper'; canopyRef?: React.Ref<THREE.Group> }) {
   const p = obj.params as TreeParams;
   const canopy = useMemo(() => buildCanopy(p, obj.seed), [p, obj.seed]);
   const snapH = p.height * SNAP_FRACTION;
@@ -57,9 +57,10 @@ export function TreeView({
   return (
     <group>
       {/* Stump: stays in place when the trunk snaps */}
-      <Box size={[trunkW, snapH, trunkW]} position={[0, snapH / 2, 0]} color={bark} />
+      {part !== 'upper' && <Box size={[trunkW, snapH, trunkW]} position={[0, snapH / 2, 0]} color={bark} />}
       {/* Upper part: sways as one unit and becomes the falling body after failure */}
-      <group ref={upperRef}>
+      {part !== 'stump' && (
+      <group>
         <Box
           size={[trunkW * 0.92, th - snapH + 0.4, trunkW * 0.92]}
           position={[0, snapH + (th - snapH + 0.4) / 2, 0]}
@@ -71,6 +72,7 @@ export function TreeView({
           ))}
         </group>
       </group>
+      )}
     </group>
   );
 }

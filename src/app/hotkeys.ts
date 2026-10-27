@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useWorldStore } from '@/world/worldStore';
-import { deleteSelected, duplicateSelected, focusObject } from '@/app/actions';
+import { deleteSelected, duplicateSelected, focusObject, togglePlay } from '@/app/actions';
 import { useEditorStore } from '@/editor/editorStore';
 
 function isTyping(e: KeyboardEvent) {
@@ -26,7 +26,13 @@ export function useEditorHotkeys() {
         return;
       }
 
-      if (ed.mode !== 'editor') return;
+      if (ed.mode === 'simulation') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePlay();
+        } else if (key === 'escape') ed.select(null);
+        return;
+      }
 
       if (mod && key === 'z') {
         e.preventDefault();
