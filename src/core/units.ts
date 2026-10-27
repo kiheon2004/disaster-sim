@@ -19,3 +19,6 @@ export const WIND_SHEAR_EXPONENT = 0.14;
 
 export const SIM_SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
 export type SimSpeed = (typeof SIM_SPEEDS)[number];
+
+/** Global multiplier on aerodynamic forces — the single knob for tuning the visual result. */
+export const WIND_FORCE_SCALE = 1.15;

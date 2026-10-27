@@ -13,6 +13,9 @@ export function Viewport({ children, showGrid }: { children?: ReactNode; showGri
       camera={{ position: [48, 42, 62], fov: 45, near: 0.3, far: 2500 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, preserveDrawingBuffer: true }}
       onContextMenu={(e) => e.preventDefault()}
+      onCreated={(state) => {
+        if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__r3f = state;
+      }}
     >
       <SceneEnvironment showGrid={showGrid} />
       <CameraRig />
