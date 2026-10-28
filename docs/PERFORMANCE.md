@@ -132,12 +132,14 @@ ms / 스텝 (60 Hz), 렌더링 제외:
 
 ```bash
 # 시뮬레이션 CPU 프로파일 (렌더링 제외)
-BENCH=1 npx vitest run src/bench            # BENCH_COUNTS=1000 으로 개수 지정
+BENCH=1 npx vitest run src/bench --silent=false   # BENCH_COUNTS=1000 으로 개수, BENCH_TERRAIN=gentleHills 로 지형 위 장면
 
 # 브라우저 프레임 벤치마크 (production build)
 npm run build && npx vite preview --port 4173 &
 npm i --no-save puppeteer-core
 node scripts/bench-browser.mjs http://localhost:4173/ after 100,500,1000 5
+
+# 지형 위 장면: TERRAIN=gentleHills node scripts/bench-browser.mjs …  (Phase 12 결과는 docs/TERRAIN.md)
 
 # 앱 안에서: Shift+P 또는 ⋯ 메뉴 → 성능 HUD, 또는 http://localhost:4173/?perf
 ```

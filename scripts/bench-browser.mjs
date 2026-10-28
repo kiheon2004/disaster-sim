@@ -7,7 +7,8 @@
 // Same scene (stress scene, seed 99), same camera, same wind (42 m/s E, gust 25 %), fast-forwarded
 // 6 s before measuring. Reports FPS / frame time / simulation speed / draw calls / triangles
 // (uninstrumented windows) plus a per-stage CPU breakdown and GPU timer queries (instrumented
-// window). CHROME=/path/to/chrome overrides the browser. On a loaded machine run before/after
+// window). CHROME=/path/to/chrome overrides the browser. TERRAIN=gentleHills runs the same scenes
+// on a terrain preset. On a loaded machine run before/after
 // alternately and compare medians.
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
@@ -192,6 +193,8 @@ for (const n of counts) {
   await page.waitForFunction(() => window.__ds && window.__r3f);
   await page.evaluate(() => localStorage.clear());
   await page.evaluate((n) => window.__ds.actions.loadStressScene(n), n);
+  // TERRAIN=gentleHills|valley|coastal: same scene on a terrain preset (objects re-seated).
+  if (process.env.TERRAIN) await page.evaluate((p) => window.__ds.world.getState().applyTerrainPreset(p, 1), process.env.TERRAIN);
   await new Promise((r) => setTimeout(r, 1500));
   await page.evaluate(async () => {
     await window.__ds.actions.enterSimulation();

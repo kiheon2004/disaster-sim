@@ -1,7 +1,8 @@
 /**
  * CPU profile of the simulation core on the stress scenes (no rendering).
  *
- *   BENCH=1 npx vitest run src/bench
+ *   BENCH=1 npx vitest run src/bench --silent=false
+ *   BENCH=1 BENCH_TERRAIN=gentleHills npx vitest run src/bench --silent=false   (same scenes on relief)
  *
  * Instrumentation is attached from the outside (method wrapping), so the same harness can be run
  * against older revisions for before/after comparisons. Skipped in the normal test run.
@@ -10,17 +11,25 @@ import { describe, it } from 'vitest';
 import { SimulationController } from '@/simulation/SimulationController';
 import { createEmptyDocument, createWorldObject, nextSerial } from '@/world/WorldDocument';
 import { stressScene } from '@/world/stressScene';
-import type { WorldDocument } from '@/core/model';
+import type { TerrainPresetId, WorldDocument } from '@/core/model';
+import { generateTerrain } from '@/terrain/TerrainPresets';
+import { TerrainSampler } from '@/terrain/TerrainSampler';
+import { reseat } from '@/terrain/groundPlacement';
 
 const COUNTS = (process.env.BENCH_COUNTS ?? '100,500,1000').split(',').map(Number);
 const WARM_S = 4;
 const MEASURE_S = 4;
 const STEP_HZ = 60;
 
+const TERRAIN = process.env.BENCH_TERRAIN as TerrainPresetId | undefined;
+
 function stressDoc(n: number): WorldDocument {
   const doc = createEmptyDocument(`Stress ${n}`);
+  if (TERRAIN) doc.terrain = generateTerrain(TERRAIN, 1);
+  const terrain = new TerrainSampler(doc.terrain);
   for (const input of stressScene(n)) {
     const o = createWorldObject(input, nextSerial(doc.objects, input.type));
+    if (TERRAIN) o.transform = { ...o.transform, ...reseat(o, terrain) };
     doc.objects[o.id] = o;
   }
   return doc;
