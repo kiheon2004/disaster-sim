@@ -5,7 +5,8 @@ import type { I18nMessage } from '@/i18n/i18n';
 import type { BodyHandle, Pose } from '@/physics/PhysicsEngine';
 import type { DamageState } from './damage/DamageState';
 import type { LocalWind, SampleCache } from './wind/SpatialWindField';
-import type { DamageCause } from './analysis/DamageEvent';
+import type { DamageCause, Hazard } from './analysis/DamageEvent';
+import type { SeismicEntityState, SeismicRuntime } from './seismic/SeismicState';
 
 export type ComponentCondition = 'intact' | 'broken' | 'detached';
 
@@ -73,6 +74,10 @@ export interface RuntimeEntity {
   peakState: DamageState;
   /** Cause of the most recent damage. */
   lastCause: DamageCause | null;
+  /** Hazard behind the most recent damage (wind / earthquake). */
+  lastHazard: Hazard | null;
+  /** Earthquake response state; created when the first earthquake starts (Phase 13). */
+  seismic?: SeismicEntityState;
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
@@ -102,6 +107,8 @@ export interface DebrisPiece {
   plate: boolean;
   pose: Pose;
   spawnTime: number;
+  /** Hazard that tore the piece off (impact events inherit it). */
+  hazard: Hazard;
 }
 
 /** Short-lived visual particles (glass shards, leaves) — integrated without the physics engine. */
@@ -137,4 +144,6 @@ export interface SimulationRuntime {
   /** Deterministic id counter for debris. */
   debrisCounter: number;
   log: SimulationLogEntry[];
+  /** Structural model + bookkeeping of the earthquake systems (lazily created, Phase 13). */
+  seismic?: SeismicRuntime;
 }

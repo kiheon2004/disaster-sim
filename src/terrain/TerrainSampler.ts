@@ -12,9 +12,10 @@
  * terrain short-circuits to 0 so the flat world costs one branch per query.
  */
 import type { Vec3 } from '@/core/types';
-import type { GroundTypeId, TerrainData } from '@/core/model';
-import { createFlatTerrain, heightRange, isDefaultGround, isFlat } from './TerrainData';
+import type { GroundTypeId, SoilProfileId, TerrainData } from '@/core/model';
+import { createFlatTerrain, heightRange, isDefaultGround, isDefaultSoil, isFlat } from './TerrainData';
 import { groundMaterial, type GroundMaterial } from './GroundMaterials';
+import { DEFAULT_SOIL, SOIL_COUNT, soilProfile, type SoilProfile } from './SoilProfiles';
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -23,6 +24,10 @@ export class TerrainSampler {
   flat = true;
   /** True when every vertex has the default ground type. */
   uniformGround = true;
+  /** True when every vertex has the default soil profile (Phase 13 fast path). */
+  uniformSoil = true;
+  /** Soil profiles present anywhere on the grid (index = SoilProfileId). */
+  readonly soilsPresent: boolean[] = new Array(SOIL_COUNT).fill(false);
   minHeight = 0;
   maxHeight = 0;
   /** Number of height queries since the last reset (performance HUD). */
@@ -46,6 +51,10 @@ export class TerrainSampler {
     this.syncedRevision = this.data.revision;
     this.flat = isFlat(this.data);
     this.uniformGround = isDefaultGround(this.data);
+    this.uniformSoil = isDefaultSoil(this.data);
+    this.soilsPresent.fill(false);
+    this.soilsPresent[DEFAULT_SOIL] = true; // the surroundings outside the grid
+    if (!this.uniformSoil) for (let i = 0; i < this.data.soil.length; i++) this.soilsPresent[this.data.soil[i]] = true;
     const [lo, hi] = this.flat ? [0, 0] : heightRange(this.data);
     this.minHeight = Math.min(0, lo);
     this.maxHeight = Math.max(0, hi);
@@ -148,6 +157,45 @@ export class TerrainSampler {
   /** Approximate surface parameters of the ground at a point. */
   sampleGround(x: number, z: number): GroundMaterial {
     return groundMaterial(this.sampleGroundType(x, z));
+  }
+
+  /** Soil profile of the nearest vertex (default soil outside the grid). */
+  sampleSoilType(x: number, z: number): SoilProfileId {
+    const d = this.data;
+    if (this.uniformSoil || !this.inside(x, z)) return DEFAULT_SOIL;
+    const ix = Math.round((x - d.originX) * this.inv);
+    const iz = Math.round((z - d.originZ) * this.inv);
+    return d.soil[iz * d.nx + ix] as SoilProfileId;
+  }
+
+  sampleSoil(x: number, z: number): SoilProfile {
+    return soilProfile(this.sampleSoilType(x, z));
+  }
+
+  /**
+   * Bilinear weights of each soil profile at a point (written into `out`, length SOIL_COUNT):
+   * site properties blend smoothly across soil boundaries instead of jumping at a vertex.
+   */
+  sampleSoilWeights(x: number, z: number, out: Float64Array): Float64Array {
+    out.fill(0);
+    const d = this.data;
+    if (this.uniformSoil || !this.inside(x, z)) {
+      out[DEFAULT_SOIL] = 1;
+      return out;
+    }
+    const gx = (x - d.originX) * this.inv;
+    const gz = (z - d.originZ) * this.inv;
+    const ix = Math.min(Math.floor(gx), d.nx - 2);
+    const iz = Math.min(Math.floor(gz), d.nz - 2);
+    const fx = gx - ix;
+    const fz = gz - iz;
+    const i = iz * d.nx + ix;
+    const g = d.soil;
+    out[g[i]] += (1 - fx) * (1 - fz);
+    out[g[i + 1]] += fx * (1 - fz);
+    out[g[i + d.nx]] += (1 - fx) * fz;
+    out[g[i + d.nx + 1]] += fx * fz;
+    return out;
   }
 
   /** Depth below the static reference water level (0 when dry or no water level is set). */

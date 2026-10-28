@@ -5,6 +5,7 @@ import type { RuntimeComponent, RuntimeEntity } from '../../SimulationRuntime';
 import { DamageState, worst } from '../DamageState';
 import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris } from '../spawn';
+import { seismicHealth, seismicLevel } from '../seismicLevels';
 
 /**
  * Anchored infrastructure (street lights, signs, walls):
@@ -56,6 +57,7 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
 
   const healthBefore = e.health;
   e.health = applyFatigue(e.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+  if (e.seismic) e.health = Math.min(e.health, seismicHealth(e.seismic));
   if (e.health <= 0) {
     ctx.recordDamage(e, {
       eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED',
@@ -70,7 +72,45 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   }
   let s = worst(loadLevel(e.loadRatio), healthLevel(e.health));
   if (failed > 0) s = worst(s, DamageState.DAMAGED);
+  if (e.seismic) s = worst(s, seismicLevel(e.seismic));
   e.state = s;
+}
+
+/** Earthquake: an attachment shaken off (lamp head, sign panel). */
+export function detachByQuake(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, response: number) {
+  const pos = componentWorldPos(e, c.spec);
+  const n = componentWorldNormal(e, c.spec);
+  const k = e.source.transform.scale;
+  const st = e.seismic!;
+  ctx.recordDamage(e, {
+    eventType: 'DETACHED', cause: 'acceleration', hazard: 'earthquake', componentId: c.spec.id, componentKind: c.spec.kind,
+    worldPosition: pos, response, damageBefore: 1 - c.health, damageAfter: 1, localWindSpeed: 0, force: c.spec.mass * response * 9.81,
+  });
+  c.condition = 'detached';
+  c.health = 0;
+  c.state = DamageState.DESTROYED;
+  e.rev++;
+  spawnDebris(ctx, e, {
+    kind: c.spec.kind,
+    position: pos,
+    size: [c.spec.size[0] * k[0], c.spec.size[1] * k[1], c.spec.size[2] * k[2]],
+    mass: c.spec.mass,
+    color: c.spec.color ?? '#999',
+    push: [st.shakeDir[0] * 0.6 + (n ? n[0] * 0.3 : 0), 0.2, st.shakeDir[1] * 0.6 + (n ? n[2] * 0.3 : 0)],
+    hazard: 'earthquake',
+  });
+  ctx.log(e.id, 'warn', { key: c.spec.kind === 'sign' ? 'log.part.panel' : 'log.part.lamp' });
+}
+
+/** Earthquake: the pole / sign / wall fails at its base (D ≥ 1), falling toward `dir`. */
+export function failByQuake(e: RuntimeEntity, ctx: SystemContext, dir: Vec3, response: number) {
+  ctx.recordDamage(e, {
+    eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED', cause: 'shaking', hazard: 'earthquake', response,
+    damageBefore: 1 - e.health, damageAfter: 1, localWindSpeed: 0,
+  });
+  if (e.source.type === 'wall') breakWall(e, ctx, dir);
+  else topple(e, ctx, dir);
+  e.state = DamageState.DESTROYED;
 }
 
 function detach(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, pos: Vec3, n: Vec3 | null) {
@@ -90,10 +130,10 @@ function detach(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, pos: 
   ctx.log(e.id, 'warn', { key: c.spec.kind === 'sign' ? 'log.part.panel' : 'log.part.lamp' });
 }
 
-function topple(e: RuntimeEntity, ctx: SystemContext) {
+function topple(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
   if (e.body === null) return;
   const { physics, env } = ctx;
-  const flow = env.wind.flow();
+  const flow = dir ?? env.wind.flow();
   if (!e.dynamic) physics.setBodyKind(e.body, 'dynamic');
   e.dynamic = true;
   e.flags.toppled = true;
@@ -103,8 +143,8 @@ function topple(e: RuntimeEntity, ctx: SystemContext) {
   ctx.log(e.id, 'warn', { key: 'log.structure.toppled' });
 }
 
-/** A free-standing masonry wall fails in sections that tip over downwind. */
-function breakWall(e: RuntimeEntity, ctx: SystemContext) {
+/** A free-standing masonry wall fails in sections that tip over downwind (or along the shaking). */
+function breakWall(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
   const { physics } = ctx;
   const p = e.source.params as { length: number; height: number; thickness: number; color: string };
   const k = e.source.transform.scale;
@@ -114,7 +154,7 @@ function breakWall(e: RuntimeEntity, ctx: SystemContext) {
   ctx.env.windField.removeObstacle(e.id);
   const segs = Math.max(1, Math.min(10, Math.round((p.length * k[0]) / 2)));
   const segLen = (p.length * k[0]) / segs;
-  const flow = ctx.env.wind.flow();
+  const flow = dir ?? ctx.env.wind.flow();
   for (let i = 0; i < segs; i++) {
     const local: Vec3 = [-(p.length * k[0]) / 2 + segLen * (i + 0.5), (p.height * k[1]) / 2 + 0.01, 0];
     spawnDebris(ctx, e, {
@@ -124,6 +164,7 @@ function breakWall(e: RuntimeEntity, ctx: SystemContext) {
       mass: e.source.physics.mass / segs,
       color: p.color,
       push: vScale(flow, 0.6),
+      hazard: dir ? 'earthquake' : undefined,
     });
   }
   e.rev++;

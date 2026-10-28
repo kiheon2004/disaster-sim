@@ -22,7 +22,8 @@ export class PoseSyncSystem implements SimulationSystem {
   readonly phase = 'postPhysics' as const;
 
   update({ runtime, physics, env }: SystemContext) {
-    const settle = !env.terrain.flat;
+    // Never put bodies to sleep while the ground shakes (they must keep feeling it).
+    const settle = !env.terrain.flat && !env.groundMotion.active;
     for (const e of runtime.entities.values()) {
       if (!e.dynamic || e.body === null) continue;
       e.pose = physics.getPose(e.body);

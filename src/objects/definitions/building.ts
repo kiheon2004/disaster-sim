@@ -60,7 +60,7 @@ export const buildingDefinition = defineObject<BuildingParams>({
   labelKey: 'object.building',
   icon: 'building',
   physicsProfile: 'static',
-  terrainFit: { align: 0, base: 'min' },
+  terrainFit: { align: 0, base: 'foundation' },
   defaultParams: {
     floors: 4,
     width: 10,

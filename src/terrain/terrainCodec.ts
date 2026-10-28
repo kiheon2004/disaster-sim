@@ -5,12 +5,14 @@
  *             compression of repeated deltas → a flat or smoothly sloped area costs a few bytes;
  *             omitted entirely for a flat terrain.
  *  ground:    byte runs (value, run length) → large painted areas are tiny.
+ *  soil:      same byte-run format as ground (schema v3); omitted when all default soil.
  *
  * Both are base64 strings inside the JSON document. Heights are stored at the same 1 cm
  * quantum the editor writes, so save → load reproduces the in-memory terrain bit for bit.
  */
 import type { TerrainData, TerrainSettings } from '@/core/model';
-import { createFlatTerrain, defaultTerrainSettings, isDefaultGround, isFlat } from './TerrainData';
+import { createFlatTerrain, defaultTerrainSettings, isDefaultGround, isDefaultSoil, isFlat } from './TerrainData';
+import { DEFAULT_SOIL } from './SoilProfiles';
 
 export interface SerializedTerrain {
   kind: 'heightfield';
@@ -23,6 +25,8 @@ export interface SerializedTerrain {
   elevation: { encoding: 'cm-delta-rle'; data: string } | null;
   /** null = all default ground. */
   ground: { encoding: 'u8-rle'; data: string } | null;
+  /** Soil profile layer (schema v3). null / absent = all default soil (dense soil). */
+  soil?: { encoding: 'u8-rle'; data: string } | null;
   settings: TerrainSettings;
 }
 
@@ -182,6 +186,7 @@ export function encodeTerrain(t: TerrainData): SerializedTerrain {
     originZ: t.originZ,
     elevation: isFlat(t) ? null : { encoding: 'cm-delta-rle', data: encodeElevation(t.heights, t.nx) },
     ground: isDefaultGround(t) ? null : { encoding: 'u8-rle', data: encodeGround(t.ground) },
+    soil: isDefaultSoil(t) ? null : { encoding: 'u8-rle', data: encodeGround(t.soil) },
     settings: { ...t.settings },
   };
 }
@@ -197,8 +202,10 @@ export function decodeTerrain(s: SerializedTerrain): TerrainData {
   t.originZ = s.originZ;
   t.heights = new Float32Array(n);
   t.ground = new Uint8Array(n);
+  t.soil = new Uint8Array(n).fill(DEFAULT_SOIL);
   if (s.elevation) decodeElevation(s.elevation.data, t.heights, s.nx);
   if (s.ground) decodeGround(s.ground.data, t.ground);
+  if (s.soil) decodeGround(s.soil.data, t.soil);
   t.settings = { ...defaultTerrainSettings(), ...s.settings };
   return t;
 }

@@ -5,6 +5,7 @@
 import type { TerrainData, TerrainSettings } from '@/core/model';
 import { WORLD_SIZE } from '@/core/units';
 import { DEFAULT_GROUND } from './GroundMaterials';
+import { DEFAULT_SOIL } from './SoilProfiles';
 
 /** Grid spacing (m). 1 m resolves building pads and car-sized slopes; 201×201 vertices. */
 export const TERRAIN_CELL_SIZE = 1;
@@ -29,6 +30,7 @@ export function createFlatTerrain(size = WORLD_SIZE, cellSize = TERRAIN_CELL_SIZ
     originZ: -size / 2,
     heights: new Float32Array(n * n),
     ground: new Uint8Array(n * n).fill(DEFAULT_GROUND),
+    soil: new Uint8Array(n * n).fill(DEFAULT_SOIL),
     settings: defaultTerrainSettings(),
     revision: 0,
   };
@@ -49,6 +51,12 @@ export function isFlat(t: TerrainData): boolean {
 export function isDefaultGround(t: TerrainData): boolean {
   const g = t.ground;
   for (let i = 0; i < g.length; i++) if (g[i] !== DEFAULT_GROUND) return false;
+  return true;
+}
+
+export function isDefaultSoil(t: TerrainData): boolean {
+  const g = t.soil;
+  for (let i = 0; i < g.length; i++) if (g[i] !== DEFAULT_SOIL) return false;
   return true;
 }
 
@@ -100,6 +108,8 @@ export interface TerrainPatch {
   heightsAfter: Float32Array;
   groundBefore: Uint8Array;
   groundAfter: Uint8Array;
+  soilBefore: Uint8Array;
+  soilAfter: Uint8Array;
   settingsBefore: TerrainSettings;
   settingsAfter: TerrainSettings;
 }
@@ -122,7 +132,7 @@ function writeRect(dst: Float32Array | Uint8Array, nx: number, r: GridRect, src:
  */
 export function makePatch(
   t: TerrainData,
-  before: { heights: Float32Array; ground: Uint8Array; settings: TerrainSettings },
+  before: { heights: Float32Array; ground: Uint8Array; soil: Uint8Array; settings: TerrainSettings },
   rect: GridRect,
 ): TerrainPatch {
   return {
@@ -131,6 +141,8 @@ export function makePatch(
     heightsAfter: copyRect(t.heights, t.nx, rect, (n) => new Float32Array(n)),
     groundBefore: copyRect(before.ground, t.nx, rect, (n) => new Uint8Array(n)),
     groundAfter: copyRect(t.ground, t.nx, rect, (n) => new Uint8Array(n)),
+    soilBefore: copyRect(before.soil, t.nx, rect, (n) => new Uint8Array(n)),
+    soilAfter: copyRect(t.soil, t.nx, rect, (n) => new Uint8Array(n)),
     settingsBefore: { ...before.settings },
     settingsAfter: { ...t.settings },
   };
@@ -140,10 +152,11 @@ export function makePatch(
 export function applyPatch(t: TerrainData, p: TerrainPatch, side: 'before' | 'after') {
   writeRect(t.heights, t.nx, p.rect, side === 'before' ? p.heightsBefore : p.heightsAfter);
   writeRect(t.ground, t.nx, p.rect, side === 'before' ? p.groundBefore : p.groundAfter);
+  writeRect(t.soil, t.nx, p.rect, side === 'before' ? p.soilBefore : p.soilAfter);
   t.settings = { ...(side === 'before' ? p.settingsBefore : p.settingsAfter) };
   t.revision++;
 }
 
 export function snapshotLayers(t: TerrainData) {
-  return { heights: t.heights.slice(), ground: t.ground.slice(), settings: { ...t.settings } };
+  return { heights: t.heights.slice(), ground: t.ground.slice(), soil: t.soil.slice(), settings: { ...t.settings } };
 }

@@ -18,9 +18,14 @@ export class MetricsSystem implements SimulationSystem {
       const prev = e.peakState;
       e.peakState = e.state;
       if (e.state >= DamageState.DAMAGED && prev < e.state && !this.metrics.recordedThisStep(e.id)) {
+        // Without a specific earlier event: the earthquake when the object shakes harder than
+        // the wind loads it (wind-only runs never have seismic state → always wind).
+        const quake = !e.lastHazard && e.seismic !== undefined && (e.seismic.shake > 0 || e.seismic.damage > 0) && e.loadRatio < 0.3;
+        const hazard = e.lastHazard ?? (quake ? 'earthquake' : 'wind');
         ctx.recordDamage(e, {
           eventType: DAMAGE_STATE_IDS[e.state] as 'DAMAGED' | 'CRITICAL' | 'DESTROYED',
-          cause: e.lastCause ?? (e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),
+          cause: e.lastCause ?? (hazard === 'earthquake' ? (e.source.type === 'building' ? 'drift' : 'shaking') : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),
+          hazard,
         });
       }
     }

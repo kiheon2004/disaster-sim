@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { SCHEMA_VERSION } from './WorldDocument';
+import { SCHEMA_VERSION, defaultScenario } from './WorldDocument';
 import { DEFAULT_WIND_MODEL, defaultSimulationSettings, type WorldDocument, type WorldObject } from '@/core/model';
+import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
+import { normalizeSeismic } from '@/simulation/seismic/structuralProps';
 import { getDefinition, hasDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
 import { decodeTerrain, encodeTerrain } from '@/terrain/terrainCodec';
@@ -30,6 +32,8 @@ const objectSchema = z.object({
   physics: physicsSchema,
   params: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
   components: z.array(z.any()).optional(),
+  // Phase 13 (schema v3). Validated leniently and normalized (defaults / clamping) below.
+  seismic: z.object({ structure: z.record(z.string(), z.any()).optional(), foundation: z.record(z.string(), z.any()).optional() }).optional(),
 });
 
 const terrainSchema = z.union([
@@ -44,6 +48,8 @@ const terrainSchema = z.union([
     originZ: z.number(),
     elevation: z.object({ encoding: z.literal('cm-delta-rle'), data: z.string() }).nullable(),
     ground: z.object({ encoding: z.literal('u8-rle'), data: z.string() }).nullable(),
+    // Phase 13: soil profile layer (absent in v2 files → default soil everywhere).
+    soil: z.object({ encoding: z.literal('u8-rle'), data: z.string() }).nullable().optional(),
     settings: z.object({
       preset: z.enum(TERRAIN_PRESETS as [string, ...string[]]).catch('flat'),
       seed: z.number().int().nonnegative().catch(1),
@@ -53,7 +59,7 @@ const terrainSchema = z.union([
 ]);
 
 const documentSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -78,6 +84,8 @@ const documentSchema = z.object({
   }),
   terrain: terrainSchema.default({ kind: 'flat' }),
   objects: z.record(z.string(), objectSchema),
+  // Phase 13: saved hazard scenarios. An invalid earthquake is dropped rather than failing the file.
+  scenario: z.object({ earthquake: earthquakeEventSchema.nullable().catch(null).default(null) }).partial().optional(),
 });
 
 export type LoadResult = { ok: true; doc: WorldDocument; skipped: number } | { ok: false; error: string };
@@ -94,6 +102,11 @@ export function serializeDocument(doc: WorldDocument, pretty = true): string {
 /**
  * Validate + normalize a document. Unknown object types are skipped and components are
  * regenerated from params so files stay consistent with the current object definitions.
+ *
+ * Migration (automatic, any older schema → v3):
+ *   v1 → flat terrain;  v1/v2 → default soil layer (dense soil), default structural and
+ *   foundation properties on buildings, empty scenario. Positions, physics, terrain heights
+ *   and surfaces are kept exactly, so wind results of old projects do not change.
  */
 export function parseDocument(json: string): LoadResult {
   let raw: unknown;
@@ -116,13 +129,17 @@ export function parseDocument(json: string): LoadResult {
     }
     const def = getDefinition(o.type);
     const params = { ...def.defaultParams, ...o.params };
-    objects[id] = {
-      ...o,
+    const { seismic: rawSeismic, ...rest } = o;
+    const obj: WorldObject = {
+      ...rest,
       id,
       type: o.type,
       params,
       components: def.createComponents(params, o.seed),
     };
+    const seismic = normalizeSeismic(o.type, rawSeismic as Parameters<typeof normalizeSeismic>[1]);
+    if (seismic) obj.seismic = seismic;
+    objects[id] = obj;
   }
   // Old (v1) files and missing terrain → flat terrain at 0 m.
   let terrain;
@@ -137,7 +154,8 @@ export function parseDocument(json: string): LoadResult {
     ...res.data.settings,
     simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) } },
   };
-  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects }, skipped };
+  const scenario = { ...defaultScenario(), ...(res.data.scenario ?? {}) };
+  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped };
 }
 
 const SAVE_KEY = 'ds.project';

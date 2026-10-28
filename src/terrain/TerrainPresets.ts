@@ -10,6 +10,7 @@ import { smoothstep } from '@/core/math';
 import { Rng } from '@/core/random';
 import { createFlatTerrain, quantizeHeight } from './TerrainData';
 import { DEFAULT_GROUND } from './GroundMaterials';
+import { DEFAULT_SOIL } from './SoilProfiles';
 
 export const TERRAIN_PRESETS: TerrainPresetId[] = ['flat', 'gentleHills', 'valley', 'coastal'];
 
@@ -97,6 +98,24 @@ function presetHeight(preset: TerrainPresetId, seed: number): HeightFn {
   }
 }
 
+/**
+ * Soil profile beneath a preset (Phase 13; heights and surfaces are unchanged): high ground is
+ * rock, valley floors are soft alluvium, the coastal lowland is soft soil with reclaimed fill
+ * along the shore. Plausible geology for the shapes, not a survey.
+ */
+function presetSoil(preset: TerrainPresetId, x: number, z: number, h: number): number {
+  switch (preset) {
+    case 'flat':
+      return DEFAULT_SOIL;
+    case 'gentleHills':
+      return h > 6 ? 0 : DEFAULT_SOIL;
+    case 'valley':
+      return h > 10 ? 0 : Math.abs(z) < 34 + 0.02 * x ? 2 : DEFAULT_SOIL;
+    case 'coastal':
+      return h < 1.3 ? 3 : h < 3 ? 2 : DEFAULT_SOIL;
+  }
+}
+
 /** Generate a preset into a fresh terrain with the same grid as `like` (default 200 m / 1 m). */
 export function generateTerrain(preset: TerrainPresetId, seed: number, like?: Pick<TerrainData, 'nx' | 'cellSize'>): TerrainData {
   const t = createFlatTerrain(like ? (like.nx - 1) * like.cellSize : undefined, like?.cellSize);
@@ -111,6 +130,7 @@ export function generateTerrain(preset: TerrainPresetId, seed: number, like?: Pi
       t.heights[i] = h;
       t.ground[i] = DEFAULT_GROUND;
       if (preset === 'coastal' && h < 1.3) t.ground[i] = 2; // sand along the shore
+      t.soil[i] = presetSoil(preset, x, z, h);
     }
   }
   t.settings = { preset, seed, waterLevel: preset === 'coastal' ? 0 : null };

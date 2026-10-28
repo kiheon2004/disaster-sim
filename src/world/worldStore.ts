@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { EntityId, Transform } from '@/core/types';
-import type { ObjectParams, PhysicalProperties, TerrainData, TerrainPresetId, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
+import type { FoundationSpec, ObjectParams, PhysicalProperties, StructuralSpec, TerrainData, TerrainPresetId, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
+import type { EarthquakeEventSpec } from '@/events/specs';
+import { normalizeSeismic, seismicOf } from '@/simulation/seismic/structuralProps';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
 import {
@@ -60,6 +62,10 @@ interface WorldState {
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
   updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings> }) => void;
+  /** Structural / foundation properties of an object (earthquake). */
+  updateSeismic: (id: EntityId, patch: { structure?: Partial<StructuralSpec>; foundation?: Partial<FoundationSpec> }, opts?: MutationOptions) => void;
+  /** The earthquake saved with the project (null = none). Not an undo step (like settings). */
+  setEarthquakeScenario: (spec: EarthquakeEventSpec | null) => void;
   replaceDocument: (doc: WorldDocument) => void;
   newDocument: () => void;
   /** Terrain brush stroke: begin → dab (every frame while held) → end (one undo step). */
@@ -99,7 +105,7 @@ function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainS
 
 /** Sampler over a copy of the layers (the terrain as it was before an edit). */
 function samplerOver(t: TerrainData, layers: ReturnType<typeof snapshotLayers>): TerrainSampler {
-  return new TerrainSampler({ ...t, heights: layers.heights, ground: layers.ground, settings: layers.settings, revision: -1 });
+  return new TerrainSampler({ ...t, heights: layers.heights, ground: layers.ground, soil: layers.soil, settings: layers.settings, revision: -1 });
 }
 
 export const useWorldStore = create<WorldState>((set, get) => {
@@ -221,6 +227,19 @@ export const useWorldStore = create<WorldState>((set, get) => {
       });
     },
 
+    updateSeismic: (id, patch, opts) =>
+      patchObject(id, (o) => {
+        const cur = seismicOf(o);
+        if (!cur) return o;
+        const seismic = normalizeSeismic(o.type, { structure: { ...cur.structure, ...(patch.structure ?? {}) }, foundation: { ...cur.foundation, ...(patch.foundation ?? {}) } });
+        return { ...o, seismic };
+      }, opts),
+
+    setEarthquakeScenario: (spec) => {
+      const doc = get().doc;
+      set({ doc: { ...doc, scenario: { ...doc.scenario, earthquake: spec ? { ...spec } : null }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
+    },
+
     replaceDocument: (doc) => {
       stroke = null;
       set({ doc, past: [], future: [], docVersion: get().docVersion + 1 });
@@ -257,6 +276,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       const next = generateTerrain(preset, seed, t);
       t.heights.set(next.heights);
       t.ground.set(next.ground);
+      t.soil.set(next.soil);
       t.settings = next.settings;
       t.revision++;
       commitTerrain(before, fullRect(t));

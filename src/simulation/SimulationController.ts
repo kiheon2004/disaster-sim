@@ -21,7 +21,10 @@ import { DamageState } from './damage/DamageState';
 import { simProfiler } from './profiling/SimProfiler';
 import { TerrainSampler } from '@/terrain/TerrainSampler';
 import { terrainColliderDesc } from '@/terrain/TerrainPhysicsAdapter';
-import { EMPTY_STATS, useSimStore, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
+import { EMPTY_STATS, useSimStore, type QuakeLive, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
+import { createGroundMotionSample, sMinusP } from './seismic/GroundMotionField';
+import { EarthquakeEvent } from '@/events/earthquake/EarthquakeEvent';
+import { GRAVITY } from '@/core/units';
 
 const MAX_STEPS_PER_FRAME = 16;
 /** Wall-clock budget for physics per frame; beyond it the simulation slows instead of the UI freezing. */
@@ -62,6 +65,9 @@ export class SimulationController {
   private lastEventCount = -1;
   /** Time spent creating the physics ground (incl. terrain collider) on the last load (ms). */
   terrainBuildMs = 0;
+  private quakeRef = createGroundMotionSample();
+  private quakePeak = 0;
+  private lastSeriesLength = -1;
 
   // ── Lifecycle ─────────────────────────────────────────────
 
@@ -112,7 +118,9 @@ export class SimulationController {
     this.lastStates = null;
     this.lastLogLength = -1;
     this.lastEventsRev = -1;
-    for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0));
+    this.quakePeak = 0;
+    this.lastSeriesLength = -1;
+    for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, { seed: sim.seed }));
     this.status = 'paused';
     useSimStore.getState().set({ runtimeVersion: useSimStore.getState().runtimeVersion + 1 });
     this.publish(true);
@@ -143,6 +151,8 @@ export class SimulationController {
       wind: { speed: 0, bearing: 90, gust: 0 },
       metrics: null,
       damageEvents: [],
+      quake: null,
+      seismicSeries: null,
     });
   }
 
@@ -158,9 +168,13 @@ export class SimulationController {
   addEvent(spec: EventSpec) {
     const absolute: EventSpec = { ...spec, startTime: spec.startTime ?? this.time };
     this.scenario.push(absolute);
-    this.scheduler.add(createEvent(absolute, this.time));
+    this.scheduler.add(createEvent(absolute, this.time, { seed: this.seed() }));
     if (this.status === 'finished') this.status = 'paused';
     this.publish(true);
+  }
+
+  private seed() {
+    return this.snapshot?.settings.simulation?.seed ?? defaultSimulationSettings().seed;
   }
 
   clearScenario() {
@@ -338,7 +352,14 @@ export class SimulationController {
         status: i.status,
         label: i.event.describe(),
         profile: Array.from({ length: 48 }, (_, k) => i.event.intensityAt((k / 47) * i.event.duration)),
+        waveform: i.event.waveform?.(240),
       }));
+    }
+    patch.quake = this.quakeLive();
+    const series = this.metrics.seismic.series;
+    if (series.t.length !== this.lastSeriesLength || force) {
+      this.lastSeriesLength = series.t.length;
+      patch.seismicSeries = series.t.length ? this.metrics.seismic.downsampled(600) : null;
     }
     patch.metrics = this.metrics.summary(rt, this.time);
     if (this.metrics.events.length !== this.lastEventCount || force) {
@@ -346,6 +367,33 @@ export class SimulationController {
       patch.damageEvents = this.metrics.events.slice();
     }
     store.set(patch);
+  }
+
+  /** Live earthquake summary for HUDs: the current or the most recent earthquake event. */
+  private quakeLive(): QuakeLive | null {
+    let item = null;
+    for (const i of this.scheduler.list()) if (i.event instanceof EarthquakeEvent && (i.status !== 'pending' || !item)) item = i;
+    if (!item) return null;
+    const ev = item.event as EarthquakeEvent;
+    const q = ev.resolved;
+    const gm = this.env.groundMotion;
+    const active = item.status === 'active' && gm.active;
+    const local = this.time - ev.startTime;
+    let accel = 0;
+    let accelH = 0;
+    if (active) {
+      gm.reference(this.time, this.quakeRef);
+      const a = this.quakeRef.a;
+      accel = (a[0] * gm.h1[0] + a[2] * gm.h1[1]) / GRAVITY;
+      accelH = Math.hypot(a[0], a[2]) / GRAVITY;
+      if (accelH > this.quakePeak) this.quakePeak = accelH;
+    }
+    const sp = sMinusP(Math.hypot(q.epicenter[0] / 1000, q.epicenter[1] / 1000, q.depth));
+    const phase: QuakeLive['phase'] = !active ? 'end' : local < sp ? 'p' : local < q.duration * 0.6 ? 's' : 'coda';
+    return {
+      active, accel, accelH, peak: this.quakePeak, phase, magnitude: q.magnitude, pga: q.pga, pgaAssumed: q.pgaAssumed,
+      epicenter: q.epicenter, depth: q.depth, direction: q.direction, local, duration: q.duration, sMinusP: sp,
+    };
   }
 
   // ── Accessors for renderers / inspectors ──────────────────

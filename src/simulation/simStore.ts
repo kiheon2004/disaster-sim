@@ -8,6 +8,7 @@ import type { DamageState } from './damage/DamageState';
 import type { SimulationLogEntry } from './SimulationRuntime';
 import type { SimulationMetrics } from './analysis/MetricsRecorder';
 import type { DamageEventRecord } from './analysis/DamageEvent';
+import type { SeismicSeries } from './analysis/SeismicRecorder';
 
 export type SimStatus = 'idle' | 'loading' | 'running' | 'paused' | 'finished';
 
@@ -20,6 +21,29 @@ export interface TimelineEventView {
   label: I18nMessage;
   /** Planned intensity samples (0–1) across the duration, for the timeline sparkline. */
   profile: number[];
+  /** Planned signal (earthquakes: principal ground acceleration in g) across the duration. */
+  waveform?: number[];
+}
+
+/** Live earthquake status for HUDs (null when no earthquake was scheduled). */
+export interface QuakeLive {
+  active: boolean;
+  /** Principal-axis ground acceleration at the map center on the reference site (g, signed). */
+  accel: number;
+  /** Horizontal magnitude of it (g) and the largest so far (g). */
+  accelH: number;
+  peak: number;
+  phase: 'p' | 's' | 'coda' | 'end';
+  magnitude: number;
+  pga: number;
+  pgaAssumed: boolean;
+  epicenter: [number, number];
+  depth: number;
+  direction: number;
+  /** Event-local time (s) and duration. */
+  local: number;
+  duration: number;
+  sMinusP: number;
 }
 
 export interface SimStats {
@@ -63,6 +87,9 @@ export interface SimState {
   metrics: SimulationMetrics | null;
   /** Full damage history (replaced only when new events arrive). */
   damageEvents: DamageEventRecord[];
+  quake: QuakeLive | null;
+  /** Recorded earthquake time series (downsampled). */
+  seismicSeries: SeismicSeries | null;
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
 }
 
@@ -79,5 +106,7 @@ export const useSimStore = create<SimState>((set) => ({
   stats: EMPTY_STATS,
   metrics: null,
   damageEvents: [],
+  quake: null,
+  seismicSeries: null,
   set: (patch) => set(patch),
 }));

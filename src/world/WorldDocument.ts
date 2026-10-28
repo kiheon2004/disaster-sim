@@ -1,12 +1,20 @@
 import type { EntityId, ObjectType, Transform } from '@/core/types';
-import { defaultSimulationSettings, type ObjectParams, type PhysicalProperties, type WorldDocument, type WorldObject } from '@/core/model';
+import { defaultSimulationSettings, type ObjectParams, type PhysicalProperties, type ScenarioSettings, type WorldDocument, type WorldObject } from '@/core/model';
+import { defaultSeismic } from '@/simulation/seismic/structuralProps';
 import { AIR_DENSITY, GRAVITY, WORLD_SIZE } from '@/core/units';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
 
-/** 2 = Phase 12 (heightfield terrain). Version 1 files load as flat terrain. */
-export const SCHEMA_VERSION = 2 as const;
+/**
+ * 3 = Phase 13 (soil layer, seismic properties, saved earthquake scenario).
+ * 2 = Phase 12 (heightfield terrain). 1 = Phase 0–11 (flat). Older files are migrated on load.
+ */
+export const SCHEMA_VERSION = 3 as const;
+
+export function defaultScenario(): ScenarioSettings {
+  return { earthquake: null };
+}
 
 export function createEmptyDocument(name = ''): WorldDocument {
   const now = new Date().toISOString();
@@ -16,6 +24,7 @@ export function createEmptyDocument(name = ''): WorldDocument {
     settings: { size: [WORLD_SIZE, WORLD_SIZE], gravity: GRAVITY, airDensity: AIR_DENSITY, simulation: defaultSimulationSettings() },
     terrain: createFlatTerrain(),
     objects: {},
+    scenario: defaultScenario(),
   };
 }
 
@@ -26,6 +35,7 @@ export interface CreateObjectInput {
   physics?: Partial<PhysicalProperties>;
   name?: string;
   seed?: number;
+  seismic?: WorldObject['seismic'];
 }
 
 export function nextSerial(objects: Record<EntityId, WorldObject>, type: ObjectType): number {
@@ -39,7 +49,7 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
   const def = getDefinition(input.type);
   const params = { ...def.defaultParams, ...(input.params ?? {}) };
   const seed = input.seed ?? Math.floor(Math.random() * 2 ** 31);
-  return {
+  const obj: WorldObject = {
     id: createId(input.type),
     type: input.type,
     name: input.name ?? '',
@@ -50,6 +60,9 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
     params,
     components: def.createComponents(params, seed),
   };
+  const seismic = input.seismic ?? defaultSeismic(input.type);
+  if (seismic) obj.seismic = structuredClone(seismic);
+  return obj;
 }
 
 /**

@@ -15,7 +15,9 @@ export type DamageEventType =
   | 'DETACHED'
   | 'COLLAPSED'
   | 'TOPPLED'
-  | 'IMPACT';
+  | 'IMPACT'
+  | 'CRACKED'
+  | 'TILTED';
 
 /**
  * Why it happened:
@@ -24,7 +26,16 @@ export type DamageEventType =
  *  - push:     aerodynamic force moved/overturned a free-standing object
  *  - impact:   hit by debris or another object
  */
-export type DamageCause = 'overload' | 'fatigue' | 'push' | 'impact';
+export type DamageCause = 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' | 'acceleration' | 'foundation' | 'shaking';
+
+/**
+ * Which hazard produced the event (Phase 13). Earthquake causes:
+ *  - drift:        inter-story drift beyond a capacity (glass, walls, structure)
+ *  - acceleration: floor / ground acceleration beyond an anchorage capacity (cladding, signs, roof units)
+ *  - foundation:   foundation tilt / bearing failure
+ *  - shaking:      ground shaking moved or toppled a free object (people, poles, walls)
+ */
+export type Hazard = 'wind' | 'earthquake';
 
 export interface DamageEventRecord {
   id: number;
@@ -48,7 +59,13 @@ export interface DamageEventRecord {
   cause: DamageCause;
   /** Building casting a wind shadow at the location, if any. */
   shadowSource: EntityId | null;
+  /** Wind or earthquake. */
+  hazard: Hazard;
+  /** Horizontal ground acceleration at the object at that moment (m/s²; 0 for wind events). */
+  groundAcceleration: number;
+  /** Structural response at that moment: drift ratio (drift causes) or acceleration in g. */
+  response: number;
 }
 
-export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource'> &
-  Partial<Pick<DamageEventRecord, 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource'>>;
+export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response'> &
+  Partial<Pick<DamageEventRecord, 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response'>>;

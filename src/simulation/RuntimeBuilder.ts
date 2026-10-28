@@ -92,6 +92,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     windLoad: 0,
     peakState: DamageState.NORMAL,
     lastCause: null,
+    lastHazard: null,
     components: o.components.map((spec) => ({
       spec,
       state: DamageState.NORMAL,

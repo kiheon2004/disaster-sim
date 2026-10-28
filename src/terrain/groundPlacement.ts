@@ -2,8 +2,11 @@
  * Object placement on terrain: where an object's origin goes and how it tilts on a slope,
  * by category (ObjectDefinition.terrainFit):
  *
- *   building, wall, pole, sign → level; origin on the LOWEST footprint corner (no floating
- *                                corner; the uphill side is embedded like a foundation)
+ *   building                   → level; floor on the HIGHEST footprint point, the downhill side
+ *                                rests on a foundation plinth down to the ground (Phase 13 —
+ *                                before, the uphill side was buried in the slope)
+ *   wall, pole, sign           → level; origin on the LOWEST footprint corner (no floating
+ *                                corner; the uphill side is embedded like a footing)
  *   person                     → level, on the ground under its center (never leans with the hill)
  *   tree                       → on the ground at the trunk, crown tilted 30 % toward the slope
  *   vehicle                    → follows the ground plane fitted through its four wheel corners
@@ -45,7 +48,9 @@ export function groundPose(obj: Placeable, x: number, z: number, yaw: number, te
   const hmm = corner(-hx, -hz);
   const hc = terrain.sampleHeight(x, z);
 
-  const y = fit.base === 'min' ? Math.min(hc, hpp, hpm, hmp, hmm) : fit.base === 'mean' ? (hpp + hpm + hmp + hmm) / 4 : hc;
+  const y = fit.base === 'min' ? Math.min(hc, hpp, hpm, hmp, hmm)
+    : fit.base === 'foundation' ? footprintMax(terrain, x, z, hx, hz, c, s)
+    : fit.base === 'mean' ? (hpp + hpm + hmp + hmm) / 4 : hc;
   if (fit.align <= 0 || hx <= 0 || hz <= 0) return { position: [x, y, z], rotation: [0, yaw, 0] };
 
   // Plane fit in the object's yaw frame (slopes along local x and z) → world up vector.
@@ -58,6 +63,45 @@ export function groundPose(obj: Placeable, x: number, z: number, yaw: number, te
   const Z: Vec3 = [X[1] * n[2] - X[2] * n[1], X[2] * n[0] - X[0] * n[2], X[0] * n[1] - X[1] * n[0]];
   const q: Quat = quatFromBasis(X, n, Z);
   return { position: [x, y, z], rotation: eulerFromQuat(q) };
+}
+
+/** Footprint sample grid (per side) for the foundation rule: corners alone miss ridges. */
+const FOOTPRINT_SAMPLES = 5;
+
+function footprintScan(terrain: TerrainSampler, x: number, z: number, hx: number, hz: number, c: number, s: number, max: boolean): number {
+  let best = max ? -Infinity : Infinity;
+  const n = FOOTPRINT_SAMPLES - 1;
+  for (let i = 0; i <= n; i++) {
+    for (let j = 0; j <= n; j++) {
+      const lx = -hx + (2 * hx * i) / n;
+      const lz = -hz + (2 * hz * j) / n;
+      const h = terrain.sampleHeight(x + lx * c + lz * s, z - lx * s + lz * c);
+      best = max ? Math.max(best, h) : Math.min(best, h);
+    }
+  }
+  return best;
+}
+
+function footprintMax(terrain: TerrainSampler, x: number, z: number, hx: number, hz: number, c: number, s: number) {
+  return footprintScan(terrain, x, z, hx, hz, c, s, true);
+}
+
+/**
+ * Depth (m) of the foundation plinth under an object: from its floor (origin) down to the
+ * lowest ground point of its footprint. 0 on flat ground and for objects whose origin is at or
+ * below the lowest point (e.g. buildings placed by the pre-Phase-13 'min' rule).
+ */
+export function foundationPlinth(obj: Placeable, terrain: TerrainSampler): number {
+  if (terrain.flat) return 0;
+  const def = getDefinition(obj.type);
+  if (def.terrainFit?.base !== 'foundation') return 0;
+  const d = def.getDimensions(obj.params);
+  const k = obj.transform.scale;
+  const yaw = yawOf(obj.transform.rotation);
+  const [x, y, z] = obj.transform.position;
+  const lo = footprintScan(terrain, x, z, (d[0] * k[0]) / 2, (d[2] * k[2]) / 2, Math.cos(yaw), Math.sin(yaw), false);
+  const depth = y - lo;
+  return depth > 0.02 ? depth : 0;
 }
 
 /** Heading of an object (rotation about +Y), ignoring any terrain tilt. */
@@ -73,5 +117,19 @@ export function reseat(obj: Placeable, terrain: TerrainSampler, x = obj.transfor
 
 /** Whether the object currently stands on the ground (rather than being lifted on purpose). */
 export function isGrounded(obj: Placeable, terrain: TerrainSampler): boolean {
-  return Math.abs(obj.transform.position[1] - reseat(obj, terrain).position[1]) <= GROUNDED_TOLERANCE;
+  if (Math.abs(obj.transform.position[1] - reseat(obj, terrain).position[1]) <= GROUNDED_TOLERANCE) return true;
+  // Buildings placed before Phase 13 sit on their lowest corner: still grounded (they follow edits).
+  if (getDefinition(obj.type).terrainFit?.base !== 'foundation' || terrain.flat) return false;
+  const def = getDefinition(obj.type);
+  const d = def.getDimensions(obj.params);
+  const k = obj.transform.scale;
+  const yaw = yawOf(obj.transform.rotation);
+  const [x, y, z] = obj.transform.position;
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const hx = (d[0] * k[0]) / 2;
+  const hz = (d[2] * k[2]) / 2;
+  const corner = (lx: number, lz: number) => terrain.sampleHeight(x + lx * c + lz * s, z - lx * s + lz * c);
+  const legacy = Math.min(terrain.sampleHeight(x, z), corner(hx, hz), corner(hx, -hz), corner(-hx, hz), corner(-hx, -hz));
+  return Math.abs(y - legacy) <= GROUNDED_TOLERANCE;
 }

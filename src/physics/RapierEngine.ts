@@ -173,6 +173,13 @@ export class RapierEngine implements PhysicsEngine {
     this.forced.add(h);
   }
 
+  addForce(h: BodyHandle, f: Vec3) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    b.addForce({ x: f[0], y: f[1], z: f[2] }, true);
+    this.forced.add(h);
+  }
+
   applyImpulse(h: BodyHandle, i: Vec3, p?: Vec3) {
     const b = this.bodies.get(h);
     if (!b) return;
@@ -211,6 +218,10 @@ export class RapierEngine implements PhysicsEngine {
   getAngularVelocity(h: BodyHandle): Vec3 {
     const v = this.bodies.get(h)?.angvel();
     return v ? [v.x, v.y, v.z] : [0, 0, 0];
+  }
+
+  getMass(h: BodyHandle) {
+    return this.bodies.get(h)?.mass() ?? 0;
   }
 
   isSleeping(h: BodyHandle) {

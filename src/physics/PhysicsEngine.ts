@@ -73,6 +73,8 @@ export interface PhysicsEngine {
   setRotationsLocked(h: BodyHandle, locked: boolean): void;
   /** Persistent force for the next step (cleared by clearForces). */
   addForceAtPoint(h: BodyHandle, force: Vec3, worldPoint: Vec3): void;
+  /** Force through the center of mass for the next step (no torque; cleared by clearForces). */
+  addForce(h: BodyHandle, force: Vec3): void;
   applyImpulse(h: BodyHandle, impulse: Vec3, worldPoint?: Vec3): void;
   applyTorqueImpulse(h: BodyHandle, torque: Vec3): void;
   clearForces(): void;
@@ -80,6 +82,8 @@ export interface PhysicsEngine {
   getLinearVelocity(h: BodyHandle): Vec3;
   getAngularVelocity(h: BodyHandle): Vec3;
   isSleeping(h: BodyHandle): boolean;
+  /** Total mass of a body (kg). */
+  getMass(h: BodyHandle): number;
   wake(h: BodyHandle): void;
   /** Put a body to sleep (it wakes on the next applied force or contact change). */
   sleep(h: BodyHandle): void;

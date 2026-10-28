@@ -21,5 +21,7 @@ export interface SimulationEvent<TSpec extends EventSpec = EventSpec> {
   onEnd?(ctx: EventContext, reason: 'finished' | 'superseded'): void;
   /** Planned intensity 0–1 at a local time, for drawing on the timeline. */
   intensityAt(localTime: number): number;
+  /** Optional planned signal (e.g. ground acceleration in g) sampled `n` times over the duration. */
+  waveform?(n: number): number[];
   describe(): I18nMessage;
 }

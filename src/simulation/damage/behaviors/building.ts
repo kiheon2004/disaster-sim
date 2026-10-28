@@ -8,6 +8,8 @@ import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris, spawnParticles } from '../spawn';
 import { heightFactor } from '../windLoad';
 import { createLocalWind, createSampleCache, type LocalWind } from '../../wind/SpatialWindField';
+import type { DamageCause } from '../../analysis/DamageEvent';
+import { seismicLevel, seismicHealth } from '../seismicLevels';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -119,8 +121,18 @@ function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext
   }
 }
 
+/** Earthquake collapse: debris falls along the building's response, not downwind. */
+export interface QuakeCollapse {
+  /** Horizontal unit direction the structure was swaying / leaning toward. */
+  dir: Vec3;
+  /** Horizontal velocity of the top relative to the ground (m/s). */
+  speed: number;
+  cause: DamageCause;
+  response: number;
+}
+
 /** Total structural failure: the building breaks into heavy chunks. */
-function collapse(e: RuntimeEntity, ctx: SystemContext) {
+export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeCollapse) {
   const { physics } = ctx;
   const p = e.source.params as BuildingParams;
   const k = e.source.transform.scale;
@@ -131,7 +143,7 @@ function collapse(e: RuntimeEntity, ctx: SystemContext) {
   const H = buildingHeight(p);
   const layers = Math.min(p.floors, 6);
   const structureMass = e.components.find((c) => c.spec.kind === 'structure')?.spec.mass ?? e.source.physics.mass;
-  const flow = ctx.env.wind.flow();
+  const flow = quake ? quake.dir : ctx.env.wind.flow();
   for (let ly = 0; ly < layers; ly++) {
     for (let ix = 0; ix < 2; ix++) {
       for (let iz = 0; iz < 2; iz++) {
@@ -142,15 +154,27 @@ function collapse(e: RuntimeEntity, ctx: SystemContext) {
           size: [(p.width / 2) * k[0] * 0.97, (H / layers) * k[1] * 0.97, (p.depth / 2) * k[2] * 0.97],
           mass: Math.min(80000, structureMass / (layers * 4)),
           color: p.color,
-          push: vScale(flow, 0.4 + ly * 0.15),
+          // Upper chunks topple farther; an earthquake also carries the sway velocity.
+          push: quake ? vScale(flow, 0.3 + ly * 0.25 + (quake.speed * (ly + 1)) / layers) : vScale(flow, 0.4 + ly * 0.15),
+          hazard: quake ? 'earthquake' : undefined,
         });
       }
     }
   }
   e.rev++;
   ctx.env.windField.removeObstacle(e.id);
+  if (quake) {
+    ctx.log(e.id, 'danger', { key: 'log.quake.collapsed' });
+    ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard: 'earthquake', response: quake.response, damageAfter: 1 });
+    return;
+  }
   ctx.log(e.id, 'danger', { key: 'log.building.collapsed' });
   ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', damageAfter: 1 });
+}
+
+/** Count a facade part that failed outside updateBuilding (earthquake damage). */
+export function noteFacadeFailure(e: RuntimeEntity) {
+  facadeOf(e).failed++;
 }
 
 /** Per-building bookkeeping so a step only visits the facade parts that are due. */
@@ -239,6 +263,8 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   if (structure) {
     structure.loadRatio = e.loadRatio;
     structure.health = applyFatigue(structure.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+    // Earthquake damage (if any) and wind fatigue share one structural health.
+    if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
     e.health = structure.health;
     if (structure.health <= 0) {
       collapse(e, ctx);
@@ -251,5 +277,6 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   let s = worst(loadLevel(e.loadRatio * 2.2), healthLevel(e.health)); // envelope "feels" stress earlier than the core
   if (failed > 0) s = worst(s, DamageState.DAMAGED);
   if (frac > 0.35) s = worst(s, DamageState.CRITICAL);
+  if (e.seismic) s = worst(s, seismicLevel(e.seismic));
   e.state = s;
 }

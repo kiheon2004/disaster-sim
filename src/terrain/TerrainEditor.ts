@@ -5,10 +5,10 @@
  * Every dab returns the vertex rectangle it touched so the renderer can update just that
  * region; the stroke as a whole becomes one undo step (see worldStore.commitTerrainStroke).
  */
-import type { GroundTypeId, TerrainData } from '@/core/model';
+import type { GroundTypeId, SoilProfileId, TerrainData } from '@/core/model';
 import { quantizeHeight, rectForCircle, type GridRect } from './TerrainData';
 
-export type TerrainBrushOp = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint';
+export type TerrainBrushOp = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'paintSoil';
 
 export interface BrushSettings {
   /** Radius (m). */
@@ -39,6 +39,8 @@ export interface DabOptions {
   targetHeight?: number;
   /** Ground type for 'paint'. */
   groundType?: GroundTypeId;
+  /** Soil profile for 'paintSoil'. */
+  soilType?: SoilProfileId;
 }
 
 /** Scratch copy of the heights used by 'smooth' so the result is independent of visit order. */
@@ -51,8 +53,9 @@ export function applyDab(t: TerrainData, o: DabOptions): GridRect | null {
   const { nx, cellSize: cs, originX, originZ, heights: h } = t;
   const strength = Math.max(0, Math.min(1, o.brush.strength));
 
-  if (o.op === 'paint') {
-    const type = o.groundType ?? 0;
+  if (o.op === 'paint' || o.op === 'paintSoil') {
+    const layer = o.op === 'paint' ? t.ground : t.soil;
+    const type = o.op === 'paint' ? (o.groundType ?? 0) : (o.soilType ?? 1);
     // Paint the inner part of the bell so edges stay crisp; strength widens the core.
     const core = 0.35 + 0.6 * strength;
     let touched = false;
@@ -60,7 +63,7 @@ export function applyDab(t: TerrainData, o: DabOptions): GridRect | null {
       for (let ix = rect.x0; ix <= rect.x1; ix++) {
         const d = Math.hypot(originX + ix * cs - o.x, originZ + iz * cs - o.z);
         if (d <= radius * core) {
-          t.ground[iz * nx + ix] = type;
+          layer[iz * nx + ix] = type;
           touched = true;
         }
       }

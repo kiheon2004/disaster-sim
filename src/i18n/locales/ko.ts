@@ -2,6 +2,8 @@
  * Korean (default) dictionary. This file defines the canonical set of keys;
  * every other locale must provide the same keys (enforced by the type system).
  */
+import { koEarthquake } from './ko.earthquake';
+
 export const ko = {
   // App
   'app.title': '재난 시뮬레이션 샌드박스',
@@ -339,7 +341,7 @@ export const ko = {
   'parse.invalid': '명령 형식이 올바르지 않습니다: {detail}',
   'parse.unsupported.rain': '폭우 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
   'parse.unsupported.snow': '폭설 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
-  'parse.unsupported.earthquake': '지진 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
+  'parse.unsupported.earthquake': '지진 이벤트로 인식했습니다.',
   'parse.unsupported.flood': '홍수 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
   'parse.unsupported.tsunami': '쓰나미 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
   'parse.unsupported.fire': '화재 이벤트를 인식했지만 아직 시뮬레이션하지 않습니다 (향후 지원).',
@@ -576,6 +578,7 @@ export const ko = {
   'viewport.hint.terrainInspect': '{tool}: 지형 클릭 · 좌클릭 드래그: 회전 · Esc: 종료',
   'shortcut.brush': '브러시 크기 (지형 편집)',
   'toast.terrainPreset': '지형 프리셋 “{name}”을(를) 적용했습니다.',
+  ...koEarthquake,
 } as const;
 
 export type MessageKey = keyof typeof ko;

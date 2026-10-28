@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Vec3 } from '@/core/types';
 import type { TerrainData } from '@/core/model';
 import { qRotate, quatFromEuler, radToDeg } from '@/core/math';
-import { createEmptyDocument, createWorldObject } from '@/world/WorldDocument';
+import { createEmptyDocument, createWorldObject, SCHEMA_VERSION } from '@/world/WorldDocument';
 import { parseDocument, serializeDocument } from '@/world/serialization';
 import { useWorldStore } from '@/world/worldStore';
 import { createFlatTerrain, quantizeHeight } from './TerrainData';
@@ -10,7 +10,7 @@ import { TerrainSampler } from './TerrainSampler';
 import { applyDab } from './TerrainEditor';
 import { generateTerrain, TERRAIN_PRESETS } from './TerrainPresets';
 import { decodeTerrain, encodeTerrain } from './terrainCodec';
-import { groundPose, isGrounded, reseat } from './groundPlacement';
+import { foundationPlinth, groundPose, isGrounded, reseat } from './groundPlacement';
 
 /** 21 × 21 m test grid centered on the origin (1 m cells) filled from f(x, z). */
 function grid(f: (x: number, z: number) => number, size = 20): TerrainData {
@@ -156,7 +156,7 @@ describe('save / load', () => {
     const res = parseDocument(serializeDocument(doc));
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.doc.schemaVersion).toBe(2);
+    expect(res.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(res.doc.terrain.heights).toEqual(doc.terrain.heights);
     expect(res.doc.terrain.settings).toEqual({ preset: 'gentleHills', seed: 3, waterLevel: null });
     expect(res.doc.objects[o.id].transform.position).toEqual([1, 2, 3]);
@@ -176,7 +176,7 @@ describe('save / load', () => {
     const res = parseDocument(JSON.stringify(v1));
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.doc.schemaVersion).toBe(2);
+    expect(res.doc.schemaVersion).toBe(SCHEMA_VERSION); // migrated to the current schema (v3 since Phase 13)
     expect(res.doc.terrain.kind).toBe('heightfield');
     expect(res.doc.terrain.nx).toBe(201);
     expect(new TerrainSampler(res.doc.terrain).flat).toBe(true);
@@ -228,14 +228,18 @@ describe('object placement on terrain', () => {
     expect(groundPose(obj('car'), 3, 4, 0.7, flat)).toEqual({ position: [3, 0, 4], rotation: [0, 0.7, 0] });
   });
 
-  it('building stays level on its lowest corner; person level at its feet', () => {
+  it('building stays level on its highest footprint point (plinth below, nothing buried); person level at its feet', () => {
+    // Phase 13: previously the building sat on its LOWEST corner and the uphill side was buried.
     const b = obj('building');
     const p = groundPose(b, 1, 2, 0, slope);
     expect(p.rotation).toEqual([0, 0, 0]);
-    expect(p.position[1]).toBeLessThan(slope.sampleHeight(1, 2));
+    expect(p.position[1]).toBeGreaterThan(slope.sampleHeight(1, 2));
     const w = Number(b.params.width);
     const d = Number(b.params.depth);
-    expect(p.position[1]).toBeCloseTo(slope.sampleHeight(1 - w / 2, 2 - d / 2), 4);
+    const corners = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => slope.sampleHeight(1 + (sx * w) / 2, 2 + (sz * d) / 2));
+    expect(p.position[1]).toBeCloseTo(Math.max(...corners), 4);
+    const placed = { ...b, transform: { ...b.transform, position: p.position, rotation: p.rotation } };
+    expect(foundationPlinth(placed, slope)).toBeCloseTo(Math.max(...corners) - Math.min(...corners), 3);
     const h = groundPose(obj('human'), 1, 2, 1.2, slope);
     expect(h.position[1]).toBeCloseTo(slope.sampleHeight(1, 2), 6);
     expect(up(h.rotation)[1]).toBeCloseTo(1, 9);

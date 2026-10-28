@@ -1,4 +1,5 @@
 import type { MessageKey } from './ko';
+import { enEarthquake } from './en.earthquake';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -337,7 +338,7 @@ export const en: Record<MessageKey, string> = {
   'parse.invalid': 'Invalid command: {detail}',
   'parse.unsupported.rain': 'Heavy rain recognized but not simulated yet (coming later).',
   'parse.unsupported.snow': 'Snow recognized but not simulated yet (coming later).',
-  'parse.unsupported.earthquake': 'Earthquake recognized but not simulated yet (coming later).',
+  'parse.unsupported.earthquake': 'Recognized as an earthquake event.',
   'parse.unsupported.flood': 'Flood recognized but not simulated yet (coming later).',
   'parse.unsupported.tsunami': 'Tsunami recognized but not simulated yet (coming later).',
   'parse.unsupported.fire': 'Fire recognized but not simulated yet (coming later).',
@@ -574,4 +575,5 @@ export const en: Record<MessageKey, string> = {
   'viewport.hint.terrainInspect': '{tool}: click the terrain · Left-drag: orbit · Esc: exit',
   'shortcut.brush': 'Brush size (terrain editing)',
   'toast.terrainPreset': 'Applied terrain preset “{name}”.',
+  ...enEarthquake,
 };

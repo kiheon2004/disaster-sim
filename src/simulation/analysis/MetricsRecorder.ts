@@ -3,6 +3,7 @@ import type { EnvironmentState } from '../environment/EnvironmentState';
 import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { DamageState } from '../damage/DamageState';
 import type { DamageEventInput, DamageEventRecord } from './DamageEvent';
+import { SeismicRecorder, type EarthquakeMetrics } from './SeismicRecorder';
 
 export interface SimulationMetrics {
   seed: number;
@@ -23,6 +24,8 @@ export interface SimulationMetrics {
   totalDamageEvents: number;
   /** Damage events per second bucket (index = floor(time)). */
   histogram: number[];
+  /** Earthquake analysis (null when no earthquake ran). */
+  earthquake: EarthquakeMetrics | null;
 }
 
 const MAX_EVENTS = 20000;
@@ -43,6 +46,8 @@ export class MetricsRecorder {
   private firstDamage: number | null = null;
   /** step → entity ids that already produced a specific event this step */
   private stepMarks = new Set<EntityId>();
+  /** Earthquake peaks and time series (Phase 13). */
+  readonly seismic = new SeismicRecorder();
 
   constructor(readonly seed: number) {}
 
@@ -69,6 +74,9 @@ export class MetricsRecorder {
       cause: ev.cause,
       componentId: ev.componentId,
       componentKind: ev.componentKind,
+      hazard: ev.hazard ?? 'wind',
+      groundAcceleration: ev.groundAcceleration ?? (ev.hazard === 'earthquake' && e.seismic ? Math.hypot(e.seismic.ground.a[0], e.seismic.ground.a[2]) : 0),
+      response: ev.response ?? 0,
     };
     this.events.push(rec);
     if (this.firstDamage === null) this.firstDamage = time;
@@ -76,6 +84,7 @@ export class MetricsRecorder {
     while (this.histogram.length <= b) this.histogram.push(0);
     this.histogram[b]++;
     e.lastCause = ev.cause;
+    e.lastHazard = rec.hazard;
   }
 
   /** Whether a specific event was already recorded for this entity in the current step. */
@@ -96,6 +105,7 @@ export class MetricsRecorder {
         this.maxLocalId = e.id;
       }
     }
+    this.seismic.sample(env, runtime, dt);
   }
 
   summary(runtime: SimulationRuntime, time: number): SimulationMetrics {
@@ -131,6 +141,7 @@ export class MetricsRecorder {
       peakDamageCount: peakCount,
       totalDamageEvents: this.events.length,
       histogram: this.histogram.slice(),
+      earthquake: this.seismic.summary(runtime, this.events),
     };
   }
 }

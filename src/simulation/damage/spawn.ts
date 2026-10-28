@@ -3,6 +3,7 @@ import { qRotate, vAdd, vScale } from '@/core/math';
 import type { ComponentSpec } from '@/core/model';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { DebrisPiece, RuntimeEntity } from '../SimulationRuntime';
+import type { Hazard } from '../analysis/DamageEvent';
 
 export const MAX_DEBRIS = 320;
 export const MAX_PARTICLES = 1600;
@@ -22,7 +23,7 @@ export function componentWorldNormal(e: RuntimeEntity, c: ComponentSpec): Vec3 |
 export function spawnDebris(
   ctx: SystemContext,
   e: RuntimeEntity,
-  opts: { kind: ComponentSpec['kind']; position: Vec3; size: Vec3; mass: number; color: string; push?: Vec3 },
+  opts: { kind: ComponentSpec['kind']; position: Vec3; size: Vec3; mass: number; color: string; push?: Vec3; hazard?: Hazard },
 ): DebrisPiece | null {
   const { runtime, physics } = ctx;
   if (runtime.debris.length >= MAX_DEBRIS) {
@@ -61,6 +62,7 @@ export function spawnDebris(
     plate: minDim / maxDim < 0.18,
     pose: { position: opts.position, quaternion: e.pose.quaternion },
     spawnTime: ctx.time,
+    hazard: opts.hazard ?? 'wind',
   };
   runtime.debris.push(piece);
   runtime.debrisRev++;

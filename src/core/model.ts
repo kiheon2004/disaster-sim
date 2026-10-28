@@ -4,6 +4,7 @@
  * typed arrays in memory and go through the terrain codec (src/terrain/terrainCodec.ts) on save.
  */
 import type { EntityId, ObjectType, Transform, Vec3 } from './types';
+import type { EarthquakeEventSpec } from '@/events/specs';
 
 export interface PhysicalProperties {
   /** kg */
@@ -71,6 +72,49 @@ export interface WorldObject {
   params: ObjectParams;
   /** Generated from params by the object definition; kept in the document for transparency. */
   components: ComponentSpec[];
+  /**
+   * Earthquake properties (Phase 13): structural system + foundation. Present on buildings;
+   * other objects use type defaults. Missing in older files → filled in on load.
+   */
+  seismic?: SeismicProperties;
+}
+
+// ── Earthquake: structure & foundation (approximate model parameters) ─────────
+
+/** Lateral structural system — selects period formula, strength and drift capacities. */
+export type StructuralSystem = 'rcFrame' | 'steelFrame' | 'masonry' | 'wood';
+
+export interface StructuralSpec {
+  system: StructuralSystem;
+  /** Viscous damping ratio of the first mode (0.01–0.2). */
+  dampingRatio: number;
+  /** Multiplier on lateral stiffness (period ∝ 1/√k). */
+  stiffnessFactor: number;
+  /** Multiplier on lateral yield strength. */
+  strengthFactor: number;
+  /** Fundamental period override (s); 0 = estimated from height and system. */
+  periodOverride: number;
+}
+
+export type FoundationType = 'spread' | 'mat' | 'pile';
+
+export interface FoundationSpec {
+  type: FoundationType;
+  /** Multiplier on the soil-derived horizontal foundation stiffness. */
+  stiffness: number;
+  /** Foundation (radiation + material) damping ratio; 0 = from the soil profile. */
+  damping: number;
+  /** Lateral resistance before the foundation slips, as a fraction of the building weight. */
+  anchorage: number;
+  /** Fraction of the footprint bearing on the ground (0.2–1). */
+  groundContact: number;
+  /** Residual tilt (degrees) at which the foundation counts as failed. */
+  failureThreshold: number;
+}
+
+export interface SeismicProperties {
+  structure: StructuralSpec;
+  foundation: FoundationSpec;
 }
 
 /**
@@ -125,6 +169,9 @@ export interface WorldSettings {
 /** Ground type ids (index into the GroundMaterialRegistry; stored as bytes). */
 export type GroundTypeId = 0 | 1 | 2 | 3 | 4;
 
+/** Soil profile ids (index into the SoilProfileRegistry; stored as bytes). Independent of the surface. */
+export type SoilProfileId = 0 | 1 | 2 | 3;
+
 export type TerrainPresetId = 'flat' | 'gentleHills' | 'valley' | 'coastal';
 
 export interface TerrainSettings {
@@ -145,8 +192,8 @@ export interface TerrainSettings {
  * (index = iz·nx + ix). Each grid cell is split into two triangles along its (x1,z0)–(x0,z1)
  * diagonal — the same triangulation the renderer and the physics collider use.
  *
- * Future layers (soil strength, permeability, moisture, seismic amplification …) are added as
- * further optional per-vertex typed arrays next to `ground`, each with its own codec entry.
+ * Further layers (permeability map, moisture …) are added as per-vertex typed arrays next to
+ * `ground` and `soil`, each with its own codec entry.
  */
 export interface TerrainData {
   kind: 'heightfield';
@@ -157,17 +204,26 @@ export interface TerrainData {
   originZ: number;
   /** Elevation per vertex (m), quantized to 1 cm so save/load is exact. */
   heights: Float32Array;
-  /** Ground type per vertex (GroundTypeId). */
+  /** Surface material per vertex (GroundTypeId) — what you walk on (grass, asphalt …). */
   ground: Uint8Array;
+  /** Soil profile per vertex (SoilProfileId) — what lies beneath (rock, soft soil …). Phase 13. */
+  soil: Uint8Array;
   settings: TerrainSettings;
   /** Bumped on every in-place change; renderers and caches compare it. Not saved. */
   revision: number;
 }
 
+/** Hazard scenarios saved with the project (Phase 13). */
+export interface ScenarioSettings {
+  /** The configured earthquake (run from the earthquake form / commands), or none. */
+  earthquake: EarthquakeEventSpec | null;
+}
+
 export interface WorldDocument {
-  schemaVersion: 2;
+  schemaVersion: 3;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;
   objects: Record<EntityId, WorldObject>;
+  scenario: ScenarioSettings;
 }

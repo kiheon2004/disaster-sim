@@ -34,13 +34,20 @@ export class SwaySystem implements SimulationSystem {
         const target = maxBend * clamp(r / 1.3, 0, 1.2) + lean;
         // Damped spring at the tree's natural frequency (~0.4–0.6 Hz).
         const omega = 2 * Math.PI * (conifer ? 0.55 : 0.42);
-        const accel = -omega * omega * (vis.swayAngle - target) - 2 * 0.18 * omega * vis.swayVel;
+        let accel = -omega * omega * (vis.swayAngle - target) - 2 * 0.18 * omega * vis.swayVel;
+        // Earthquake: base excitation — the crown lags behind the moving ground.
+        if (e.seismic && e.seismic.shake > 0) {
+          const a = e.seismic.ground.a;
+          accel -= (a[0] * fx + a[2] * fz) / (0.6 * Math.max(2, e.dims[1]));
+        }
         vis.swayVel += accel * dt;
         vis.swayAngle += vis.swayVel * dt;
         // Leaf flutter
         vis.swayAngle += Math.sin(time * 9 + (e.source.seed % 1000)) * 0.004 * smoothstep(0.05, 0.5, r);
       } else if (e.source.type === 'human') {
-        const target = e.flags.fallen ? 0 : smoothstep(0.12, 0.9, r);
+        let target = e.flags.fallen ? 0 : smoothstep(0.12, 0.9, r);
+        // Earthquake: people crouch and brace while the ground shakes.
+        if (e.seismic && !e.flags.fallen) target = Math.max(target, smoothstep(0.05, 0.6, e.seismic.shake));
         vis.brace += (target - vis.brace) * Math.min(1, dt * 4);
         // People lean INTO the wind (negative = upwind).
         vis.swayAngle = -0.2 * vis.brace + Math.sin(time * 3.1 + (e.source.seed % 1000)) * 0.03 * vis.brace;
