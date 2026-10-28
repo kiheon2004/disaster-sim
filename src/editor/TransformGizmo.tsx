@@ -5,6 +5,7 @@ import type * as THREE from 'three';
 import { degToRad } from '@/core/math';
 import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from './editorStore';
+import { gridStep, useBuildStore } from './buildStore';
 import { entityNodeName } from '@/rendering/objectNames';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { isGrounded, reseat } from '@/terrain/groundPlacement';
@@ -14,6 +15,7 @@ export function TransformGizmo() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const mode = useEditorStore((s) => s.transformMode);
   const snap = useEditorStore((s) => s.snap);
+  const snapping = useBuildStore((s) => s.snapping);
   const exists = useWorldStore((s) => (selectedId ? !!s.doc.objects[selectedId] : false));
   const scene = useThree((s) => s.scene);
   const [target, setTarget] = useState<THREE.Object3D | null>(null);
@@ -67,8 +69,8 @@ export function TransformGizmo() {
       space={mode === 'translate' ? 'world' : 'local'}
       showX={mode !== 'rotate'}
       showZ={mode !== 'rotate'}
-      translationSnap={snap ? 0.5 : null}
-      rotationSnap={snap ? degToRad(15) : null}
+      translationSnap={snap ? gridStep(snapping.grid, 0) : null}
+      rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
       scaleSnap={snap ? 0.1 : null}
       ref={controlsRef as never}
       onMouseDown={() => {

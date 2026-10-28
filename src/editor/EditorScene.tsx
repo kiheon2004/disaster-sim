@@ -1,5 +1,6 @@
-import { memo, useMemo } from 'react';
-import type { ThreeEvent } from '@react-three/fiber';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import type { EntityId } from '@/core/types';
 import type { WorldObject } from '@/core/model';
 import { WORLD_SIZE } from '@/core/units';
 import { getDefinition } from '@/objects/registry';
@@ -8,11 +9,25 @@ import { StaticObjectView } from '@/rendering/views';
 import { SelectionBox } from '@/rendering/SelectionBox';
 import { entityNodeName } from '@/rendering/objectNames';
 import { CastShadowContext, castsShadow } from '@/rendering/materials';
+import { EditorBatches } from '@/rendering/editor/EditorBatches';
+import { setEditorBatches } from '@/rendering/editor/editorRenderStats';
+import { samplerFor } from '@/terrain/TerrainSampler';
+import { clickSelect } from '@/app/buildActions';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
 import { TerrainTool } from './tools/TerrainTool';
+import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
+import { PasteTool } from './tools/PasteTool';
 import { TransformGizmo } from './TransformGizmo';
+import { GroupSelection } from './GroupSelection';
+import { MarqueeSelect } from './MarqueeSelect';
 
+const mods = (e: ThreeEvent<MouseEvent>) => ({ shift: e.nativeEvent.shiftKey, alt: e.nativeEvent.altKey });
+
+/**
+ * One object drawn as its own React view: roads (few, textured, ground layer) and the single
+ * selected object (the transform gizmo binds to its scene node). Everything else is batched.
+ */
 const EditorEntity = memo(function EditorEntity({
   obj,
   interactive,
@@ -32,7 +47,7 @@ const EditorEntity = memo(function EditorEntity({
         onClick: (e: ThreeEvent<MouseEvent>) => {
           e.stopPropagation();
           if (e.delta > 5 || useEditorStore.getState().dragging) return;
-          useEditorStore.getState().select(obj.id);
+          clickSelect(obj.id, mods(e));
         },
         onPointerOver: (e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
@@ -57,14 +72,78 @@ const EditorEntity = memo(function EditorEntity({
   );
 });
 
-/** Click on empty ground clears the selection. */
+/**
+ * Every non-road object through the instanced adapter (Phase 16 — same batches as the
+ * simulation). `hide`: ids drawn elsewhere right now (the selection being edited).
+ */
+function EditorBatchLayer({ hide, interactive }: { hide: ReadonlySet<EntityId>; interactive: boolean }) {
+  const objects = useWorldStore((s) => s.doc.objects);
+  const terrain = useWorldStore((s) => s.doc.terrain);
+  const camera = useThree((s) => s.camera);
+  // Created in an effect (StrictMode-safe, like SimRenderLayer).
+  const [batches, setBatches] = useState<EditorBatches | null>(null);
+  useEffect(() => {
+    const b = new EditorBatches(samplerFor(useWorldStore.getState().doc.terrain));
+    setBatches(b);
+    setEditorBatches(b);
+    return () => {
+      setEditorBatches(null);
+      b.dispose();
+    };
+  }, []);
+  useEffect(() => {
+    if (!batches) return;
+    batches.setTerrain(samplerFor(terrain));
+    batches.sync(objects, hide, camera);
+  }, [batches, objects, terrain, hide, camera]);
+  useFrame(({ camera: cam }) => batches?.updateLod(cam));
+
+  const handlers = useMemo(
+    () => ({
+      onClick: (e: ThreeEvent<MouseEvent>) => {
+        e.stopPropagation();
+        if (e.delta > 5 || useEditorStore.getState().dragging) return;
+        const id = batches?.pick(e.object, e.batchId ?? e.instanceId);
+        if (id) clickSelect(id, mods(e));
+      },
+      onPointerMove: (e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation();
+        const id = batches?.pick(e.object, e.batchId ?? e.instanceId) ?? null;
+        useEditorStore.getState().hover(id);
+        document.body.style.cursor = id ? 'pointer' : '';
+      },
+      onPointerOut: () => {
+        useEditorStore.getState().hover(null);
+        document.body.style.cursor = '';
+      },
+    }),
+    [batches],
+  );
+  if (!batches) return null;
+  return <primitive object={batches.root} {...(interactive ? handlers : {})} />;
+}
+
+/** Hover outline for a batched object (one component for all). */
+function HoverBox({ id }: { id: EntityId }) {
+  const obj = useWorldStore((s) => s.doc.objects[id]);
+  const dims = useMemo(() => (obj ? getDefinition(obj.type).getDimensions(obj.params) : null), [obj]);
+  if (!obj || !dims) return null;
+  const { position, rotation, scale } = obj.transform;
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <SelectionBox dims={dims} color="#cfe0ff" opacity={0.6} />
+    </group>
+  );
+}
+
+/** Click on empty ground clears the selection (Shift keeps it). */
 function GroundDeselect() {
   return (
     <mesh
       rotation-x={-Math.PI / 2}
       position-y={0.001}
       onClick={(e) => {
-        if (e.delta > 5 || useEditorStore.getState().dragging) return;
+        if (e.delta > 5 || useEditorStore.getState().dragging || e.nativeEvent.shiftKey) return;
         useEditorStore.getState().select(null);
       }}
     >
@@ -74,31 +153,55 @@ function GroundDeselect() {
   );
 }
 
+const EMPTY = new Set<EntityId>();
+
 /** Editor-mode scene: renders the WorldDocument directly. */
 export function EditorScene() {
   const objects = useWorldStore((s) => s.doc.objects);
   const tool = useEditorStore((s) => s.tool);
+  const selectedIds = useEditorStore((s) => s.selectedIds);
   const selectedId = useEditorStore((s) => s.selectedId);
   const hoveredId = useEditorStore((s) => s.hoveredId);
   const interactive = tool === 'select';
-  const list = Object.values(objects);
+  const count = Object.keys(objects).length;
+  const multi = interactive && selectedIds.length > 1;
+  const single = interactive && selectedIds.length === 1 ? selectedIds[0] : null;
+
+  // Selected objects leave the batches while selected: the single one is a React view (gizmo),
+  // a multi-selection is drawn by GroupSelection (rigid group drag without batch rebuilds).
+  const hide = useMemo(() => (interactive && selectedIds.length ? new Set(selectedIds) : EMPTY), [interactive, selectedIds]);
+  const live = useMemo(() => {
+    const out: WorldObject[] = [];
+    // (Roads of a multi-selection move with the group drawing.)
+    for (const o of Object.values(objects)) if ((o.type === 'road' && !(multi && hide.has(o.id))) || o.id === single) out.push(o);
+    return out;
+  }, [objects, single, multi, hide]);
+  const hoverBatched = interactive && hoveredId && !hide.has(hoveredId) && objects[hoveredId]?.type !== 'road' ? hoveredId : null;
 
   return (
     <>
-      {list.map((o) => (
+      <EditorBatchLayer hide={hide} interactive={interactive} />
+      {live.map((o) => (
         <EditorEntity
           key={o.id}
           obj={o}
           interactive={interactive}
-          selected={o.id === selectedId}
+          selected={interactive && (o.id === single || (multi && selectedIds.includes(o.id)))}
           hovered={interactive && o.id === hoveredId && o.id !== selectedId}
-          objectCount={list.length}
+          objectCount={count}
         />
       ))}
+      {hoverBatched && <HoverBox id={hoverBatched} />}
       {interactive && <GroundDeselect />}
+      {interactive && <MarqueeSelect />}
       {tool === 'place' && <PlaceTool />}
+      {tool === 'brush' && <BrushTool />}
+      {tool === 'line' && <LineTool />}
+      {tool === 'area' && <AreaTool />}
+      {tool === 'paste' && <PasteTool />}
       {tool === 'terrain' && <TerrainTool />}
-      {interactive && <TransformGizmo />}
+      {interactive && single && <TransformGizmo />}
+      {multi && <GroupSelection ids={selectedIds} />}
     </>
   );
 }

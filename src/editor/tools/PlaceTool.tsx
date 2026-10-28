@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Vec3 } from '@/core/types';
 import type { ObjectParams } from '@/core/model';
-import { WORLD_SIZE } from '@/core/units';
 import { seededRandom } from '@/core/math';
 import { getDefinition } from '@/objects/registry';
 import { getPaletteItem } from '@/objects/palette';
@@ -11,23 +10,55 @@ import { useWorldStore } from '@/world/worldStore';
 import { MaterialModeContext } from '@/rendering/materials';
 import { StaticObjectView } from '@/rendering/views';
 import { useEditorStore } from '../editorStore';
-import { isInsideWorld, snapPoint } from '../placement';
+import { gridStep, useBuildStore } from '../buildStore';
+import { isInsideWorld } from '../placement';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { groundPose, type GroundPose } from '@/terrain/groundPlacement';
+import { collisionFootprint, FootprintIndex } from '../build/footprint';
+import { checkPlacement, type PlacementWarning } from '../build/placementCheck';
+import { GroundCatcher } from './shared';
 
-/** Ghost preview that follows the cursor on the ground; click places the armed preset. */
+/** Warnings of the place ghost, for the viewport hint (render-only state). */
+export const useGhostWarnings = (() => {
+  let current: PlacementWarning[] = [];
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (w: PlacementWarning[]) => {
+      if (w.join() === current.join()) return;
+      current = w;
+      for (const l of listeners) l();
+    },
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+  };
+})();
+
+/**
+ * Ghost preview that follows the cursor on the ground; click places the armed preset.
+ * Phase 16: configurable grid step, terrain surface snapping on/off, and a collision / slope
+ * warning tint (orange) — placement stays allowed; outside the world it is refused (red).
+ */
 export function PlaceTool() {
   const itemId = useEditorStore((s) => s.placeItemId);
   const yaw = useEditorStore((s) => s.ghostYaw);
   const snap = useEditorStore((s) => s.snap);
   const randomize = useEditorStore((s) => s.randomize);
+  const snapping = useBuildStore((s) => s.snapping);
   const item = getPaletteItem(itemId);
   const [pos, setPos] = useState<Vec3 | null>(null);
   const terrain = useWorldStore((s) => s.doc.terrain);
+  const objects = useWorldStore((s) => s.doc.objects);
   const [variant, setVariant] = useState(() => Math.floor(Math.random() * 1e9));
 
   // Re-roll the variation whenever a new preset is armed.
   useEffect(() => setVariant(Math.floor(Math.random() * 1e9)), [itemId]);
+  useEffect(() => () => useGhostWarnings.set([]), []);
+  // Published after each render (never during it).
+  const warnRef = useRef<PlacementWarning[]>([]);
+  useEffect(() => useGhostWarnings.set(warnRef.current));
 
   const preview = useMemo(() => {
     if (!item) return null;
@@ -39,22 +70,35 @@ export function PlaceTool() {
     const obj = createWorldObject({ type: item.type, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, params, seed: variant }, 0);
     return { obj, dims: def.getDimensions(params) };
   }, [item, variant, randomize]);
+  const existing = useMemo(() => (snapping.collisionWarning ? FootprintIndex.fromObjects(Object.values(objects)) : null), [objects, snapping.collisionWarning]);
 
   if (!item || !preview) return null;
 
   const footprint = Math.max(preview.dims[0], preview.dims[2]);
+  const step = gridStep(snapping.grid, footprint);
   const valid = pos ? isInsideWorld(pos, preview.dims, yaw) : false;
   const sampler = samplerFor(terrain);
-  /** Seated pose on the terrain for the armed preset (level / tilted per category). */
-  const poseAt = (p: Vec3): GroundPose => groundPose(preview.obj, p[0], p[2], yaw, sampler);
+  /** Seated pose: on the terrain by category rules, or level at the cursor height (snapping off). */
+  const poseAt = (p: Vec3): GroundPose =>
+    snapping.surface ? groundPose(preview.obj, p[0], p[2], yaw, sampler) : { position: [p[0], sampler.sampleHeight(p[0], p[2]), p[2]], rotation: [0, yaw, 0] };
   const ghost = pos ? poseAt(pos) : null;
 
-  /** Intersect the pointer ray with the terrain data (independent of mesh matrices), snap x/z. */
+  let warnings: PlacementWarning[] = [];
+  if (ghost && valid && snapping.collisionWarning) {
+    const placed = { type: item.type, params: preview.obj.params, transform: { position: ghost.position, rotation: ghost.rotation, scale: [1, 1, 1] as Vec3 } };
+    warnings = checkPlacement(placed, sampler, useBuildStore.getState().placement.slopeLimit).warnings;
+    const fp = collisionFootprint(item.type, preview.obj.params, [1, 1, 1], ghost.position[0], ghost.position[2], yaw);
+    if (fp && existing?.overlaps(fp)) warnings.push('overlap');
+  }
+  warnRef.current = valid ? warnings : pos ? ['outside'] : [];
+
+  /** Pointer ray → terrain hit, snapped to the grid on x / z. */
   const groundHit = (e: ThreeEvent<PointerEvent | MouseEvent>): Vec3 | null => {
     const o = e.ray.origin;
     const d = e.ray.direction;
     const hit: Vec3 = [0, 0, 0];
-    return sampler.raycast([o.x, o.y, o.z], [d.x, d.y, d.z], 3000, hit) ? snapPoint(hit, snap, footprint) : null;
+    if (!sampler.raycast([o.x, o.y, o.z], [d.x, d.y, d.z], 3000, hit)) return null;
+    return snap ? [Math.round(hit[0] / step) * step, 0, Math.round(hit[2] / step) * step] : [hit[0], 0, hit[2]];
   };
   const onMove = (e: ThreeEvent<PointerEvent>) => setPos(groundHit(e));
   const onClick = (e: ThreeEvent<MouseEvent>) => {
@@ -69,17 +113,15 @@ export function PlaceTool() {
       seed: preview.obj.seed,
       transform: { ...poseAt(at), scale: [1, 1, 1] },
     });
+    useBuildStore.getState().pushRecent(item.id);
     setVariant(Math.floor(Math.random() * 1e9));
   };
 
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-60} onPointerMove={onMove} onPointerOut={() => setPos(null)} onClick={onClick}>
-        <planeGeometry args={[WORLD_SIZE * 3, WORLD_SIZE * 3]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
+      <GroundCatcher onMove={onMove} onOut={() => setPos(null)} onClick={onClick} />
       {ghost && (
-        <MaterialModeContext.Provider value={valid ? 'ghost' : 'ghostInvalid'}>
+        <MaterialModeContext.Provider value={!valid ? 'ghostInvalid' : warnings.length ? 'ghostWarn' : 'ghost'}>
           <group position={ghost.position} rotation={ghost.rotation} raycast={() => null}>
             <StaticObjectView obj={preview.obj} />
           </group>

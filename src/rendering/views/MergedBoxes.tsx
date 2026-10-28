@@ -2,7 +2,7 @@ import { forwardRef, useContext, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { Vec3 } from '@/core/types';
 import { UNIT_BOX } from '../geometry/primitives';
-import { CastShadowContext, useMaterialMode, ghostMaterial } from '../materials';
+import { CastShadowContext, useMaterialMode, ghostFor } from '../materials';
 
 import type { BoxPart, MergedMatOptions } from '../parts/objectParts';
 export type { BoxPart, MergedMatOptions };
@@ -72,7 +72,7 @@ export const MergedBoxes = forwardRef<THREE.Mesh, { parts: BoxPart[]; mat?: Merg
     const mode = useMaterialMode();
     const lod = useContext(CastShadowContext);
     const ghost = mode !== 'normal';
-    const material = ghost ? ghostMaterial(mode === 'ghostInvalid') : vertexColorMaterial(mat);
+    const material = ghost ? ghostFor(mode) : vertexColorMaterial(mat);
     return <mesh ref={ref} geometry={geometry} material={material} position={position} castShadow={shadow && !ghost && lod} receiveShadow={!ghost} />;
   },
 );

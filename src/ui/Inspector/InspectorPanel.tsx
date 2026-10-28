@@ -12,12 +12,14 @@ import { TerrainInspector } from './TerrainInspector';
 import { QuakeLiveSection } from './SeismicInspector';
 import { FloodLiveSection, FloodProbeSection } from './FloodInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
+import { MultiInspector } from './MultiInspector';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
   countRender('InspectorPanel');
   const t = useT();
   const selectedId = useEditorStore((s) => s.selectedId);
+  const selectedIds = useEditorStore((s) => s.selectedIds);
   const mode = useEditorStore((s) => s.mode);
   const obj = useWorldStore((s) => (selectedId ? s.doc.objects[selectedId] : undefined));
   const inSim = mode === 'simulation';
@@ -27,6 +29,8 @@ export function InspectorPanel() {
     <Panel title={t('panel.inspector')}>
       {terrainMode && !inSim ? (
         <TerrainInspector />
+      ) : selectedIds.length > 1 && !inSim ? (
+        <MultiInspector ids={selectedIds} readOnly={inSim} />
       ) : obj ? (
         <>
           {inSim && <LiveStatusSection id={obj.id} />}
@@ -57,6 +61,11 @@ function NoSelection() {
   }, [objects]);
 
   const shortcuts: [string, Parameters<typeof t>[0]][] = [
+    ['V / P / B / L / A', 'shortcut.tools'],
+    ['Shift + click / drag', 'shortcut.multiSelect'],
+    ['Ctrl/⌘ + C / V', 'shortcut.copyPaste'],
+    ['Ctrl/⌘ + A', 'shortcut.selectAll'],
+    ['Ctrl/⌘ + G', 'shortcut.group'],
     ['W / E / R', 'shortcut.transform'],
     ['F', 'shortcut.focus'],
     ['Ctrl/⌘ + D', 'shortcut.duplicate'],

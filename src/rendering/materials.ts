@@ -5,7 +5,8 @@ import { createContext, useContext } from 'react';
  * Material cache + "material mode" so the same view components can render
  * normal objects, the placement ghost, or an invalid-placement ghost.
  */
-export type MaterialMode = 'normal' | 'ghost' | 'ghostInvalid';
+/** ghostWarn (Phase 16): placeable, but overlapping another object or badly seated on a slope. */
+export type MaterialMode = 'normal' | 'ghost' | 'ghostInvalid' | 'ghostWarn';
 export const MaterialModeContext = createContext<MaterialMode>('normal');
 
 /** Whether meshes below should cast shadows (turned off for small objects in large scenes). */
@@ -53,15 +54,24 @@ const ghostInvalid = new THREE.MeshStandardMaterial({
   color: '#ff6b6b', transparent: true, opacity: 0.45, depthWrite: false, emissive: new THREE.Color('#a32020'), emissiveIntensity: 0.4,
 });
 
+const ghostWarn = new THREE.MeshStandardMaterial({
+  color: '#ffb54a', transparent: true, opacity: 0.5, depthWrite: false, emissive: new THREE.Color('#a86412'), emissiveIntensity: 0.4,
+});
+
 export function ghostMaterial(invalid: boolean): THREE.Material {
   return invalid ? ghostInvalid : ghostValid;
+}
+
+/** Ghost material for a material mode ('normal' → the valid ghost). */
+export function ghostFor(mode: MaterialMode): THREE.Material {
+  return mode === 'ghostInvalid' ? ghostInvalid : mode === 'ghostWarn' ? ghostWarn : ghostValid;
 }
 
 /** Hook used by every view: resolves a color to the right material for the current mode. */
 export function useMat() {
   const mode = useContext(MaterialModeContext);
   return (color: string, o?: MatOptions): THREE.Material =>
-    mode === 'ghost' ? ghostValid : mode === 'ghostInvalid' ? ghostInvalid : getMaterial(color, o);
+    mode === 'normal' ? getMaterial(color, o) : ghostFor(mode);
 }
 
 export function useMaterialMode() {

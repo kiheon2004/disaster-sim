@@ -3,7 +3,16 @@ import type { EntityId } from '@/core/types';
 import type { GroundTypeId, SoilProfileId } from '@/core/model';
 
 export type AppMode = 'editor' | 'simulation';
-export type EditorTool = 'select' | 'place' | 'terrain';
+/**
+ * Exactly one tool owns viewport input at a time (Phase 16): select (click / Shift+click /
+ * Shift+drag box, gizmo), place (single click), brush (drag to scatter), line (click points),
+ * area (drag a rectangle / circle or paint a region, then apply), paste (clipboard ghost),
+ * terrain (Terrain Editing Mode). Switching tools ends the previous tool's session.
+ */
+export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste' | 'terrain';
+/** Tools that place the armed palette preset. */
+export const PLACEMENT_TOOLS: readonly EditorTool[] = ['place', 'brush', 'line', 'area'];
+export const isPlacementTool = (t: EditorTool) => (PLACEMENT_TOOLS as readonly string[]).includes(t);
 /** Terrain Editing Mode tools: sculpt, paint ground, or read values at a point. */
 export type TerrainToolId = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'soil' | 'inspect';
 
@@ -17,7 +26,10 @@ interface EditorState {
   placeItemId: string | null;
   /** Yaw (rad) applied to the placement ghost. */
   ghostYaw: number;
+  /** Primary selection (inspector, gizmo, camera focus) — the last clicked of `selectedIds`. */
   selectedId: EntityId | null;
+  /** Every selected object (Phase 16 multi-selection), primary included. */
+  selectedIds: EntityId[];
   hoveredId: EntityId | null;
   transformMode: TransformMode;
   snap: boolean;
@@ -36,9 +48,14 @@ interface EditorState {
   terrainProbe: { x: number; z: number } | null;
 
   setMode: (m: AppMode) => void;
+  /** Arm a preset for the current placement tool (place by default); null/same id = back to select. */
   armPlacement: (itemId: string | null) => void;
+  /** Switch tool. Placement tools keep the armed preset; select / paste clear it. */
+  setTool: (tool: Exclude<EditorTool, 'terrain'>) => void;
   rotateGhost: (delta: number) => void;
   select: (id: EntityId | null) => void;
+  /** Replace the selection (primary = `primary` if given and included, else the last id). */
+  setSelection: (ids: EntityId[], primary?: EntityId | null) => void;
   hover: (id: EntityId | null) => void;
   setTransformMode: (m: TransformMode) => void;
   toggleSnap: () => void;
@@ -58,6 +75,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   placeItemId: null,
   ghostYaw: 0,
   selectedId: null,
+  selectedIds: [],
   hoveredId: null,
   transformMode: 'translate',
   snap: true,
@@ -71,19 +89,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   terrainProbe: null,
 
   setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null }),
-  armPlacement: (placeItemId) =>
-    set(placeItemId && placeItemId !== get().placeItemId
-      ? { placeItemId, tool: 'place', selectedId: null }
-      : { placeItemId: null, tool: 'select' }),
+  armPlacement: (placeItemId) => {
+    const cur = get();
+    if (placeItemId && placeItemId !== cur.placeItemId) {
+      set({ placeItemId, tool: isPlacementTool(cur.tool) ? cur.tool : 'place', selectedId: null, selectedIds: [] });
+    } else set({ placeItemId: null, tool: 'select' });
+  },
+  setTool: (tool) => {
+    if (isPlacementTool(tool)) set({ tool, selectedId: null, selectedIds: [], hoveredId: null });
+    else set({ tool, placeItemId: null, hoveredId: null });
+  },
   rotateGhost: (delta) => set({ ghostYaw: (get().ghostYaw + delta) % (Math.PI * 2) }),
-  select: (selectedId) => set({ selectedId }),
+  select: (selectedId) => set({ selectedId, selectedIds: selectedId ? [selectedId] : [] }),
+  setSelection: (ids, primary) => {
+    const unique = [...new Set(ids)];
+    const p = primary && unique.includes(primary) ? primary : unique[unique.length - 1] ?? null;
+    set({ selectedIds: unique, selectedId: p });
+  },
   hover: (hoveredId) => (get().hoveredId !== hoveredId ? set({ hoveredId }) : undefined),
   setTransformMode: (transformMode) => set({ transformMode }),
   toggleSnap: () => set({ snap: !get().snap }),
   toggleRandomize: () => set({ randomize: !get().randomize }),
   setDragging: (dragging) => set({ dragging }),
   setTerrainTool: (t) =>
-    set(t ? { tool: 'terrain', terrainTool: t, placeItemId: null, selectedId: null, hoveredId: null } : { tool: 'select' }),
+    set(t ? { tool: 'terrain', terrainTool: t, placeItemId: null, selectedId: null, selectedIds: [], hoveredId: null } : { tool: 'select' }),
   setBrush: ({ radius, strength }) =>
     set({
       brushRadius: radius === undefined ? get().brushRadius : Math.min(BRUSH_RADIUS_RANGE[1], Math.max(BRUSH_RADIUS_RANGE[0], radius)),

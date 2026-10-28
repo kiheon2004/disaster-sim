@@ -54,6 +54,20 @@ const paths = {
   soil: 'M3 7h18M3 12h18M3 17h18M6 9.5h.01M14 9.5h.01M10 14.5h.01M18 14.5h.01M7 19.5h.01',
   chevronDown: 'M6 9l6 6 6-6',
   chevronRight: 'M9 6l6 6-6 6',
+  // Phase 16 (Creative Build Mode)
+  place: 'M12 21s-6-5.5-6-10a6 6 0 0112 0c0 4.5-6 10-6 10zM12 13a2 2 0 100-4 2 2 0 000 4z',
+  scatter: 'M5 6h.01M10 4h.01M16 6h.01M7 11h.01M13 10h.01M19 11h.01M5 16h.01M11 15h.01M17 16h.01M9 20h.01M15 20h.01',
+  line: 'M4 19L20 5M4 19h.01M9.3 14.3h.01M14.7 9.7h.01M20 5h.01',
+  area: 'M4 4h4M12 4h4M20 4v4M20 12v4M20 20h-4M12 20H8M4 20v-4M4 12V8M9 9h6v6H9z',
+  paste: 'M9 4h6v3H9zM8 5H5v16h14V5h-3M9 12h6M9 16h4',
+  group: 'M3 3h7v7H3zM14 14h7v7h-7zM10 7h4v7',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
+  search: 'M11 18a7 7 0 100-14 7 7 0 000 14zM21 21l-5-5',
+  dice: 'M4 4h16v16H4zM8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01',
+  alignStart: 'M4 3v18M8 7h10v4H8zM8 14h6v4H8z',
+  alignCenter: 'M12 3v18M6 7h12v4H6zM8 14h8v4H8z',
+  alignEnd: 'M20 3v18M6 7h10v4H6zM10 14h6v4h-6z',
+  distribute: 'M4 4v16M20 4v16M9 8h2v8H9zM13 8h2v8h-2z',
 } as const;
 
 export type IconName = keyof typeof paths;

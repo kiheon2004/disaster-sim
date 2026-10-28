@@ -26,6 +26,9 @@ import { createInstance, resolveSchedule } from '@/phenomena/schedule';
 import { defaultScenarios, runComparison, type ScenarioResult } from '@/phenomena/experiment';
 import { defaultExperiment, type PhenomenonContext, type PhenomenonInstance } from '@/phenomena/types';
 import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
+import { deleteSelection, duplicateSelection } from './buildActions';
+import { useBuildStore } from '@/editor/buildStore';
+import { worldFingerprint } from '@/world/fingerprint';
 
 /** Select an object and center the camera on it (its live pose while simulating). */
 export function focusObject(id: EntityId) {
@@ -51,18 +54,14 @@ export function toggleFollow(id: EntityId) {
   v.setFollow(v.followId === id ? null : id);
 }
 
+/** Delete every selected object (one undo step). */
 export function deleteSelected() {
-  const id = useEditorStore.getState().selectedId;
-  if (!id) return;
-  useWorldStore.getState().remove([id]);
-  useEditorStore.getState().select(null);
+  deleteSelection();
 }
 
+/** Duplicate the selection (one undo step; a single object keeps the pre-Phase-16 behavior). */
 export function duplicateSelected() {
-  const id = useEditorStore.getState().selectedId;
-  if (!id) return;
-  const copy = useWorldStore.getState().duplicate(id);
-  if (copy) useEditorStore.getState().select(copy);
+  duplicateSelection();
 }
 
 // ── Project / file actions ────────────────────────────────────────────────
@@ -162,6 +161,11 @@ export async function enterSimulation() {
   const ed = useEditorStore.getState();
   if (ed.mode === 'simulation') return;
   ed.setMode('simulation');
+  useBuildStore.getState().clearSessions();
+  // The original world is read-only while the experiment runs on its snapshot (Phase 16).
+  useWorldStore.getState().setLocked(true);
+  const doc = useWorldStore.getState().doc;
+  useSimStore.getState().set({ baseline: { hash: worldFingerprint(doc), objects: Object.keys(doc.objects).length } });
   try {
     await simulationController.load(useWorldStore.getState().doc);
   } catch (err) {
@@ -176,6 +180,9 @@ export function exitSimulation() {
   useViewStore.getState().setFollow(null);
   useUiStore.getState().setResultsOpen(false);
   simulationController.unload();
+  // The simulation never writes to the document: leaving shows exactly the original world.
+  useSimStore.getState().set({ baseline: null });
+  useWorldStore.getState().setLocked(false);
   useEditorStore.getState().setMode('editor');
 }
 

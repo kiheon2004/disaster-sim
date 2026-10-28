@@ -93,6 +93,8 @@ interface EntityView {
   far: boolean;
   lastRev: number;
   hidden: boolean;
+  /** Hidden by the editor (drawn elsewhere while selected / dragged). Phase 16. */
+  userHidden?: boolean;
   /** Facade instances of a building: [kind, instance index, component index]. */
   facade?: [FacadeKind, number, number][];
   /** Facade part matrices in the building's local frame (earthquake deformation). */
@@ -239,6 +241,7 @@ export class SimRenderAdapter {
   readonly root = new THREE.Group();
   private batches = new Map<PartMat, PartBatch>();
   private views: EntityView[] = [];
+  private byId = new Map<EntityId, EntityView>();
   private facade: FacadeLayer;
   private frame = 0;
   private camPos = new THREE.Vector3();
@@ -365,6 +368,7 @@ export class SimRenderAdapter {
       if (view.type === 'tree') view.canopy = new THREE.Matrix4().makeTranslation(0, view.pivot!, 0);
       if (view.type === 'building') this.initBuilding(view);
       this.views.push(view);
+      this.byId.set(e.id, view);
     });
     this.facade.finish();
   }
@@ -444,7 +448,7 @@ export class SimRenderAdapter {
     const flood = this.runtime.flood !== undefined;
     for (const v of this.views) {
       if (v.e.rev !== v.lastRev) this.applyRev(v);
-      if (v.hidden) continue;
+      if (v.hidden || v.userHidden) continue;
       if (flood && v.e.flood) this.updateWet(v);
       if (v.type === 'building') {
         if (this.quake && v.e.seismic && this.updateBuildingQuake(v)) cracksDirty = true;
@@ -542,7 +546,7 @@ export class SimRenderAdapter {
     v.far = far;
     for (const part of v.parts) {
       if (part.geom[0] !== part.geom[1]) part.batch.mesh.setGeometryIdAt(part.id, part.geom[far ? 1 : 0]);
-      if (part.nearOnly) part.batch.mesh.setVisibleAt(part.id, !far);
+      if (part.nearOnly) part.batch.mesh.setVisibleAt(part.id, !far && !v.userHidden && !v.hidden);
     }
   }
 
@@ -684,6 +688,52 @@ export class SimRenderAdapter {
     if (vAxis.lengthSq() < 1e-18) vAxis.set(0, 0, 0);
     else vAxis.normalize();
     return qA.setFromAxisAngle(vAxis, angle).multiply(setQ(qB, base));
+  }
+
+  // ── Editor use (Phase 16): static world objects, no simulation state ─────
+
+  /**
+   * Hide / show one entity's instances (the editor draws a selected object separately while
+   * it is being edited). Static objects only: matrices are restored from the entity's pose.
+   */
+  setHidden(id: EntityId, hidden: boolean) {
+    const v = this.byId.get(id);
+    if (!v || !!v.userHidden === hidden) return;
+    v.userHidden = hidden;
+    for (const part of v.parts) part.batch.mesh.setVisibleAt(part.id, !hidden && !v.hidden && !(part.nearOnly && v.far));
+    if (v.facade && v.facadeLocal && v.staticRoot) {
+      for (let f = 0; f < v.facade.length; f++) {
+        const [kind, i] = v.facade[f];
+        this.facade.meshes[kind].setMatrixAt(i, hidden ? HIDDEN : mTmp.multiplyMatrices(v.staticRoot, v.facadeLocal[f]));
+        this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
+  /** Distance LOD only — for static scenes whose transforms were written by one update(). */
+  updateLodOnly(camera: THREE.Camera) {
+    camera.getWorldPosition(this.camPos);
+    for (const v of this.views) if (v.type !== 'building' && !v.hidden) this.updateLod(v);
+  }
+
+  /** Draw every part with one material (placement ghosts), without shadows. */
+  setMaterialOverride(material: THREE.Material) {
+    for (const b of this.batches.values()) {
+      b.mesh.material = material;
+      b.mesh.castShadow = false;
+      b.mesh.receiveShadow = false;
+    }
+    for (const kind of FACADE_KINDS) {
+      const m = this.facade.meshes[kind];
+      m.material = material;
+      m.castShadow = false;
+      m.receiveShadow = false;
+    }
+  }
+
+  /** Empty instanced layers are not drawn at all (no zero-instance draw calls). */
+  cullEmpty() {
+    for (const kind of FACADE_KINDS) this.facade.meshes[kind].visible = this.facade.meshes[kind].count > 0;
   }
 
   dispose() {

@@ -120,6 +120,11 @@ export interface SimState {
   milestones: Milestone[];
   /** Time of the loaded water state the next run starts from (null = none). */
   initialWaterTime: number | null;
+  /**
+   * The original world this run started from (Phase 16): its content fingerprint and object
+   * count. The document itself is never modified by the simulation.
+   */
+  baseline: { hash: string; objects: number } | null;
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
 }
 
@@ -141,6 +146,7 @@ export const useSimStore = create<SimState>((set) => ({
   flood: null,
   floodSeries: null,
   initialWaterTime: null,
+  baseline: null,
   milestones: [],
   set: (patch) => set(patch),
 }));

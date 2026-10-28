@@ -14,6 +14,7 @@ import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
 import { useViewStore } from '@/rendering/viewStore';
+import { BuildHint, AreaApplyBar, OriginalWorldBadge } from './BuildOverlays';
 import styles from './ViewportContainer.module.css';
 
 export function ViewportContainer() {
@@ -40,6 +41,7 @@ export function ViewportContainer() {
         {!isEditor && (
           <span className={styles.approx} title={t('model.approximate')}>{t('model.badge')}</span>
         )}
+        {!isEditor && <OriginalWorldBadge />}
         {perf && <PerfHud />}
       </div>
       <div className={`${styles.overlay} ${styles.topRight}`}>
@@ -49,16 +51,15 @@ export function ViewportContainer() {
         {!isEditor && <FloodHud />}
       </div>
       <div className={`${styles.overlay} ${styles.bottomLeft}`}>
-        <span className={styles.hint}>
+        <span className={styles.hint} data-testid="viewport-hint">
           {!isEditor
             ? t('viewport.hint.sim')
-            : tool === 'place' && placeItem
-              ? t('viewport.hint.place', { name: t(placeItem.labelKey) })
-              : tool === 'terrain'
+            : tool === 'terrain'
                 ? t(terrainTool === 'inspect' ? 'viewport.hint.terrainInspect' : 'viewport.hint.terrain', { tool: t(`terrain.tool.${terrainTool}`) })
-                : t('viewport.hint.camera')}
+                : <BuildHint fallback={tool === 'place' && placeItem ? t('viewport.hint.place', { name: t(placeItem.labelKey) }) : t('viewport.hint.camera')} />}
         </span>
       </div>
+      {isEditor && tool === 'area' && <AreaApplyBar />}
       {!isEditor && (
         <div className={`${styles.overlay} ${styles.bottomRight}`}>
           <OverlayToggles />

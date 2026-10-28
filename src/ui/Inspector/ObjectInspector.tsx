@@ -36,7 +36,7 @@ export function ObjectInspector({ obj, readOnly = false }: { obj: WorldObject; r
             onBlur={(e) => e.target.value !== obj.name && store().rename(id, e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
-          <span className={styles.sub}>{t(def.labelKey)} · {id}</span>
+          <span className={styles.sub}>{t(def.labelKey)} · {id}{obj.group ? ` · ${t('object.group')}` : ''}</span>
         </div>
         <div className={styles.actions}>
           <button className={styles.iconBtn} title={t('inspector.focus')} onClick={() => focusObject(id)}><Icon name="focus" size={15} /></button>
