@@ -17,6 +17,7 @@ export const carDefinition = defineObject<CarParams>({
   labelKey: 'object.car',
   icon: 'car',
   physicsProfile: 'dynamic',
+  terrainFit: { align: 1, base: 'mean' },
   defaultParams: { variant: 'sedan', length: 4.5, width: 1.8, height: 1.45, color: '#3d6fd6' },
   paramSchema: [
     {

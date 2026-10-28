@@ -101,3 +101,55 @@ export function hashString(s: string): number {
   }
   return h >>> 0;
 }
+
+/** XYZ Euler angles from a unit quaternion (inverse of quatFromEuler, matches three.js). */
+export function eulerFromQuat(q: Quat): Vec3 {
+  const [x, y, z, w] = q;
+  const m11 = 1 - 2 * (y * y + z * z);
+  const m12 = 2 * (x * y - z * w);
+  const m13 = 2 * (x * z + y * w);
+  const m22 = 1 - 2 * (x * x + z * z);
+  const m23 = 2 * (y * z - x * w);
+  const m32 = 2 * (y * z + x * w);
+  const m33 = 1 - 2 * (x * x + y * y);
+  const ey = Math.asin(clamp(m13, -1, 1));
+  if (Math.abs(m13) < 0.9999999) return [Math.atan2(-m23, m33), ey, Math.atan2(-m12, m11)];
+  return [Math.atan2(m32, m22), ey, 0];
+}
+
+/** Rotation whose local x/y/z axes map onto the given orthonormal world vectors. */
+export function quatFromBasis(x: Vec3, y: Vec3, z: Vec3): Quat {
+  const m00 = x[0], m10 = x[1], m20 = x[2];
+  const m01 = y[0], m11 = y[1], m21 = y[2];
+  const m02 = z[0], m12 = z[1], m22 = z[2];
+  const tr = m00 + m11 + m22;
+  if (tr > 0) {
+    const s = 0.5 / Math.sqrt(tr + 1);
+    return [(m21 - m12) * s, (m02 - m20) * s, (m10 - m01) * s, 0.25 / s];
+  }
+  if (m00 > m11 && m00 > m22) {
+    const s = 2 * Math.sqrt(1 + m00 - m11 - m22);
+    return [0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s];
+  }
+  if (m11 > m22) {
+    const s = 2 * Math.sqrt(1 + m11 - m00 - m22);
+    return [(m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s];
+  }
+  const s = 2 * Math.sqrt(1 + m22 - m00 - m11);
+  return [(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s];
+}
+
+/** Shortest-arc rotation taking unit vector a onto unit vector b. */
+export function quatFromUnitVectors(a: Vec3, b: Vec3): Quat {
+  const r = vDot(a, b) + 1;
+  if (r < 1e-8) {
+    // Opposite vectors: rotate 180° about any perpendicular axis.
+    return Math.abs(a[0]) > Math.abs(a[2]) ? vNormQ([-a[1], a[0], 0, 0]) : vNormQ([0, -a[2], a[1], 0]);
+  }
+  return vNormQ([a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0], r]);
+}
+
+function vNormQ(q: Quat): Quat {
+  const l = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+  return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
+}

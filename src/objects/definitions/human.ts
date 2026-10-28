@@ -15,6 +15,7 @@ export const humanDefinition = defineObject<HumanParams>({
   labelKey: 'object.human',
   icon: 'human',
   physicsProfile: 'upright',
+  terrainFit: { align: 0, base: 'center' },
   defaultParams: { height: 1.75, shirtColor: '#2fa39a', pantsColor: '#34406b' },
   paramSchema: [
     { key: 'height', labelKey: 'param.height', kind: 'number', min: 1, max: 2.1, step: 0.01, unit: 'm' },

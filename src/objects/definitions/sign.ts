@@ -14,6 +14,7 @@ export const signDefinition = defineObject<SignParams>({
   labelKey: 'object.sign',
   icon: 'sign',
   physicsProfile: 'anchoredUntilFailure',
+  terrainFit: { align: 0, base: 'min' },
   defaultParams: { height: 3.2, panelWidth: 2.4, panelHeight: 1.4, color: '#2f7d4f' },
   paramSchema: [
     { key: 'height', labelKey: 'param.height', kind: 'number', min: 1.5, max: 8, step: 0.1, unit: 'm' },

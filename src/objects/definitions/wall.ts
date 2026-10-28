@@ -16,6 +16,7 @@ export const wallDefinition = defineObject<WallParams>({
   labelKey: 'object.wall',
   icon: 'wall',
   physicsProfile: 'anchoredUntilFailure',
+  terrainFit: { align: 0, base: 'min' },
   defaultParams: { length: 6, height: 2, thickness: 0.25, color: '#b9a689' },
   paramSchema: [
     { key: 'length', labelKey: 'param.length', kind: 'number', min: 1, max: 40, step: 0.5, unit: 'm' },

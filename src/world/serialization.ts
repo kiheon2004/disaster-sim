@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { SCHEMA_VERSION } from './WorldDocument';
 import { DEFAULT_WIND_MODEL, defaultSimulationSettings, type WorldDocument, type WorldObject } from '@/core/model';
 import { getDefinition, hasDefinition } from '@/objects/registry';
-import { SCHEMA_VERSION } from './WorldDocument';
+import { createFlatTerrain } from '@/terrain/TerrainData';
+import { decodeTerrain, encodeTerrain } from '@/terrain/terrainCodec';
+import { TERRAIN_PRESETS } from '@/terrain/TerrainPresets';
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -29,8 +32,28 @@ const objectSchema = z.object({
   components: z.array(z.any()).optional(),
 });
 
+const terrainSchema = z.union([
+  // Schema v1 (Phase 0–11): always flat.
+  z.object({ kind: z.literal('flat') }),
+  z.object({
+    kind: z.literal('heightfield'),
+    nx: z.number().int().min(2).max(2001),
+    nz: z.number().int().min(2).max(2001),
+    cellSize: z.number().positive(),
+    originX: z.number(),
+    originZ: z.number(),
+    elevation: z.object({ encoding: z.literal('cm-delta-rle'), data: z.string() }).nullable(),
+    ground: z.object({ encoding: z.literal('u8-rle'), data: z.string() }).nullable(),
+    settings: z.object({
+      preset: z.enum(TERRAIN_PRESETS as [string, ...string[]]).catch('flat'),
+      seed: z.number().int().nonnegative().catch(1),
+      waterLevel: z.number().nullable().catch(null),
+    }).partial().default({}),
+  }),
+]);
+
 const documentSchema = z.object({
-  schemaVersion: z.literal(SCHEMA_VERSION),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -53,14 +76,19 @@ const documentSchema = z.object({
       .partial()
       .optional(),
   }),
-  terrain: z.object({ kind: z.literal('flat') }),
+  terrain: terrainSchema.default({ kind: 'flat' }),
   objects: z.record(z.string(), objectSchema),
 });
 
 export type LoadResult = { ok: true; doc: WorldDocument; skipped: number } | { ok: false; error: string };
 
-export function serializeDocument(doc: WorldDocument): string {
-  return JSON.stringify(doc, null, 2);
+/** JSON-ready copy of a document (terrain layers → compact encoded strings). */
+export function toSerializable(doc: WorldDocument) {
+  return { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain) };
+}
+
+export function serializeDocument(doc: WorldDocument, pretty = true): string {
+  return JSON.stringify(toSerializable(doc), null, pretty ? 2 : undefined);
 }
 
 /**
@@ -96,13 +124,20 @@ export function parseDocument(json: string): LoadResult {
       components: def.createComponents(params, o.seed),
     };
   }
+  // Old (v1) files and missing terrain → flat terrain at 0 m.
+  let terrain;
+  try {
+    terrain = res.data.terrain.kind === 'flat' ? createFlatTerrain() : decodeTerrain(res.data.terrain as Parameters<typeof decodeTerrain>[0]);
+  } catch (e) {
+    return { ok: false, error: `terrain: ${(e as Error).message}` };
+  }
   const defaults = defaultSimulationSettings();
   const sim = res.data.settings.simulation;
   const settings = {
     ...res.data.settings,
     simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) } },
   };
-  return { ok: true, doc: { ...res.data, settings, objects }, skipped };
+  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects }, skipped };
 }
 
 const SAVE_KEY = 'ds.project';
@@ -131,7 +166,7 @@ export const storage = {
     return s ? parseDocument(s) : null;
   },
   hasSave: () => safeGet(SAVE_KEY) !== null,
-  autosave: (doc: WorldDocument) => safeSet(AUTOSAVE_KEY, JSON.stringify(doc)),
+  autosave: (doc: WorldDocument) => safeSet(AUTOSAVE_KEY, serializeDocument(doc, false)),
   loadAutosave: (): LoadResult | null => {
     const s = safeGet(AUTOSAVE_KEY);
     return s ? parseDocument(s) : null;

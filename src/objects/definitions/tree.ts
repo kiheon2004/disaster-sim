@@ -22,6 +22,7 @@ export const treeDefinition = defineObject<TreeParams>({
   labelKey: 'object.tree',
   icon: 'tree',
   physicsProfile: 'anchoredUntilFailure',
+  terrainFit: { align: 0.3, base: 'center' },
   defaultParams: { species: 'broadleaf', height: 8, canopyRadius: 2.6, trunkRadius: 0.3 },
   paramSchema: [
     {

@@ -15,6 +15,7 @@ export const streetLightDefinition = defineObject<StreetLightParams>({
   labelKey: 'object.streetLight',
   icon: 'streetLight',
   physicsProfile: 'anchoredUntilFailure',
+  terrainFit: { align: 0, base: 'min' },
   defaultParams: { height: 8, armLength: 1.6, color: '#5b6670' },
   paramSchema: [
     { key: 'height', labelKey: 'param.height', kind: 'number', min: 4, max: 14, step: 0.5, unit: 'm' },

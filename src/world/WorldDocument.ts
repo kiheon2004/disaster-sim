@@ -3,8 +3,10 @@ import { defaultSimulationSettings, type ObjectParams, type PhysicalProperties, 
 import { AIR_DENSITY, GRAVITY, WORLD_SIZE } from '@/core/units';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
+import { createFlatTerrain } from '@/terrain/TerrainData';
 
-export const SCHEMA_VERSION = 1 as const;
+/** 2 = Phase 12 (heightfield terrain). Version 1 files load as flat terrain. */
+export const SCHEMA_VERSION = 2 as const;
 
 export function createEmptyDocument(name = ''): WorldDocument {
   const now = new Date().toISOString();
@@ -12,7 +14,7 @@ export function createEmptyDocument(name = ''): WorldDocument {
     schemaVersion: SCHEMA_VERSION,
     meta: { name, createdAt: now, updatedAt: now },
     settings: { size: [WORLD_SIZE, WORLD_SIZE], gravity: GRAVITY, airDensity: AIR_DENSITY, simulation: defaultSimulationSettings() },
-    terrain: { kind: 'flat' },
+    terrain: createFlatTerrain(),
     objects: {},
   };
 }

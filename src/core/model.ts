@@ -1,6 +1,7 @@
 /**
  * Serializable data model shared by every layer (World, Objects, Simulation, Physics).
- * Everything here must stay plain JSON-compatible data.
+ * Everything here must stay plain JSON-compatible data — except the terrain grids, which are
+ * typed arrays in memory and go through the terrain codec (src/terrain/terrainCodec.ts) on save.
  */
 import type { EntityId, ObjectType, Transform, Vec3 } from './types';
 
@@ -121,12 +122,50 @@ export interface WorldSettings {
   simulation: SimulationSettings;
 }
 
+/** Ground type ids (index into the GroundMaterialRegistry; stored as bytes). */
+export type GroundTypeId = 0 | 1 | 2 | 3 | 4;
+
+export type TerrainPresetId = 'flat' | 'gentleHills' | 'valley' | 'coastal';
+
+export interface TerrainSettings {
+  /** Preset the terrain was last generated from (informational; edits come on top). */
+  preset: TerrainPresetId;
+  /** Seed of that preset (same preset + seed → same terrain). */
+  seed: number;
+  /**
+   * Static reference water surface (m), e.g. sea level for the coastal preset. Nothing flows —
+   * it only marks where the ground is under water (flood systems will start from here).
+   */
+  waterLevel: number | null;
+}
+
+/**
+ * Terrain = regular heightfield over the buildable area, with per-vertex layers.
+ * Vertex (ix, iz) sits at (originX + ix·cellSize, originZ + iz·cellSize); arrays are row-major
+ * (index = iz·nx + ix). Each grid cell is split into two triangles along its (x1,z0)–(x0,z1)
+ * diagonal — the same triangulation the renderer and the physics collider use.
+ *
+ * Future layers (soil strength, permeability, moisture, seismic amplification …) are added as
+ * further optional per-vertex typed arrays next to `ground`, each with its own codec entry.
+ */
 export interface TerrainData {
-  kind: 'flat';
+  kind: 'heightfield';
+  nx: number;
+  nz: number;
+  cellSize: number;
+  originX: number;
+  originZ: number;
+  /** Elevation per vertex (m), quantized to 1 cm so save/load is exact. */
+  heights: Float32Array;
+  /** Ground type per vertex (GroundTypeId). */
+  ground: Uint8Array;
+  settings: TerrainSettings;
+  /** Bumped on every in-place change; renderers and caches compare it. Not saved. */
+  revision: number;
 }
 
 export interface WorldDocument {
-  schemaVersion: 1;
+  schemaVersion: 2;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;

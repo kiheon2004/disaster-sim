@@ -12,6 +12,18 @@ import type { MessageKey } from '@/i18n/i18n';
  */
 export type PhysicsProfile = 'static' | 'anchoredUntilFailure' | 'dynamic' | 'upright';
 
+/**
+ * How an object sits on sloped terrain (see terrain/groundPlacement).
+ * - align: 0 = stays level (buildings, people), 1 = follows the ground plane (vehicles)
+ * - base:  which ground height the origin goes to — 'center' point, lowest footprint corner
+ *          ('min': nothing floats, the uphill side is embedded like a foundation) or the mean
+ *          of the footprint corners ('mean': wheels on a plane fit)
+ */
+export interface TerrainFit {
+  align: number;
+  base: 'center' | 'min' | 'mean';
+}
+
 export interface ParamSchema {
   key: string;
   labelKey: MessageKey;
@@ -34,6 +46,8 @@ export interface ObjectDefinition<P extends ObjectParams = ObjectParams> {
   inert?: boolean;
   /** Place slightly below other objects and never block selection of things on top. */
   groundLayer?: boolean;
+  /** Placement on sloped terrain (default: level, centered). */
+  terrainFit?: TerrainFit;
   defaultParams: P;
   paramSchema: ParamSchema[];
   /** Physical defaults may depend on params (e.g. mass from size). */

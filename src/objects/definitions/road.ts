@@ -15,6 +15,7 @@ export const roadDefinition = defineObject<RoadParams>({
   labelKey: 'object.road',
   icon: 'road',
   physicsProfile: 'static',
+  terrainFit: { align: 0, base: 'center' },
   inert: true,
   groundLayer: true,
   defaultParams: { length: 20, width: 7, lanes: 2 },
