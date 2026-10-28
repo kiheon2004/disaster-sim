@@ -34,7 +34,7 @@ export function DamageOverlay({ entities }: { entities: RuntimeEntity[] }) {
   if (!show) return null;
   return (
     <>
-      {entities.map((e) => (
+      {entities.filter((e) => !e.def.inert).map((e) => (
         <StateRing key={e.id} e={e} />
       ))}
     </>

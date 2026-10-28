@@ -59,7 +59,7 @@ export interface RuntimeEntity {
   windAtCop: number;
   components: RuntimeComponent[];
   visual: VisualState;
-  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean };
+  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
   /** Horizontal distance moved from the initial position (m). */
   displacement: number;
   /** Bumped on discrete visual changes (component broken, snapped …) so views can update. */

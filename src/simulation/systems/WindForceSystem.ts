@@ -27,6 +27,7 @@ export class WindForceSystem implements SimulationSystem {
     const calm = wind.baseSpeed <= 0.01;
 
     for (const e of runtime.entities.values()) {
+      if (e.def.inert) continue;
       const cop: Vec3 = vAdd(e.pose.position, qRotate(e.pose.quaternion, e.copLocal));
       const v = calm ? ([0, 0, 0] as Vec3) : wind.sample(cop, time);
       const speed = vLen(v);

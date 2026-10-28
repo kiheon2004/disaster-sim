@@ -3,6 +3,7 @@ import { updateHuman, knockDown } from '../damage/behaviors/human';
 import { updateTree } from '../damage/behaviors/tree';
 import { updateCar } from '../damage/behaviors/car';
 import { updateBuilding } from '../damage/behaviors/building';
+import { updateAnchoredStructure } from '../damage/behaviors/structure';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { BodyUserData } from '@/physics/PhysicsEngine';
 
@@ -28,6 +29,11 @@ export class DamageSystem implements SimulationSystem {
           break;
         case 'building':
           updateBuilding(e, ctx, dt);
+          break;
+        case 'streetLight':
+        case 'sign':
+        case 'wall':
+          updateAnchoredStructure(e, ctx, dt);
           break;
       }
     }

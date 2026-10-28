@@ -392,6 +392,23 @@ export const ko = {
 
   'panel.resize': '드래그하여 높이 조절 (더블클릭: 기본값)',
 
+  'param.armLength': '암 길이',
+  'param.panelWidth': '패널 폭',
+  'param.panelHeight': '패널 높이',
+  'param.thickness': '두께',
+  'param.lanes': '차로 수',
+  'preset.sign.road': '도로 표지판',
+  'preset.sign.billboard': '광고판',
+  'preset.wall.masonry': '조적 담장',
+  'preset.wall.fence': '블록 펜스',
+  'preset.road.twoLane': '2차로 도로',
+  'preset.road.fourLane': '4차로 도로',
+  'flag.toppled': '쓰러짐',
+  'log.part.panel': '{name}: 표지판 패널이 날아감',
+  'log.part.lamp': '{name}: 등기구가 떨어짐',
+  'log.structure.toppled': '{name}: 쓰러짐',
+  'log.wall.collapsed': '{name}: 담장이 무너짐',
+
   // Generic
   'common.close': '닫기',
   'common.cancel': '취소',

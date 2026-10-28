@@ -3,7 +3,6 @@ import type { EntityId } from '@/core/types';
 import { FIXED_DT, type SimSpeed } from '@/core/units';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { PhysicsEngine } from '@/physics/PhysicsEngine';
-import { RapierEngine } from '@/physics/RapierEngine';
 import { EventScheduler } from '@/events/EventScheduler';
 import { createEvent } from '@/events/eventRegistry';
 import type { EventSpec } from '@/events/specs';
@@ -60,6 +59,8 @@ export class SimulationController {
   private async rebuild(token = ++this.loadToken) {
     this.disposeRuntime();
     if (!this.snapshot) return;
+    // Rapier (WASM) is loaded on demand so the editor starts fast.
+    const { RapierEngine } = await import('@/physics/RapierEngine');
     const physics = new RapierEngine();
     await physics.init(this.snapshot.settings.gravity);
     if (token !== this.loadToken) {
@@ -234,6 +235,7 @@ export class SimulationController {
     const states: Record<EntityId, DamageState> = {};
     const stats: SimStats = { ...EMPTY_STATS, byState: [0, 0, 0, 0, 0] };
     for (const e of rt.entities.values()) {
+      if (e.def.inert) continue;
       states[e.id] = e.state;
       if (!changed && this.lastStates![e.id] !== e.state) changed = true;
       stats.byState[e.state]++;

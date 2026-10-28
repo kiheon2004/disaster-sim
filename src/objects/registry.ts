@@ -5,9 +5,22 @@ import { buildingDefinition } from './definitions/building';
 import { treeDefinition } from './definitions/tree';
 import { carDefinition } from './definitions/car';
 import { humanDefinition } from './definitions/human';
+import { streetLightDefinition } from './definitions/streetLight';
+import { signDefinition } from './definitions/sign';
+import { wallDefinition } from './definitions/wall';
+import { roadDefinition } from './definitions/road';
 
 /** Single source of truth for every placeable object type. Add new types here. */
-const definitions = [buildingDefinition, treeDefinition, carDefinition, humanDefinition] as unknown as ObjectDefinition<ObjectParams>[];
+const definitions = [
+  buildingDefinition,
+  treeDefinition,
+  carDefinition,
+  humanDefinition,
+  streetLightDefinition,
+  signDefinition,
+  wallDefinition,
+  roadDefinition,
+] as unknown as ObjectDefinition<ObjectParams>[];
 
 const byType = new Map<ObjectType, ObjectDefinition<ObjectParams>>(definitions.map((d) => [d.type, d]));
 

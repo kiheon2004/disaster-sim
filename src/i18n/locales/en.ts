@@ -390,6 +390,23 @@ export const en: Record<MessageKey, string> = {
 
   'panel.resize': 'Drag to resize (double-click: reset)',
 
+  'param.armLength': 'Arm length',
+  'param.panelWidth': 'Panel width',
+  'param.panelHeight': 'Panel height',
+  'param.thickness': 'Thickness',
+  'param.lanes': 'Lanes',
+  'preset.sign.road': 'Road Sign',
+  'preset.sign.billboard': 'Billboard',
+  'preset.wall.masonry': 'Masonry Wall',
+  'preset.wall.fence': 'Block Fence',
+  'preset.road.twoLane': '2-Lane Road',
+  'preset.road.fourLane': '4-Lane Road',
+  'flag.toppled': 'Toppled',
+  'log.part.panel': '{name}: sign panel blown away',
+  'log.part.lamp': '{name}: lamp head torn off',
+  'log.structure.toppled': '{name}: toppled',
+  'log.wall.collapsed': '{name}: wall collapsed',
+
   // Generic
   'common.close': 'Close',
   'common.cancel': 'Cancel',

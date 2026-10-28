@@ -95,7 +95,8 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
     rev: 0,
     counters: {},
   };
-  e.body = createEntityBody(physics, e, dynamic);
+  e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic);
+  if (def.inert) e.dynamic = false;
   return e;
 }
 

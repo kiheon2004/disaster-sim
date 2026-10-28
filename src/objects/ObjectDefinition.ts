@@ -30,6 +30,10 @@ export interface ObjectDefinition<P extends ObjectParams = ObjectParams> {
   /** Icon name understood by the UI icon set. */
   icon: string;
   physicsProfile: PhysicsProfile;
+  /** Decorative ground cover (roads): no physics body, no wind load, no damage. */
+  inert?: boolean;
+  /** Place slightly below other objects and never block selection of things on top. */
+  groundLayer?: boolean;
   defaultParams: P;
   paramSchema: ParamSchema[];
   /** Physical defaults may depend on params (e.g. mass from size). */

@@ -24,6 +24,10 @@ export function sampleTown(): CreateObjectInput[] {
   const rnd = seededRandom(20261007);
   const out: CreateObjectInput[] = [];
 
+  // Main street + side street
+  out.push(place('env.road', 0, 0, 0, { length: 100, width: 10, lanes: 2 }, rnd));
+  out.push(place('env.road', -23, 25, Math.PI / 2, { length: 40, width: 8, lanes: 2 }, rnd));
+
   // North side (facing the street to the south)
   out.push(place('building.lowrise', -32, -17, 0, { floors: 3, color: '#c9b79c' }, rnd));
   out.push(place('building.office', -14, -19, 0, { floors: 9, color: '#8d9db2' }, rnd));
@@ -44,6 +48,18 @@ export function sampleTown(): CreateObjectInput[] {
   for (let i = 0; i < 9; i++) {
     out.push(place(i % 3 === 0 ? 'tree.broadleaf' : 'tree.conifer', 26 + (i % 3) * 6 + rnd() * 2, 16 + Math.floor(i / 3) * 6 + rnd() * 2, rnd() * 6, {}, rnd));
   }
+
+  // Street furniture
+  for (let x = -44; x <= 44; x += 16) {
+    out.push(place('infra.streetLight', x, -5.6, Math.PI / 2, {}, rnd));
+    out.push(place('infra.streetLight', x + 8, 5.6, -Math.PI / 2, {}, rnd));
+  }
+  out.push(place('infra.sign', -40, -6.2, 0, {}, rnd));
+  out.push(place('infra.sign', 40, 6.2, Math.PI, {}, rnd));
+  out.push(place('infra.billboard', 48, -12, -Math.PI / 4, {}, rnd));
+  // Park fence and a garden wall
+  out.push(place('infra.fence', 35, 12.5, 0, { length: 20 }, rnd));
+  out.push(place('infra.wall', -38, 13, 0, { length: 10 }, rnd));
 
   // Parked cars (length along X = along the street)
   const carColors = ['#3d6fd6', '#d64545', '#e9e9e6', '#2d2f33', '#3c8f5a', '#c9a227'];

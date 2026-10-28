@@ -9,6 +9,7 @@ import { BuildingView } from '../views/BuildingView';
 import { TreeView } from '../views/TreeView';
 import { CarView } from '../views/CarView';
 import { HumanView } from '../views/HumanView';
+import { RoadView, SignView, StreetLightView, WallView } from '../views/InfrastructureViews';
 import { SelectionBox } from '../SelectionBox';
 
 const tmpQ = new THREE.Quaternion();
@@ -122,6 +123,31 @@ const SimHuman = memo(function SimHuman({ e }: { e: RuntimeEntity }) {
   );
 });
 
+/** Anchored infrastructure: static until it topples, then follows its body. */
+const SimStructure = memo(function SimStructure({ e }: { e: RuntimeEntity }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (ref.current) ref.current.visible = !e.flags.collapsed;
+  });
+  const View = e.source.type === 'streetLight' ? StreetLightView : e.source.type === 'sign' ? SignView : WallView;
+  return (
+    <group ref={ref}>
+      <PoseRoot e={e}>
+        <View obj={e.source} live={e} />
+      </PoseRoot>
+    </group>
+  );
+});
+
+const SimGround = memo(function SimGround({ e }: { e: RuntimeEntity }) {
+  const { position, rotation, scale } = e.source.transform;
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <RoadView obj={e.source} />
+    </group>
+  );
+});
+
 const SimCar = memo(function SimCar({ e }: { e: RuntimeEntity }) {
   return (
     <PoseRoot e={e}>
@@ -140,6 +166,12 @@ export function SimEntity({ e }: { e: RuntimeEntity }) {
       return <SimHuman e={e} />;
     case 'car':
       return <SimCar e={e} />;
+    case 'streetLight':
+    case 'sign':
+    case 'wall':
+      return <SimStructure e={e} />;
+    case 'road':
+      return <SimGround e={e} />;
     default:
       return null;
   }

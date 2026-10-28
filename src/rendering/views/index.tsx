@@ -5,6 +5,7 @@ import { BuildingView } from './BuildingView';
 import { TreeView } from './TreeView';
 import { CarView } from './CarView';
 import { HumanView } from './HumanView';
+import { RoadView, SignView, StreetLightView, WallView } from './InfrastructureViews';
 
 /** Editor-time (static) view for each object type. */
 export const STATIC_VIEWS: Partial<Record<ObjectType, ComponentType<ViewProps>>> = {
@@ -12,6 +13,10 @@ export const STATIC_VIEWS: Partial<Record<ObjectType, ComponentType<ViewProps>>>
   tree: TreeView,
   car: CarView,
   human: HumanView,
+  streetLight: StreetLightView,
+  sign: SignView,
+  wall: WallView,
+  road: RoadView,
 };
 
 export function StaticObjectView({ obj }: ViewProps) {

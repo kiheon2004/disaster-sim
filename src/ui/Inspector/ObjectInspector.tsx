@@ -50,8 +50,8 @@ export function ObjectInspector({ obj, readOnly = false }: { obj: WorldObject; r
 
       <TransformSection obj={obj} readOnly={readOnly} />
       <ParamsSection obj={obj} readOnly={readOnly} />
-      <PhysicsSection obj={obj} readOnly={readOnly} />
-      <EstimateSection obj={obj} />
+      {!def.inert && <PhysicsSection obj={obj} readOnly={readOnly} />}
+      {!def.inert && <EstimateSection obj={obj} />}
       {obj.components.length > 1 && <ComponentsSection obj={obj} />}
     </>
   );

@@ -48,10 +48,16 @@ export const PALETTE: PaletteItem[] = [
 
   { id: 'human.adult', type: 'human', category: 'people', labelKey: 'preset.human.adult', icon: 'human', randomize: true },
 
-  { id: 'infra.streetLight', type: 'streetLight', category: 'infrastructure', labelKey: 'object.streetLight', icon: 'streetLight', disabled: true },
-  { id: 'infra.sign', type: 'sign', category: 'infrastructure', labelKey: 'object.sign', icon: 'sign', disabled: true },
-  { id: 'infra.wall', type: 'wall', category: 'infrastructure', labelKey: 'object.wall', icon: 'wall', disabled: true },
-  { id: 'env.road', type: 'road', category: 'environment', labelKey: 'object.road', icon: 'road', disabled: true },
+  { id: 'infra.streetLight', type: 'streetLight', category: 'infrastructure', labelKey: 'object.streetLight', icon: 'streetLight' },
+  { id: 'infra.sign', type: 'sign', category: 'infrastructure', labelKey: 'preset.sign.road', icon: 'sign' },
+  { id: 'infra.billboard', type: 'sign', category: 'infrastructure', labelKey: 'preset.sign.billboard', icon: 'sign',
+    params: { height: 6, panelWidth: 6, panelHeight: 3, color: '#e0a526' } },
+  { id: 'infra.wall', type: 'wall', category: 'infrastructure', labelKey: 'preset.wall.masonry', icon: 'wall' },
+  { id: 'infra.fence', type: 'wall', category: 'infrastructure', labelKey: 'preset.wall.fence', icon: 'wall',
+    params: { length: 8, height: 1.8, thickness: 0.12, color: '#d9d6cf' } },
+  { id: 'env.road', type: 'road', category: 'environment', labelKey: 'preset.road.twoLane', icon: 'road' },
+  { id: 'env.road4', type: 'road', category: 'environment', labelKey: 'preset.road.fourLane', icon: 'road',
+    params: { length: 40, width: 14, lanes: 4 } },
 ];
 
 export function getPaletteItem(id: string | null): PaletteItem | undefined {
