@@ -16,7 +16,7 @@ import styles from './BottomPanel.module.css';
 // 3×3 layout of the compass rose (null = center)
 const ROSE: (CompassDir | null)[] = ['NW', 'N', 'NE', 'W', null, 'E', 'SW', 'S', 'SE'];
 
-export function WindForm() {
+export function WindForm({ tabs }: { tabs?: React.ReactNode }) {
   countRender('WindForm');
   const t = useT();
   const f = useWindForm();
@@ -28,7 +28,7 @@ export function WindForm() {
   return (
     <>
       <div className={styles.colHead}>
-        <Icon name="wind" size={14} /> {t('panel.wind')}
+        {tabs ?? (<><Icon name="wind" size={14} /> {t('panel.wind')}</>)}
         <span className={styles.aside}>
           <span className={styles.speedClass} style={{ color: cls.color, background: `${cls.color}22` }}>{t(cls.key)}</span>
         </span>

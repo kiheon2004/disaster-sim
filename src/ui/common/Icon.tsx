@@ -46,6 +46,10 @@ const paths = {
   smooth: 'M3 15c3-6 6-6 9 0s6 6 9 0',
   brush: 'M14 4l6 6-8 8-6-6zM6 12l-3 3c-1 2 0 5 3 5 2 0 3-1 3-3l3-3',
   probe: 'M12 2v8M12 22a5 5 0 100-10 5 5 0 000 10zM12 17h.01',
+  quake: 'M2 12h3l2-6 3 12 3-9 2 5 2-2h5',
+  soil: 'M3 7h18M3 12h18M3 17h18M6 9.5h.01M14 9.5h.01M10 14.5h.01M18 14.5h.01M7 19.5h.01',
+  chevronDown: 'M6 9l6 6 6-6',
+  chevronRight: 'M9 6l6 6-6 6',
 } as const;
 
 export type IconName = keyof typeof paths;

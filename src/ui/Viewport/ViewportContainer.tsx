@@ -8,6 +8,7 @@ import { useT } from '@/i18n/i18n';
 import { Compass } from './Compass';
 import { ViewportToolbar } from './ViewportToolbar';
 import { WindHud } from './WindHud';
+import { QuakeHud } from './QuakeHud';
 import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
@@ -43,6 +44,7 @@ export function ViewportContainer() {
       <div className={`${styles.overlay} ${styles.topRight}`}>
         <Compass />
         {!isEditor && <WindHud />}
+        {!isEditor && <QuakeHud />}
       </div>
       <div className={`${styles.overlay} ${styles.bottomLeft}`}>
         <span className={styles.hint}>

@@ -12,7 +12,7 @@ import { describeParsed, describeUnsupported } from './describeCommand';
 import bp from './BottomPanel.module.css';
 import styles from './CommandPanel.module.css';
 
-const EXAMPLES: MessageKey[] = ['cmd.ex.1', 'cmd.ex.2', 'cmd.ex.3', 'cmd.ex.4', 'cmd.ex.5', 'cmd.ex.6'];
+const EXAMPLES: MessageKey[] = ['cmd.ex.1', 'cmd.ex.2', 'cmd.ex.3', 'cmd.ex.7', 'cmd.ex.8', 'cmd.ex.4', 'cmd.ex.6'];
 
 /** Unspecified values come from the wind form — or from the wind currently blowing in the simulation. */
 function defaults() {

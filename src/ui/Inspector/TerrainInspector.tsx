@@ -29,6 +29,15 @@ export function TerrainInspector() {
     [t('terrain.friction'), `${g.friction.toFixed(2)} *`],
     [t('terrain.permeability'), `${g.permeability.toFixed(2)} *`],
   ];
+  const soil = s.sampleSoil(probe.x, probe.z);
+  rows.push(
+    [t('terrain.soil'), t(soil.labelKey)],
+    [t('terrain.soil.amp'), `×${soil.amplification.toFixed(2)} *`],
+    [t('terrain.soil.vs'), `${soil.vs30} m/s *`],
+    [t('terrain.soil.siteFreq'), `${soil.siteFrequency.toFixed(1)} Hz *`],
+    [t('terrain.soil.damping'), `${(soil.damping * 100).toFixed(0)} % *`],
+    [t('terrain.soil.bearing'), `${soil.bearingCapacity} kPa *`],
+  );
   if (terrain.settings.waterLevel !== null) rows.push([t('terrain.waterDepth'), `${s.sampleWaterDepth(probe.x, probe.z).toFixed(2)} m`]);
   return (
     <Section title={t('terrain.inspector.title')}>

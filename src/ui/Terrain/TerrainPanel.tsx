@@ -6,6 +6,7 @@ import { useEditorStore, BRUSH_RADIUS_RANGE, type TerrainToolId } from '@/editor
 import { useWorldStore } from '@/world/worldStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { GROUND_MATERIALS } from '@/terrain/GroundMaterials';
+import { SOIL_PROFILES } from '@/terrain/SoilProfiles';
 import { TERRAIN_PRESETS } from '@/terrain/TerrainPresets';
 import { heightRange } from '@/terrain/TerrainData';
 import { Icon, type IconName } from '@/ui/common/Icon';
@@ -20,6 +21,7 @@ const TOOLS: { id: TerrainToolId; icon: IconName }[] = [
   { id: 'flatten', icon: 'flatten' },
   { id: 'smooth', icon: 'smooth' },
   { id: 'paint', icon: 'brush' },
+  { id: 'soil', icon: 'soil' },
   { id: 'inspect', icon: 'probe' },
 ];
 
@@ -31,6 +33,7 @@ export function TerrainPanel() {
   const radius = useEditorStore((s) => s.brushRadius);
   const strength = useEditorStore((s) => s.brushStrength);
   const paintType = useEditorStore((s) => s.paintType);
+  const soilType = useEditorStore((s) => s.soilType);
   const view = useViewStore((s) => s.terrainView);
   const terrain = useWorldStore((s) => s.doc.terrain);
   const [preset, setPreset] = useState<TerrainPresetId>(terrain.settings.preset === 'flat' ? 'gentleHills' : terrain.settings.preset);
@@ -79,6 +82,21 @@ export function TerrainPanel() {
               </div>
             </>
           )}
+          {active === 'soil' && (
+            <>
+              <div className={styles.sub}>{t('terrain.soilType')}</div>
+              <div className={styles.swatches}>
+                {SOIL_PROFILES.map((g) => (
+                  <button key={g.id} className={`${styles.swatch} ${soilType === g.id ? styles.active : ''}`} onClick={() => ed().setSoilType(g.id)} disabled={!editing}
+                    title={`${t('terrain.soil.amp')} ×${g.amplification} · Vs30 ${g.vs30} m/s`}>
+                    <span className={styles.chip} style={{ background: g.color }} />
+                    {t(g.labelKey)}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.note}>{t('terrain.soil.note')}</div>
+            </>
+          )}
           <div className={styles.hint}>
             {brushTool ? t('terrain.hint.brush') : active === 'inspect' ? t('terrain.hint.inspect') : t('terrain.hint.idle')}
           </div>
@@ -113,6 +131,7 @@ export function TerrainPanel() {
               { value: 'surface', label: t('terrain.view.surface') },
               { value: 'elevation', label: t('terrain.view.elevation') },
               { value: 'ground', label: t('terrain.view.ground') },
+              { value: 'soil', label: t('terrain.view.soil') },
             ]}
           />
           {view === 'elevation' && <div className={styles.note}>{t('terrain.view.contours')}</div>}

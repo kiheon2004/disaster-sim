@@ -2,10 +2,24 @@ import { useRef, useState } from 'react';
 import { useT } from '@/i18n/i18n';
 import { Timeline } from '@/ui/Timeline/Timeline';
 import { WindForm } from './WindForm';
+import { EarthquakeForm } from './EarthquakeForm';
+import { Seismogram } from '@/ui/Timeline/Seismogram';
+import { Icon } from '@/ui/common/Icon';
+import eq from './EarthquakeForm.module.css';
 import { CommandPanel } from './CommandPanel';
 import styles from './BottomPanel.module.css';
 
 const KEY = 'ds.bottomHeight';
+const TAB_KEY = 'ds.hazardTab';
+type HazardTab = 'wind' | 'earthquake';
+
+function initialTab(): HazardTab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'earthquake' ? 'earthquake' : 'wind';
+  } catch {
+    return 'wind';
+  }
+}
 const MIN = 210;
 
 function initialHeight() {
@@ -20,6 +34,25 @@ function initialHeight() {
 export function BottomPanel() {
   const t = useT();
   const [height, setHeight] = useState(initialHeight);
+  const [tab, setTabState] = useState<HazardTab>(initialTab);
+  const setTab = (v: HazardTab) => {
+    setTabState(v);
+    try {
+      localStorage.setItem(TAB_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
+  const tabs = (
+    <span className={eq.tabs} role="tablist" aria-label={t('panel.wind')}>
+      <button role="tab" className={eq.tab} aria-selected={tab === 'wind'} onClick={() => setTab('wind')}>
+        <Icon name="wind" size={13} /> {t('hazard.tab.wind')}
+      </button>
+      <button role="tab" className={eq.tab} aria-selected={tab === 'earthquake'} onClick={() => setTab('earthquake')}>
+        <Icon name="quake" size={13} /> {t('hazard.tab.earthquake')}
+      </button>
+    </span>
+  );
   const drag = useRef<{ y: number; h: number } | null>(null);
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -53,9 +86,10 @@ export function BottomPanel() {
         onDoubleClick={() => setHeight(262)}
       />
       <Timeline />
+      <Seismogram />
       <div className={styles.body}>
         <div className={styles.col}>
-          <WindForm />
+          {tab === 'wind' ? <WindForm tabs={tabs} /> : <EarthquakeForm tabs={tabs} />}
         </div>
         <div className={styles.col}>
           <CommandPanel />

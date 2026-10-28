@@ -9,6 +9,7 @@ import { ObjectInspector } from './ObjectInspector';
 import { LiveStatusSection, SimSummary } from './SimInspector';
 import { SimulationSettingsSection } from './SimulationSettings';
 import { TerrainInspector } from './TerrainInspector';
+import { QuakeLiveSection } from './SeismicInspector';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -27,6 +28,7 @@ export function InspectorPanel() {
       ) : obj ? (
         <>
           {inSim && <LiveStatusSection id={obj.id} />}
+          {inSim && <QuakeLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>
       ) : inSim ? (
