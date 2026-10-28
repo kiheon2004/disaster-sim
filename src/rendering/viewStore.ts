@@ -18,6 +18,15 @@ export interface QuakeViz {
 
 export const QUAKE_EXAGGERATIONS = [1, 5, 10, 25] as const;
 
+/** Water display mode (Phase 14, render-only). */
+export type FloodVizMode = 'normal' | 'depth' | 'flow' | 'speed';
+
+export interface FloodViz {
+  mode: FloodVizMode;
+  /** Instanced arrows along the flow (direction + speed); always shown in 'flow' mode. */
+  arrows: boolean;
+}
+
 /**
  * Small bridge between the 3D view and DOM overlays (compass, focus requests).
  * Kept separate from world/editor state on purpose.
@@ -41,6 +50,12 @@ interface ViewState {
   /** Earthquake visualization (render-only; never affects the simulation). */
   quakeViz: QuakeViz;
   setQuakeViz: (patch: Partial<QuakeViz>) => void;
+  /** Water visualization (render-only; never affects the simulation). Phase 14. */
+  floodViz: FloodViz;
+  setFloodViz: (patch: Partial<FloodViz>) => void;
+  /** Point picked on the ground in simulation mode (flood inspector), world x / z. */
+  waterProbe: { x: number; z: number } | null;
+  setWaterProbe: (p: { x: number; z: number } | null) => void;
   /** Developer performance HUD (off by default; `?perf` or Shift+P). */
   showPerfHud: boolean;
   togglePerfHud: () => void;
@@ -65,6 +80,10 @@ export const useViewStore = create<ViewState>((set) => ({
   setTerrainView: (terrainView) => set({ terrainView }),
   quakeViz: { ground: true, arrows: true, stress: true, epicenter: true, exaggeration: 10, cameraShake: false },
   setQuakeViz: (patch) => set((s) => ({ quakeViz: { ...s.quakeViz, ...patch } })),
+  floodViz: { mode: 'normal', arrows: false },
+  setFloodViz: (patch) => set((s) => ({ floodViz: { ...s.floodViz, ...patch } })),
+  waterProbe: null,
+  setWaterProbe: (waterProbe) => set({ waterProbe }),
   showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
   togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),

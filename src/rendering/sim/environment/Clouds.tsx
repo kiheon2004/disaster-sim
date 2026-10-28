@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Rng } from '@/core/random';
 import { UNIT_BOX } from '../../geometry/primitives';
-import { globalFlow, stormIntensity } from './intensity';
+import { globalFlow, weatherIntensity } from './intensity';
 
 const COUNT = 160;
 const RANGE = 420;
@@ -32,7 +32,7 @@ export function Clouds() {
   useFrame((_, dt) => {
     const mesh = ref.current;
     if (!mesh) return;
-    const k = stormIntensity();
+    const k = weatherIntensity();
     const { flow, speed } = globalFlow();
     const cover = 0.25 + k * 0.75;
     material.color.copy(LIGHT).lerp(DARK, k);

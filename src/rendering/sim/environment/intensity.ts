@@ -9,6 +9,16 @@ export function stormIntensity(): number {
   return smoothstep(6, 55, simulationController.getEnvironment().wind.baseSpeed);
 }
 
+/**
+ * Visual weather intensity 0–1 for sky, clouds and falling rain: the stronger of the storm (wind)
+ * and the rain falling in the water model (Phase 14; 80 mm/h ≈ full rain). Read-only.
+ */
+export function weatherIntensity(): number {
+  const mm = simulationController.getEnvironment().flood.rainIntensity();
+  const rain = mm > 0 ? 0.25 + 0.65 * Math.min(1, mm / 80) : 0;
+  return Math.max(stormIntensity(), rain);
+}
+
 export function globalFlow() {
   const w = simulationController.getEnvironment().wind;
   return { flow: w.flow(), speed: w.baseSpeed };

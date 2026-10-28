@@ -13,6 +13,11 @@ import { DamageOverlay } from './DamageOverlay';
 import { GroundMotionLayer } from './seismic/GroundMotionLayer';
 import { EpicenterMarker } from './seismic/EpicenterMarker';
 import { CameraShake } from './seismic/CameraShake';
+import { WaterLayer } from './water/WaterLayer';
+import { useViewStore } from '../viewStore';
+import type { Vec3 } from '@/core/types';
+
+const hit: Vec3 = [0, 0, 0];
 
 /** Advances the simulation clock from the render loop (mounted first so it runs before views). */
 function SimulationDriver() {
@@ -25,7 +30,16 @@ function GroundDeselect() {
     <mesh
       rotation-x={-Math.PI / 2}
       position-y={0.001}
-      onClick={(e) => e.delta <= 5 && useEditorStore.getState().select(null)}
+      onClick={(e) => {
+        if (e.delta > 5) return;
+        useEditorStore.getState().select(null);
+        // Flood inspector: the point on the actual terrain under the cursor (Phase 14).
+        if (!useSimStore.getState().flood) return;
+        const o = e.ray.origin;
+        const d = e.ray.direction;
+        const terrain = simulationController.getEnvironment().terrain;
+        if (terrain.raycast([o.x, o.y, o.z], [d.x, d.y, d.z], 3000, hit)) useViewStore.getState().setWaterProbe({ x: hit[0], z: hit[2] });
+      }}
     >
       <planeGeometry args={[600, 600]} />
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -52,6 +66,7 @@ export function SimulationScene() {
       </group>
       <WindStreaks />
       <WindArrows />
+      <WaterLayer />
       <GroundMotionLayer />
       <EpicenterMarker />
       <CameraShake />

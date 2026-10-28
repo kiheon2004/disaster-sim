@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Rng } from '@/core/random';
 import { smoothstep } from '@/core/math';
 import { UNIT_BOX } from '../../geometry/primitives';
-import { globalFlow, stormIntensity } from './intensity';
+import { globalFlow, weatherIntensity } from './intensity';
 
 const MAX = 3000;
 const RANGE = 70;
@@ -27,7 +27,7 @@ export function Rain() {
   useFrame((_, dt) => {
     const mesh = ref.current;
     if (!mesh) return;
-    const amount = smoothstep(0.25, 0.9, stormIntensity());
+    const amount = smoothstep(0.25, 0.9, weatherIntensity());
     const n = Math.floor(MAX * amount);
     mesh.count = n;
     mesh.visible = n > 0;

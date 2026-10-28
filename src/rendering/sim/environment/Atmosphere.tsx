@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SKY_COLOR } from '../../SceneEnvironment';
-import { stormIntensity } from './intensity';
+import { weatherIntensity } from './intensity';
 
 const STORM_SKY = new THREE.Color('#4d5661');
 const FOG_NEAR = 180;
@@ -33,7 +33,7 @@ export function Atmosphere() {
 
   useFrame((_, dt) => {
     // Ease toward the target so gust-to-gust changes don't flicker the whole sky.
-    smooth.k += (stormIntensity() - smooth.k) * Math.min(1, dt * 1.5);
+    smooth.k += (weatherIntensity() - smooth.k) * Math.min(1, dt * 1.5);
     apply(smooth.k);
   });
   useEffect(() => () => apply(0), []); // eslint-disable-line react-hooks/exhaustive-deps

@@ -103,6 +103,8 @@ interface EntityView {
   quakeKey?: number;
   cracksShown?: number;
   tint?: number;
+  /** Flood: wetness tint last applied (0 = dry; quantized). */
+  wet?: number;
 }
 
 /** One BatchedMesh per material variant. */
@@ -208,6 +210,8 @@ const mShear = new THREE.Matrix4();
 const mTilt = new THREE.Matrix4();
 const vShaken: [number, number, number] = [0, 0, 0];
 const cTint = new THREE.Color();
+/** Wet / submerged look: darker and bluer (multiplies the part colors). */
+const WET = new THREE.Color(0.5, 0.62, 0.78);
 const TINT_STOPS = [new THREE.Color(1, 1, 1), new THREE.Color(1, 0.93, 0.45), new THREE.Color(1, 0.62, 0.3), new THREE.Color(1, 0.36, 0.32)];
 
 /** Drift demand (0 … 3, × slight-damage drift) → shell tint (white = unstressed). */
@@ -436,9 +440,12 @@ export class SimRenderAdapter {
     // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).
     this.quake = quake && this.runtime.seismic ? quake : null;
     let cracksDirty = false;
+    // Flood (Phase 14): only once the water model created flood state (dry runs: unchanged path).
+    const flood = this.runtime.flood !== undefined;
     for (const v of this.views) {
       if (v.e.rev !== v.lastRev) this.applyRev(v);
       if (v.hidden) continue;
+      if (flood && v.e.flood) this.updateWet(v);
       if (v.type === 'building') {
         if (this.quake && v.e.seismic && this.updateBuildingQuake(v)) cracksDirty = true;
         continue;
@@ -450,6 +457,21 @@ export class SimRenderAdapter {
       this.crackMesh.instanceMatrix.needsUpdate = true;
       for (const kind of FACADE_KINDS) this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
     }
+  }
+
+  /**
+   * Submerged / wet objects (render-only): parts are tinted darker and bluer by how much of the
+   * object stands in water. Buildings with an active earthquake stress tint keep that tint.
+   */
+  private updateWet(v: EntityView) {
+    const st = v.e.flood!;
+    const h = Math.max(0.4, v.e.dims[1]);
+    const w = Math.round(Math.min(1, st.depth / h + (st.depth > 0.02 ? 0.15 : 0)) * 10) / 10;
+    if (w === (v.wet ?? 0)) return;
+    v.wet = w;
+    if (v.type === 'building' && (v.tint ?? 0) > 0) return;
+    cTint.copy(WHITE).lerp(WET, w * 0.85);
+    for (const part of v.parts) part.batch.mesh.setColorAt(part.id, cTint);
   }
 
   /**
