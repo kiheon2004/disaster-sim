@@ -6,6 +6,7 @@ import { useSimStore } from '@/simulation/simStore';
 import { simulationController } from '@/simulation/SimulationController';
 import { enterSimulation, resetSimulation, togglePlay } from '@/app/actions';
 import { Icon } from '@/ui/common/Icon';
+import { useUiStore } from '@/ui/uiStore';
 import { Segmented } from '@/ui/common/Segmented';
 import styles from './Timeline.module.css';
 
@@ -84,6 +85,14 @@ export function Timeline() {
         options={SIM_SPEEDS.map((s) => ({ value: s, label: `${s}x` }))}
       />
       <span className={`${styles.status} ${styles[`s-${status}`]}`}>{t(`simStatus.${status}`)}</span>
+      <button
+        className={styles.resultsBtn}
+        disabled={!inSim || (status !== 'paused' && status !== 'finished')}
+        title={t('results.open.title')}
+        onClick={() => useUiStore.getState().setResultsOpen(true)}
+      >
+        <Icon name="list" size={14} /> {t('results.open')}
+      </button>
     </div>
   );
 }

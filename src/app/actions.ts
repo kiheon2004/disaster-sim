@@ -11,6 +11,7 @@ import { downloadDocument, parseDocument, pickDocumentFile, storage, type LoadRe
 import { sampleTown } from '@/world/sampleScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
+import { useUiStore } from '@/ui/uiStore';
 import { t } from '@/i18n/i18n';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
@@ -19,16 +20,28 @@ import { RuleBasedParser } from '@/commands/RuleBasedParser';
 import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
 import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
 
+/** Select an object and center the camera on it (its live pose while simulating). */
 export function focusObject(id: EntityId) {
   const o = useWorldStore.getState().doc.objects[id];
   if (!o) return;
   useEditorStore.getState().select(id);
   const dims = getDefinition(o.type).getDimensions(o.params);
   const size = Math.max(dims[0] * o.transform.scale[0], dims[1] * o.transform.scale[1], dims[2] * o.transform.scale[2]);
-  useViewStore.getState().requestFocus(
-    [o.transform.position[0], o.transform.position[1] + dims[1] * o.transform.scale[1] * 0.4, o.transform.position[2]],
-    Math.max(8, size * 2.6),
-  );
+  const live = simulationController.getRuntime()?.entities.get(id);
+  const p = live ? live.pose.position : o.transform.position;
+  useViewStore.getState().requestFocus([p[0], p[1] + dims[1] * o.transform.scale[1] * 0.4, p[2]], Math.max(8, size * 2.6));
+}
+
+/** Camera to a world position (e.g. a damage event), optionally selecting the object. */
+export function focusPosition(pos: [number, number, number], id?: EntityId) {
+  if (id && useWorldStore.getState().doc.objects[id]) useEditorStore.getState().select(id);
+  useViewStore.getState().setFollow(null);
+  useViewStore.getState().requestFocus(pos, 18);
+}
+
+export function toggleFollow(id: EntityId) {
+  const v = useViewStore.getState();
+  v.setFollow(v.followId === id ? null : id);
 }
 
 export function deleteSelected() {
@@ -100,6 +113,9 @@ export function loadSampleTown() {
 
 /** Restore the last session (autosave) or start with the sample town on first launch. */
 export function bootstrapWorld() {
+  useSimStore.subscribe((s, prev) => {
+    if (s.status === 'finished' && prev.status !== 'finished') toast('info', { key: 'toast.finished' });
+  });
   const res = storage.loadAutosave();
   if (res && res.ok) {
     useWorldStore.getState().replaceDocument(res.doc);
@@ -133,6 +149,8 @@ export async function enterSimulation() {
 
 /** Back to the editor. The document was never modified, so this is also a full restore. */
 export function exitSimulation() {
+  useViewStore.getState().setFollow(null);
+  useUiStore.getState().setResultsOpen(false);
   simulationController.unload();
   useEditorStore.getState().setMode('editor');
 }

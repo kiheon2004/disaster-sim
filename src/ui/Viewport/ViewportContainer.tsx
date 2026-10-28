@@ -27,6 +27,9 @@ export function ViewportContainer() {
           {t(isEditor ? 'mode.editorShort' : 'mode.simulationShort')}
         </span>
         {isEditor && <ViewportToolbar />}
+        {!isEditor && (
+          <span className={styles.approx} title={t('model.approximate')}>{t('model.badge')}</span>
+        )}
       </div>
       <div className={`${styles.overlay} ${styles.topRight}`}>
         <Compass />

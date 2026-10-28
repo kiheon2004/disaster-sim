@@ -5,6 +5,9 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useViewStore } from './viewStore';
 import { radToDeg } from '@/core/math';
+import { simulationController } from '@/simulation/SimulationController';
+
+const followDelta = new THREE.Vector3();
 
 /**
  * Free orbit camera: left-drag orbit, right-drag pan, wheel zoom.
@@ -35,6 +38,17 @@ export function CameraRig() {
       c.target.lerpVectors(a.fromT, a.toT, k);
       camera.position.lerpVectors(a.fromP, a.toP, k);
       if (a.t >= 1) anim.current = null;
+    } else {
+      // Follow mode: translate target + camera together so the user keeps their viewing angle.
+      const followId = useViewStore.getState().followId;
+      const e = followId ? simulationController.getRuntime()?.entities.get(followId) : undefined;
+      if (e) {
+        const p = e.pose.position;
+        followDelta.set(p[0], p[1] + e.dims[1] * 0.4, p[2]).sub(c.target);
+        followDelta.multiplyScalar(1 - Math.exp(-dt * 6));
+        c.target.add(followDelta);
+        camera.position.add(followDelta);
+      }
     }
     // Azimuth: direction the camera looks, clockwise from north (-Z).
     const dir = c.target.clone().sub(camera.position);

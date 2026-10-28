@@ -7,10 +7,11 @@ import { useSimStore } from '@/simulation/simStore';
 import { DAMAGE_STATE_COLORS, DamageState } from '@/simulation/damage/DamageState';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
-import { focusObject } from '@/app/actions';
+import { focusObject, toggleFollow } from '@/app/actions';
+import { useViewStore } from '@/rendering/viewStore';
 import { Section } from '@/ui/common/Panel';
 import { StateBadge, StateDot } from '@/ui/common/StateBadge';
-import { fmt, formatLogEntry } from '@/ui/format';
+import { displayName, fmt, formatLogEntry } from '@/ui/format';
 import styles from './Inspector.module.css';
 
 /** Re-render at the store publish rate (≈10 Hz) while simulating. */
@@ -28,41 +29,72 @@ function Meter({ value, color }: { value: number; color: string }) {
 
 const KIND_ORDER: ComponentKind[] = ['window', 'sign', 'roof', 'wall', 'exterior', 'canopy'];
 
-/** Live physical/damage status of the selected entity. */
+/** Live physical/damage status of the selected entity (read from the runtime at ~10 Hz). */
 export function LiveStatusSection({ id }: { id: EntityId }) {
   const t = useT();
   useSimTick();
+  const followId = useViewStore((s) => s.followId);
+  const objects = useWorldStore((s) => s.doc.objects);
   const e = simulationController.getRuntime()?.entities.get(id);
   if (!e) return null;
+  const lw = e.localWind;
   const loadColor = e.loadRatio < 0.3 ? DAMAGE_STATE_COLORS[0] : e.loadRatio < 0.7 ? DAMAGE_STATE_COLORS[1] : e.loadRatio < 1 ? DAMAGE_STATE_COLORS[2] : DAMAGE_STATE_COLORS[3];
   const flags = Object.entries(e.flags).filter(([, v]) => v).map(([k]) => t(`flag.${k}` as Parameters<typeof t>[0]));
   const comps = KIND_ORDER.map((kind) => {
     const list = e.components.filter((c) => c.spec.kind === kind);
     return { kind, total: list.length, failed: list.filter((c) => c.condition !== 'intact').length };
   }).filter((r) => r.total > 0 && !(r.kind === 'canopy'));
+  const design = e.source.physics.windResistance * e.strength;
+  const instant = design * Math.sqrt(e.source.physics.breakThreshold);
+  const ratio = lw.freeStream > 0.1 ? lw.speed / lw.freeStream : 1;
+  const source = lw.shadowSource ? objects[lw.shadowSource] : undefined;
+
+  // Why does local wind differ from the free stream?
+  const reasons: string[] = [];
+  if (source && ratio < 0.97) reasons.push(t('live.reason.shadow', { name: displayName(source, t), pct: Math.round((1 - ratio) * 100) }));
+  if (lw.corner && ratio > 1.02) reasons.push(t('live.reason.corner', { pct: Math.round((ratio - 1) * 100) }));
+  if (lw.turbulence > 0.05) reasons.push(t('live.reason.turbulence', { pct: Math.round(lw.turbulence * 100) }));
+  if (e.localWind.global > 0.5 && reasons.length === 0) reasons.push(t('live.reason.open'));
 
   return (
     <Section title={t('live.title')}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <StateBadge state={e.state} />
         {flags.length > 0 && <span style={{ color: 'var(--text-1)', fontSize: 12 }}>{flags.join(' · ')}</span>}
       </div>
-      <div className={styles.liveGrid}>
-        <span>{t('live.health')}</span><span>{fmt(e.health * 100, 0)} %</span>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button className={styles.smallBtn} onClick={() => focusObject(id)}>{t('live.focus')}</button>
+        <button className={`${styles.smallBtn} ${followId === id ? styles.smallBtnOn : ''}`} aria-pressed={followId === id} onClick={() => toggleFollow(id)}>
+          {t(followId === id ? 'live.following' : 'live.follow')}
+        </button>
       </div>
-      <Meter value={e.health} color={e.health > 0.6 ? 'var(--ok)' : e.health > 0.3 ? 'var(--warn)' : 'var(--danger)'} />
+      <div className={styles.liveGrid}>
+        <span>{t('live.globalWind')}</span><span>{fmt(lw.global, 1)} m/s</span>
+        <span>{t('live.localWind')}</span><span>{fmt(lw.speed, 1)} m/s</span>
+        <span>{t('live.freeStream')}</span><span>{fmt(lw.freeStream, 1)} m/s</span>
+      </div>
+      {reasons.map((r) => (
+        <div key={r} className={styles.reason}>{r}</div>
+      ))}
+      <div className={styles.liveGrid}>
+        <span>{t('live.windLoad')}</span><span>{fmt(e.windLoad / 1000, 2)} kN</span>
+        <span>{t('live.damage')}</span><span>{fmt((1 - e.health) * 100, 0)} %</span>
+      </div>
+      <Meter value={1 - e.health} color={e.health > 0.6 ? 'var(--warn)' : 'var(--danger)'} />
       <div className={styles.liveGrid}>
         <span>{t('live.loadRatio')}</span><span>{fmt(e.loadRatio, 2)} ({t('live.peak')} {fmt(e.peakLoadRatio, 2)})</span>
       </div>
       <Meter value={e.loadRatio / 1.5} color={loadColor} />
       <div className={styles.liveGrid}>
-        <span>{t('live.windAtCop')}</span><span>{fmt(e.windAtCop, 1)} m/s</span>
-        <span>{t('physics.windResistance')}</span><span>{fmt(e.source.physics.windResistance, 0)} m/s</span>
+        <span>{t('live.threshold')}</span><span>{fmt(design, 0)} m/s</span>
+        <span>{t('live.instantThreshold')}</span><span>{fmt(instant, 0)} m/s</span>
+        <span>{t('live.cause')}</span><span>{e.lastCause ? t(`cause.${e.lastCause}`) : '–'}</span>
         {e.dynamic && (<><span>{t('live.displacement')}</span><span>{fmt(e.displacement, 2)} m</span></>)}
         {comps.map((r) => (
           <FragmentPair key={r.kind} a={t(`component.${r.kind}`)} b={`${r.failed} / ${r.total}`} />
         ))}
       </div>
+      <div className={styles.note}>{t('live.thresholdNote')}</div>
     </Section>
   );
 }
