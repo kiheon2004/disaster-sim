@@ -17,6 +17,8 @@ export interface SimProfileSnapshot {
   /** Per-system ms per tick (includes the wind sampling they trigger). */
   systems: Record<string, number>;
   windSamplesPerStep: number;
+  /** Fixed steps in the snapshot window. */
+  steps: number;
   /** Simulated seconds per wall-clock second over the window. */
   simSpeed: number;
 }
@@ -68,6 +70,7 @@ export class SimProfiler {
       damageMs: systems.damage ?? 0,
       systems,
       windSamplesPerStep: this.steps ? this.windSamples / this.steps : 0,
+      steps: this.steps,
       simSpeed: this.windowStart && wall > 0 ? this.simTime / wall : 0,
     };
     this.sections = {};

@@ -14,6 +14,8 @@ export interface WindObstacle {
   ax: [number, number];
   az: [number, number];
   height: number;
+  /** Ground elevation of the obstacle's base; heights in the wake model are measured from here. */
+  baseY: number;
   active: boolean;
 }
 
@@ -40,6 +42,7 @@ export function obstacleFromEntity(e: RuntimeEntity): WindObstacle | null {
     ax: [x[0] / nx, x[2] / nx],
     az: [z[0] / nz, z[2] / nz],
     height,
+    baseY: e.initialPose.position[1],
     active: true,
   };
 }

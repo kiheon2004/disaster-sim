@@ -159,7 +159,7 @@ interface FacadeIndex {
   breakable: number;
   /** Parts no longer intact (kept up to date by updateBuilding). */
   failed: number;
-  /** Per part: heightFactor(y)^HEIGHT_DESIGN_EXPONENT (static: buildings never move). */
+  /** Per part: heightFactor(height above ground)^HEIGHT_DESIGN_EXPONENT (static: buildings never move). */
   design: Float64Array;
   /** Per part: pressure factor for `cpFlow` (only changes when the wind turns). */
   cp: Float64Array;
@@ -217,7 +217,8 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
       // Local wind at the part (neighbouring buildings' wakes / corners; never its own wake).
       const lw = field.sample(pos, ctx.time, e.id, (c.windCache ??= createSampleCache()), scratchWind);
       let design = index.design[ci];
-      if (design !== design) design = index.design[ci] = Math.pow(heightFactor(pos[1]), HEIGHT_DESIGN_EXPONENT);
+      // Design wind of the part = profile at its height above the ground (same as the field).
+      if (design !== design) design = index.design[ci] = Math.pow(heightFactor(pos[1] - ctx.env.terrain.sampleHeight(pos[0], pos[2])), HEIGHT_DESIGN_EXPONENT);
       const v = lw.speed / design;
       let cp = index.cp[ci];
       if (cp !== cp) cp = index.cp[ci] = pressureFactor(c, c.worldNormal, flow);

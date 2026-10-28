@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Vec3 } from '@/core/types';
 import type { ShapeSpec } from '@/core/shapes';
 import type {
+  TerrainColliderDesc,
   BodyDesc,
   BodyHandle,
   BodyKind,
@@ -47,14 +48,69 @@ export class RapierEngine implements PhysicsEngine {
   private bodies = new Map<BodyHandle, RAPIER.RigidBody>();
   private userData = new Map<BodyHandle, BodyUserData>();
   private forced = new Set<BodyHandle>();
+  private ground: RAPIER.RigidBody | null = null;
 
-  async init(gravity: number) {
+  async init(gravity: number, terrain: TerrainColliderDesc | null = null) {
     await ensureRapier();
     this.world = new RAPIER.World({ x: 0, y: -gravity, z: 0 });
     this.events = new RAPIER.EventQueue(true);
-    // Infinite-ish ground slab whose top face is y = 0.
-    const ground = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
-    this.world.createCollider(RAPIER.ColliderDesc.cuboid(GROUND_HALF, 0.5, GROUND_HALF).setFriction(0.9), ground);
+    this.setTerrain(terrain);
+  }
+
+  /**
+   * Flat ground: one infinite-ish slab whose top face is y = 0 (unchanged since Phase 1).
+   * Terrain: a Rapier heightfield over the grid (the exact triangles the renderer draws) plus
+   * four slabs around it carrying the y = 0 surroundings.
+   */
+  setTerrain(terrain: TerrainColliderDesc | null) {
+    const world = this.w();
+    if (this.ground) world.removeRigidBody(this.ground);
+    const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
+    this.ground = ground;
+    if (!terrain) {
+      world.createCollider(RAPIER.ColliderDesc.cuboid(GROUND_HALF, 0.5, GROUND_HALF).setFriction(0.9), ground);
+      return;
+    }
+    const { nx, nz, cellSize, originX, originZ, heights, friction } = terrain;
+    const sx = (nx - 1) * cellSize;
+    const sz = (nz - 1) * cellSize;
+    // Rapier: (nrows+1)×(ncols+1) heights, column-major, rows along z and columns along x,
+    // centered on the collider origin.
+    const cm = new Float32Array(nx * nz);
+    for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix < nx; ix++) cm[ix * nz + iz] = heights[iz * nx + ix];
+    world.createCollider(
+      RAPIER.ColliderDesc.heightfield(nz - 1, nx - 1, cm, { x: sx, y: 1, z: sz }, RAPIER.HeightFieldFlags.FIX_INTERNAL_EDGES)
+        .setTranslation(originX + sx / 2, 0.5, originZ + sz / 2)
+        .setFriction(friction),
+      ground,
+    );
+    // Surroundings (top at y = 0): north/south strips span the full width, east/west fill the rest.
+    const x0 = originX;
+    const x1 = originX + sx;
+    const z0 = originZ;
+    const z1 = originZ + sz;
+    const slab = (cx: number, cz: number, hx: number, hz: number) =>
+      world.createCollider(RAPIER.ColliderDesc.cuboid(hx, 0.5, hz).setTranslation(cx, 0, cz).setFriction(0.9), ground);
+    const northDepth = (z0 + GROUND_HALF) / 2;
+    const southDepth = (GROUND_HALF - z1) / 2;
+    slab(0, z0 - northDepth, GROUND_HALF, northDepth);
+    slab(0, z1 + southDepth, GROUND_HALF, southDepth);
+    const westW = (x0 + GROUND_HALF) / 2;
+    const eastW = (GROUND_HALF - x1) / 2;
+    slab(x0 - westW, (z0 + z1) / 2, westW, sz / 2);
+    slab(x1 + eastW, (z0 + z1) / 2, eastW, sz / 2);
+  }
+
+  castGroundRay(origin: Vec3, dir: Vec3, maxDist: number): number | null {
+    const g = this.ground;
+    if (!g) return null;
+    const ray = new RAPIER.Ray({ x: origin[0], y: origin[1], z: origin[2] }, { x: dir[0], y: dir[1], z: dir[2] });
+    let best: number | null = null;
+    for (let i = 0; i < g.numColliders(); i++) {
+      const toi = g.collider(i).castRay(ray, maxDist, true);
+      if (toi >= 0 && (best === null || toi < best)) best = toi;
+    }
+    return best;
   }
 
   private w(): RAPIER.World {
@@ -165,6 +221,10 @@ export class RapierEngine implements PhysicsEngine {
     this.bodies.get(h)?.wakeUp();
   }
 
+  sleep(h: BodyHandle) {
+    this.bodies.get(h)?.sleep();
+  }
+
   step(dt: number) {
     const world = this.w();
     world.timestep = dt;
@@ -196,6 +256,7 @@ export class RapierEngine implements PhysicsEngine {
     this.world?.free();
     this.events = null;
     this.world = null;
+    this.ground = null;
     this.bodies.clear();
     this.userData.clear();
     this.forced.clear();

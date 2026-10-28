@@ -57,6 +57,8 @@ export interface RuntimeEntity {
   areaFactor: number;
   /** Individual strength multiplier on windResistance (natural variation between specimens). */
   strength: number;
+  /** Friction multiplier from the ground type under a free-standing object at t = 0. */
+  groundFriction: number;
   state: DamageState;
   health: number;
   loadRatio: number;
@@ -74,6 +76,10 @@ export interface RuntimeEntity {
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
+  /** Consecutive calm, motionless steps on uneven terrain (see PoseSyncSystem). */
+  quietSteps: number;
+  /** Position where the current quiet window started (internal). */
+  restRef: Vec3;
   /** Horizontal distance moved from the initial position (m). */
   displacement: number;
   /** Bumped on discrete visual changes (component broken, snapped …) so views can update. */

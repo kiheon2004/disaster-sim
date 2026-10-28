@@ -19,6 +19,7 @@ function randomObstacles(rng: Rng, n: number): WindObstacle[] {
       ax: [Math.cos(yaw), -Math.sin(yaw)] as [number, number],
       az: [Math.sin(yaw), Math.cos(yaw)] as [number, number],
       height: rng.range(2, 34),
+      baseY: 0,
       active: true,
     };
   });
@@ -134,9 +135,9 @@ describe('ObstacleIndex (flow-aligned spatial index)', () => {
     field.removeObstacle('b3');
     field.removeObstacle('b17');
     expectSame(field, pts);
-    field.addObstacle({ id: 'new', cx: 10, cz: -20, hx: 6, hz: 4, ax: [1, 0], az: [0, 1], height: 25, active: true });
+    field.addObstacle({ id: 'new', cx: 10, cz: -20, hx: 6, hz: 4, ax: [1, 0], az: [0, 1], height: 25, baseY: 0, active: true });
     expectSame(field, pts);
-    field.updateObstacle('b5', { cx: -40, cz: 35, hx: 5, hz: 5, ax: [0, 1], az: [-1, 0], height: 30 });
+    field.updateObstacle('b5', { cx: -40, cz: 35, hx: 5, hz: 5, ax: [0, 1], az: [-1, 0], height: 30, baseY: 0 });
     expectSame(field, pts);
     expect(field.getObstacles().find((o) => o.id === 'b5')!.cx).toBe(-40);
   });

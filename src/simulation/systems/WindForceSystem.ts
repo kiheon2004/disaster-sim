@@ -85,7 +85,7 @@ export class WindForceSystem implements SimulationSystem {
       const area = boxProjectedArea(d.size, qRotate(conj(d.pose.quaternion), dir));
       const f = 0.5 * rho * DEBRIS_CD * area * rel * rel * WIND_FORCE_SCALE;
       const force = vScale(dir, f);
-      if (d.plate) force[1] += f * PLATE_LIFT * Math.min(1, Math.max(0, 1 - d.pose.position[1] / 60));
+      if (d.plate) force[1] += f * PLATE_LIFT * Math.min(1, Math.max(0, 1 - env.terrain.heightAboveGround(d.pose.position) / 60));
       physics.addForceAtPoint(d.body, force, d.pose.position);
     }
   }

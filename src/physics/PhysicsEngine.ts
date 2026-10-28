@@ -45,8 +45,28 @@ export interface Pose {
   quaternion: Quat;
 }
 
+/**
+ * Static ground collider built from the terrain grid (see terrain/TerrainPhysicsAdapter).
+ * Heights are row-major (index = iz·nx + ix); cells split along their (x1,z0)–(x0,z1) diagonal.
+ * Outside the grid the ground continues as the y = 0 plane.
+ */
+export interface TerrainColliderDesc {
+  nx: number;
+  nz: number;
+  cellSize: number;
+  originX: number;
+  originZ: number;
+  heights: Float32Array;
+  friction: number;
+}
+
 export interface PhysicsEngine {
-  init(gravity: number): Promise<void>;
+  /** `terrain` null → infinite flat ground at y = 0. */
+  init(gravity: number, terrain?: TerrainColliderDesc | null): Promise<void>;
+  /** Replace the ground collider (one rebuild — call once per finished edit, not per frame). */
+  setTerrain(terrain: TerrainColliderDesc | null): void;
+  /** Distance along a unit ray to the ground collider (null = no hit within maxDist). */
+  castGroundRay(origin: Vec3, dir: Vec3, maxDist: number): number | null;
   createBody(desc: BodyDesc): BodyHandle;
   removeBody(h: BodyHandle): void;
   setBodyKind(h: BodyHandle, kind: BodyKind): void;
@@ -61,6 +81,8 @@ export interface PhysicsEngine {
   getAngularVelocity(h: BodyHandle): Vec3;
   isSleeping(h: BodyHandle): boolean;
   wake(h: BodyHandle): void;
+  /** Put a body to sleep (it wakes on the next applied force or contact change). */
+  sleep(h: BodyHandle): void;
   step(dt: number): void;
   drainContactEvents(): ContactEvent[];
   bodyCount(): number;

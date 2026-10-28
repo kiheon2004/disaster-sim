@@ -1,10 +1,22 @@
 import type { Vec3 } from '@/core/types';
 import { windFlowVector } from '@/core/compass';
 import { heightFactor } from '../damage/windLoad';
+import type { TerrainSampler } from '@/terrain/TerrainSampler';
+
+/**
+ * Extension point for terrain-induced wind effects (speed-up over hill crests, channelling
+ * along valleys, shelter on lee slopes). Not modelled in this phase — no modifier is installed.
+ */
+export interface TerrainWindModifier {
+  /** Multiplier on the free-stream speed at a point (`hag` = height above ground). */
+  factor(x: number, z: number, hag: number): number;
+}
 
 /**
  * Spatially and temporally varying wind.
- *   v(p, t) = base · heightFactor(y) · (1 + gust · g(p, t))
+ *   v(p, t) = base · heightFactor(h) · (1 + gust · g(p, t)),   h = height above the local ground
+ * so the boundary-layer profile follows the terrain: an object on a hill top and one in a valley
+ * both see the profile measured from the ground they stand on.
  * g is a sum of sinusoids whose phase travels downwind, so gust fronts sweep through the scene.
  */
 export class WindField {
@@ -14,6 +26,9 @@ export class WindField {
   fromBearing = 90;
   /** 0–1 */
   gustStrength = 0;
+  /** Ground the height profile is measured from (null = flat ground at y = 0). */
+  terrain: TerrainSampler | null = null;
+  terrainModifier: TerrainWindModifier | null = null;
 
   private flowBearing = NaN;
   private flowVec: Vec3 = [0, 0, 0];
@@ -50,7 +65,9 @@ export class WindField {
   /** Effective scalar speed at a point. */
   speedAt(p: Vec3, t: number): number {
     if (this.baseSpeed <= 0) return 0;
-    return Math.max(0, this.baseSpeed * heightFactor(p[1]) * (1 + this.gustStrength * this.gustFactor(p, t)));
+    const hag = this.terrain ? p[1] - this.terrain.sampleHeight(p[0], p[2]) : p[1];
+    const v = Math.max(0, this.baseSpeed * heightFactor(hag) * (1 + this.gustStrength * this.gustFactor(p, t)));
+    return this.terrainModifier ? v * this.terrainModifier.factor(p[0], p[2], hag) : v;
   }
 
   /** Wind velocity vector at a point (with a slight directional wobble in gusts). */

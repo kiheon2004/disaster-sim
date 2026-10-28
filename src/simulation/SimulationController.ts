@@ -19,6 +19,8 @@ import { Rng } from '@/core/random';
 import { defaultSimulationSettings } from '@/core/model';
 import { DamageState } from './damage/DamageState';
 import { simProfiler } from './profiling/SimProfiler';
+import { TerrainSampler } from '@/terrain/TerrainSampler';
+import { terrainColliderDesc } from '@/terrain/TerrainPhysicsAdapter';
 import { EMPTY_STATS, useSimStore, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
 
 const MAX_STEPS_PER_FRAME = 16;
@@ -58,6 +60,8 @@ export class SimulationController {
   private fxRng = new Rng(2);
   private metrics = new MetricsRecorder(1);
   private lastEventCount = -1;
+  /** Time spent creating the physics ground (incl. terrain collider) on the last load (ms). */
+  terrainBuildMs = 0;
 
   // ── Lifecycle ─────────────────────────────────────────────
 
@@ -77,15 +81,19 @@ export class SimulationController {
     // Rapier (WASM) is loaded on demand so the editor starts fast.
     const { RapierEngine } = await import('@/physics/RapierEngine');
     const physics = new RapierEngine();
-    await physics.init(this.snapshot.settings.gravity);
+    // The terrain is frozen while simulating: its collider is built once per (re)load.
+    const t0 = performance.now();
+    await physics.init(this.snapshot.settings.gravity, terrainColliderDesc(this.snapshot.terrain));
+    this.terrainBuildMs = performance.now() - t0;
     if (token !== this.loadToken) {
       physics.dispose(); // a newer load/reset superseded this one
       return;
     }
     this.physics = physics;
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
-    this.runtime = buildRuntime(this.snapshot, physics);
-    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed);
+    const terrain = new TerrainSampler(this.snapshot.terrain);
+    this.runtime = buildRuntime(this.snapshot, physics, terrain);
+    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain);
     const obstacles = [];
     for (const e of this.runtime.entities.values()) {
       const o = obstacleFromEntity(e);

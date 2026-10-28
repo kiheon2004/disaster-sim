@@ -8,6 +8,8 @@ import { broadsideArea } from './damage/windLoad';
 import { DamageState } from './damage/DamageState';
 import { createSampleCache } from './wind/SpatialWindField';
 import type { RuntimeEntity, SimulationRuntime } from './SimulationRuntime';
+import { groundFrictionFactor } from '@/terrain/GroundMaterials';
+import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -28,7 +30,7 @@ export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
 /** Contact-force threshold so resting contact is ignored but impacts are reported. */
 export const impactThreshold = (mass: number) => Math.max(800, mass * 9.81 * 2.5);
 
-export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose'>, dynamic: boolean): BodyHandle {
+export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction'>, dynamic: boolean): BodyHandle {
   const o = e.source;
   return physics.createBody({
     kind: dynamic ? 'dynamic' : 'fixed',
@@ -36,7 +38,8 @@ export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 
     quaternion: e.initialPose.quaternion,
     shapes: e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale)),
     mass: o.physics.mass,
-    friction: o.physics.friction,
+    // Free-standing bodies grip according to the ground they start on (approximate; ×1 on grass).
+    friction: o.physics.friction * e.groundFriction,
     restitution: o.physics.restitution,
     lockRotations: e.profile === 'upright',
     linearDamping: 0.05,
@@ -52,7 +55,7 @@ function naturalStrength(o: WorldObject): number {
   return 1 + (seededRandom(o.seed ^ 0x5bd1e995)() * 2 - 1) * spread;
 }
 
-function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
+function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSampler): RuntimeEntity {
   const def = getDefinition(o.type);
   const k = o.transform.scale;
   const d = def.getDimensions(o.params);
@@ -61,6 +64,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
   const profile = def.physicsProfile;
   // Free-standing profiles start dynamic unless the user anchored them.
   const dynamic = (profile === 'dynamic' || profile === 'upright') && !o.physics.anchored;
+  const groundFriction = profile === 'dynamic' || profile === 'upright' ? groundFrictionFactor(terrain.sampleGroundType(pose.position[0], pose.position[2])) : 1;
 
   const e: RuntimeEntity = {
     id: o.id,
@@ -78,6 +82,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
       ? Math.min(1, def.frontalArea(o.params) / (Math.max(d[0], d[2]) * d[1]))
       : 1,
     strength: naturalStrength(o),
+    groundFriction,
     state: DamageState.NORMAL,
     health: 1,
     loadRatio: 0,
@@ -97,6 +102,8 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
     visual: { swayAngle: 0, swayAxis: [1, 0, 0], brace: 0, foliageLoss: 0, swayVel: 0 },
     flags: {},
     displacement: 0,
+    quietSteps: 0,
+    restRef: [0, 0, 0],
     rev: 0,
     windCache: createSampleCache(),
     counters: {},
@@ -107,8 +114,8 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
 }
 
 /** WorldDocument (read-only) → fresh SimulationRuntime with physics bodies. */
-export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine): SimulationRuntime {
+export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain)): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
-  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics));
+  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain));
   return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [] };
 }

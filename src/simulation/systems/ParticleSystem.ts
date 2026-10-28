@@ -25,7 +25,8 @@ export class ParticleSystem implements SimulationSystem {
       p.life -= dt;
       if (p.life <= 0) continue;
       const leaf = p.kind === 'leaf';
-      const onGround = p.position[1] <= 0.02;
+      const ground = env.terrain.sampleHeight(p.position[0], p.position[2]) + 0.02;
+      const onGround = p.position[1] <= ground;
       if (!p.wind || (i & 1) === this.step) {
         const v = env.windField.sample(p.position, time, undefined, undefined, scratch).velocity;
         const pw = (p.wind ??= [0, 0, 0]);
@@ -41,8 +42,8 @@ export class ParticleSystem implements SimulationSystem {
       p.position[0] += p.velocity[0] * dt;
       p.position[1] += p.velocity[1] * dt;
       p.position[2] += p.velocity[2] * dt;
-      if (p.position[1] < 0.02) {
-        p.position[1] = 0.02;
+      if (p.position[1] < ground) {
+        p.position[1] = ground;
         p.velocity[1] = 0;
         p.velocity[0] *= 0.9;
         p.velocity[2] *= 0.9;

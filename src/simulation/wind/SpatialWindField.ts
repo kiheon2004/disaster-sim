@@ -217,7 +217,8 @@ export class SpatialWindField {
       const c = Math.abs(rx * n0 + rz * n1); // across flow
       const D = extD[idx];
       const W = extW[idx];
-      const y = p[1];
+      // Height relative to the obstacle's base (terrain: a building on a hill shelters at its height).
+      const y = p[1] - o.baseY;
 
       // Inside the volume (e.g. debris resting on a roof edge cell)
       if (a > -D && a < D && c < W && y < H) {

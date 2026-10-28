@@ -11,7 +11,7 @@ function setup(seed = 7, params = DEFAULT_WIND_MODEL) {
   wind.fromBearing = 270;
   wind.gustStrength = 0; // isolate the obstacle effect
   const field = new SpatialWindField(wind, params, seed);
-  const b: WindObstacle = { id: 'b1', cx: 0, cz: 0, hx: 5, hz: 5, ax: [1, 0], az: [0, 1], height: 20, active: true };
+  const b: WindObstacle = { id: 'b1', cx: 0, cz: 0, hx: 5, hz: 5, ax: [1, 0], az: [0, 1], height: 20, baseY: 0, active: true };
   field.setObstacles([b]);
   return { wind, field };
 }
