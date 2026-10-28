@@ -409,6 +409,21 @@ export const ko = {
   'log.structure.toppled': '{name}: 쓰러짐',
   'log.wall.collapsed': '{name}: 담장이 무너짐',
 
+  // Simulation settings / model
+  'settings.title': '시뮬레이션 설정',
+  'settings.seed': '시드',
+  'settings.seed.hint': '같은 환경 + 같은 이벤트 + 같은 시드 → 같은 피해 결과',
+  'settings.seed.random': '새 시드 생성',
+  'settings.shelter': '건물 바람 그림자',
+  'settings.shelter.hint': '건물 뒤 풍속 감소(wake)와 모서리 가속을 근사합니다.',
+  'settings.shadowStrength': '그림자 강도',
+  'settings.wakeLength': 'wake 길이',
+  'settings.wakeRecovery': '회복 거리',
+  'settings.cornerSpeedup': '모서리 가속',
+  'settings.turbulence': '난류 강도',
+  'model.approximate': '⚠ 근사 모델: 시각적 이해를 위한 semi-realistic 시뮬레이션이며, CFD·구조공학으로 검증된 예측값이 아닙니다.',
+  'model.badge': '근사 모델',
+
   // Generic
   'common.close': '닫기',
   'common.cancel': '취소',

@@ -7,6 +7,7 @@ import { DamageState, worst } from '../DamageState';
 import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris, spawnParticles } from '../spawn';
 import { heightFactor } from '../windLoad';
+import type { LocalWind } from '../../wind/SpatialWindField';
 
 /** Brittle glass fails slightly earlier than ductile parts. */
 const GLASS_BREAK = 1.5;
@@ -30,6 +31,11 @@ function pressureFactor(c: RuntimeComponent, normal: Vec3 | null, flow: Vec3): n
   return f;
 }
 
+/** Representative pressure factor for a part (used for the indicative force value). */
+function pressureFactorFor(c: RuntimeComponent): number {
+  return c.spec.kind === 'roof' ? 1.1 : 1;
+}
+
 const LOG_MILESTONES = [1, 5, 10, 20, 40, 80, 160];
 
 function countAndLog(e: RuntimeEntity, ctx: SystemContext, kind: string, key: 'log.building.window' | 'log.building.roof') {
@@ -37,16 +43,37 @@ function countAndLog(e: RuntimeEntity, ctx: SystemContext, kind: string, key: 'l
   if (LOG_MILESTONES.includes(n)) ctx.log(e.id, 'info', { key, params: { n } });
 }
 
-function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext) {
-  const flow = ctx.env.wind.flow();
-  const speed = ctx.env.wind.baseSpeed;
-  const pos = componentWorldPos(e, c.spec);
+interface FailInfo {
+  lw: LocalWind;
+  pos: Vec3;
+  healthBefore: number;
+  overload: boolean;
+}
+
+function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, info: FailInfo) {
+  const { lw, pos } = info;
+  const speed = lw.speed;
+  const flow: Vec3 = speed > 0.1 ? [lw.velocity[0] / speed, 0, lw.velocity[2] / speed] : ctx.env.wind.flow();
   const normal = componentWorldNormal(e, c.spec) ?? [0, 1, 0];
   const k = e.source.transform.scale;
   const size: Vec3 = [c.spec.size[0] * k[0], c.spec.size[1] * k[1], c.spec.size[2] * k[2]];
   c.health = 0;
   c.state = DamageState.DESTROYED;
   e.rev++;
+  // Face area × dynamic pressure as an indicative load on the part.
+  const face = Math.max(size[0] * size[1], size[1] * size[2], size[0] * size[2]);
+  ctx.recordDamage(e, {
+    eventType: c.spec.kind === 'window' ? 'BROKEN' : 'DETACHED',
+    cause: info.overload ? 'overload' : 'fatigue',
+    componentId: c.spec.id,
+    componentKind: c.spec.kind,
+    worldPosition: pos,
+    localWindSpeed: speed,
+    force: 0.5 * ctx.env.airDensity * speed * speed * face * pressureFactorFor(c),
+    damageBefore: 1 - info.healthBefore,
+    damageAfter: 1,
+    shadowSource: lw.shadowSource,
+  });
 
   if (c.spec.kind === 'window') {
     c.condition = 'broken';
@@ -111,7 +138,9 @@ function collapse(e: RuntimeEntity, ctx: SystemContext) {
     }
   }
   e.rev++;
+  ctx.env.windField.removeObstacle(e.id);
   ctx.log(e.id, 'danger', { key: 'log.building.collapsed' });
+  ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', damageAfter: 1 });
 }
 
 export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number) {
@@ -120,6 +149,7 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
     return;
   }
   const wind = ctx.env.wind;
+  const field = ctx.env.windField;
   const flow = wind.flow();
   const calm = wind.baseSpeed <= 0.01;
   let failed = 0;
@@ -141,14 +171,17 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
       continue;
     }
     const pos = componentWorldPos(e, c.spec);
-    const v = wind.speedAt(pos, ctx.time) / Math.pow(heightFactor(pos[1]), HEIGHT_DESIGN_EXPONENT);
+    // Local wind at the part (neighbouring buildings' wakes / corners; never its own wake).
+    const lw = field.sample(pos, ctx.time, e.id);
+    const v = lw.speed / Math.pow(heightFactor(pos[1]), HEIGHT_DESIGN_EXPONENT);
     const cp = pressureFactor(c, componentWorldNormal(e, c.spec), flow);
     c.loadRatio = (cp * v * v) / (c.spec.windResistance * c.spec.windResistance);
     const brk = c.spec.kind === 'window' ? GLASS_BREAK : e.source.physics.breakThreshold;
+    const before = c.health;
     c.health = applyFatigue(c.health, c.loadRatio, c.spec.durability, brk, dt);
     c.state = worst(loadLevel(c.loadRatio), healthLevel(c.health));
     if (c.health <= 0) {
-      failComponent(e, c, ctx);
+      failComponent(e, c, ctx, { lw, pos, healthBefore: before, overload: c.loadRatio >= brk });
       failed++;
     }
   }

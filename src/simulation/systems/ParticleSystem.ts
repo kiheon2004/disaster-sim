@@ -14,7 +14,7 @@ export class ParticleSystem implements SimulationSystem {
       if (p.life <= 0) continue;
       const leaf = p.kind === 'leaf';
       const onGround = p.position[1] <= 0.02;
-      const wv = env.wind.sample(p.position, time);
+      const wv = env.windField.velocityAt(p.position, time);
       // Relax toward the wind velocity (light leaves follow it closely, glass less so).
       const k = (leaf ? 1.6 : 0.5) * (onGround ? 0.25 : 1);
       p.velocity[0] += (wv[0] - p.velocity[0]) * Math.min(1, k * dt);

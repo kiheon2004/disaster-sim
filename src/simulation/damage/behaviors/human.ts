@@ -7,18 +7,26 @@ import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 /** Load ratio at which a standing person is knocked over immediately (gust). */
 const KNOCKDOWN_RATIO = 1.0;
 
-export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact') {
+export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact', impactForce?: number) {
   if (e.flags.fallen || !e.dynamic || e.body === null) return;
   e.flags.fallen = true;
   e.rev++;
-  const { physics, env } = ctx;
-  const flow = env.wind.baseSpeed > 0.5 ? env.wind.flow() : ([1, 0, 0] as [number, number, number]);
+  const { physics } = ctx;
+  // Fall along the LOCAL wind direction.
+  const v = e.localWind.velocity;
+  const sp = Math.hypot(v[0], v[2]);
+  const flow: [number, number, number] = sp > 0.5 ? [v[0] / sp, 0, v[2] / sp] : ctx.env.wind.baseSpeed > 0.5 ? ctx.env.wind.flow() : [1, 0, 0];
   physics.setRotationsLocked(e.body, false);
   // Tip over downwind: angular impulse about the horizontal axis ⟂ flow, plus a shove.
   const m = e.source.physics.mass;
   physics.applyTorqueImpulse(e.body, vScale([flow[2], 0, -flow[0]], m * 0.55));
   physics.applyImpulse(e.body, vScale(flow, m * 0.6));
   ctx.log(e.id, 'danger', { key: reason === 'wind' ? 'log.human.fallen' : 'log.human.hit' });
+  ctx.recordDamage(e, {
+    eventType: reason === 'wind' ? 'FALLEN' : 'IMPACT',
+    cause: reason === 'impact' ? 'impact' : e.loadRatio >= KNOCKDOWN_RATIO ? 'overload' : 'fatigue',
+    force: impactForce,
+  });
 }
 
 export function updateHuman(e: RuntimeEntity, ctx: SystemContext, dt: number) {

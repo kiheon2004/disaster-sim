@@ -82,6 +82,10 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
     loadRatio: 0,
     peakLoadRatio: 0,
     windAtCop: 0,
+    localWind: { velocity: [0, 0, 0], speed: 0, freeStream: 0, global: 0, shelter: 1, turbulence: 0, shadowSource: null, corner: false },
+    windLoad: 0,
+    peakState: DamageState.NORMAL,
+    lastCause: null,
     components: o.components.map((spec) => ({
       spec,
       state: DamageState.NORMAL,
@@ -104,5 +108,5 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
 export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
   for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics));
-  return { entities, debris: [], particles: [], debrisRev: 0, log: [] };
+  return { entities, debris: [], particles: [], debrisRev: 0, debrisCounter: 0, log: [] };
 }

@@ -4,6 +4,8 @@ import type { ObjectDefinition, PhysicsProfile } from '@/objects/ObjectDefinitio
 import type { I18nMessage } from '@/i18n/i18n';
 import type { BodyHandle, Pose } from '@/physics/PhysicsEngine';
 import type { DamageState } from './damage/DamageState';
+import type { LocalWind } from './wind/SpatialWindField';
+import type { DamageCause } from './analysis/DamageEvent';
 
 export type ComponentCondition = 'intact' | 'broken' | 'detached';
 
@@ -57,6 +59,14 @@ export interface RuntimeEntity {
   peakLoadRatio: number;
   /** Effective wind speed at the center of pressure (m/s). */
   windAtCop: number;
+  /** Full local-wind sample at the center of pressure (from the spatial wind field). */
+  localWind: LocalWind;
+  /** Current aerodynamic load magnitude (N). */
+  windLoad: number;
+  /** Worst state reached so far. */
+  peakState: DamageState;
+  /** Cause of the most recent damage. */
+  lastCause: DamageCause | null;
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
@@ -108,5 +118,7 @@ export interface SimulationRuntime {
   particles: Particle[];
   /** Bumped when debris is added/removed. */
   debrisRev: number;
+  /** Deterministic id counter for debris. */
+  debrisCounter: number;
   log: SimulationLogEntry[];
 }

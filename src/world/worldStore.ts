@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { EntityId, Transform } from '@/core/types';
-import type { ObjectParams, PhysicalProperties, WorldDocument, WorldObject } from '@/core/model';
+import type { ObjectParams, PhysicalProperties, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
 import {
@@ -37,6 +37,7 @@ interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings> }) => void;
   replaceDocument: (doc: WorldDocument) => void;
   newDocument: () => void;
   /** Record the current state as an undo step (call once before a continuous edit). */
@@ -126,6 +127,21 @@ export const useWorldStore = create<WorldState>((set, get) => {
     setProjectName: (name) => {
       const doc = get().doc;
       set({ doc: { ...doc, meta: { ...doc.meta, name, updatedAt: new Date().toISOString() } } });
+    },
+
+    updateSimulationSettings: (patch) => {
+      const doc = get().doc;
+      const cur = doc.settings.simulation;
+      set({
+        doc: {
+          ...doc,
+          settings: {
+            ...doc.settings,
+            simulation: { seed: patch.seed ?? cur.seed, wind: { ...cur.wind, ...(patch.wind ?? {}) } },
+          },
+          meta: { ...doc.meta, updatedAt: new Date().toISOString() },
+        },
+      });
     },
 
     replaceDocument: (doc) => set({ doc, past: [], future: [], docVersion: get().docVersion + 1 }),

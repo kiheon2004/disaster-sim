@@ -11,6 +11,12 @@ import { buildRuntime } from './RuntimeBuilder';
 import type { SimulationRuntime } from './SimulationRuntime';
 import type { SimulationSystem, SystemContext } from './systems/SimulationSystem';
 import { createDefaultSystems } from './systems';
+import { MetricsSystem } from './systems/MetricsSystem';
+import { MetricsRecorder, type SimulationMetrics } from './analysis/MetricsRecorder';
+import type { DamageEventRecord } from './analysis/DamageEvent';
+import { obstacleFromEntity } from './wind/obstacles';
+import { Rng } from '@/core/random';
+import { defaultSimulationSettings } from '@/core/model';
 import { DamageState } from './damage/DamageState';
 import { EMPTY_STATS, useSimStore, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
 
@@ -43,6 +49,10 @@ export class SimulationController {
   private lastLogLength = -1;
   private lastEventsRev = -1;
   private loadToken = 0;
+  private rng = new Rng(1);
+  private fxRng = new Rng(2);
+  private metrics = new MetricsRecorder(1);
+  private lastEventCount = -1;
 
   // ── Lifecycle ─────────────────────────────────────────────
 
@@ -68,10 +78,21 @@ export class SimulationController {
       return;
     }
     this.physics = physics;
+    const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     this.runtime = buildRuntime(this.snapshot, physics);
-    this.env = createEnvironment(this.snapshot.settings.airDensity);
+    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed);
+    const obstacles = [];
+    for (const e of this.runtime.entities.values()) {
+      const o = obstacleFromEntity(e);
+      if (o) obstacles.push(o);
+    }
+    this.env.windField.setObstacles(obstacles);
+    this.rng = new Rng(sim.seed).fork('core');
+    this.fxRng = new Rng(sim.seed).fork('fx');
+    this.metrics = new MetricsRecorder(sim.seed);
+    this.lastEventCount = -1;
     this.scheduler = new EventScheduler();
-    this.systems = createDefaultSystems();
+    this.systems = [...createDefaultSystems(), new MetricsSystem(this.metrics)];
     this.time = 0;
     this.accumulator = 0;
     this.lastStates = null;
@@ -106,6 +127,8 @@ export class SimulationController {
       log: [],
       stats: EMPTY_STATS,
       wind: { speed: 0, bearing: 90, gust: 0 },
+      metrics: null,
+      damageEvents: [],
     });
   }
 
@@ -206,8 +229,12 @@ export class SimulationController {
       runtime,
       physics,
       time: this.time,
+      rng: this.rng,
+      fxRng: this.fxRng,
       log: (entityId, severity, message) => this.log(entityId, severity, message),
+      recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
     };
+    this.metrics.beginStep();
     physics.clearForces();
     for (const s of this.systems) if (s.phase === 'prePhysics') s.update(ctx, dt);
     physics.step(dt);
@@ -276,6 +303,11 @@ export class SimulationController {
         profile: Array.from({ length: 48 }, (_, k) => i.event.intensityAt((k / 47) * i.event.duration)),
       }));
     }
+    patch.metrics = this.metrics.summary(rt, this.time);
+    if (this.metrics.events.length !== this.lastEventCount || force) {
+      this.lastEventCount = this.metrics.events.length;
+      patch.damageEvents = this.metrics.events.slice();
+    }
     store.set(patch);
   }
 
@@ -283,6 +315,12 @@ export class SimulationController {
 
   getRuntime(): SimulationRuntime | null {
     return this.runtime;
+  }
+  getMetrics(): SimulationMetrics | null {
+    return this.runtime ? this.metrics.summary(this.runtime, this.time) : null;
+  }
+  getDamageEvents(): readonly DamageEventRecord[] {
+    return this.metrics.events;
   }
   getEnvironment(): EnvironmentState {
     return this.env;

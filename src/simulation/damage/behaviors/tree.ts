@@ -1,5 +1,5 @@
 import type { Vec3 } from '@/core/types';
-import { qRotate, quatFromAxisAngle, qMul, seededRandom, vAdd, vScale } from '@/core/math';
+import { qRotate, quatFromAxisAngle, qMul, vAdd, vScale } from '@/core/math';
 import { SNAP_FRACTION, trunkHeight, type TreeParams } from '@/objects/definitions/tree';
 import type { SystemContext } from '../../systems/SimulationSystem';
 import type { RuntimeEntity } from '../../SimulationRuntime';
@@ -15,22 +15,24 @@ function canopyCenter(e: RuntimeEntity): Vec3 {
 }
 
 function shedLeaves(e: RuntimeEntity, ctx: SystemContext, count: number) {
-  const flow = ctx.env.wind.flow();
-  const speed = ctx.env.wind.baseSpeed;
+  const v = e.localWind.velocity;
+  const speed = e.localWind.speed;
+  const flow: Vec3 = speed > 0.1 ? [v[0] / speed, 0, v[2] / speed] : ctx.env.wind.flow();
   const r = (e.source.params as TreeParams).canopyRadius * e.source.transform.scale[0];
   const c = canopyCenter(e);
-  const at: Vec3 = [c[0] + (Math.random() - 0.5) * r, c[1] + (Math.random() - 0.3) * r, c[2] + (Math.random() - 0.5) * r];
-  const color = e.source.params.species === 'conifer' ? '#2f6b3a' : LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
+  const fx = ctx.fxRng;
+  const at: Vec3 = [c[0] + fx.spread(0.5) * r, c[1] + fx.range(-0.3, 0.7) * r, c[2] + fx.spread(0.5) * r];
+  const color = e.source.params.species === 'conifer' ? '#2f6b3a' : fx.pick(LEAF_COLORS);
   spawnParticles(ctx, 'leaf', at, count, vScale(flow, speed * 0.4), 1.5, color);
 }
 
 /** Trunk failure: either snaps above the stump or is uprooted, then falls as a rigid body. */
-function fail(e: RuntimeEntity, ctx: SystemContext) {
+function fail(e: RuntimeEntity, ctx: SystemContext, healthBefore: number) {
   const { physics, env } = ctx;
   const p = e.source.params as TreeParams;
   const k = e.source.transform.scale;
   const flow = env.wind.flow();
-  const uproot = e.loadRatio > 2.4 || seededRandom(e.source.seed)() < 0.3;
+  const uproot = e.loadRatio > 2.4 || ctx.rng.chance(0.3);
   const swayQ = qMul(quatFromAxisAngle(e.visual.swayAxis, e.visual.swayAngle), e.initialPose.quaternion);
 
   if (e.body !== null) physics.removeBody(e.body);
@@ -97,6 +99,13 @@ function fail(e: RuntimeEntity, ctx: SystemContext) {
   physics.applyImpulse(e.body, vScale(flow, m * 0.4), canopyCenter(e));
   shedLeaves(e, ctx, 40);
   e.rev++;
+  ctx.recordDamage(e, {
+    eventType: uproot ? 'UPROOTED' : 'SNAPPED',
+    cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue',
+    worldPosition: [...e.initialPose.position],
+    damageBefore: 1 - healthBefore,
+    damageAfter: 1,
+  });
   ctx.log(e.id, 'warn', { key: uproot ? 'log.tree.uprooted' : 'log.tree.snapped' });
 }
 
@@ -108,7 +117,7 @@ export function updateTree(e: RuntimeEntity, ctx: SystemContext, dt: number) {
     canopy.health = applyFatigue(canopy.health, canopy.loadRatio, canopy.spec.durability, Infinity, dt);
     e.visual.foliageLoss = Math.min(0.85, 1 - canopy.health);
     const rate = Math.max(0, canopy.loadRatio - 0.45) * 7; // leaves per second
-    if (Math.random() < rate * dt) shedLeaves(e, ctx, 1 + Math.floor(Math.random() * 3));
+    if (ctx.fxRng.chance(rate * dt)) shedLeaves(e, ctx, 1 + ctx.fxRng.int(3));
   }
 
   if (e.flags.snapped || e.flags.uprooted) {
@@ -117,9 +126,10 @@ export function updateTree(e: RuntimeEntity, ctx: SystemContext, dt: number) {
   }
   const p = e.source.physics;
   // Anchored-off trees are already dynamic; still evaluate the trunk.
+  const before = e.health;
   e.health = applyFatigue(e.health, e.loadRatio, p.durability, p.breakThreshold, dt);
   if (e.health <= 0) {
-    fail(e, ctx);
+    fail(e, ctx, before);
     e.state = DamageState.DESTROYED;
     return;
   }

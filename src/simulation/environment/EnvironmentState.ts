@@ -1,20 +1,30 @@
 import type { Vec3 } from '@/core/types';
 import { AIR_DENSITY } from '@/core/units';
+import { DEFAULT_WIND_MODEL, type WindModelSettings } from '@/core/model';
 import { WindField } from './WindField';
+import { SpatialWindField } from '../wind/SpatialWindField';
 
 /**
- * Shared environmental fields. Events WRITE here; systems READ from here.
+ * Shared environmental fields. Events WRITE the global values; systems READ local values.
+ *  - wind:       global wind written by WindEvents (speed, bearing, gust)
+ *  - windField:  spatial field derived from `wind` + obstacles + turbulence (what objects feel)
  * New hazards add their own field (ground motion, water level, …) without touching objects.
  */
 export interface EnvironmentState {
   time: number;
   airDensity: number;
   wind: WindField;
+  windField: SpatialWindField;
   // Future: groundMotion?: GroundMotionField; waterLevel?: number; precipitation?: number; fire?: FireField;
 }
 
-export function createEnvironment(airDensity = AIR_DENSITY): EnvironmentState {
-  return { time: 0, airDensity, wind: new WindField() };
+export function createEnvironment(
+  airDensity = AIR_DENSITY,
+  windModel: WindModelSettings = DEFAULT_WIND_MODEL,
+  seed = 1,
+): EnvironmentState {
+  const wind = new WindField();
+  return { time: 0, airDensity, wind, windField: new SpatialWindField(wind, windModel, seed) };
 }
 
 export type { Vec3 };

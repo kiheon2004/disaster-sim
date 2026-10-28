@@ -6,6 +6,7 @@ import { allDefinitions } from '@/objects/registry';
 import { Panel, Section } from '@/ui/common/Panel';
 import { ObjectInspector } from './ObjectInspector';
 import { LiveStatusSection, SimSummary } from './SimInspector';
+import { SimulationSettingsSection } from './SimulationSettings';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -64,7 +65,8 @@ function NoSelection() {
           <FragmentRow label={t('inspector.total')} value={Object.keys(objects).length} />
         </div>
       </Section>
-      <Section title={t('inspector.shortcuts')}>
+      <SimulationSettingsSection readOnly={false} />
+      <Section title={t('inspector.shortcuts')} defaultOpen={false}>
         <div className={styles.shortcuts}>
           {shortcuts.map(([k, key]) => (
             <FragmentRow key={k} label={<span className={styles.kbd}>{k}</span>} value={t(key)} />

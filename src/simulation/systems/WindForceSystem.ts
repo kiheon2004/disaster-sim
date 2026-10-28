@@ -22,18 +22,26 @@ export class WindForceSystem implements SimulationSystem {
   readonly phase = 'prePhysics' as const;
 
   update({ env, runtime, physics, time }: SystemContext) {
-    const wind = env.wind;
+    const field = env.windField;
     const rho = env.airDensity || AIR_DENSITY;
-    const calm = wind.baseSpeed <= 0.01;
+    const calm = env.wind.baseSpeed <= 0.01;
 
     for (const e of runtime.entities.values()) {
       if (e.def.inert) continue;
       const cop: Vec3 = vAdd(e.pose.position, qRotate(e.pose.quaternion, e.copLocal));
-      const v = calm ? ([0, 0, 0] as Vec3) : wind.sample(cop, time);
-      const speed = vLen(v);
+      // Local wind from the spatial field (an object never sits in its own wake).
+      const lw = field.sample(cop, time, e.id);
+      e.localWind = lw;
+      const v = lw.velocity;
+      const speed = lw.speed;
       e.windAtCop = speed;
       e.loadRatio = loadRatio(speed, e.source.physics.windResistance * e.strength);
       if (e.loadRatio > e.peakLoadRatio) e.peakLoadRatio = e.loadRatio;
+      if (speed > 0.05) {
+        const dirW = vScale(v, 1 / speed);
+        const areaW = e.source.physics.frontalAreaOverride ?? boxProjectedArea(e.dims, qRotate(conj(e.pose.quaternion), dirW)) * e.areaFactor;
+        e.windLoad = 0.5 * rho * e.source.physics.dragCoefficient * areaW * speed * speed * WIND_FORCE_SCALE;
+      } else e.windLoad = 0;
 
       if (calm || !e.dynamic || e.body === null) continue;
       const vRel = vSub(v, physics.getLinearVelocity(e.body));
@@ -48,7 +56,7 @@ export class WindForceSystem implements SimulationSystem {
 
     if (calm) return;
     for (const d of runtime.debris) {
-      const v = wind.sample(d.pose.position, time);
+      const v = field.velocityAt(d.pose.position, time);
       const vRel = vSub(v, physics.getLinearVelocity(d.body));
       const rel = vLen(vRel);
       if (rel < 0.05) continue;

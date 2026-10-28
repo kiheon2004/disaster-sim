@@ -58,12 +58,16 @@ export class DamageSystem implements SimulationSystem {
     if (e.source.type === 'human') {
       if (force > 1200) {
         e.health = Math.max(0, e.health - force / 20000);
-        if (!e.flags.fallen) knockDown(e, ctx, 'impact');
+        e.lastCause = 'impact';
+        if (!e.flags.fallen) knockDown(e, ctx, 'impact', force);
       }
     } else if (e.source.type === 'car') {
       const dmg = force / (e.source.physics.mass * 9.81 * 30);
       if (dmg > 0.02) {
+        const before = e.health;
         e.health = Math.max(0, e.health - dmg);
+        e.lastCause = 'impact';
+        if (dmg > 0.05) ctx.recordDamage(e, { eventType: 'IMPACT', cause: 'impact', force, damageBefore: 1 - before, damageAfter: 1 - e.health });
         if (!e.counters.hitLogged && dmg > 0.05) {
           e.counters.hitLogged = 1;
           ctx.log(e.id, 'warn', { key: 'log.car.hit' });

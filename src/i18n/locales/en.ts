@@ -407,6 +407,21 @@ export const en: Record<MessageKey, string> = {
   'log.structure.toppled': '{name}: toppled',
   'log.wall.collapsed': '{name}: wall collapsed',
 
+  // Simulation settings / model
+  'settings.title': 'Simulation settings',
+  'settings.seed': 'Seed',
+  'settings.seed.hint': 'Same world + same events + same seed → same damage result',
+  'settings.seed.random': 'New random seed',
+  'settings.shelter': 'Building wind shadow',
+  'settings.shelter.hint': 'Approximates the wake behind buildings and corner speed-up.',
+  'settings.shadowStrength': 'Shadow strength',
+  'settings.wakeLength': 'Wake length',
+  'settings.wakeRecovery': 'Recovery distance',
+  'settings.cornerSpeedup': 'Corner speed-up',
+  'settings.turbulence': 'Turbulence',
+  'model.approximate': '⚠ Approximate model: a semi-realistic simulation for visual understanding — not a CFD/structural-engineering prediction.',
+  'model.badge': 'Approximate model',
+
   // Generic
   'common.close': 'Close',
   'common.cancel': 'Cancel',

@@ -6,6 +6,8 @@ import type { EventStatus } from '@/events/EventScheduler';
 import type { EventType } from '@/events/specs';
 import type { DamageState } from './damage/DamageState';
 import type { SimulationLogEntry } from './SimulationRuntime';
+import type { SimulationMetrics } from './analysis/MetricsRecorder';
+import type { DamageEventRecord } from './analysis/DamageEvent';
 
 export type SimStatus = 'idle' | 'loading' | 'running' | 'paused' | 'finished';
 
@@ -58,6 +60,9 @@ export interface SimState {
   events: TimelineEventView[];
   log: SimulationLogEntry[];
   stats: SimStats;
+  metrics: SimulationMetrics | null;
+  /** Full damage history (replaced only when new events arrive). */
+  damageEvents: DamageEventRecord[];
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
 }
 
@@ -72,5 +77,7 @@ export const useSimStore = create<SimState>((set) => ({
   events: [],
   log: [],
   stats: EMPTY_STATS,
+  metrics: null,
+  damageEvents: [],
   set: (patch) => set(patch),
 }));

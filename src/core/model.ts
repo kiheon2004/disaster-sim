@@ -72,11 +72,53 @@ export interface WorldObject {
   components: ComponentSpec[];
 }
 
+/**
+ * Parameters of the approximate spatial wind model (not a CFD solver).
+ * Distances are expressed in multiples of the obstacle height H.
+ */
+export interface WindModelSettings {
+  /** Enable building wind shadows and corner effects. */
+  shelterEnabled: boolean;
+  /** Fractional speed deficit directly behind an obstacle (0–0.9). */
+  shadowStrength: number;
+  /** Wake extent downstream, × H. */
+  wakeLength: number;
+  /** e-folding recovery distance of the deficit, × H. */
+  wakeRecovery: number;
+  /** Lateral widening of the wake per meter downstream. */
+  wakeSpread: number;
+  /** Extra speed along building sides/corners (0.18 = +18 %). */
+  cornerSpeedup: number;
+  /** Turbulence intensity inside wakes and at corners (0–1). */
+  turbulence: number;
+}
+
+export interface SimulationSettings {
+  /** Seed for every random draw in the simulation core (reproducibility). */
+  seed: number;
+  wind: WindModelSettings;
+}
+
+export const DEFAULT_WIND_MODEL: WindModelSettings = {
+  shelterEnabled: true,
+  shadowStrength: 0.55,
+  wakeLength: 8,
+  wakeRecovery: 2.5,
+  wakeSpread: 0.12,
+  cornerSpeedup: 0.18,
+  turbulence: 0.35,
+};
+
+export function defaultSimulationSettings(): SimulationSettings {
+  return { seed: 1234, wind: { ...DEFAULT_WIND_MODEL } };
+}
+
 export interface WorldSettings {
   /** [x, z] size in meters */
   size: [number, number];
   gravity: number;
   airDensity: number;
+  simulation: SimulationSettings;
 }
 
 export interface TerrainData {

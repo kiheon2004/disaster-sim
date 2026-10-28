@@ -27,21 +27,42 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
       continue;
     }
     const pos = componentWorldPos(e, c.spec);
-    const v = wind.speedAt(pos, ctx.time);
+    const lw = ctx.env.windField.sample(pos, ctx.time, e.id);
+    const v = lw.speed;
     const n = componentWorldNormal(e, c.spec);
     // Flat panels catch the most wind when facing it; edge-on they are much safer.
     const facing = n ? 0.35 + 0.65 * Math.abs(vDot(n, flow)) : 1;
     c.loadRatio = (facing * v * v) / (c.spec.windResistance * c.spec.windResistance);
+    const before = c.health;
     c.health = applyFatigue(c.health, c.loadRatio, c.spec.durability, e.source.physics.breakThreshold, dt);
     c.state = worst(loadLevel(c.loadRatio), healthLevel(c.health));
     if (c.health <= 0) {
+      ctx.recordDamage(e, {
+        eventType: 'DETACHED',
+        cause: c.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue',
+        componentId: c.spec.id,
+        componentKind: c.spec.kind,
+        worldPosition: pos,
+        localWindSpeed: v,
+        force: 0.5 * ctx.env.airDensity * v * v * c.spec.size[0] * c.spec.size[1],
+        damageBefore: 1 - before,
+        damageAfter: 1,
+        shadowSource: lw.shadowSource,
+      });
       detach(e, c, ctx, pos, n);
       failed++;
     }
   }
 
+  const healthBefore = e.health;
   e.health = applyFatigue(e.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
   if (e.health <= 0) {
+    ctx.recordDamage(e, {
+      eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED',
+      cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue',
+      damageBefore: 1 - healthBefore,
+      damageAfter: 1,
+    });
     if (e.source.type === 'wall') breakWall(e, ctx);
     else topple(e, ctx);
     e.state = DamageState.DESTROYED;
@@ -90,6 +111,7 @@ function breakWall(e: RuntimeEntity, ctx: SystemContext) {
   if (e.body !== null) physics.removeBody(e.body);
   e.body = null;
   e.flags.collapsed = true;
+  ctx.env.windField.removeObstacle(e.id);
   const segs = Math.max(1, Math.min(10, Math.round((p.length * k[0]) / 2)));
   const segLen = (p.length * k[0]) / segs;
   const flow = ctx.env.wind.flow();

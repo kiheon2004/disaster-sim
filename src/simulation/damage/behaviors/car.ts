@@ -10,10 +10,12 @@ export function updateCar(e: RuntimeEntity, ctx: SystemContext) {
     e.flags.overturned = true;
     e.rev++;
     ctx.log(e.id, 'danger', { key: 'log.car.overturned' });
+    ctx.recordDamage(e, { eventType: 'OVERTURNED', cause: e.lastCause === 'impact' ? 'impact' : 'push' });
   }
   if (e.displacement > 1 && !e.counters.movedLogged) {
     e.counters.movedLogged = 1;
     ctx.log(e.id, 'warn', { key: 'log.car.moved' });
+    ctx.recordDamage(e, { eventType: 'MOVED', cause: e.lastCause === 'impact' ? 'impact' : 'push' });
   }
   let s = worst(loadLevel(e.loadRatio), healthLevel(e.health));
   if (e.displacement > 1) s = worst(s, DamageState.DAMAGED);

@@ -10,13 +10,16 @@ export class SwaySystem implements SimulationSystem {
   readonly phase = 'postPhysics' as const;
 
   update({ env, runtime, time }: SystemContext, dt: number) {
-    const flow = env.wind.flow();
-    // Horizontal axis perpendicular to the flow: positive rotation tips the top downwind.
-    const axis: [number, number, number] = [flow[2], 0, -flow[0]];
+    const global = env.wind.flow();
 
     for (const e of runtime.entities.values()) {
       const vis = e.visual;
-      vis.swayAxis = axis;
+      // Bend along the LOCAL wind direction (veers in wakes / around corners).
+      const v = e.localWind.velocity;
+      const sp = Math.hypot(v[0], v[2]);
+      const flow = sp > 0.1 ? [v[0] / sp, 0, v[2] / sp] : global;
+      // Horizontal axis perpendicular to the flow: positive rotation tips the top downwind.
+      vis.swayAxis = [flow[2], 0, -flow[0]];
       const r = e.loadRatio;
 
       if (e.source.type === 'tree' && !e.flags.snapped && !e.flags.uprooted) {
@@ -31,12 +34,12 @@ export class SwaySystem implements SimulationSystem {
         vis.swayVel += accel * dt;
         vis.swayAngle += vis.swayVel * dt;
         // Leaf flutter
-        vis.swayAngle += Math.sin(time * 9 + e.source.seed) * 0.004 * smoothstep(0.05, 0.5, r);
+        vis.swayAngle += Math.sin(time * 9 + (e.source.seed % 1000)) * 0.004 * smoothstep(0.05, 0.5, r);
       } else if (e.source.type === 'human') {
         const target = e.flags.fallen ? 0 : smoothstep(0.12, 0.9, r);
         vis.brace += (target - vis.brace) * Math.min(1, dt * 4);
         // People lean INTO the wind (negative = upwind).
-        vis.swayAngle = -0.2 * vis.brace + Math.sin(time * 3.1 + e.source.seed) * 0.03 * vis.brace;
+        vis.swayAngle = -0.2 * vis.brace + Math.sin(time * 3.1 + (e.source.seed % 1000)) * 0.03 * vis.brace;
       }
     }
   }

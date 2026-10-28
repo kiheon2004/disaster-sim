@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { WorldDocument, WorldObject } from '@/core/model';
+import { DEFAULT_WIND_MODEL, defaultSimulationSettings, type WorldDocument, type WorldObject } from '@/core/model';
 import { getDefinition, hasDefinition } from '@/objects/registry';
 import { SCHEMA_VERSION } from './WorldDocument';
 
@@ -36,6 +36,22 @@ const documentSchema = z.object({
     size: z.tuple([z.number(), z.number()]),
     gravity: z.number(),
     airDensity: z.number(),
+    // Added in Phase 8 — older files get defaults.
+    simulation: z
+      .object({
+        seed: z.number().int().nonnegative(),
+        wind: z.object({
+          shelterEnabled: z.boolean(),
+          shadowStrength: z.number().min(0).max(0.95),
+          wakeLength: z.number().min(0),
+          wakeRecovery: z.number().positive(),
+          wakeSpread: z.number().min(0),
+          cornerSpeedup: z.number().min(0),
+          turbulence: z.number().min(0).max(1),
+        }).partial().optional(),
+      })
+      .partial()
+      .optional(),
   }),
   terrain: z.object({ kind: z.literal('flat') }),
   objects: z.record(z.string(), objectSchema),
@@ -80,7 +96,13 @@ export function parseDocument(json: string): LoadResult {
       components: def.createComponents(params, o.seed),
     };
   }
-  return { ok: true, doc: { ...res.data, objects }, skipped };
+  const defaults = defaultSimulationSettings();
+  const sim = res.data.settings.simulation;
+  const settings = {
+    ...res.data.settings,
+    simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) } },
+  };
+  return { ok: true, doc: { ...res.data, settings, objects }, skipped };
 }
 
 const SAVE_KEY = 'ds.project';

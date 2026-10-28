@@ -1,6 +1,5 @@
 import type { Vec3 } from '@/core/types';
 import { qRotate, vAdd, vScale } from '@/core/math';
-import { createId } from '@/core/id';
 import type { ComponentSpec } from '@/core/model';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { DebrisPiece, RuntimeEntity } from '../SimulationRuntime';
@@ -48,11 +47,11 @@ export function spawnDebris(
     angularDamping: 0.25,
     ccd: true,
     contactForceThreshold: Math.max(600, opts.mass * 9.81 * 4),
-    userData: { entityId: e.id, debrisId: createId('deb') },
+    userData: { entityId: e.id, debrisId: `deb-${runtime.debrisCounter}` },
   });
   if (opts.push) physics.applyImpulse(body, vScale(opts.push, Math.max(1, opts.mass)));
   const piece: DebrisPiece = {
-    id: createId('deb'),
+    id: `deb-${runtime.debrisCounter++}`,
     sourceId: e.id,
     kind: opts.kind,
     body,
@@ -80,18 +79,19 @@ export function spawnParticles(
   const ps = ctx.runtime.particles;
   const room = MAX_PARTICLES - ps.length;
   const n = Math.min(count, room);
+  const rng = ctx.fxRng;
   for (let i = 0; i < n; i++) {
-    const r = () => (Math.random() * 2 - 1) * spread;
+    const r = () => rng.spread(spread);
     ps.push({
       kind,
       position: [at[0] + r() * 0.3, at[1] + r() * 0.3, at[2] + r() * 0.3],
       velocity: [baseVel[0] + r(), baseVel[1] + Math.abs(r()) * 0.5, baseVel[2] + r()],
-      rotation: [Math.random(), Math.random(), Math.random(), 1],
+      rotation: [rng.next(), rng.next(), rng.next(), 1],
       spin: [r() * 6, r() * 6, r() * 6],
-      life: kind === 'leaf' ? 6 + Math.random() * 6 : 3 + Math.random() * 3,
+      life: kind === 'leaf' ? rng.range(6, 12) : rng.range(3, 6),
       maxLife: 12,
       color,
-      size: kind === 'leaf' ? 0.12 + Math.random() * 0.1 : 0.06 + Math.random() * 0.1,
+      size: kind === 'leaf' ? rng.range(0.12, 0.22) : rng.range(0.06, 0.16),
     });
   }
 }
