@@ -66,7 +66,8 @@ UI (React)  ──actions──▶  app/actions.ts (오케스트레이션)
 ### 확장 방법
 
 - **새 재난**: `events/specs.ts`에 스펙 추가 → `SimulationEvent` 구현 → `eventRegistry` 등록 → `EnvironmentState`에 필드 추가 → 반응하는 `SimulationSystem` 추가 (예: `GroundShakeSystem`, `BuoyancySystem`). 파서는 이미 폭우·지진·홍수·쓰나미·화재·폭발을 인식해 "향후 지원"으로 안내합니다.
-- **새 오브젝트**: `objects/definitions/*.ts` 정의 + 레지스트리 등록 + 뷰 1개 (+ 필요 시 손상 behavior)
+- **새 오브젝트**: `objects/definitions/*.ts` 정의 + 레지스트리 등록 + `rendering/parts/objectParts.ts`에 파츠 빌더(편집 뷰와 시뮬레이션 배치가 공유) + 편집 뷰 1개 + `SimRenderAdapter`의 타입별 분기 (+ 필요 시 손상 behavior)
+- **새 시스템**: `SimulationSystem`을 구현하고 `systems/index.ts`에 추가. 60 Hz가 필요 없는 시각 전용 시스템은 `interval`(N 스텝마다 실행, dt×N)을 지정합니다. 물리·피해에 영향을 주는 시스템은 결정론을 위해 매 스텝 실행하고, 내부 분산 처리는 `ctx.step`(고정 스텝 카운터)을 사용합니다.
 - **LLM 연결**: `commands/LlmParser.ts`가 동일한 `CommandParser` 인터페이스를 구현. 백엔드 호출 함수를 주입하고 `app/actions.ts`의 `commandParser`만 교체. 출력은 `commandJsonSchema()`(zod → JSON Schema)로 검증됩니다.
 
 ## Phase 8–10: 공간 바람장 · 시각화 · 분석
@@ -80,9 +81,19 @@ UI (React)  ──actions──▶  app/actions.ts (오케스트레이션)
 - **근사 모델 표시**: 뷰포트 배지, 결과 패널, 설정 패널에 "공학적 예측값이 아님"을 명시합니다.
 - 성능 측정 결과는 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)에 있습니다.
 
+## Phase 11: 엔진 성능 · 확장성
+
+- **렌더링 어댑터** (`rendering/sim/SimRenderAdapter.ts`): 시뮬레이션 상태 → 어댑터 → 인스턴스 렌더링. 모든 오브젝트 파츠를 재질별 `BatchedMesh`(7개)에, 건물 외피 요소를 종류별 `InstancedMesh`에, 파편을 하나의 `InstancedMesh`에 그립니다. 프레임당 `useFrame` 하나가 포즈·흔들림·가시성을 복사합니다. 클릭한 인스턴스는 `batchId` → 원래 엔티티 ID로 매핑되어 선택·인스펙터·포커스·피해 이벤트 이동이 그대로 동작합니다. 시뮬레이션 코어는 React/Three.js에 의존하지 않습니다.
+- **렌더링 LOD** (시뮬레이션 계산은 그대로): 먼 나무·사람·차량은 단순 지오메트리, 먼 사람은 팔을 따로 그리지 않음, 먼 오브젝트의 시각 애니메이션은 3프레임마다 갱신.
+- **바람장 공간 인덱스** (`simulation/wind/ObstacleIndex.ts`): 장애물의 실제 영향 영역(외곽·모서리 띠·넓어지는 wake)을 바람 방향 좌표계 격자에 래스터화. 셀별 버전으로 정적 지점 캐시를 무효화(붕괴 시 그 wake 아래만 재계산). 장애물 추가·이동·삭제 지원. 결과는 전수 검사와 비트 단위로 동일합니다.
+- **스케줄러**: 시스템별 `interval`(고정 스텝 카운터 기반, 결정론 유지). 입자(시각 전용)는 30 Hz, 건물 외피 판정은 20 Hz 3라운드 분산, UI 발행은 10 Hz.
+- **개발용 성능 HUD**: `Shift+P`, `⋯` 메뉴 또는 `?perf` — FPS, 프레임 시간, 시뮬레이션/물리/바람장/피해 ms, draw call, 삼각형, 오브젝트 수. 기본 OFF.
+- **골든 테스트** (`simulation/golden.test.ts`): 최적화 전 엔진으로 생성한 피해 이벤트 시퀀스와 최종 엔티티 상태(전체 정밀도)를 해시로 비교합니다.
+- CPU 프로파일: `BENCH=1 npx vitest run src/bench`
+
 ## 현재 제한사항
 
 - 지형은 평면(높이맵 편집 미구현). 바람 그림자는 박스 형태의 경험적 wake 근사(CFD 아님)이며, 나무·차량은 바람을 막지 않음
 - 바람 외 재난은 인식만 하고 시뮬레이션하지 않음
 - 시뮬레이션 타임라인은 되감기(seek) 불가 — 초기화 후 재생
-- 대규모 장면(수백 개 건물)에서는 인스턴싱 확대 필요
+- 편집 모드는 아직 오브젝트별 메시로 그립니다(시뮬레이션 모드만 배치 렌더링). 1000개 장면의 편집 모드 draw call은 최적화 전 수준입니다.
