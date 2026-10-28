@@ -1,5 +1,5 @@
 import { countRender } from '@/utils/renderCounter';
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RuntimeEntity, SimulationRuntime } from '@/simulation/SimulationRuntime';
@@ -52,15 +52,19 @@ function SelectionFollower({ runtime }: { runtime: SimulationRuntime }) {
  */
 export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
   countRender('SimRenderLayer');
-  const adapter = useMemo(() => new SimRenderAdapter(runtime), [runtime]);
+  // Created inside the effect (not useMemo): StrictMode runs effect cleanups once in dev, and a
+  // memoized adapter would be disposed there and then reused.
+  const [adapter, setAdapter] = useState<SimRenderAdapter | null>(null);
   useEffect(() => {
-    setActiveAdapter(adapter);
+    const a = new SimRenderAdapter(runtime);
+    setAdapter(a);
+    setActiveAdapter(a);
     return () => {
       setActiveAdapter(null);
-      adapter.dispose();
+      a.dispose();
     };
-  }, [adapter]);
-  useFrame(({ camera, clock }) => adapter.update(camera, clock.elapsedTime, stormIntensity()));
+  }, [runtime]);
+  useFrame(({ camera, clock }) => adapter?.update(camera, clock.elapsedTime, stormIntensity()));
 
   const roads = useMemo(() => [...runtime.entities.values()].filter((e) => e.source.type === 'road'), [runtime]);
   const handlers = useMemo(
@@ -68,7 +72,7 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
       onClick: (ev: ThreeEvent<MouseEvent>) => {
         ev.stopPropagation();
         if (ev.delta > 5) return;
-        const id = adapter.pick(ev.object, ev.batchId ?? ev.instanceId);
+        const id = adapter?.pick(ev.object, ev.batchId ?? ev.instanceId);
         if (id) useEditorStore.getState().select(id);
       },
       onPointerOver: (ev: ThreeEvent<PointerEvent>) => {
@@ -84,7 +88,7 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
 
   return (
     <>
-      <primitive object={adapter.root} {...handlers} />
+      {adapter && <primitive object={adapter.root} {...handlers} />}
       {roads.map((e) => (
         <SimRoad key={e.id} e={e} />
       ))}
