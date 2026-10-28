@@ -14,12 +14,15 @@ import type { I18nMessage } from '@/i18n/i18n';
 import type { WindEventSpec } from '@/events/specs';
 import type { CommandParser, ParseDefaults, ParseResult, ParsedCommand } from './CommandParser';
 import { simulationCommandSchema, type UnsupportedRequest } from './schema';
+import { isEarthquakeClause, parseEarthquake } from './earthquakeParser';
 
 // ── Normalization ─────────────────────────────────────────────────────────
 
 export function normalize(input: string): string {
   let s = input.normalize('NFKC').replace(/[∕⁄]/g, '/').toLowerCase();
   s = s.replace(/\s*\/\s*/g, '/');
+  // Acceleration units ("m/s²" is "m/s2" after NFKC) → one letter-only token.
+  s = s.replace(/(?:m\/s\^?2|m\/sec\^?2|meters?\s+per\s+second\s+squared|미터\/초\^?2)/g, 'mpss');
   s = s.replace(/미터\s*퍼\s*세컨드|미터\/초|미터\s*매\s*초|meters?\s+per\s+second|metres?\s+per\s+second|m\/sec|\bmps\b/g, 'm/s');
   s = s.replace(/킬로미터\/시|kilometers?\s+per\s+hour|\bkmh\b|\bkph\b/g, 'km/h');
   s = s.replace(/miles?\s+per\s+hour/g, 'mph');
@@ -39,12 +42,12 @@ export function splitClauses(s: string): string[] {
 
 // ── Number + unit tokens ──────────────────────────────────────────────────
 
-type UnitKind = 'speed' | 'time' | 'percent' | 'degree' | 'mm' | 'cm' | 'meter' | 'multiplier' | 'bare';
+type UnitKind = 'speed' | 'time' | 'percent' | 'degree' | 'mm' | 'cm' | 'meter' | 'multiplier' | 'accel' | 'km' | 'freq' | 'bare';
 
-interface NumToken {
+export interface NumToken {
   value: number;
   kind: UnitKind;
-  /** m/s for speed, seconds for time */
+  /** m/s for speed, seconds for time, g for acceleration, km for distance, Hz for frequency */
   si: number;
   index: number;
   end: number;
@@ -54,8 +57,17 @@ interface NumToken {
 }
 
 const UNIT_TABLE: [string, UnitKind, number][] = [
+  // Acceleration (earthquake intensity) → g. "m/s²" is normalized to "mpss".
+  ['mpss', 'accel', 1 / 9.81],
+  ['gal', 'accel', 0.01 / 9.81],
+  ['갈', 'accel', 0.01 / 9.81],
   ['m/s', 'speed', 1],
   ['km/h', 'speed', 1 / 3.6],
+  ['km', 'km', 1],
+  ['킬로미터', 'km', 1],
+  ['킬로', 'km', 1],
+  ['hz', 'freq', 1],
+  ['헤르츠', 'freq', 1],
   ['mph', 'speed', 0.44704],
   ['knots', 'speed', 0.514444],
   ['knot', 'speed', 0.514444],
@@ -94,6 +106,7 @@ const UNIT_TABLE: [string, UnitKind, number][] = [
   ['hr', 'time', 3600],
   ['시간', 'time', 3600],
   ['h', 'time', 3600],
+  ['g', 'accel', 1],
   ['m', 'meter', 1],
 ];
 
@@ -150,7 +163,6 @@ interface Hazard {
 }
 const HAZARDS: Hazard[] = [
   { event: 'tsunami', re: /쓰나미|해일|tsunami/ },
-  { event: 'earthquake', re: /지진|earthquake|quake|seismic/ },
   { event: 'flood', re: /홍수|침수|범람|flood/ },
   { event: 'rain', re: /폭우|호우|강우|장대비|비가|비를|\b비\b|rain|downpour|precipitation/ },
   { event: 'snow', re: /폭설|눈보라|눈이|눈을|snow|blizzard/ },
@@ -172,7 +184,7 @@ const CATEGORY_SPEED: [RegExp, number, number][] = [
 
 // ── Direction ─────────────────────────────────────────────────────────────
 
-const KO_DIR: Record<string, CompassDir> = {
+export const KO_DIR: Record<string, CompassDir> = {
   북동: 'NE', 동북: 'NE', 북서: 'NW', 서북: 'NW', 남동: 'SE', 동남: 'SE', 남서: 'SW', 서남: 'SW',
   북: 'N', 남: 'S', 동: 'E', 서: 'W',
 };
@@ -183,10 +195,10 @@ const EN_DIR: Record<string, CompassDir> = {
 };
 const OPPOSITE: Record<CompassDir, CompassDir> = { N: 'S', NE: 'SW', E: 'W', SE: 'NW', S: 'N', SW: 'NE', W: 'E', NW: 'SE' };
 
-const KO_DIR_WORD = '(북동|북서|남동|남서|동북|동남|서북|서남|북|남|동|서)';
-const EN_DIR_WORD = '(north[\\s-]?east|north[\\s-]?west|south[\\s-]?east|south[\\s-]?west|north|south|east|west)';
+export const KO_DIR_WORD = '(북동|북서|남동|남서|동북|동남|서북|서남|북|남|동|서)';
+export const EN_DIR_WORD = '(north[\\s-]?east|north[\\s-]?west|south[\\s-]?east|south[\\s-]?west|north|south|east|west)';
 
-function enDir(w: string): CompassDir | undefined {
+export function enDir(w: string): CompassDir | undefined {
   return EN_DIR[w.replace(/[\s-]/g, '')];
 }
 
@@ -244,7 +256,7 @@ function nearestSimSpeed(v: number): SimSpeed {
   return SIM_SPEEDS.reduce((best, s) => (Math.abs(Math.log(s / v)) < Math.abs(Math.log(best / v)) ? s : best), 1 as SimSpeed);
 }
 
-function isDelay(t: NumToken): boolean {
+export function isDelay(t: NumToken): boolean {
   return /^\s*(?:후|뒤|이후|있다가|지나서|later|from now)/.test(t.after) || /(?:after|in)\s+$/.test(t.before);
 }
 
@@ -295,10 +307,21 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
   for (const clause of clauses) {
     const tokens = tokenizeNumbers(clause);
     const notes: I18nMessage[] = [];
-
-    // 1) Hazards the simulator does not support yet
-    const hazard = HAZARDS.find((h) => h.re.test(clause));
     const windish = WIND_WORDS.test(clause) || tokens.some((t) => t.kind === 'speed');
+
+    // 1) Earthquake (Phase 13)
+    if (!windish && isEarthquakeClause(clause, tokens)) {
+      const parsed = parseEarthquake(clause, originals, tokens, notes, result);
+      if (parsed) {
+        const check = simulationCommandSchema.safeParse({ kind: 'event', spec: parsed.spec });
+        if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
+        else result.commands.push({ command: check.data, source: clause, notes, delay: parsed.delay } satisfies ParsedCommand);
+      }
+      continue;
+    }
+
+    // 2) Hazards the simulator does not support yet
+    const hazard = HAZARDS.find((h) => h.re.test(clause));
     if (hazard && !windish) {
       const params: Record<string, number> = {};
       const mm = tokens.find((t) => t.kind === 'mm');
@@ -314,7 +337,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
-    // 2) Wind
+    // 3) Wind
     const ramping = RAMP_UP.test(clause) || RAMP_DOWN.test(clause);
     if (windish || (ramping && lastWind)) {
       const parsed = parseWind(clause, originals, tokens, defaults, lastWind, notes, result);
@@ -331,7 +354,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
-    // 3) Simulation controls
+    // 4) Simulation controls
     if (RESET.test(clause)) {
       result.commands.push({ command: { kind: 'control', action: 'reset' }, source: clause, notes });
       continue;

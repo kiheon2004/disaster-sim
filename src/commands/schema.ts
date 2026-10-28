@@ -6,6 +6,9 @@ import { z } from 'zod';
 import { COMPASS_DIRS } from '@/core/compass';
 import { SIM_SPEEDS } from '@/core/units';
 import type { EventSpec, EventType } from '@/events/specs';
+import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
+
+export { earthquakeEventSchema };
 
 export const compassSchema = z.enum(COMPASS_DIRS);
 
@@ -20,7 +23,7 @@ export const windEventSchema = z.object({
   rampDuration: z.number().positive().max(3600).optional().describe('Seconds to reach the target speed'),
 });
 
-export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema]);
+export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema, earthquakeEventSchema]);
 
 export const simulationCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('event'), spec: eventSpecSchema }),
@@ -32,7 +35,7 @@ export type SimulationCommand = z.infer<typeof simulationCommandSchema>;
 
 /** A hazard the parser recognized but the simulator does not support yet. */
 export interface UnsupportedRequest {
-  event: Exclude<EventType, 'wind'>;
+  event: Exclude<EventType, 'wind' | 'earthquake'>;
   params: Record<string, number>;
 }
 
