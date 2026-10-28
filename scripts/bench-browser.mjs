@@ -16,6 +16,8 @@ import fs from 'node:fs';
 const [url, label, countsArg = '100,500,1000', winArg = '5'] = process.argv.slice(2);
 const counts = countsArg.split(',').map(Number);
 const WIN = Number(winArg) * 1000;
+// HAZARD=wind (default) | earthquake | both — earthquake: M6.8, PGA 0.3 g, 90 s, seed 7.
+const HAZARD = process.env.HAZARD ?? 'wind';
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const browser = await puppeteer.launch({
@@ -202,12 +204,13 @@ for (const n of counts) {
   await page.waitForFunction(() => window.__ds.simStore.getState().status === 'paused', { timeout: 120_000 });
   await setCamera(page);
   // identical starting state: fast-forward synchronously past the ramp, then play
-  await page.evaluate(() => {
+  await page.evaluate((hazard) => {
     const sim = window.__ds.sim;
-    sim.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 300, gustStrength: 0.25, rampDuration: 4 });
+    if (hazard !== 'earthquake') sim.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 300, gustStrength: 0.25, rampDuration: 4 });
+    if (hazard !== 'wind') sim.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
     sim.advance(6);
-  });
-  const row = { label, objects: n };
+  }, HAZARD);
+  const row = { label, hazard: HAZARD, objects: n };
   // paused frame (render only)
   await new Promise((r) => setTimeout(r, 1500));
   row.pausedBare = await measure(page, 'paused', true);
@@ -232,4 +235,4 @@ for (const n of counts) {
   await page.close();
 }
 await browser.close();
-fs.writeFileSync(`results-${label}.json`, JSON.stringify(results, null, 1));
+fs.writeFileSync(`results-${label}${HAZARD === 'wind' ? '' : `-${HAZARD}`}.json`, JSON.stringify(results, null, 1));

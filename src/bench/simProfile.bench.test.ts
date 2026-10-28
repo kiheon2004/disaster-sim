@@ -3,10 +3,12 @@
  *
  *   BENCH=1 npx vitest run src/bench --silent=false
  *   BENCH=1 BENCH_TERRAIN=gentleHills npx vitest run src/bench --silent=false   (same scenes on relief)
+ *   BENCH=1 BENCH_HAZARD=earthquake npx vitest run src/bench --silent=false     (earthquake; or `both`)
  *
  * Instrumentation is attached from the outside (method wrapping), so the same harness can be run
  * against older revisions for before/after comparisons. Skipped in the normal test run.
  */
+import { PerformanceObserver } from 'node:perf_hooks';
 import { describe, it } from 'vitest';
 import { SimulationController } from '@/simulation/SimulationController';
 import { createEmptyDocument, createWorldObject, nextSerial } from '@/world/WorldDocument';
@@ -22,6 +24,8 @@ const MEASURE_S = 4;
 const STEP_HZ = 60;
 
 const TERRAIN = process.env.BENCH_TERRAIN as TerrainPresetId | undefined;
+/** wind (default) | earthquake | both. Earthquake: M6.8, PGA 0.3 g, 90 s, seed 7 (strong shaking for the whole window). */
+const HAZARD = process.env.BENCH_HAZARD ?? 'wind';
 
 function stressDoc(n: number): WorldDocument {
   const doc = createEmptyDocument(`Stress ${n}`);
@@ -73,7 +77,8 @@ function countSamples(field: Any, acc: Acc) {
 async function profile(n: number) {
   const c = new SimulationController() as unknown as Any;
   await c.load(stressDoc(n));
-  c.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 120, gustStrength: 0.25, rampDuration: 4 });
+  if (HAZARD !== 'earthquake') c.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 120, gustStrength: 0.25, rampDuration: 4 });
+  if (HAZARD !== 'wind') c.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
   c.advance(WARM_S);
 
   const rt = c.runtime as Any;
@@ -89,9 +94,16 @@ async function profile(n: number) {
   const rawSample = c.env.windField.sample;
   countSamples(c.env.windField, acc);
   const steps = MEASURE_S * STEP_HZ;
+  let gcMs = 0;
+  const gcObs = new PerformanceObserver((list) => { for (const e of list.getEntries()) gcMs += e.duration; });
+  gcObs.observe({ entryTypes: ['gc'] });
+  const heap0 = process.memoryUsage().heapUsed;
   const t0 = performance.now();
   c.advance(MEASURE_S);
   const wall = performance.now() - t0;
+  const heapDelta = process.memoryUsage().heapUsed - heap0;
+  await new Promise((r) => setTimeout(r, 0)); // flush gc entries
+  gcObs.disconnect();
 
   // Pass 2: replay one step's worth of wind samples in a tight loop (accurate per-call cost).
   const field = c.env.windField as Any;
@@ -128,6 +140,8 @@ async function profile(n: number) {
     'step ms': (wall / steps).toFixed(2),
     'realtime ×': ((MEASURE_S * 1000) / wall).toFixed(2),
     'physics ms': per('physics').toFixed(2),
+    'gc ms': (gcMs / steps).toFixed(3),
+    'heap growth KB/step': (heapDelta / 1024 / steps).toFixed(1),
   };
   for (const k of Object.keys(acc.ms).filter((x) => x.startsWith('sys.'))) row[k.slice(4)] = per(k).toFixed(2);
   row['other ms'] = (per('step') - Object.keys(acc.ms).filter((k) => k !== 'step').reduce((a, k) => a + per(k), 0)).toFixed(2);
@@ -143,6 +157,7 @@ async function profile(n: number) {
 
 describe.skipIf(!process.env.BENCH)('simulation CPU profile', () => {
   it('stress scenes', async () => {
+    console.log(`hazard: ${HAZARD}`);
     const rows = [];
     for (const n of COUNTS) rows.push(await profile(n));
     console.log(JSON.stringify(rows, null, 1));
