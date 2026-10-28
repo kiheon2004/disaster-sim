@@ -4,13 +4,8 @@ import type { Vec3 } from '@/core/types';
 import { UNIT_BOX } from '../geometry/primitives';
 import { CastShadowContext, useMaterialMode, ghostMaterial } from '../materials';
 
-/** One box of a merged voxel model. */
-export interface BoxPart {
-  size: Vec3;
-  position?: Vec3;
-  rotation?: Vec3;
-  color: string;
-}
+import type { BoxPart, MergedMatOptions } from '../parts/objectParts';
+export type { BoxPart, MergedMatOptions };
 
 const tmpM = new THREE.Matrix4();
 const tmpQ = new THREE.Quaternion();
@@ -51,12 +46,6 @@ export function buildMergedGeometry(parts: BoxPart[]): THREE.BufferGeometry {
   return g;
 }
 
-export interface MergedMatOptions {
-  roughness?: number;
-  metalness?: number;
-  emissive?: string;
-  emissiveIntensity?: number;
-}
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
 export function vertexColorMaterial(o: MergedMatOptions = {}) {
   const key = `${o.roughness ?? 0.85}|${o.metalness ?? 0}|${o.emissive ?? ''}|${o.emissiveIntensity ?? 0}`;

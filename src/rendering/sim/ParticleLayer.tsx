@@ -27,10 +27,13 @@ export function ParticleLayer() {
     if (!mesh || !rt) return;
     const ps = rt.particles;
     const n = Math.min(ps.length, MAX_PARTICLES);
+    // Particles are integrated at a lower rate than physics: extrapolate to the current time.
+    const ahead = Math.max(-0.05, Math.min(0.05, simulationController.getTime() - rt.particlesTime));
     for (let i = 0; i < n; i++) {
       const p = ps[i];
       const fade = Math.min(1, p.life / 1.5);
-      dummy.position.set(p.position[0], p.position[1], p.position[2]);
+      const v = p.velocity;
+      dummy.position.set(p.position[0] + v[0] * ahead, Math.max(0.02, p.position[1] + v[1] * ahead), p.position[2] + v[2] * ahead);
       dummy.rotation.set(p.rotation[0], p.rotation[1], p.rotation[2]);
       const s = p.size * fade;
       if (p.kind === 'leaf') dummy.scale.set(s * 1.6, s * 0.15, s);

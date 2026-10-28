@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
 import { useEditorStore } from '@/editor/editorStore';
-import { SimEntity } from './SimEntities';
+import { SimRenderLayer } from './SimRenderLayer';
 import { DebrisLayer } from './DebrisLayer';
 import { ParticleLayer } from './ParticleLayer';
 import { WindStreaks } from './WindStreaks';
@@ -42,9 +42,7 @@ export function SimulationScene() {
       <TyphoonEnvironment />
       <GroundDeselect />
       <group key={version}>
-        {entities.map((e) => (
-          <SimEntity key={e.id} e={e} objectCount={entities.length} />
-        ))}
+        {runtime && <SimRenderLayer runtime={runtime} />}
         <DamageOverlay entities={entities} />
         <DebrisLayer />
         <ParticleLayer />

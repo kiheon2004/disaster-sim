@@ -1,39 +1,49 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { simulationController } from '@/simulation/SimulationController';
-import type { DebrisPiece } from '@/simulation/SimulationRuntime';
+import { MAX_DEBRIS } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
-import { getMaterial } from '../materials';
 
-function DebrisMesh({ d }: { d: DebrisPiece }) {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame(() => {
-    const m = ref.current;
-    if (!m) return;
-    m.position.set(d.pose.position[0], d.pose.position[1], d.pose.position[2]);
-    m.quaternion.set(d.pose.quaternion[0], d.pose.quaternion[1], d.pose.quaternion[2], d.pose.quaternion[3]);
-  });
-  return <mesh ref={ref} geometry={UNIT_BOX} material={getMaterial(d.color)} scale={d.size} castShadow receiveShadow />;
+const m = new THREE.Matrix4();
+const pos = new THREE.Vector3();
+const quat = new THREE.Quaternion();
+const scale = new THREE.Vector3();
+/** Parsed colors cached by hex string. */
+const colorCache = new Map<string, THREE.Color>();
+function cachedColor(hex: string) {
+  let c = colorCache.get(hex);
+  if (!c) colorCache.set(hex, (c = new THREE.Color(hex)));
+  return c;
 }
 
-/** Detached building parts and collapse chunks (rigid bodies). Re-renders only when the set changes. */
+/**
+ * Detached building parts and collapse chunks (rigid bodies): one InstancedMesh, matrices from
+ * the physics poses every frame, colors rewritten only when the set of pieces changes.
+ */
 export function DebrisLayer() {
-  const [pieces, setPieces] = useState<DebrisPiece[]>([]);
+  const ref = useRef<THREE.InstancedMesh>(null);
   const rev = useRef(-1);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, metalness: 0, flatShading: true }), []);
   useFrame(() => {
+    const mesh = ref.current;
     const rt = simulationController.getRuntime();
-    if (!rt) return;
-    if (rt.debrisRev !== rev.current) {
-      rev.current = rt.debrisRev;
-      setPieces(rt.debris.slice());
+    if (!mesh || !rt) return;
+    const list = rt.debris;
+    const n = Math.min(list.length, MAX_DEBRIS);
+    const colors = rt.debrisRev !== rev.current;
+    rev.current = rt.debrisRev;
+    for (let i = 0; i < n; i++) {
+      const d = list[i];
+      const p = d.pose.position;
+      const q = d.pose.quaternion;
+      m.compose(pos.set(p[0], p[1], p[2]), quat.set(q[0], q[1], q[2], q[3]), scale.set(d.size[0], d.size[1], d.size[2]));
+      mesh.setMatrixAt(i, m);
+      if (colors) mesh.setColorAt(i, cachedColor(d.color));
     }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (colors && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
-  return (
-    <>
-      {pieces.map((d) => (
-        <DebrisMesh key={d.id} d={d} />
-      ))}
-    </>
-  );
+  return <instancedMesh ref={ref} args={[UNIT_BOX, material, MAX_DEBRIS]} frustumCulled={false} castShadow receiveShadow raycast={() => null} />;
 }
