@@ -7,7 +7,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { useSimStore } from '@/simulation/simStore';
 import { estimateCriticalSpeeds, heightFactor } from '@/simulation/damage/windLoad';
 import { windClass } from '@/simulation/damage/windScale';
-import { runSimulation } from '@/app/actions';
+import { addPhenomenon, runSimulation } from '@/app/actions';
 import { NumberField, SliderField } from '@/ui/common/fields';
 import { Icon } from '@/ui/common/Icon';
 import { useWindForm } from './windFormStore';
@@ -71,6 +71,9 @@ export function WindForm({ tabs }: { tabs?: React.ReactNode }) {
         <div className={styles.actions}>
           <button className={styles.primary} disabled={status === 'loading'} onClick={() => void runSimulation([f.toSpec()])}>
             <Icon name="play" size={14} /> {inSim ? t('wind.applyNow') : t('wind.run')}
+          </button>
+          <button className={styles.secondary} title={t('exp.addFromForm.hint')} onClick={() => addPhenomenon(f.toSpec().event, f.toSpec())}>
+            <Icon name="flask" size={13} /> {t('exp.addFromForm')}
           </button>
           <ImpactPreview speed={f.speed} gust={f.gust} />
         </div>

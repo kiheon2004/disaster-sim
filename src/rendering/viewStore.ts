@@ -22,6 +22,8 @@ export const QUAKE_EXAGGERATIONS = [1, 5, 10, 25] as const;
 export type FloodVizMode = 'normal' | 'depth' | 'flow' | 'speed';
 
 export interface FloodViz {
+  /** Draw the water layers at all (per-phenomenon visualization, Phase 15). */
+  visible: boolean;
   mode: FloodVizMode;
   /** Instanced arrows along the flow (direction + speed); always shown in 'flow' mode. */
   arrows: boolean;
@@ -80,7 +82,7 @@ export const useViewStore = create<ViewState>((set) => ({
   setTerrainView: (terrainView) => set({ terrainView }),
   quakeViz: { ground: true, arrows: true, stress: true, epicenter: true, exaggeration: 10, cameraShake: false },
   setQuakeViz: (patch) => set((s) => ({ quakeViz: { ...s.quakeViz, ...patch } })),
-  floodViz: { mode: 'normal', arrows: false },
+  floodViz: { visible: true, mode: 'normal', arrows: false },
   setFloodViz: (patch) => set((s) => ({ floodViz: { ...s.floodViz, ...patch } })),
   waterProbe: null,
   setWaterProbe: (waterProbe) => set({ waterProbe }),

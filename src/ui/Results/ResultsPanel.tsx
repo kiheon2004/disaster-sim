@@ -11,6 +11,9 @@ import { useUiStore } from '@/ui/uiStore';
 import { Icon } from '@/ui/common/Icon';
 import { displayName, fmt } from '@/ui/format';
 import { DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
+import { MODELS } from '@/phenomena/models';
+import { phenomena } from '@/phenomena/registry';
+import { ModelBadge } from '@/ui/common/ModelBadge';
 import styles from './ResultsPanel.module.css';
 
 const PAGE = 400;
@@ -60,6 +63,8 @@ function ResultsDialog() {
   const [hazardFilter, setHazardFilter] = useState<'all' | Hazard>('all');
   const series = useSimStore((s) => s.seismicSeries);
   const floodSeries = useSimStore((s) => s.floodSeries);
+  const milestones = useSimStore((s) => s.milestones);
+  const runEvents = useSimStore((s) => s.events);
   const [second, setSecond] = useState<number | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const close = () => useUiStore.getState().setResultsOpen(false);
@@ -100,6 +105,7 @@ function ResultsDialog() {
     model: 'approximate', groundMotion: metrics?.earthquake ? 'synthetic' : undefined,
     floodModel: metrics?.flood ? 'local-inertial shallow-water approximation (educational, not a validated hydraulic model)' : undefined,
     metrics, seismicSeries: series ?? undefined, floodSeries: floodSeries ?? undefined, events,
+    milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
   const m = metrics;
@@ -123,6 +129,7 @@ function ResultsDialog() {
         </div>
         <div className={m?.earthquake || m?.flood ? `${styles.body} ${styles.bodyHazard}` : styles.body}>
           <div className={styles.disclaimer}>{t('model.approximate')}</div>
+          <ExperimentSummary t={t} />
           {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
           {m ? (
@@ -408,6 +415,60 @@ function FloodSummary({ f, t, objects, series, events, name }: {
         </div>
       </div>
       <div className={styles.disclaimer} style={{ marginTop: 6 }}>{t('flood.disclaimer')}</div>
+    </div>
+  );
+}
+
+/** Models behind a run: those of the phenomena that ran, plus the interaction models when on. */
+export function modelsUsed(types: string[], interactions: boolean): string[] {
+  const ids = new Set<string>();
+  for (const ty of new Set(types)) for (const m of phenomena.get(ty)?.models ?? []) ids.add(m);
+  const has = (...tt: string[]) => types.some((x) => tt.includes(x));
+  const water = has('rain', 'risingWater', 'waterSource');
+  if (water) ids.add('buoyancy').add('floodDamage');
+  if (has('earthquake')) ids.add('structural');
+  if (interactions) {
+    if (has('wind') && water) ids.add('windStress');
+    if (has('earthquake') && water) ids.add('waterInertia').add('saturatedBearing');
+    if (has('wind') && has('earthquake')) ids.add('combinedStructuralLoad');
+    if ([has('wind'), has('earthquake'), water].filter(Boolean).length >= 2) ids.add('residualStrength');
+  }
+  if (types.length) ids.add('exposure');
+  return [...ids];
+}
+
+/** Experiment timeline (milestones in simulation-time order) and the models used (Phase 15). */
+function ExperimentSummary({ t }: { t: TFunction }) {
+  const milestones = useSimStore((s) => s.milestones);
+  const events = useSimStore((s) => s.events);
+  const interactions = useWorldStore((s) => s.doc.settings.simulation.interactions?.enabled ?? true);
+  if (!events.length) return null;
+  const label = (m: (typeof milestones)[number]) => {
+    if (m.kind === 'start' || m.kind === 'end') {
+      const def = phenomena.get(m.subject ?? '');
+      return `${def ? t(def.labelKey) : m.subject} ${t(`milestone.${m.kind}`)}`;
+    }
+    return t(`milestone.${m.kind}` as MessageKey, { hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' });
+  };
+  return (
+    <div className={styles.box} data-testid="experiment-results">
+      <div className={styles.boxTitle}>{t('results.exp.title')} · {t(interactions ? 'exp.cmp.interactionsOn' : 'exp.cmp.interactionsOff')}</div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 320px', fontSize: 11.5, maxHeight: 150, overflow: 'auto' }}>
+          {milestones.map((m, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8 }}>
+              <span className="mono" style={{ width: 54, textAlign: 'right', color: 'var(--text-2)' }}>{m.time.toFixed(1)} s</span>
+              <span style={{ color: m.hazard === 'flood' ? '#9fd3ff' : m.hazard === 'earthquake' ? '#ffb3a1' : m.hazard === 'wind' ? '#f5a13b' : undefined }}>{label(m)}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ flex: '1 1 320px' }}>
+          <div className={styles.cardSub}>{t('results.exp.models')}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+            {modelsUsed(events.map((e) => e.type), interactions).map((id) => <ModelBadge key={id} id={id} />)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

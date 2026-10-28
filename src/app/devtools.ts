@@ -6,6 +6,7 @@ import * as actions from './actions';
 import { useViewStore } from '@/rendering/viewStore';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
+import { useUiStore } from '@/ui/uiStore';
 import { waterRenderStats } from '@/rendering/sim/water/WaterLayer';
 import { simProfiler } from '@/simulation/profiling/SimProfiler';
 import { WaterField } from '@/simulation/water/WaterField';
@@ -21,6 +22,7 @@ export function installDevtools() {
     view: useViewStore,
     sim: simulationController,
     simStore: useSimStore,
+    ui: useUiStore,
     waterRenderStats,
     profiler: simProfiler,
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */

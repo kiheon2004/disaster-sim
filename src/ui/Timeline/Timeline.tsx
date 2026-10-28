@@ -21,6 +21,12 @@ export function Timeline() {
   const end = useSimStore((s) => s.endTime);
   const speed = useSimStore((s) => s.speed);
   const events = useSimStore((s) => s.events);
+  const milestones = useSimStore((s) => s.milestones);
+  // Phase 15: one lane per phenomenon type (in order of first appearance).
+  const lanes: string[] = [];
+  for (const e of events) if (!lanes.includes(e.type)) lanes.push(e.type);
+  const laneCount = Math.max(1, lanes.length);
+  const trackH = laneCount > 1 ? Math.min(72, 8 + laneCount * 15) : 26;
   const wind = useSimStore((s) => s.wind);
   const inSim = mode === 'simulation';
   const busy = status === 'loading';
@@ -44,7 +50,7 @@ export function Timeline() {
       <span className={styles.time}>
         <b>{time.toFixed(1)}</b> / {inSim ? end.toFixed(0) : '–'} s
       </span>
-      <div className={styles.track} aria-label={t('panel.timeline')}>
+      <div className={styles.track} style={{ height: trackH }} aria-label={t('panel.timeline')}>
         {inSim && (
           <>
             <div className={styles.ticks}>
@@ -56,7 +62,10 @@ export function Timeline() {
               <div
                 key={e.id}
                 className={`${styles.evt} ${e.status === 'active' ? styles.active : ''} ${e.status === 'superseded' ? styles.superseded : ''}`}
-                style={{ left: pct(e.start), width: `calc(${pct(e.duration)} - 1px)` }}
+                style={{
+                  left: pct(e.start), width: `calc(${pct(e.duration)} - 1px)`,
+                  top: 3 + (lanes.indexOf(e.type) * (trackH - 6)) / laneCount, height: (trackH - 6) / laneCount - 1, bottom: 'auto',
+                }}
                 title={translateMessage(locale, e.label)}
               >
                 <svg width="100%" height="100%" viewBox="0 0 47 1" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
@@ -67,6 +76,10 @@ export function Timeline() {
                 </svg>
                 <span className={styles.evtLabel}>{translateMessage(locale, e.label)}</span>
               </div>
+            ))}
+            {milestones.filter((m) => m.kind !== 'start' && m.kind !== 'end').map((m, i) => (
+              <div key={i} className={styles.milestone} data-hazard={m.hazard} style={{ left: pct(m.time) }}
+                title={`${m.time.toFixed(1)} s · ${t(`milestone.${m.kind}` as MessageKey, { hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' })}`} />
             ))}
             <div className={styles.progress} style={{ width: pct(time) }} />
             <div className={styles.head} style={{ left: pct(time) }} />

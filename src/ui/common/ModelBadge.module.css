@@ -1,0 +1,5 @@
+.wrap { position: relative; display: inline-block; }
+.badge { font-size: 10px; font-weight: 600; padding: 0 6px; height: 18px; border-radius: 9px; background: transparent; border: 1px solid; white-space: nowrap; line-height: 16px; }
+.pop { position: absolute; z-index: 40; bottom: 22px; left: 0; width: 300px; padding: 8px 10px; border-radius: 8px; background: var(--bg-1); border: 1px solid var(--line-strong); box-shadow: 0 6px 24px rgba(0,0,0,0.45); font-size: 11px; line-height: 1.45; color: var(--text-1); display: flex; flex-direction: column; gap: 4px; }
+.pop i { font-style: normal; color: var(--text-3); margin-right: 4px; }
+.pop code { font-size: 10.5px; }

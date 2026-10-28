@@ -6,7 +6,7 @@ import { sMinusP } from '@/simulation/seismic/GroundMotionField';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import { useSimStore } from '@/simulation/simStore';
-import { runSimulation } from '@/app/actions';
+import { addPhenomenon, runSimulation } from '@/app/actions';
 import { NumberField, SliderField, Toggle } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
 import { Icon } from '@/ui/common/Icon';
@@ -108,6 +108,9 @@ export function EarthquakeForm({ tabs }: { tabs: React.ReactNode }) {
         <div className={styles.actions}>
           <button className={styles.primary} disabled={status === 'loading'} onClick={() => void runSimulation([{ ...spec }])}>
             <Icon name="play" size={14} /> {inSim ? t('eq.form.applyNow') : t('eq.form.run')}
+          </button>
+          <button className={styles.secondary} title={t('exp.addFromForm.hint')} onClick={() => addPhenomenon({ ...spec }.event, { ...spec })}>
+            <Icon name="flask" size={13} /> {t('exp.addFromForm')}
           </button>
           <div className={eq.disclaimer}>{t('eq.form.synthetic')}</div>
         </div>

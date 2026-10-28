@@ -1,4 +1,4 @@
-.bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-shrink: 0; }
+.bar { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-shrink: 0; }
 .ctrl { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
 .play { background: var(--sim); border-color: var(--sim); color: #fff; }
 .play:hover:not(:disabled) { background: #f59a52; border-color: #f59a52; }
@@ -23,3 +23,8 @@
 .windNow { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-1); white-space: nowrap; display: flex; align-items: center; gap: 5px; }
 .resultsBtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .resultsBtn:not(:disabled) { border-color: var(--accent); color: var(--accent-strong); }
+/* Phase 15: experiment milestones (first damage, collapse, flooded area …) */
+.milestone { position: absolute; top: 0; width: 2px; height: 100%; margin-left: -1px; background: rgba(239, 77, 77, 0.85); pointer-events: auto; z-index: 2; }
+.milestone[data-hazard='flood'] { background: rgba(70, 160, 230, 0.95); }
+.milestone[data-hazard='earthquake'] { background: rgba(255, 179, 161, 0.95); }
+.milestone[data-hazard='wind'] { background: rgba(245, 151, 59, 0.95); }

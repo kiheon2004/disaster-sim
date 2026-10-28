@@ -1,0 +1,20 @@
+.list { display: flex; flex-direction: column; gap: 4px; }
+.row { border: 1px solid var(--line); border-radius: 7px; background: var(--bg-2); }
+.row[data-disabled='true'] { opacity: 0.55; }
+.head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; min-width: 0; font-size: 11.5px; }
+.name { white-space: nowrap; color: var(--text-0); }
+.desc { flex: 1; min-width: 0; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { font-family: var(--font-mono); font-size: 11px; color: var(--text-1); white-space: nowrap; }
+.icon { width: 24px; height: 22px; padding: 0; display: grid; place-items: center; background: transparent; border-color: transparent; color: var(--text-2); }
+.icon[aria-pressed='false'] { color: var(--text-3); }
+.issue { font-size: 11px; color: var(--warn); padding: 0 8px 4px; }
+.editor { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 10px; padding: 6px 8px 8px; border-top: 1px solid var(--line); }
+.params, .side { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.channel { font-size: 10px; padding: 0 6px; height: 18px; line-height: 18px; border-radius: 9px; background: var(--bg-3); color: var(--text-1); }
+.addRow { position: relative; margin-top: 8px; }
+.menu { position: absolute; z-index: 30; bottom: 28px; left: 0; width: 240px; max-height: 300px; overflow: auto; display: flex; flex-direction: column; padding: 4px; border-radius: 8px; background: var(--bg-1); border: 1px solid var(--line-strong); box-shadow: 0 6px 24px rgba(0,0,0,0.45); }
+.menu button { display: flex; align-items: center; gap: 6px; justify-content: flex-start; text-align: left; padding: 4px 8px; font-size: 12px; background: transparent; border-color: transparent; }
+.menu button:disabled { color: var(--text-3); }
+.menuSep { font-size: 10.5px; color: var(--text-3); padding: 6px 8px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+.planned { margin-left: auto; font-size: 10px; color: #b98cf5; }

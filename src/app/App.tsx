@@ -3,6 +3,7 @@ import { useEditorHotkeys } from './hotkeys';
 import { bootstrapWorld } from './actions';
 import { Toaster } from '@/ui/common/Toaster';
 import { ResultsPanel } from '@/ui/Results/ResultsPanel';
+import { ComparisonDialog } from '@/ui/Results/ComparisonDialog';
 
 bootstrapWorld();
 
@@ -13,6 +14,7 @@ export function App() {
       <AppLayout />
       <Toaster />
       <ResultsPanel />
+      <ComparisonDialog />
     </>
   );
 }

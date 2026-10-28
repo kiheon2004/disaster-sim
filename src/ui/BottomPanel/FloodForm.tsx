@@ -7,7 +7,7 @@ import { resolveBoundary } from '@/simulation/water/WaterForcing';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import { useSimStore } from '@/simulation/simStore';
-import { clearWaterState, loadWaterState, runSimulation, saveWaterState } from '@/app/actions';
+import { addPhenomenon, clearWaterState, loadWaterState, runSimulation, saveWaterState } from '@/app/actions';
 import { NumberField, SliderField, Toggle } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
 import { Icon } from '@/ui/common/Icon';
@@ -168,6 +168,9 @@ export function FloodForm({ tabs }: { tabs: React.ReactNode }) {
           <button className={styles.primary} disabled={status === 'loading' || specs.length === 0} title={specs.length === 0 ? t('flood.form.nothing') : undefined}
             onClick={() => void runSimulation(specs)}>
             <Icon name="play" size={14} /> {inSim ? t('flood.form.applyNow') : t('flood.form.run')}
+          </button>
+          <button className={styles.secondary} disabled={specs.length === 0} title={t('exp.addFromForm.hint')} onClick={() => specs.forEach((sp) => addPhenomenon(sp.event, sp))}>
+            <Icon name="flask" size={13} /> {t('exp.addFromForm')}
           </button>
           <div className={eq.disclaimer}>{t('flood.disclaimer')}</div>
         </div>

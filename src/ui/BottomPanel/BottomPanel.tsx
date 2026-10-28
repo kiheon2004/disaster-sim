@@ -4,6 +4,7 @@ import { Timeline } from '@/ui/Timeline/Timeline';
 import { WindForm } from './WindForm';
 import { EarthquakeForm } from './EarthquakeForm';
 import { FloodForm } from './FloodForm';
+import { ExperimentPanel } from './ExperimentPanel';
 import { Seismogram } from '@/ui/Timeline/Seismogram';
 import { Icon } from '@/ui/common/Icon';
 import eq from './EarthquakeForm.module.css';
@@ -12,12 +13,12 @@ import styles from './BottomPanel.module.css';
 
 const KEY = 'ds.bottomHeight';
 const TAB_KEY = 'ds.hazardTab';
-type HazardTab = 'wind' | 'earthquake' | 'flood';
+type HazardTab = 'wind' | 'earthquake' | 'flood' | 'experiment';
 
 function initialTab(): HazardTab {
   try {
     const v = localStorage.getItem(TAB_KEY);
-    return v === 'earthquake' || v === 'flood' ? v : 'wind';
+    return v === 'earthquake' || v === 'flood' || v === 'experiment' ? v : 'wind';
   } catch {
     return 'wind';
   }
@@ -55,6 +56,9 @@ export function BottomPanel() {
       </button>
       <button role="tab" className={eq.tab} aria-selected={tab === 'flood'} onClick={() => setTab('flood')}>
         <Icon name="water" size={13} /> {t('hazard.tab.flood')}
+      </button>
+      <button role="tab" className={eq.tab} aria-selected={tab === 'experiment'} onClick={() => setTab('experiment')}>
+        <Icon name="flask" size={13} /> {t('hazard.tab.experiment')}
       </button>
     </span>
   );
@@ -94,7 +98,7 @@ export function BottomPanel() {
       <Seismogram />
       <div className={styles.body}>
         <div className={styles.col}>
-          {tab === 'wind' ? <WindForm tabs={tabs} /> : tab === 'earthquake' ? <EarthquakeForm tabs={tabs} /> : <FloodForm tabs={tabs} />}
+          {tab === 'wind' ? <WindForm tabs={tabs} /> : tab === 'earthquake' ? <EarthquakeForm tabs={tabs} /> : tab === 'flood' ? <FloodForm tabs={tabs} /> : <ExperimentPanel tabs={tabs} />}
         </div>
         <div className={styles.col}>
           <CommandPanel />

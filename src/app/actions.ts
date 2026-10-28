@@ -22,6 +22,9 @@ import { RuleBasedParser } from '@/commands/RuleBasedParser';
 import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
 import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
 import { phenomena } from '@/phenomena/registry';
+import { createInstance, resolveSchedule } from '@/phenomena/schedule';
+import { defaultScenarios, runComparison, type ScenarioResult } from '@/phenomena/experiment';
+import { defaultExperiment, type PhenomenonContext, type PhenomenonInstance } from '@/phenomena/types';
 import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
 
 /** Select an object and center the camera on it (its live pose while simulating). */
@@ -192,6 +195,85 @@ export async function resetSimulation() {
 export function togglePlay() {
   if (useSimStore.getState().status === 'loading') return;
   simulationController.togglePlay();
+}
+
+// ── Experiment (Phase 15) ───────────────────────────────────────────────
+
+function experiment() {
+  return useWorldStore.getState().doc.scenario.experiment ?? defaultExperiment();
+}
+
+export function phenomenonContext(): PhenomenonContext {
+  const doc = useWorldStore.getState().doc;
+  return { seed: doc.settings.simulation.seed, terrain: doc.terrain, water: doc.settings.simulation.water };
+}
+
+/** Add a phenomenon (default parameters, or a spec from one of the detailed hazard forms). */
+export function addPhenomenon(type: string, spec?: EventSpec): string | null {
+  const cur = experiment().instances;
+  if (!phenomena.implemented(type)) return null;
+  const inst = createInstance(type, cur, spec);
+  useWorldStore.getState().setExperiment({ instances: [...cur, inst] });
+  toast('success', { key: 'exp.toast.added', params: { name: t(phenomena.get(type)!.labelKey) } });
+  return inst.id;
+}
+
+export function updatePhenomenon(id: string, patch: Partial<PhenomenonInstance>) {
+  useWorldStore.getState().setExperiment({ instances: experiment().instances.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
+}
+
+export function removePhenomenon(id: string) {
+  // Instances that started after the removed one keep their resolved time.
+  const ctx = phenomenonContext();
+  const sched = resolveSchedule(experiment().instances, ctx);
+  const startOf = new Map(sched.items.map((r) => [r.instance.id, r.start]));
+  const rest = experiment().instances.filter((i) => i.id !== id).map((i) => ('after' in i.start && i.start.after === id ? { ...i, start: { at: startOf.get(i.id) ?? 0 } } : i));
+  useWorldStore.getState().setExperiment({ instances: rest });
+}
+
+/** Per-phenomenon visualization → the existing view layers (render-only). */
+function applyVisualization(instances: readonly PhenomenonInstance[]) {
+  const on = (types: string[]) => instances.some((i) => i.enabled && types.includes(i.type) && i.visualize);
+  const has = (types: string[]) => instances.some((i) => i.enabled && types.includes(i.type));
+  const v = useViewStore.getState();
+  if (has(['wind'])) useViewStore.setState({ showWind: on(['wind']) });
+  if (has(['earthquake'])) v.setQuakeViz({ ground: on(['earthquake']), arrows: on(['earthquake']), epicenter: on(['earthquake']) });
+  if (has(['rain', 'risingWater', 'waterSource'])) v.setFloodViz({ visible: on(['rain', 'risingWater', 'waterSource']) });
+}
+
+/** Run every enabled phenomenon of the experiment on one clock (now = experiment time 0). */
+export async function runExperiment() {
+  const exp = experiment();
+  const inSim = useEditorStore.getState().mode === 'simulation';
+  const base = inSim ? simulationController.getTime() : 0;
+  const sched = resolveSchedule(exp.instances, phenomenonContext(), base);
+  for (const issue of sched.issues) toast('warn', { key: `exp.issue.${issue.problem}`, params: { id: issue.id } });
+  if (!sched.items.length) {
+    toast('warn', { key: 'exp.toast.nothing' });
+    return;
+  }
+  applyVisualization(exp.instances);
+  await runSimulation(sched.items.map((r) => r.spec));
+}
+
+export interface ComparisonRun {
+  cancel: () => void;
+  done: Promise<ScenarioResult[]>;
+}
+
+/** Compare the experiment's phenomena alone and together on the current world (headless). */
+export function compareExperiment(onProgress: (scenario: number, simTime: number, total: number) => void): ComparisonRun {
+  const doc = structuredClone(useWorldStore.getState().doc);
+  const exp = doc.scenario.experiment;
+  let stop = false;
+  const done = runComparison(doc, exp.instances, defaultScenarios(exp.instances), {
+    duration: exp.compareDuration,
+    initialWater: simulationController.getInitialWaterState(),
+    onProgress,
+    yieldFn: () => new Promise((r) => setTimeout(r, 0)),
+    cancelled: () => stop,
+  });
+  return { cancel: () => (stop = true), done };
 }
 
 // ── Water state (mid-simulation snapshot, separate from the project file) ─

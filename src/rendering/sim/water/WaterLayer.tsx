@@ -388,7 +388,9 @@ export function WaterLayer() {
   // Re-render when the water model activates (the field object appears).
   const active = useSimStore((s) => s.flood !== null);
   const version = useSimStore((s) => s.runtimeVersion);
-  const field = active ? simulationController.getEnvironment().flood.field : null;
+  // Hidden water layers are not mounted at all (no mesh refresh, no draw calls).
+  const visible = useViewStore((s) => s.floodViz.visible);
+  const field = active && visible ? simulationController.getEnvironment().flood.field : null;
   return (
     <>
       {field && <WaterSurface key={`s${version}`} field={field} />}
