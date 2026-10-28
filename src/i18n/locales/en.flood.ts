@@ -212,6 +212,7 @@ export const enFlood: Record<keyof typeof koFlood, string> = {
   'results.flood.budget.drainage': 'Drainage loss',
   'results.flood.budget.current': 'Current water',
   'results.flood.budget.error': 'Numerical conservation error',
+  'results.flood.damageMarks': 'Flood damage',
   'results.flood.csv': 'Series CSV',
   'results.col.depth': 'Depth m',
   'results.col.flow': 'Flow m/s',

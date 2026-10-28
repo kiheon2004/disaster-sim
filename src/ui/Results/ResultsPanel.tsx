@@ -388,7 +388,7 @@ function FloodSummary({ f, t, objects, series, events, name }: {
                 ))}
               </svg>
               <div className={styles.cardSub}>
-                <span style={{ color: '#46a0e6' }}>■</span> {t('results.flood.area')} (≤ {fmtArea(aMax)}) · <span style={{ color: '#f2d43d' }}>■</span> {t('results.flood.water')} (≤ {fmt(vMax, 0)} m³) · <span style={{ color: '#ef4d4d' }}>■</span> {t('seis.damage')} · 0–{tMax.toFixed(0)} s
+                <span style={{ color: '#46a0e6' }}>■</span> {t('results.flood.area')} (≤ {fmtArea(aMax)}) · <span style={{ color: '#f2d43d' }}>■</span> {t('results.flood.water')} (≤ {fmt(vMax, 0)} m³) · <span style={{ color: '#ef4d4d' }}>■</span> {t('results.flood.damageMarks')} · 0–{tMax.toFixed(0)} s
               </div>
             </>
           ) : <div className={styles.cardSub}>–</div>}

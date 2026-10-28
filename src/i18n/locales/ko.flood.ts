@@ -220,6 +220,7 @@ export const koFlood = {
   'results.flood.budget.drainage': '배수 손실',
   'results.flood.budget.current': '현재 물의 양',
   'results.flood.budget.error': '수치 보존 오차',
+  'results.flood.damageMarks': '홍수 피해',
   'results.flood.csv': '시계열 CSV',
   'results.col.depth': '수심 m',
   'results.col.flow': '유속 m/s',
