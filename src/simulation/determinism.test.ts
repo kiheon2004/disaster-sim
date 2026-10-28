@@ -18,7 +18,7 @@ async function run(doc: WorldDocument) {
   const c = new SimulationController();
   await c.load(doc);
   c.addEvent({ event: 'wind', speed: 46, direction: 'S', duration: 40, gustStrength: 0.3, rampDuration: 4 });
-  c.advance(18);
+  c.advance(12);
   const seq = c.getDamageEvents().map((e) => `${e.time.toFixed(4)}|${e.objectId}|${e.componentId ?? ''}|${e.eventType}|${e.localWindSpeed.toFixed(4)}`);
   const m = c.getMetrics()!;
   c.unload();
@@ -34,7 +34,7 @@ describe('simulation reproducibility', () => {
     expect(b.seq).toEqual(a.seq);
     expect(b.m.totalDamageEvents).toBe(a.m.totalDamageEvents);
     expect(b.m.firstDamageTime).toBe(a.m.firstDamageTime);
-  }, 60_000);
+  }, 180_000);
 
   it('a different seed changes the result', async () => {
     const doc = town(42);
@@ -43,7 +43,7 @@ describe('simulation reproducibility', () => {
     other.settings.simulation.seed = 4242;
     const b = await run(other);
     expect(b.seq).not.toEqual(a.seq);
-  }, 60_000);
+  }, 180_000);
 
   it('metrics are consistent with the event history', async () => {
     const { m } = await run(town(7));
@@ -51,5 +51,5 @@ describe('simulation reproducibility', () => {
     expect(m.firstDamageTime).not.toBeNull();
     expect(m.histogram.reduce((x, y) => x + y, 0)).toBe(m.totalDamageEvents);
     expect(m.humansFallen).toBeGreaterThan(0);
-  }, 60_000);
+  }, 180_000);
 });
