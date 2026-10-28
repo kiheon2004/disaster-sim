@@ -71,8 +71,16 @@ export interface PhysicsEngine {
   removeBody(h: BodyHandle): void;
   setBodyKind(h: BodyHandle, kind: BodyKind): void;
   setRotationsLocked(h: BodyHandle, locked: boolean): void;
-  /** Persistent force for the next step (cleared by clearForces). */
-  addForceAtPoint(h: BodyHandle, force: Vec3, worldPoint: Vec3): void;
+  /**
+   * Change the contact friction of every collider of a body in place (no collider rebuild;
+   * Phase 14 ground-contact friction). The engine combines it with the ground's friction.
+   */
+  setFriction(h: BodyHandle, friction: number): void;
+  /**
+   * Persistent force for the next step (cleared by clearForces). `wake` = false leaves a sleeping
+   * body asleep (static loads such as buoyancy in still water, Phase 14).
+   */
+  addForceAtPoint(h: BodyHandle, force: Vec3, worldPoint: Vec3, wake?: boolean): void;
   /** Force through the center of mass for the next step (no torque; cleared by clearForces). */
   addForce(h: BodyHandle, force: Vec3): void;
   applyImpulse(h: BodyHandle, impulse: Vec3, worldPoint?: Vec3): void;

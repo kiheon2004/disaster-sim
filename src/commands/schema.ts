@@ -7,8 +7,9 @@ import { COMPASS_DIRS } from '@/core/compass';
 import { SIM_SPEEDS } from '@/core/units';
 import type { EventSpec, EventType } from '@/events/specs';
 import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
+import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from '@/events/flood/floodSchema';
 
-export { earthquakeEventSchema };
+export { earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema };
 
 export const compassSchema = z.enum(COMPASS_DIRS);
 
@@ -23,19 +24,19 @@ export const windEventSchema = z.object({
   rampDuration: z.number().positive().max(3600).optional().describe('Seconds to reach the target speed'),
 });
 
-export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema, earthquakeEventSchema]);
+export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema, earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema]);
 
 export const simulationCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('event'), spec: eventSpecSchema }),
   z.object({ kind: z.literal('control'), action: z.enum(['play', 'pause', 'reset']) }),
-  z.object({ kind: z.literal('speed'), value: z.union(SIM_SPEEDS.map((s) => z.literal(s)) as unknown as [z.ZodLiteral<0.25>, z.ZodLiteral<0.5>, z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<4>]) }),
+  z.object({ kind: z.literal('speed'), value: z.union(SIM_SPEEDS.map((s) => z.literal(s)) as unknown as [z.ZodLiteral<0.25>, z.ZodLiteral<0.5>, z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<4>, z.ZodLiteral<8>, z.ZodLiteral<16>]) }),
 ]);
 
 export type SimulationCommand = z.infer<typeof simulationCommandSchema>;
 
 /** A hazard the parser recognized but the simulator does not support yet. */
 export interface UnsupportedRequest {
-  event: Exclude<EventType, 'wind' | 'earthquake'>;
+  event: Exclude<EventType, 'wind' | 'earthquake' | 'rain' | 'risingWater' | 'waterSource' | 'flood'>;
   params: Record<string, number>;
 }
 

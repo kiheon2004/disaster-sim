@@ -9,6 +9,9 @@ import type { SimulationLogEntry } from './SimulationRuntime';
 import type { SimulationMetrics } from './analysis/MetricsRecorder';
 import type { DamageEventRecord } from './analysis/DamageEvent';
 import type { SeismicSeries } from './analysis/SeismicRecorder';
+import type { FloodSeries } from './analysis/FloodRecorder';
+import type { BoundarySide } from '@/core/model';
+import type { ResolvedBoundaryType } from './water/WaterForcing';
 
 export type SimStatus = 'idle' | 'loading' | 'running' | 'paused' | 'finished';
 
@@ -44,6 +47,25 @@ export interface QuakeLive {
   local: number;
   duration: number;
   sMinusP: number;
+}
+
+/** Live water status for HUDs (null while the water model is dormant). Phase 14. */
+export interface FloodLive {
+  /** Rain falling now (mm/h) and total point inflow (m³/s). */
+  rain: number;
+  sources: number;
+  /** Water on the map (m³), area ≥ 0.1 m / ≥ 1 cm deep (m²). */
+  volume: number;
+  floodedArea: number;
+  wetArea: number;
+  maxDepth: number;
+  meanDepth: number;
+  maxSpeed: number;
+  /** Per edge: effective boundary type, its level (fixed level) and whether an event drives it. */
+  boundaries: Record<BoundarySide, { type: ResolvedBoundaryType; level: number | null; event: boolean } | null>;
+  /** Mass-budget relative error so far. */
+  relativeError: number;
+  substeps: number;
 }
 
 export interface SimStats {
@@ -90,6 +112,9 @@ export interface SimState {
   quake: QuakeLive | null;
   /** Recorded earthquake time series (downsampled). */
   seismicSeries: SeismicSeries | null;
+  flood: FloodLive | null;
+  /** Recorded flood time series (downsampled). */
+  floodSeries: FloodSeries | null;
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
 }
 
@@ -108,5 +133,7 @@ export const useSimStore = create<SimState>((set) => ({
   damageEvents: [],
   quake: null,
   seismicSeries: null,
+  flood: null,
+  floodSeries: null,
   set: (patch) => set(patch),
 }));

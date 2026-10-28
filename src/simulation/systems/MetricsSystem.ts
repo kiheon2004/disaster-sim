@@ -21,10 +21,12 @@ export class MetricsSystem implements SimulationSystem {
         // Without a specific earlier event: the earthquake when the object shakes harder than
         // the wind loads it (wind-only runs never have seismic state → always wind).
         const quake = !e.lastHazard && e.seismic !== undefined && (e.seismic.shake > 0 || e.seismic.damage > 0) && e.loadRatio < 0.3;
-        const hazard = e.lastHazard ?? (quake ? 'earthquake' : 'wind');
+        // Flood (Phase 14): the flood channel caused it when it is the damaged one (dry runs: never).
+        const flood = !e.lastHazard && !quake && e.flood !== undefined && e.flood.health < 1 && e.loadRatio < 0.3;
+        const hazard = e.lastHazard ?? (quake ? 'earthquake' : flood ? 'flood' : 'wind');
         ctx.recordDamage(e, {
           eventType: DAMAGE_STATE_IDS[e.state] as 'DAMAGED' | 'CRITICAL' | 'DESTROYED',
-          cause: e.lastCause ?? (hazard === 'earthquake' ? (e.source.type === 'building' ? 'drift' : 'shaking') : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),
+          cause: e.lastCause ?? (hazard === 'earthquake' ? (e.source.type === 'building' ? 'drift' : 'shaking') : hazard === 'flood' ? 'inundation' : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),
           hazard,
         });
       }

@@ -4,6 +4,7 @@ import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { DamageState } from '../damage/DamageState';
 import type { DamageEventInput, DamageEventRecord } from './DamageEvent';
 import { SeismicRecorder, type EarthquakeMetrics } from './SeismicRecorder';
+import { FloodRecorder, type FloodMetrics } from './FloodRecorder';
 
 export interface SimulationMetrics {
   seed: number;
@@ -26,6 +27,8 @@ export interface SimulationMetrics {
   histogram: number[];
   /** Earthquake analysis (null when no earthquake ran). */
   earthquake: EarthquakeMetrics | null;
+  /** Flood analysis (null when the water model never activated). Phase 14. */
+  flood: FloodMetrics | null;
 }
 
 const MAX_EVENTS = 20000;
@@ -48,6 +51,9 @@ export class MetricsRecorder {
   private stepMarks = new Set<EntityId>();
   /** Earthquake peaks and time series (Phase 13). */
   readonly seismic = new SeismicRecorder();
+  /** Water time series and peaks (Phase 14). */
+  readonly flood = new FloodRecorder();
+  private env: EnvironmentState | null = null;
 
   constructor(readonly seed: number) {}
 
@@ -77,6 +83,10 @@ export class MetricsRecorder {
       hazard: ev.hazard ?? 'wind',
       groundAcceleration: ev.groundAcceleration ?? (ev.hazard === 'earthquake' && e.seismic ? Math.hypot(e.seismic.ground.a[0], e.seismic.ground.a[2]) : 0),
       response: ev.response ?? 0,
+      waterDepth: ev.waterDepth ?? (ev.hazard === 'flood' && e.flood ? e.flood.depth : 0),
+      flowSpeed: ev.flowSpeed ?? (ev.hazard === 'flood' && e.flood ? e.flood.speed : 0),
+      exposure: ev.exposure ?? (ev.hazard === 'flood' && e.flood ? e.flood.exposure : 0),
+      state: ev.state ?? e.state,
     };
     this.events.push(rec);
     if (this.firstDamage === null) this.firstDamage = time;
@@ -106,6 +116,8 @@ export class MetricsRecorder {
       }
     }
     this.seismic.sample(env, runtime, dt);
+    this.env = env;
+    this.flood.sample(env, runtime, dt);
   }
 
   summary(runtime: SimulationRuntime, time: number): SimulationMetrics {
@@ -142,6 +154,7 @@ export class MetricsRecorder {
       totalDamageEvents: this.events.length,
       histogram: this.histogram.slice(),
       earthquake: this.seismic.summary(runtime, this.events),
+      flood: this.env ? this.flood.summary(this.env, runtime, this.events, time) : null,
     };
   }
 }

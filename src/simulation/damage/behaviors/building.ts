@@ -8,8 +8,9 @@ import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris, spawnParticles } from '../spawn';
 import { heightFactor } from '../windLoad';
 import { createLocalWind, createSampleCache, type LocalWind } from '../../wind/SpatialWindField';
-import type { DamageCause } from '../../analysis/DamageEvent';
+import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 import { seismicLevel, seismicHealth } from '../seismicLevels';
+import { floodLevel } from '../floodLevels';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -121,14 +122,18 @@ function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext
   }
 }
 
-/** Earthquake collapse: debris falls along the building's response, not downwind. */
+/** Earthquake / flood collapse: debris falls along the building's response, not downwind. */
 export interface QuakeCollapse {
-  /** Horizontal unit direction the structure was swaying / leaning toward. */
+  /** Horizontal unit direction the structure was swaying / leaning toward (flood: the flow). */
   dir: Vec3;
   /** Horizontal velocity of the top relative to the ground (m/s). */
   speed: number;
   cause: DamageCause;
   response: number;
+  /** Default earthquake (Phase 13); 'flood' for lateral water load failures (Phase 14). */
+  hazard?: 'earthquake' | 'flood';
+  /** Extra fields for the damage record (flood: water depth, flow speed, load …). */
+  extra?: Partial<DamageEventInput>;
 }
 
 /** Total structural failure: the building breaks into heavy chunks. */
@@ -156,16 +161,19 @@ export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeColl
           color: p.color,
           // Upper chunks topple farther; an earthquake also carries the sway velocity.
           push: quake ? vScale(flow, 0.3 + ly * 0.25 + (quake.speed * (ly + 1)) / layers) : vScale(flow, 0.4 + ly * 0.15),
-          hazard: quake ? 'earthquake' : undefined,
+          hazard: quake ? (quake.hazard ?? 'earthquake') : undefined,
         });
       }
     }
   }
   e.rev++;
   ctx.env.windField.removeObstacle(e.id);
+  // The ruins no longer block the water (debris bodies still feel the flow).
+  ctx.env.flood?.removeObstacle(e.id);
   if (quake) {
-    ctx.log(e.id, 'danger', { key: 'log.quake.collapsed' });
-    ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard: 'earthquake', response: quake.response, damageAfter: 1 });
+    const hazard = quake.hazard ?? 'earthquake';
+    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : 'log.quake.collapsed' });
+    ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard, response: quake.response, damageAfter: 1, ...quake.extra });
     return;
   }
   ctx.log(e.id, 'danger', { key: 'log.building.collapsed' });
@@ -263,8 +271,9 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   if (structure) {
     structure.loadRatio = e.loadRatio;
     structure.health = applyFatigue(structure.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
-    // Earthquake damage (if any) and wind fatigue share one structural health.
+    // Earthquake / flood damage (if any) and wind fatigue share one structural health.
     if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
+    if (e.flood) structure.health = Math.min(structure.health, e.flood.health);
     e.health = structure.health;
     if (structure.health <= 0) {
       collapse(e, ctx);
@@ -278,5 +287,6 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   if (failed > 0) s = worst(s, DamageState.DAMAGED);
   if (frac > 0.35) s = worst(s, DamageState.CRITICAL);
   if (e.seismic) s = worst(s, seismicLevel(e.seismic));
+  if (e.flood) s = worst(s, floodLevel(e.flood));
   e.state = s;
 }

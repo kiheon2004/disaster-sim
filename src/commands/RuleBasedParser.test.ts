@@ -76,10 +76,17 @@ describe('Korean wind commands', () => {
   });
 
   it('unsupported hazards are recognized', () => {
+    const r = parseCommands('화재를 발생시켜', D);
+    expect(r.ok).toBe(true);
+    expect(r.unsupported[0]).toMatchObject({ event: 'fire' });
+    expect(r.commands).toHaveLength(0);
+  });
+
+  it('heavy rain is a supported event since Phase 14 (was "unsupported" before)', () => {
     const r = parseCommands('폭우를 시간당 100mm로 발생시켜', D);
     expect(r.ok).toBe(true);
-    expect(r.unsupported[0]).toMatchObject({ event: 'rain', params: { mmPerHour: 100 } });
-    expect(r.commands).toHaveLength(0);
+    expect(r.unsupported).toHaveLength(0);
+    expect(r.commands[0].command).toMatchObject({ kind: 'event', spec: { event: 'rain', intensity: 100 } });
   });
 
   it('바람이 불어 is not fire', () => {

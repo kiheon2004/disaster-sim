@@ -17,7 +17,8 @@ export const WIND_REFERENCE_HEIGHT = 10;
 /** Power-law exponent for the atmospheric boundary layer (open terrain). */
 export const WIND_SHEAR_EXPONENT = 0.14;
 
-export const SIM_SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
+/** 8× and 16× (Phase 14) fast-forward slow floods; the per-frame step budget still applies. */
+export const SIM_SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 16] as const;
 export type SimSpeed = (typeof SIM_SPEEDS)[number];
 
 /** Global multiplier on aerodynamic forces — the single knob for tuning the visual result. */

@@ -3,19 +3,26 @@
  * (parser / UI form / future LLM) and the Event System.
  */
 import type { CompassDir } from '@/core/compass';
+import type { BoundarySide } from '@/core/model';
 
 export type EventType =
   | 'wind'
   | 'earthquake'
+  | 'rain'
+  | 'risingWater'
+  | 'waterSource'
   | 'flood'
   | 'tsunami'
-  | 'rain'
   | 'snow'
   | 'fire'
   | 'explosion';
 
-/** Event types that are recognized but not simulated yet. */
-export const UNSUPPORTED_EVENT_TYPES: EventType[] = ['flood', 'tsunami', 'rain', 'snow', 'fire', 'explosion'];
+/** Event types that are recognized but not simulated yet. ('flood' alone maps to rising water.) */
+export const UNSUPPORTED_EVENT_TYPES: EventType[] = ['tsunami', 'snow', 'fire', 'explosion'];
+
+/** Event types that drive the water model (Phase 14). */
+export const WATER_EVENT_TYPES = ['rain', 'risingWater', 'waterSource'] as const;
+export type WaterEventType = (typeof WATER_EVENT_TYPES)[number];
 
 export interface WindEventSpec {
   event: 'wind';
@@ -66,4 +73,65 @@ export interface EarthquakeEventSpec {
   startTime?: number;
 }
 
-export type EventSpec = WindEventSpec | EarthquakeEventSpec;
+/** Circular area on the map (world meters). */
+export interface CircleArea {
+  center: [number, number];
+  radius: number;
+}
+
+/**
+ * Heavy rain (Phase 14): a uniform rainfall intensity over the whole map or a circular area.
+ * Water reaches the ground at `intensity` mm/h for `duration` seconds, then infiltrates, drains
+ * or runs off over the terrain.
+ */
+export interface RainEventSpec {
+  event: 'rain';
+  /** Rainfall intensity, mm/h (millimeters of water depth per hour). */
+  intensity: number;
+  /** Seconds. */
+  duration: number;
+  /** null / omitted = the whole map. */
+  area?: CircleArea | null;
+  /** Absolute simulation time to start at (default: now). */
+  startTime?: number;
+}
+
+/**
+ * Rising water at a map edge (Phase 14): the edge becomes an outside water body whose SURFACE
+ * ELEVATION rises from its current level to `level` at `riseRate`, holds there until the event
+ * ends, then the edge reverts to its configured boundary condition.
+ * `level` is an elevation on the terrain datum (like terrain heights), not a depth.
+ */
+export interface RisingWaterEventSpec {
+  event: 'risingWater';
+  boundary: BoundarySide;
+  /** Target water surface elevation, m. */
+  level: number;
+  /** m/min (default 0.5). */
+  riseRate?: number;
+  /** Total seconds incl. the rise (default: rise time + 180 s hold). */
+  duration?: number;
+  startTime?: number;
+}
+
+/** Local water source (Phase 14): a constant inflow (pipe burst, culvert, pump) at a point. */
+export interface WaterSourceEventSpec {
+  event: 'waterSource';
+  /** World [x, z] (m). */
+  position: [number, number];
+  /** Inflow, m³/s. */
+  rate: number;
+  /** Seconds. */
+  duration: number;
+  /** Radius the inflow is spread over (m, default 2). */
+  radius?: number;
+  startTime?: number;
+}
+
+export type WaterEventSpec = RainEventSpec | RisingWaterEventSpec | WaterSourceEventSpec;
+
+export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec;
+
+export function isWaterEvent(s: EventSpec): s is WaterEventSpec {
+  return s.event === 'rain' || s.event === 'risingWater' || s.event === 'waterSource';
+}

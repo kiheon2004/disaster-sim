@@ -4,7 +4,7 @@
  * typed arrays in memory and go through the terrain codec (src/terrain/terrainCodec.ts) on save.
  */
 import type { EntityId, ObjectType, Transform, Vec3 } from './types';
-import type { EarthquakeEventSpec } from '@/events/specs';
+import type { EarthquakeEventSpec, RainEventSpec, RisingWaterEventSpec, WaterSourceEventSpec } from '@/events/specs';
 
 export interface PhysicalProperties {
   /** kg */
@@ -142,6 +142,55 @@ export interface SimulationSettings {
   /** Seed for every random draw in the simulation core (reproducibility). */
   seed: number;
   wind: WindModelSettings;
+  /** Flood / water model settings (Phase 14). Missing in older files → defaults. */
+  water: WaterSettings;
+}
+
+// ── Flood: water model settings (Phase 14, approximate model parameters) ─────
+
+/** Map edges, named like compass points (north = −Z, east = +X). */
+export type BoundarySide = 'N' | 'S' | 'E' | 'W';
+export const BOUNDARY_SIDES: readonly BoundarySide[] = ['N', 'E', 'S', 'W'];
+
+/**
+ * What water does at a map edge:
+ *  - auto:       fixedLevel at the terrain's reference water level when part of the edge lies
+ *                below it (sea / river connected to the outside), otherwise open
+ *  - closed:     a wall — nothing flows in or out (mass is conserved exactly)
+ *  - open:       free outflow, as if the terrain continued with the same slope; never inflow
+ *  - fixedLevel: an outside water body with a fixed surface elevation `level` (in and out)
+ */
+export type WaterBoundaryType = 'auto' | 'closed' | 'open' | 'fixedLevel';
+
+export interface WaterBoundarySpec {
+  type: WaterBoundaryType;
+  /** Water SURFACE elevation (m, same datum as terrain heights) for fixedLevel; default = reference level ?? 0. */
+  level?: number;
+}
+
+export interface WaterSettings {
+  boundaries: Record<BoundarySide, WaterBoundarySpec>;
+  /** Infiltration into the ground (rate from the ground type's permeability). */
+  infiltration: boolean;
+  /** Multiplier on every ground type's infiltration capacity. */
+  infiltrationScale: number;
+  /** Storm-drain removal capacity on paved surfaces (asphalt, concrete, road objects), mm/h. 0 = none. */
+  drainageCapacity: number;
+  /** Multiplier on every ground type's Manning roughness. */
+  roughnessScale: number;
+  /** At flood start, fill ground below the reference level that is connected to a fixed-level edge. */
+  initialFromReference: boolean;
+}
+
+export function defaultWaterSettings(): WaterSettings {
+  return {
+    boundaries: { N: { type: 'auto' }, E: { type: 'auto' }, S: { type: 'auto' }, W: { type: 'auto' } },
+    infiltration: true,
+    infiltrationScale: 1,
+    drainageCapacity: 30,
+    roughnessScale: 1,
+    initialFromReference: true,
+  };
 }
 
 export const DEFAULT_WIND_MODEL: WindModelSettings = {
@@ -155,7 +204,7 @@ export const DEFAULT_WIND_MODEL: WindModelSettings = {
 };
 
 export function defaultSimulationSettings(): SimulationSettings {
-  return { seed: 1234, wind: { ...DEFAULT_WIND_MODEL } };
+  return { seed: 1234, wind: { ...DEFAULT_WIND_MODEL }, water: defaultWaterSettings() };
 }
 
 export interface WorldSettings {
@@ -172,7 +221,7 @@ export type GroundTypeId = 0 | 1 | 2 | 3 | 4;
 /** Soil profile ids (index into the SoilProfileRegistry; stored as bytes). Independent of the surface. */
 export type SoilProfileId = 0 | 1 | 2 | 3;
 
-export type TerrainPresetId = 'flat' | 'gentleHills' | 'valley' | 'coastal';
+export type TerrainPresetId = 'flat' | 'gentleHills' | 'valley' | 'coastal' | 'lowland';
 
 export interface TerrainSettings {
   /** Preset the terrain was last generated from (informational; edits come on top). */
@@ -213,14 +262,30 @@ export interface TerrainData {
   revision: number;
 }
 
-/** Hazard scenarios saved with the project (Phase 13). */
+/**
+ * Configured flood events (Phase 14). Each entry is null / empty when not used; `enabled`
+ * lists which of them the flood form's Run button starts together.
+ */
+export interface FloodScenario {
+  rain: RainEventSpec | null;
+  risingWater: RisingWaterEventSpec | null;
+  sources: WaterSourceEventSpec[];
+  enabled: { rain: boolean; risingWater: boolean; sources: boolean };
+}
+
+export function defaultFloodScenario(): FloodScenario {
+  return { rain: null, risingWater: null, sources: [], enabled: { rain: true, risingWater: false, sources: false } };
+}
+
+/** Hazard scenarios saved with the project (Phase 13, flood Phase 14). */
 export interface ScenarioSettings {
   /** The configured earthquake (run from the earthquake form / commands), or none. */
   earthquake: EarthquakeEventSpec | null;
+  flood: FloodScenario;
 }
 
 export interface WorldDocument {
-  schemaVersion: 3;
+  schemaVersion: 4;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;

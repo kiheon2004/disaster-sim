@@ -166,11 +166,17 @@ export class RapierEngine implements PhysicsEngine {
     this.bodies.get(h)?.lockRotations(locked, true);
   }
 
-  addForceAtPoint(h: BodyHandle, f: Vec3, p: Vec3) {
+  addForceAtPoint(h: BodyHandle, f: Vec3, p: Vec3, wake = true) {
     const b = this.bodies.get(h);
     if (!b) return;
-    b.addForceAtPoint({ x: f[0], y: f[1], z: f[2] }, { x: p[0], y: p[1], z: p[2] }, true);
+    b.addForceAtPoint({ x: f[0], y: f[1], z: f[2] }, { x: p[0], y: p[1], z: p[2] }, wake);
     this.forced.add(h);
+  }
+
+  setFriction(h: BodyHandle, friction: number) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    for (let i = 0; i < b.numColliders(); i++) b.collider(i).setFriction(friction);
   }
 
   addForce(h: BodyHandle, f: Vec3) {

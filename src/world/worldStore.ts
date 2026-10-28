@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { EntityId, Transform } from '@/core/types';
-import type { FoundationSpec, ObjectParams, PhysicalProperties, StructuralSpec, TerrainData, TerrainPresetId, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
+import type { FloodScenario, FoundationSpec, ObjectParams, PhysicalProperties, StructuralSpec, TerrainData, TerrainPresetId, WaterSettings, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
+import { defaultFloodScenario, defaultWaterSettings } from '@/core/model';
 import type { EarthquakeEventSpec } from '@/events/specs';
 import { normalizeSeismic, seismicOf } from '@/simulation/seismic/structuralProps';
 import { createId } from '@/core/id';
@@ -61,11 +62,13 @@ interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings> }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings> }) => void;
   /** Structural / foundation properties of an object (earthquake). */
   updateSeismic: (id: EntityId, patch: { structure?: Partial<StructuralSpec>; foundation?: Partial<FoundationSpec> }, opts?: MutationOptions) => void;
   /** The earthquake saved with the project (null = none). Not an undo step (like settings). */
   setEarthquakeScenario: (spec: EarthquakeEventSpec | null) => void;
+  /** The flood events saved with the project (Phase 14). Not an undo step (like settings). */
+  setFloodScenario: (patch: Partial<FloodScenario>) => void;
   replaceDocument: (doc: WorldDocument) => void;
   newDocument: () => void;
   /** Terrain brush stroke: begin → dab (every frame while held) → end (one undo step). */
@@ -220,7 +223,11 @@ export const useWorldStore = create<WorldState>((set, get) => {
           ...doc,
           settings: {
             ...doc.settings,
-            simulation: { seed: patch.seed ?? cur.seed, wind: { ...cur.wind, ...(patch.wind ?? {}) } },
+            simulation: {
+              seed: patch.seed ?? cur.seed,
+              wind: { ...cur.wind, ...(patch.wind ?? {}) },
+              water: { ...(cur.water ?? defaultWaterSettings()), ...(patch.water ?? {}) },
+            },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },
         },
@@ -238,6 +245,12 @@ export const useWorldStore = create<WorldState>((set, get) => {
     setEarthquakeScenario: (spec) => {
       const doc = get().doc;
       set({ doc: { ...doc, scenario: { ...doc.scenario, earthquake: spec ? { ...spec } : null }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
+    },
+
+    setFloodScenario: (patch) => {
+      const doc = get().doc;
+      const flood = { ...(doc.scenario.flood ?? defaultFloodScenario()), ...structuredClone(patch) };
+      set({ doc: { ...doc, scenario: { ...doc.scenario, flood }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
     },
 
     replaceDocument: (doc) => {

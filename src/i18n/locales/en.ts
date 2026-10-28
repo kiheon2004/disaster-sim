@@ -1,5 +1,6 @@
 import type { MessageKey } from './ko';
 import { enEarthquake } from './en.earthquake';
+import { enFlood } from './en.flood';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -576,4 +577,5 @@ export const en: Record<MessageKey, string> = {
   'shortcut.brush': 'Brush size (terrain editing)',
   'toast.terrainPreset': 'Applied terrain preset “{name}”.',
   ...enEarthquake,
+  ...enFlood,
 };

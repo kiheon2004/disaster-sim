@@ -3,11 +3,12 @@ import type { SystemContext } from '../../systems/SimulationSystem';
 import type { RuntimeEntity } from '../../SimulationRuntime';
 import { DamageState, worst } from '../DamageState';
 import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
+import { floodLevel } from '../floodLevels';
 
 /** Load ratio at which a standing person is knocked over immediately (gust). */
 const KNOCKDOWN_RATIO = 1.0;
 
-export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake', impactForce?: number, dir?: [number, number, number]) {
+export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood', impactForce?: number, dir?: [number, number, number]) {
   if (e.flags.fallen || !e.dynamic || e.body === null) return;
   e.flags.fallen = true;
   e.rev++;
@@ -21,6 +22,11 @@ export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' |
   const m = e.source.physics.mass;
   physics.applyTorqueImpulse(e.body, vScale([flow[2], 0, -flow[0]], m * 0.55));
   physics.applyImpulse(e.body, vScale(flow, m * 0.6));
+  if (reason === 'flood') {
+    ctx.log(e.id, 'danger', { key: 'log.flood.personFell' });
+    ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'hydrodynamic', hazard: 'flood', localWindSpeed: e.localWind.speed, force: e.flood?.load });
+    return;
+  }
   if (reason === 'earthquake') {
     ctx.log(e.id, 'danger', { key: 'log.quake.personFell' });
     ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'shaking', hazard: 'earthquake', localWindSpeed: e.localWind.speed });
@@ -43,6 +49,7 @@ export function updateHuman(e: RuntimeEntity, ctx: SystemContext, dt: number) {
   let s = worst(loadLevel(e.loadRatio), healthLevel(e.health));
   if (e.flags.fallen) s = worst(s, DamageState.CRITICAL);
   else if (e.seismic && e.seismic.balance < 0.7) s = worst(s, DamageState.STRESSED);
+  if (e.flood) s = worst(s, floodLevel(e.flood));
   // People are never shown as "destroyed".
   e.state = Math.min(s, DamageState.CRITICAL) as DamageState;
 }

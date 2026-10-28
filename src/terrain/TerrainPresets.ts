@@ -12,7 +12,10 @@ import { createFlatTerrain, quantizeHeight } from './TerrainData';
 import { DEFAULT_GROUND } from './GroundMaterials';
 import { DEFAULT_SOIL } from './SoilProfiles';
 
-export const TERRAIN_PRESETS: TerrainPresetId[] = ['flat', 'gentleHills', 'valley', 'coastal'];
+export const TERRAIN_PRESETS: TerrainPresetId[] = ['flat', 'gentleHills', 'valley', 'coastal', 'lowland'];
+
+/** Normal river surface of the lowland preset (its reference water level), m. */
+export const LOWLAND_RIVER_LEVEL = -0.6;
 
 /** Smooth value noise on a seeded lattice, summed over octaves (fbm), roughly in [-1, 1]. */
 class ValueNoise {
@@ -95,6 +98,18 @@ function presetHeight(preset: TerrainPresetId, seed: number): HeightFn {
         const sea = -3.5 * smoothstep(coast - 4, coast + 22, z);
         return z < coast ? Math.max(0.15, land) : sea + 0.15 * (1 - smoothstep(coast, coast + 6, z));
       };
+    case 'lowland':
+      return (x, z) => {
+        // Phase 14 floodplain: a river runs west → east south of the town (channel bed
+        // −2.2 m, banks at +0.3 m), the plain sits barely above the bank and rises gently
+        // toward the north, with a few shallow depressions where water collects.
+        const center = 52 + 9 * Math.sin(x / 38) + noise.fbm(x / 60, 1.3, 2) * 4;
+        const d = Math.abs(z - center);
+        const channel = -2.5 * (1 - smoothstep(4, 11, d));
+        const plain = 0.3 + 0.012 * Math.max(0, center - z) + noise.fbm(x / 35, z / 35, 3) * 0.45 * smoothstep(8, 30, d);
+        const dip = -0.7 * Math.exp(-(((x + 60) / 18) ** 2 + ((z + 40) / 14) ** 2)) - 0.5 * Math.exp(-(((x - 70) / 15) ** 2 + ((z + 5) / 12) ** 2));
+        return d < 11 ? Math.min(plain, channel + 0.3 + 2.2 * smoothstep(4, 11, d)) : plain + dip;
+      };
   }
 }
 
@@ -113,6 +128,8 @@ function presetSoil(preset: TerrainPresetId, x: number, z: number, h: number): n
       return h > 10 ? 0 : Math.abs(z) < 34 + 0.02 * x ? 2 : DEFAULT_SOIL;
     case 'coastal':
       return h < 1.3 ? 3 : h < 3 ? 2 : DEFAULT_SOIL;
+    case 'lowland':
+      return 2; // soft alluvium everywhere
   }
 }
 
@@ -130,9 +147,10 @@ export function generateTerrain(preset: TerrainPresetId, seed: number, like?: Pi
       t.heights[i] = h;
       t.ground[i] = DEFAULT_GROUND;
       if (preset === 'coastal' && h < 1.3) t.ground[i] = 2; // sand along the shore
+      if (preset === 'lowland' && h < -0.2) t.ground[i] = 1; // bare soil in the river channel
       t.soil[i] = presetSoil(preset, x, z, h);
     }
   }
-  t.settings = { preset, seed, waterLevel: preset === 'coastal' ? 0 : null };
+  t.settings = { preset, seed, waterLevel: preset === 'coastal' ? 0 : preset === 'lowland' ? LOWLAND_RIVER_LEVEL : null };
   return t;
 }

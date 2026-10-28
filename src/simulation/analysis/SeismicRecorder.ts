@@ -107,7 +107,7 @@ export class SeismicRecorder {
     const damaged = new Set<EntityId>();
     for (const ev of events) {
       if (ev.hazard !== 'earthquake') {
-        m.windEvents++;
+        if (ev.hazard === 'wind') m.windEvents++;
         continue;
       }
       m.earthquakeEvents++;

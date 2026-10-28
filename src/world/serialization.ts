@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { SCHEMA_VERSION, defaultScenario } from './WorldDocument';
-import { DEFAULT_WIND_MODEL, defaultSimulationSettings, type WorldDocument, type WorldObject } from '@/core/model';
+import { DEFAULT_WIND_MODEL, defaultFloodScenario, defaultSimulationSettings, defaultWaterSettings, type WaterSettings, type WorldDocument, type WorldObject } from '@/core/model';
 import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
+import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from '@/events/flood/floodSchema';
 import { normalizeSeismic } from '@/simulation/seismic/structuralProps';
 import { getDefinition, hasDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
@@ -58,8 +59,45 @@ const terrainSchema = z.union([
   }),
 ]);
 
+const boundarySchema = z.object({
+  type: z.enum(['auto', 'closed', 'open', 'fixedLevel']).catch('auto'),
+  level: z.number().min(-100).max(200).optional().catch(undefined),
+});
+
+/** Phase 14 water settings: validated leniently (bad fields fall back to defaults). */
+const waterSchema = z.object({
+  boundaries: z.object({ N: boundarySchema, E: boundarySchema, S: boundarySchema, W: boundarySchema }).partial(),
+  infiltration: z.boolean(),
+  infiltrationScale: z.number().min(0).max(10),
+  drainageCapacity: z.number().min(0).max(500),
+  roughnessScale: z.number().min(0.1).max(10),
+  initialFromReference: z.boolean(),
+}).partial();
+
+/** Phase 14 flood scenario: an invalid event is dropped rather than failing the file. */
+const floodScenarioSchema = z.object({
+  rain: rainEventSchema.nullable().catch(null).default(null),
+  risingWater: risingWaterEventSchema.nullable().catch(null).default(null),
+  sources: z.array(z.unknown()).catch([]).default([]).transform((a) => a.flatMap((x) => {
+    const r = waterSourceEventSchema.safeParse(x);
+    return r.success ? [r.data] : [];
+  })),
+  enabled: z.object({ rain: z.boolean(), risingWater: z.boolean(), sources: z.boolean() }).partial().catch({}).default({}),
+}).partial();
+
+function normalizeWater(raw: z.infer<typeof waterSchema> | undefined): WaterSettings {
+  const d = defaultWaterSettings();
+  if (!raw) return d;
+  const b = raw.boundaries ?? {};
+  return {
+    ...d,
+    ...Object.fromEntries(Object.entries(raw).filter(([k, v]) => k !== 'boundaries' && v !== undefined)),
+    boundaries: { N: b.N ?? d.boundaries.N, E: b.E ?? d.boundaries.E, S: b.S ?? d.boundaries.S, W: b.W ?? d.boundaries.W },
+  } as WaterSettings;
+}
+
 const documentSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -78,6 +116,8 @@ const documentSchema = z.object({
           cornerSpeedup: z.number().min(0),
           turbulence: z.number().min(0).max(1),
         }).partial().optional(),
+        // Phase 14: water model settings (absent before v4 → defaults).
+        water: waterSchema.optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -85,7 +125,10 @@ const documentSchema = z.object({
   terrain: terrainSchema.default({ kind: 'flat' }),
   objects: z.record(z.string(), objectSchema),
   // Phase 13: saved hazard scenarios. An invalid earthquake is dropped rather than failing the file.
-  scenario: z.object({ earthquake: earthquakeEventSchema.nullable().catch(null).default(null) }).partial().optional(),
+  scenario: z.object({
+    earthquake: earthquakeEventSchema.nullable().catch(null).default(null),
+    flood: floodScenarioSchema.optional().catch(undefined),
+  }).partial().optional(),
 });
 
 export type LoadResult = { ok: true; doc: WorldDocument; skipped: number } | { ok: false; error: string };
@@ -103,10 +146,12 @@ export function serializeDocument(doc: WorldDocument, pretty = true): string {
  * Validate + normalize a document. Unknown object types are skipped and components are
  * regenerated from params so files stay consistent with the current object definitions.
  *
- * Migration (automatic, any older schema → v3):
+ * Migration (automatic, any older schema → v4):
  *   v1 → flat terrain;  v1/v2 → default soil layer (dense soil), default structural and
- *   foundation properties on buildings, empty scenario. Positions, physics, terrain heights
- *   and surfaces are kept exactly, so wind results of old projects do not change.
+ *   foundation properties on buildings, empty scenario;  v1–v3 → default water settings
+ *   (all edges 'auto', infiltration on, 30 mm/h drainage) and an empty flood scenario.
+ *   Positions, physics, terrain heights and surfaces are kept exactly, so wind and earthquake
+ *   results of old projects do not change.
  */
 export function parseDocument(json: string): LoadResult {
   let raw: unknown;
@@ -152,9 +197,17 @@ export function parseDocument(json: string): LoadResult {
   const sim = res.data.settings.simulation;
   const settings = {
     ...res.data.settings,
-    simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) } },
+    simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) }, water: normalizeWater(sim?.water) },
   };
-  const scenario = { ...defaultScenario(), ...(res.data.scenario ?? {}) };
+  const rawFlood = res.data.scenario?.flood;
+  const floodDefaults = defaultFloodScenario();
+  const flood = {
+    rain: rawFlood?.rain ?? null,
+    risingWater: rawFlood?.risingWater ?? null,
+    sources: rawFlood?.sources ?? [],
+    enabled: { ...floodDefaults.enabled, ...(rawFlood?.enabled ?? {}) },
+  };
+  const scenario = { ...defaultScenario(), earthquake: res.data.scenario?.earthquake ?? null, flood };
   return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped };
 }
 

@@ -15,6 +15,7 @@ import type { WindEventSpec } from '@/events/specs';
 import type { CommandParser, ParseDefaults, ParseResult, ParsedCommand } from './CommandParser';
 import { simulationCommandSchema, type UnsupportedRequest } from './schema';
 import { isEarthquakeClause, parseEarthquake } from './earthquakeParser';
+import { floodKind, parseFlood } from './floodParser';
 
 // ── Normalization ─────────────────────────────────────────────────────────
 
@@ -23,6 +24,17 @@ export function normalize(input: string): string {
   s = s.replace(/\s*\/\s*/g, '/');
   // Acceleration units ("m/s²" is "m/s2" after NFKC) → one letter-only token.
   s = s.replace(/(?:m\/s\^?2|m\/sec\^?2|meters?\s+per\s+second\s+squared|미터\/초\^?2)/g, 'mpss');
+  // Flood units (Phase 14). Volume units contain a digit ("m3"), so they become letter-only
+  // tokens: cms = m³/s, cmm = m³/min, cmh = m³/h, cbm = m³ (rate from context: "초당 5cbm").
+  s = s.replace(/(?:m3|세제곱\s*미터|입방\s*미터|cubic\s+met(?:er|re)s?)\s*(?:\/\s*s(?:ec)?\b|\/\s*초|per\s+second|a\s+second)/g, 'cms');
+  s = s.replace(/(?:m3|세제곱\s*미터|입방\s*미터|cubic\s+met(?:er|re)s?)\s*(?:\/\s*min\b|\/\s*분|per\s+minute)/g, 'cmm');
+  s = s.replace(/(?:m3|세제곱\s*미터|입방\s*미터|cubic\s+met(?:er|re)s?)\s*(?:\/\s*h(?:r|our)?\b|\/\s*시간?|per\s+hour|an\s+hour)/g, 'cmh');
+  s = s.replace(/(?:m3|세제곱\s*미터|입방\s*미터|cubic\s+met(?:er|re)s?)/g, 'cbm');
+  s = s.replace(/(?:liters?|litres?|리터)\s*(?:\/\s*s(?:ec)?\b|\/\s*초|per\s+second)/g, 'lps');
+  s = s.replace(/(?:mm|밀리미터|밀리)\s*(?:\/\s*h(?:r|our)?\b|\/\s*시간|per\s+hour|an\s+hour|an\s+hr)/g, 'mm/h');
+  s = s.replace(/(?:millimet(?:er|re)s?)\s*(?:per\s+hour|an\s+hour|\/\s*h)/g, 'mm/h');
+  s = s.replace(/millimet(?:er|re)s?|밀리미터|밀리(?=[\s의로]|$)/g, 'mm');
+  s = s.replace(/(?:m|met(?:er|re)s?|미터)\s*(?:\/\s*min\b|per\s+minute|a\s+minute)/g, 'm/min');
   s = s.replace(/미터\s*퍼\s*세컨드|미터\/초|미터\s*매\s*초|meters?\s+per\s+second|metres?\s+per\s+second|m\/sec|\bmps\b/g, 'm/s');
   s = s.replace(/킬로미터\/시|kilometers?\s+per\s+hour|\bkmh\b|\bkph\b/g, 'km/h');
   s = s.replace(/miles?\s+per\s+hour/g, 'mph');
@@ -42,12 +54,16 @@ export function splitClauses(s: string): string[] {
 
 // ── Number + unit tokens ──────────────────────────────────────────────────
 
-type UnitKind = 'speed' | 'time' | 'percent' | 'degree' | 'mm' | 'cm' | 'meter' | 'multiplier' | 'accel' | 'km' | 'freq' | 'bare';
+type UnitKind =
+  | 'speed' | 'time' | 'percent' | 'degree' | 'mm' | 'cm' | 'meter' | 'multiplier' | 'accel' | 'km' | 'freq' | 'bare'
+  // Flood (Phase 14): rain intensity (mm/h), volume flow (m³/s), volume (m³), rise rate (m/min)
+  | 'rainRate' | 'flow' | 'volume' | 'riseRate';
 
 export interface NumToken {
   value: number;
   kind: UnitKind;
-  /** m/s for speed, seconds for time, g for acceleration, km for distance, Hz for frequency */
+  /** m/s for speed, seconds for time, g for acceleration, km for distance, Hz for frequency,
+   *  mm/h for rain, m³/s for flow, m³ for volume, m/min for rise rate */
   si: number;
   index: number;
   end: number;
@@ -57,6 +73,19 @@ export interface NumToken {
 }
 
 const UNIT_TABLE: [string, UnitKind, number][] = [
+  // Flood (Phase 14) — before their prefixes (mm, m, cm).
+  ['mm/h', 'rainRate', 1],
+  ['cms', 'flow', 1],
+  ['cmm', 'flow', 1 / 60],
+  ['cmh', 'flow', 1 / 3600],
+  ['cbm', 'volume', 1],
+  ['lps', 'flow', 0.001],
+  ['m/min', 'riseRate', 1],
+  ['톤', 'volume', 1],
+  ['meters', 'meter', 1],
+  ['meter', 'meter', 1],
+  ['metres', 'meter', 1],
+  ['metre', 'meter', 1],
   // Acceleration (earthquake intensity) → g. "m/s²" is normalized to "mpss".
   ['mpss', 'accel', 1 / 9.81],
   ['gal', 'accel', 0.01 / 9.81],
@@ -162,9 +191,7 @@ interface Hazard {
   re: RegExp;
 }
 const HAZARDS: Hazard[] = [
-  { event: 'tsunami', re: /쓰나미|해일|tsunami/ },
-  { event: 'flood', re: /홍수|침수|범람|flood/ },
-  { event: 'rain', re: /폭우|호우|강우|장대비|비가|비를|\b비\b|rain|downpour|precipitation/ },
+  { event: 'tsunami', re: /쓰나미|지진해일|tsunami/ },
   { event: 'snow', re: /폭설|눈보라|눈이|눈을|snow|blizzard/ },
   { event: 'fire', re: /화재|산불|불이|불을|불길|fire|blaze|wildfire|burn/ },
   { event: 'explosion', re: /폭발|explosion|explode|blast|detonat/ },
@@ -320,7 +347,30 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
-    // 2) Hazards the simulator does not support yet
+    // 2) Water: rain, rising water at an edge, local source (Phase 14). A clause with both a
+    //    typhoon and rain ("태풍과 함께 시간당 80mm 비") yields a rain AND a wind command.
+    const water = floodKind(clause, tokens);
+    if (water) {
+      const parsed = parseFlood(water, clause, tokens, notes, result);
+      if (parsed) {
+        const check = simulationCommandSchema.safeParse({ kind: 'event', spec: parsed.spec });
+        if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
+        else result.commands.push({ command: check.data, source: clause, notes, delay: parsed.delay } satisfies ParsedCommand);
+      }
+      if (!(water === 'rain' && WIND_WORDS.test(clause) && /태풍|폭풍|강풍|바람|typhoon|hurricane|storm|wind|gale/.test(clause))) continue;
+      const windNotes: I18nMessage[] = [];
+      const w = parseWind(clause, originals, tokens.filter((t) => t.kind !== 'rainRate' && t.kind !== 'mm'), defaults, lastWind, windNotes, result);
+      if (w) {
+        const check = simulationCommandSchema.safeParse({ kind: 'event', spec: w.spec });
+        if (check.success) {
+          result.commands.push({ command: check.data, source: clause, notes: windNotes, delay: w.delay } satisfies ParsedCommand);
+          lastWind = w;
+        }
+      }
+      continue;
+    }
+
+    // 3) Hazards the simulator does not support yet
     const hazard = HAZARDS.find((h) => h.re.test(clause));
     if (hazard && !windish) {
       const params: Record<string, number> = {};
@@ -337,7 +387,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
-    // 3) Wind
+    // 4) Wind
     const ramping = RAMP_UP.test(clause) || RAMP_DOWN.test(clause);
     if (windish || (ramping && lastWind)) {
       const parsed = parseWind(clause, originals, tokens, defaults, lastWind, notes, result);
@@ -354,7 +404,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
-    // 4) Simulation controls
+    // 5) Simulation controls
     if (RESET.test(clause)) {
       result.commands.push({ command: { kind: 'control', action: 'reset' }, source: clause, notes });
       continue;

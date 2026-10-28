@@ -17,7 +17,10 @@ export type DamageEventType =
   | 'TOPPLED'
   | 'IMPACT'
   | 'CRACKED'
-  | 'TILTED';
+  | 'TILTED'
+  | 'INUNDATED'
+  | 'FLOATED'
+  | 'SCOURED';
 
 /**
  * Why it happened:
@@ -26,7 +29,9 @@ export type DamageEventType =
  *  - push:     aerodynamic force moved/overturned a free-standing object
  *  - impact:   hit by debris or another object
  */
-export type DamageCause = 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' | 'acceleration' | 'foundation' | 'shaking';
+export type DamageCause =
+  | 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' | 'acceleration' | 'foundation' | 'shaking'
+  | 'hydrostatic' | 'hydrodynamic' | 'buoyancy' | 'inundation' | 'scour';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -34,8 +39,14 @@ export type DamageCause = 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' |
  *  - acceleration: floor / ground acceleration beyond an anchorage capacity (cladding, signs, roof units)
  *  - foundation:   foundation tilt / bearing failure
  *  - shaking:      ground shaking moved or toppled a free object (people, poles, walls)
+ * Flood causes (Phase 14):
+ *  - hydrostatic:  water pressure from a depth difference (walls, windows, building envelope)
+ *  - hydrodynamic: drag of flowing water (people, vehicles, poles, debris)
+ *  - buoyancy:     lifted by the water (vehicles floating)
+ *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
+ *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake';
+export type Hazard = 'wind' | 'earthquake' | 'flood';
 
 export interface DamageEventRecord {
   id: number;
@@ -65,7 +76,16 @@ export interface DamageEventRecord {
   groundAcceleration: number;
   /** Structural response at that moment: drift ratio (drift causes) or acceleration in g. */
   response: number;
+  /** Water depth at the object (m; 0 for wind / earthquake events). Phase 14. */
+  waterDepth: number;
+  /** Flow speed at the object (m/s). */
+  flowSpeed: number;
+  /** Seconds the object had been in water ≥ 0.1 m deep. */
+  exposure: number;
+  /** Damage state of the object right after the event. */
+  state: number;
 }
 
-export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response'> &
-  Partial<Pick<DamageEventRecord, 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response'>>;
+type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state';
+
+export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

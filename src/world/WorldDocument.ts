@@ -1,5 +1,5 @@
 import type { EntityId, ObjectType, Transform } from '@/core/types';
-import { defaultSimulationSettings, type ObjectParams, type PhysicalProperties, type ScenarioSettings, type WorldDocument, type WorldObject } from '@/core/model';
+import { defaultFloodScenario, defaultSimulationSettings, type ObjectParams, type PhysicalProperties, type ScenarioSettings, type WorldDocument, type WorldObject } from '@/core/model';
 import { defaultSeismic } from '@/simulation/seismic/structuralProps';
 import { AIR_DENSITY, GRAVITY, WORLD_SIZE } from '@/core/units';
 import { createId } from '@/core/id';
@@ -7,13 +7,14 @@ import { getDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
 
 /**
+ * 4 = Phase 14 (water settings, saved flood scenario, lowland preset).
  * 3 = Phase 13 (soil layer, seismic properties, saved earthquake scenario).
  * 2 = Phase 12 (heightfield terrain). 1 = Phase 0–11 (flat). Older files are migrated on load.
  */
-export const SCHEMA_VERSION = 3 as const;
+export const SCHEMA_VERSION = 4 as const;
 
 export function defaultScenario(): ScenarioSettings {
-  return { earthquake: null };
+  return { earthquake: null, flood: defaultFloodScenario() };
 }
 
 export function createEmptyDocument(name = ''): WorldDocument {

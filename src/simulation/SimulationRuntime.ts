@@ -7,6 +7,7 @@ import type { DamageState } from './damage/DamageState';
 import type { LocalWind, SampleCache } from './wind/SpatialWindField';
 import type { DamageCause, Hazard } from './analysis/DamageEvent';
 import type { SeismicEntityState, SeismicRuntime } from './seismic/SeismicState';
+import type { FloodEntityState, FloodRuntime } from './flood/FloodState';
 
 export type ComponentCondition = 'intact' | 'broken' | 'detached';
 
@@ -74,10 +75,12 @@ export interface RuntimeEntity {
   peakState: DamageState;
   /** Cause of the most recent damage. */
   lastCause: DamageCause | null;
-  /** Hazard behind the most recent damage (wind / earthquake). */
+  /** Hazard behind the most recent damage (wind / earthquake / flood). */
   lastHazard: Hazard | null;
   /** Earthquake response state; created when the first earthquake starts (Phase 13). */
   seismic?: SeismicEntityState;
+  /** Flood exposure / response state; created when the water model activates (Phase 14). */
+  flood?: FloodEntityState;
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
@@ -109,6 +112,8 @@ export interface DebrisPiece {
   spawnTime: number;
   /** Hazard that tore the piece off (impact events inherit it). */
   hazard: Hazard;
+  /** Water surface last applied while asleep (flood, internal). */
+  lastEta?: number;
 }
 
 /** Short-lived visual particles (glass shards, leaves) — integrated without the physics engine. */
@@ -146,4 +151,6 @@ export interface SimulationRuntime {
   log: SimulationLogEntry[];
   /** Structural model + bookkeeping of the earthquake systems (lazily created, Phase 13). */
   seismic?: SeismicRuntime;
+  /** Flood bookkeeping (lazily created when the water model activates, Phase 14). */
+  flood?: FloodRuntime;
 }

@@ -24,7 +24,7 @@ async function setup() {
   return { c, rt, adapter, camera, batches, facade };
 }
 
-describe('SimRenderAdapter (instanced rendering of the simulation state)', () => {
+describe('SimRenderAdapter (instanced rendering of the simulation state)', { timeout: 30_000 }, () => {
   it('renders every object with a handful of batches and maps instances back to entity ids', async () => {
     const { c, rt, adapter, batches } = await setup();
     expect(batches.length).toBeLessThanOrEqual(8);

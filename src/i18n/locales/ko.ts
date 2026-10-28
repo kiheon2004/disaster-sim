@@ -3,6 +3,7 @@
  * every other locale must provide the same keys (enforced by the type system).
  */
 import { koEarthquake } from './ko.earthquake';
+import { koFlood } from './ko.flood';
 
 export const ko = {
   // App
@@ -579,6 +580,7 @@ export const ko = {
   'shortcut.brush': '브러시 크기 (지형 편집)',
   'toast.terrainPreset': '지형 프리셋 “{name}”을(를) 적용했습니다.',
   ...koEarthquake,
+  ...koFlood,
 } as const;
 
 export type MessageKey = keyof typeof ko;

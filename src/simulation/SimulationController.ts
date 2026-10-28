@@ -25,12 +25,19 @@ import { EMPTY_STATS, useSimStore, type QuakeLive, type SimStats, type SimStatus
 import { createGroundMotionSample, sMinusP } from './seismic/GroundMotionField';
 import { EarthquakeEvent } from '@/events/earthquake/EarthquakeEvent';
 import { GRAVITY } from '@/core/units';
+import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
+import { isWaterEvent } from '@/events/specs';
+import { floodFeatures } from './water/floodFeatures';
+import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
+import type { FloodLive } from './simStore';
 
 const MAX_STEPS_PER_FRAME = 16;
 /** Wall-clock budget for physics per frame; beyond it the simulation slows instead of the UI freezing. */
 const STEP_BUDGET_MS = 12;
 const PUBLISH_INTERVAL = 0.1; // s (real time)
 const SETTLE_TIME = 8; // s after the last event before the run is "finished"
+/** Water keeps running off after the last water event: give it longer before "finished". */
+const SETTLE_TIME_WATER = 60;
 const MIN_TIMELINE = 30; // s
 const LOG_LIMIT = 300;
 
@@ -68,6 +75,9 @@ export class SimulationController {
   private quakeRef = createGroundMotionSample();
   private quakePeak = 0;
   private lastSeriesLength = -1;
+  private lastFloodSeriesLength = -1;
+  /** Water state to start the next (re)load from (mid-simulation snapshot), or null. */
+  private initialWater: WaterStateSnapshot | null = null;
 
   // ── Lifecycle ─────────────────────────────────────────────
 
@@ -99,13 +109,17 @@ export class SimulationController {
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     const terrain = new TerrainSampler(this.snapshot.terrain);
     this.runtime = buildRuntime(this.snapshot, physics, terrain);
-    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain);
+    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, sim.water ?? defaultWaterSettings());
     const obstacles = [];
     for (const e of this.runtime.entities.values()) {
       const o = obstacleFromEntity(e);
       if (o) obstacles.push(o);
     }
     this.env.windField.setObstacles(obstacles);
+    // Water model inputs (used only if a water event starts): solid footprints + road surfaces.
+    const features = floodFeatures(this.runtime);
+    this.env.flood.setFeatures(features.obstacles, features.roads);
+    this.env.flood.initialState = this.initialWater;
     this.rng = new Rng(sim.seed).fork('core');
     this.fxRng = new Rng(sim.seed).fork('fx');
     this.metrics = new MetricsRecorder(sim.seed);
@@ -120,7 +134,8 @@ export class SimulationController {
     this.lastEventsRev = -1;
     this.quakePeak = 0;
     this.lastSeriesLength = -1;
-    for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, { seed: sim.seed }));
+    this.lastFloodSeriesLength = -1;
+    for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, this.eventDefaults()));
     this.status = 'paused';
     useSimStore.getState().set({ runtimeVersion: useSimStore.getState().runtimeVersion + 1 });
     this.publish(true);
@@ -153,6 +168,8 @@ export class SimulationController {
       damageEvents: [],
       quake: null,
       seismicSeries: null,
+      flood: null,
+      floodSeries: null,
     });
   }
 
@@ -168,13 +185,36 @@ export class SimulationController {
   addEvent(spec: EventSpec) {
     const absolute: EventSpec = { ...spec, startTime: spec.startTime ?? this.time };
     this.scenario.push(absolute);
-    this.scheduler.add(createEvent(absolute, this.time, { seed: this.seed() }));
+    this.scheduler.add(createEvent(absolute, this.time, this.eventDefaults()));
     if (this.status === 'finished') this.status = 'paused';
     this.publish(true);
   }
 
   private seed() {
     return this.snapshot?.settings.simulation?.seed ?? defaultSimulationSettings().seed;
+  }
+
+  private eventDefaults() {
+    return { seed: this.seed(), terrain: this.snapshot?.terrain ?? null, water: this.snapshot?.settings.simulation?.water ?? defaultWaterSettings() };
+  }
+
+  /**
+   * Start the next (re)load from a saved water state instead of a dry map (null = dry / the
+   * reference level). Applied when the water model activates. Takes effect on the next reset.
+   */
+  setInitialWaterState(state: WaterStateSnapshot | null) {
+    this.initialWater = state;
+    this.env.flood.initialState = state;
+  }
+
+  getInitialWaterState() {
+    return this.initialWater;
+  }
+
+  /** Snapshot of the current water (null while the water model is dormant). */
+  captureWaterState(): WaterStateSnapshot | null {
+    const f = this.env.flood.field;
+    return f ? captureWaterState(f, this.time) : null;
   }
 
   clearScenario() {
@@ -206,7 +246,8 @@ export class SimulationController {
 
   private endTime(): number {
     const planned = this.scheduler.plannedEnd();
-    return Math.max(MIN_TIMELINE, planned > 0 ? planned + SETTLE_TIME : 0, this.extendEnd);
+    const settle = this.scenario.some(isWaterEvent) ? SETTLE_TIME_WATER : SETTLE_TIME;
+    return Math.max(MIN_TIMELINE, planned > 0 ? planned + settle : 0, this.extendEnd);
   }
 
   private setStatus(s: SimStatus) {
@@ -361,6 +402,12 @@ export class SimulationController {
       this.lastSeriesLength = series.t.length;
       patch.seismicSeries = series.t.length ? this.metrics.seismic.downsampled(600) : null;
     }
+    patch.flood = this.floodLive();
+    const fs = this.metrics.flood.series;
+    if (fs.t.length !== this.lastFloodSeriesLength || force) {
+      this.lastFloodSeriesLength = fs.t.length;
+      patch.floodSeries = fs.t.length ? this.metrics.flood.downsampled(600) : null;
+    }
     patch.metrics = this.metrics.summary(rt, this.time);
     if (this.metrics.events.length !== this.lastEventCount || force) {
       this.lastEventCount = this.metrics.events.length;
@@ -393,6 +440,32 @@ export class SimulationController {
     return {
       active, accel, accelH, peak: this.quakePeak, phase, magnitude: q.magnitude, pga: q.pga, pgaAssumed: q.pgaAssumed,
       epicenter: q.epicenter, depth: q.depth, direction: q.direction, local, duration: q.duration, sMinusP: sp,
+    };
+  }
+
+  /** Live water status for HUDs (null while the water model is dormant). */
+  private floodLive(): FloodLive | null {
+    const fl = this.env.flood;
+    const f = fl.field;
+    if (!f) return null;
+    const levels: FloodLive['boundaries'] = { N: null, E: null, S: null, W: null };
+    for (const side of BOUNDARY_SIDES) {
+      const b = fl.forcing!.boundary(side);
+      levels[side] = { type: b.type, level: b.type === 'fixedLevel' ? b.level : null, event: fl.forcing!.override[side] !== undefined };
+    }
+    const st = f.stats;
+    return {
+      rain: fl.rainIntensity(),
+      sources: fl.forcing!.sources.reduce((a, s) => a + s.rate, 0),
+      volume: st.volume,
+      floodedArea: st.floodedCells * f.cellArea,
+      wetArea: st.wetCells * f.cellArea,
+      maxDepth: st.maxDepth,
+      meanDepth: st.meanFloodDepth,
+      maxSpeed: st.maxSpeed,
+      boundaries: levels,
+      relativeError: Math.abs(f.budget.error) / Math.max(1e-9, f.budget.initial + f.budget.rain + f.budget.sources + f.budget.boundaryIn),
+      substeps: st.substeps,
     };
   }
 

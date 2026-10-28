@@ -6,6 +6,8 @@ import { DamageState, worst } from '../DamageState';
 import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris } from '../spawn';
 import { seismicHealth, seismicLevel } from '../seismicLevels';
+import { floodLevel } from '../floodLevels';
+import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 
 /**
  * Anchored infrastructure (street lights, signs, walls):
@@ -58,6 +60,7 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   const healthBefore = e.health;
   e.health = applyFatigue(e.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
   if (e.seismic) e.health = Math.min(e.health, seismicHealth(e.seismic));
+  if (e.flood) e.health = Math.min(e.health, e.flood.health);
   if (e.health <= 0) {
     ctx.recordDamage(e, {
       eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED',
@@ -73,6 +76,7 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   let s = worst(loadLevel(e.loadRatio), healthLevel(e.health));
   if (failed > 0) s = worst(s, DamageState.DAMAGED);
   if (e.seismic) s = worst(s, seismicLevel(e.seismic));
+  if (e.flood) s = worst(s, floodLevel(e.flood));
   e.state = s;
 }
 
@@ -113,6 +117,18 @@ export function failByQuake(e: RuntimeEntity, ctx: SystemContext, dir: Vec3, res
   e.state = DamageState.DESTROYED;
 }
 
+/** Flood: the pole / sign / wall fails under the water load, falling with the flow (Phase 14). */
+export function failByFlood(e: RuntimeEntity, ctx: SystemContext, dir: Vec3, response: number, cause: DamageCause, extra: Partial<DamageEventInput> = {}) {
+  ctx.recordDamage(e, {
+    eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED', cause, hazard: 'flood', response,
+    damageBefore: 1 - e.health, damageAfter: 1, localWindSpeed: 0, ...extra,
+  });
+  e.health = 0;
+  if (e.source.type === 'wall') breakWall(e, ctx, dir, 'flood');
+  else topple(e, ctx, dir);
+  e.state = DamageState.DESTROYED;
+}
+
 function detach(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, pos: Vec3, n: Vec3 | null) {
   const k = e.source.transform.scale;
   c.condition = 'detached';
@@ -144,7 +160,7 @@ function topple(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
 }
 
 /** A free-standing masonry wall fails in sections that tip over downwind (or along the shaking). */
-function breakWall(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
+function breakWall(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3, hazard: 'earthquake' | 'flood' = 'earthquake') {
   const { physics } = ctx;
   const p = e.source.params as { length: number; height: number; thickness: number; color: string };
   const k = e.source.transform.scale;
@@ -152,6 +168,7 @@ function breakWall(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
   e.body = null;
   e.flags.collapsed = true;
   ctx.env.windField.removeObstacle(e.id);
+  ctx.env.flood?.removeObstacle(e.id);
   const segs = Math.max(1, Math.min(10, Math.round((p.length * k[0]) / 2)));
   const segLen = (p.length * k[0]) / segs;
   const flow = dir ?? ctx.env.wind.flow();
@@ -164,7 +181,7 @@ function breakWall(e: RuntimeEntity, ctx: SystemContext, dir?: Vec3) {
       mass: e.source.physics.mass / segs,
       color: p.color,
       push: vScale(flow, 0.6),
-      hazard: dir ? 'earthquake' : undefined,
+      hazard: dir ? hazard : undefined,
     });
   }
   e.rev++;
