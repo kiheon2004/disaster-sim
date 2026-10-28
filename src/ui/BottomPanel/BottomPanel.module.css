@@ -1,4 +1,6 @@
-.root { display: flex; flex-direction: column; height: 262px; }
+.root { position: relative; display: flex; flex-direction: column; }
+.resizer { position: absolute; top: -4px; left: 0; right: 0; height: 8px; cursor: ns-resize; z-index: 5; }
+.resizer:hover { background: linear-gradient(transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px); }
 .body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(380px, 1fr) minmax(380px, 1.15fr); }
 .col { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .col + .col { border-left: 1px solid var(--line); }

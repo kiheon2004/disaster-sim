@@ -15,6 +15,9 @@ import { t } from '@/i18n/i18n';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
 import type { EventSpec } from '@/events/specs';
+import { RuleBasedParser } from '@/commands/RuleBasedParser';
+import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
+import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
 
 export function focusObject(id: EntityId) {
   const o = useWorldStore.getState().doc.objects[id];
@@ -150,4 +153,42 @@ export async function resetSimulation() {
 export function togglePlay() {
   if (useSimStore.getState().status === 'loading') return;
   simulationController.togglePlay();
+}
+
+// ── Command system wiring ─────────────────────────────────────────────────
+
+
+/** Active parser. Swap for `new LlmParser(transport)` to use an LLM. */
+export const commandParser: CommandParser = new RuleBasedParser();
+
+const commandTarget: CommandTarget = {
+  runEvents: async (events) => {
+    if (useEditorStore.getState().mode === 'editor') await enterSimulation();
+    if (!simulationController.isLoaded()) return;
+    const now = simulationController.getTime();
+    for (const { spec, delay } of events) {
+      simulationController.addEvent(delay > 0 ? { ...spec, startTime: now + delay } : spec);
+    }
+    simulationController.play();
+  },
+  play: () => {
+    if (useEditorStore.getState().mode === 'editor') void enterSimulation().then(() => simulationController.play());
+    else simulationController.play();
+  },
+  pause: () => simulationController.pause(),
+  reset: async () => {
+    if (simulationController.isLoaded()) await resetSimulation();
+  },
+  setSpeed: (v) => simulationController.setSpeed(v),
+};
+
+export function parseCommand(input: string, defaults: ParseDefaults): Promise<ParseResult> {
+  return commandParser.parse(input, defaults);
+}
+
+/** Parse + execute. Returns the parse result for display. */
+export async function executeCommand(input: string, defaults: ParseDefaults): Promise<ParseResult> {
+  const result = await commandParser.parse(input, defaults);
+  if (result.ok && result.commands.length) await dispatchCommands(result.commands, commandTarget);
+  return result;
 }
