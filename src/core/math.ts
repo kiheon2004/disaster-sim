@@ -38,6 +38,19 @@ export function qRotate(q: Quat, v: Vec3): Vec3 {
   ];
 }
 
+/** qRotate writing into `out` (same arithmetic, no allocation). `out` may not alias `v`. */
+export function qRotateInto(out: Vec3, q: Quat, v: Vec3): Vec3 {
+  const qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+  const vx = v[0], vy = v[1], vz = v[2];
+  const tx = 2 * (qy * vz - qz * vy);
+  const ty = 2 * (qz * vx - qx * vz);
+  const tz = 2 * (qx * vy - qy * vx);
+  out[0] = vx + qw * tx + (qy * tz - qz * ty);
+  out[1] = vy + qw * ty + (qz * tx - qx * tz);
+  out[2] = vz + qw * tz + (qx * ty - qy * tx);
+  return out;
+}
+
 /** Quaternion from XYZ Euler angles (matches three.js default order). */
 export function quatFromEuler([x, y, z]: Vec3): Quat {
   const c1 = Math.cos(x / 2), c2 = Math.cos(y / 2), c3 = Math.cos(z / 2);

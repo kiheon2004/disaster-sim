@@ -124,6 +124,8 @@ export interface SimulationRuntime {
   entities: Map<EntityId, RuntimeEntity>;
   debris: DebrisPiece[];
   particles: Particle[];
+  /** Simulation time the particle positions correspond to (they update at a lower rate). */
+  particlesTime: number;
   /** Bumped when debris is added/removed. */
   debrisRev: number;
   /** Deterministic id counter for debris. */

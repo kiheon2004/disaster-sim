@@ -110,5 +110,5 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
 export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
   for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics));
-  return { entities, debris: [], particles: [], debrisRev: 0, debrisCounter: 0, log: [] };
+  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [] };
 }

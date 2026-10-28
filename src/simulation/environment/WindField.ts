@@ -15,9 +15,19 @@ export class WindField {
   /** 0–1 */
   gustStrength = 0;
 
-  /** Unit vector of air movement (horizontal). */
+  private flowBearing = NaN;
+  private flowVec: Vec3 = [0, 0, 0];
+
+  /**
+   * Unit vector of air movement (horizontal). Cached per bearing — this is called several
+   * times per wind sample. Treat the returned array as read-only.
+   */
   flow(): Vec3 {
-    return windFlowVector(this.fromBearing);
+    if (this.fromBearing !== this.flowBearing) {
+      this.flowVec = windFlowVector(this.fromBearing);
+      this.flowBearing = this.fromBearing;
+    }
+    return this.flowVec;
   }
 
   /** Gust fluctuation in roughly [-0.6, 1]. */

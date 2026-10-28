@@ -17,9 +17,13 @@ export class SwaySystem implements SimulationSystem {
       // Bend along the LOCAL wind direction (veers in wakes / around corners).
       const v = e.localWind.velocity;
       const sp = Math.hypot(v[0], v[2]);
-      const flow = sp > 0.1 ? [v[0] / sp, 0, v[2] / sp] : global;
+      const fx = sp > 0.1 ? v[0] / sp : global[0];
+      const fz = sp > 0.1 ? v[2] / sp : global[2];
       // Horizontal axis perpendicular to the flow: positive rotation tips the top downwind.
-      vis.swayAxis = [flow[2], 0, -flow[0]];
+      const axis = vis.swayAxis;
+      axis[0] = fz;
+      axis[1] = 0;
+      axis[2] = -fx;
       const r = e.loadRatio;
 
       if (e.source.type === 'tree' && !e.flags.snapped && !e.flags.uprooted) {

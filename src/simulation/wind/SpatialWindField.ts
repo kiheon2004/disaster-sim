@@ -8,14 +8,22 @@
  *
  * The same `sample()` is used by physics, damage AND visualization, so what you see is what
  * the objects feel.
+ *
+ * Performance notes (results are bit-identical to a full scan):
+ *  - obstacles are looked up in a flow-aligned spatial index (ObstacleIndex) that only lists
+ *    obstacles whose wake / corner region can reach a cell;
+ *  - static points keep their obstacle effect in a SampleCache, invalidated per index cell
+ *    (a collapse only invalidates the cells its wake covered);
+ *  - `sample(..., out)` writes into a caller-owned LocalWind (no allocation on hot paths).
  */
 import type { EntityId, Vec3 } from '@/core/types';
 import type { WindModelSettings } from '@/core/model';
 import { DEFAULT_WIND_MODEL } from '@/core/model';
-import { clamp, smoothstep } from '@/core/math';
+import { smoothstep } from '@/core/math';
 import { Rng } from '@/core/random';
-import { WORLD_HALF } from '@/core/units';
 import type { WindField } from '../environment/WindField';
+import { simProfiler } from '../profiling/SimProfiler';
+import { ObstacleIndex } from './ObstacleIndex';
 import type { WindObstacle } from './obstacles';
 
 export interface LocalWind {
@@ -37,24 +45,30 @@ export interface LocalWind {
   corner: boolean;
 }
 
-const CELL = 10; // m
-const GRID_HALF = WORLD_HALF + 120;
-const GRID_N = Math.ceil((GRID_HALF * 2) / CELL);
+export function createLocalWind(): LocalWind {
+  return { velocity: [0, 0, 0], speed: 0, freeStream: 0, global: 0, shelter: 1, turbulence: 0, shadowSource: null, corner: false };
+}
+
 const INSIDE_FACTOR = 0.3;
 const MIN_SHELTER = 0.15;
 const REBUILD_ANGLE = 1.5; // deg
+/** Rotation allowance (rad) while the wind turns by less than REBUILD_ANGLE. */
+const DRIFT_ANGLE = ((REBUILD_ANGLE + 0.5) * Math.PI) / 180;
 
 /**
  * Per-caller cache for points that do not move (buildings, anchored trees, facade parts):
- * the obstacle effect only changes when the wind turns or an obstacle collapses.
+ * the obstacle effect only changes when the wind turns or an obstacle near the point changes.
  */
 export interface SampleCache {
   version: number;
   fx: Effect | null;
+  /** Index cell of the point and that cell's version when the effect was computed. */
+  cell: number;
+  cellVersion: number;
 }
 
 export function createSampleCache(): SampleCache {
-  return { version: -1, fx: null };
+  return { version: -1, fx: null, cell: 0, cellVersion: 0 };
 }
 
 interface Effect {
@@ -65,18 +79,22 @@ interface Effect {
   corner: boolean;
 }
 
+const newEffect = (): Effect => ({ factor: 1, speedup: 1, turbulence: 0, source: null, corner: false });
+
 export class SpatialWindField {
   private obstacles: WindObstacle[] = [];
-  /** Projected half-depth (D) / half-width (W) per obstacle for the current wind direction. */
-  private extD = new Float64Array(0);
-  private extW = new Float64Array(0);
-  private grid: Int32Array[] = [];
+  private index: ObstacleIndex;
   private gridBearing = NaN;
   private dirty = true;
-  /** Incremented whenever the obstacle layout relative to the wind changes. */
+  /** The wind turned (by less than REBUILD_ANGLE) since the last full rebuild. */
+  private drifted = false;
+  /** Obstacles removed since the last query (applied lazily, like a rebuild would be). */
+  private pendingRemovals: number[] = [];
+  /** Incremented on every full rebuild (all cached effects become stale). */
   private version = 0;
-  /** Seeded phases/frequencies for the turbulence noise. */
-  private noise: { k: number; w: number; ph: number }[][];
+  /** Seeded wave numbers / frequencies / phases of the turbulence noise, 3 per channel. */
+  private noise: Float64Array[];
+  private scratchFx = newEffect();
 
   constructor(
     readonly global: WindField,
@@ -84,21 +102,48 @@ export class SpatialWindField {
     seed = 1,
   ) {
     const rng = new Rng(seed).fork('turbulence');
-    this.noise = [0, 1, 2].map(() =>
-      Array.from({ length: 3 }, (_, i) => ({ k: rng.range(0.05, 0.25) * (i + 1), w: rng.range(0.8, 3.5) * (i + 1), ph: rng.range(0, Math.PI * 2) })),
-    );
+    this.noise = [0, 1, 2].map(() => {
+      const a = new Float64Array(9);
+      for (let i = 0; i < 3; i++) {
+        a[i * 3] = rng.range(0.05, 0.25) * (i + 1);
+        a[i * 3 + 1] = rng.range(0.8, 3.5) * (i + 1);
+        a[i * 3 + 2] = rng.range(0, Math.PI * 2);
+      }
+      return a;
+    });
+    this.index = new ObstacleIndex(params);
   }
+
+  // ── Obstacle set (spatial index maintenance) ─────────────────────────────
 
   setObstacles(list: WindObstacle[]) {
     this.obstacles = list;
+    this.pendingRemovals.length = 0;
     this.dirty = true;
   }
 
+  /** A new obstacle (e.g. placed while simulating). */
+  addObstacle(o: WindObstacle) {
+    this.obstacles.push(o);
+    if (!this.dirty) this.index.add(o, this.obstacles.length - 1);
+  }
+
+  /** An obstacle moved or changed size/height. */
+  updateObstacle(id: EntityId, next: Omit<WindObstacle, 'id' | 'active'>) {
+    const idx = this.obstacles.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    const before = this.obstacles[idx];
+    const after: WindObstacle = { ...before, ...next };
+    this.obstacles[idx] = after;
+    if (!this.dirty) this.index.update(before, after, idx);
+  }
+
   removeObstacle(id: EntityId) {
-    const o = this.obstacles.find((x) => x.id === id);
+    const idx = this.obstacles.findIndex((x) => x.id === id);
+    const o = this.obstacles[idx];
     if (o && o.active) {
       o.active = false;
-      this.dirty = true;
+      this.pendingRemovals.push(idx);
     }
   }
 
@@ -106,72 +151,58 @@ export class SpatialWindField {
     return this.obstacles;
   }
 
-  // ── Spatial acceleration grid ────────────────────────────────────────────
+  /** Candidate obstacle indices for the cell containing (x, z) (diagnostics / tests). */
+  candidatesAt(x: number, z: number): readonly number[] {
+    this.ensureGrid();
+    return this.index.cells[this.index.cellAt(x, z)];
+  }
 
   private ensureGrid() {
     const bearing = this.global.fromBearing;
+    if (bearing === this.gridBearing && !this.dirty && this.pendingRemovals.length === 0) return;
     const turned = Math.abs(((bearing - this.gridBearing + 540) % 360) - 180) > REBUILD_ANGLE;
-    if (!this.dirty && !turned) return;
-    this.dirty = false;
-    this.gridBearing = bearing;
-    this.version++;
-    const lists: number[][] = Array.from({ length: GRID_N * GRID_N }, () => []);
-    const f = this.global.flow();
-    const n: [number, number] = [-f[2], f[0]];
-    const p = this.params;
-    this.extD = new Float64Array(this.obstacles.length);
-    this.extW = new Float64Array(this.obstacles.length);
-    this.obstacles.forEach((o, idx) => {
-      const { D, W } = this.extents(o, f, n);
-      this.extD[idx] = D;
-      this.extW[idx] = W;
-      if (!o.active) return;
-      const H = o.height;
-      const L = p.wakeLength * H;
-      const front = -D - 0.7 * H;
-      const back = D + L;
-      const side = W + p.wakeSpread * L + 0.7 * H;
-      // AABB of the influence rectangle in world space
-      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-      for (const a of [front, back]) {
-        for (const c of [-side, side]) {
-          const x = o.cx + f[0] * a + n[0] * c;
-          const z = o.cz + f[2] * a + n[1] * c;
-          minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-          minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
-        }
-      }
-      const i0 = this.cellIndex(minX), i1 = this.cellIndex(maxX);
-      const j0 = this.cellIndex(minZ), j1 = this.cellIndex(maxZ);
-      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) lists[j * GRID_N + i].push(idx);
-    });
-    this.grid = lists.map((l) => Int32Array.from(l));
-  }
-
-  private cellIndex(v: number) {
-    return clamp(Math.floor((v + GRID_HALF) / CELL), 0, GRID_N - 1);
-  }
-
-  /** Projected half-depth (along flow) and half-width (across flow) of an obstacle. */
-  private extents(o: WindObstacle, f: Vec3, n: [number, number]) {
-    const D = o.hx * Math.abs(o.ax[0] * f[0] + o.ax[1] * f[2]) + o.hz * Math.abs(o.az[0] * f[0] + o.az[1] * f[2]);
-    const W = o.hx * Math.abs(o.ax[0] * n[0] + o.ax[1] * n[1]) + o.hz * Math.abs(o.az[0] * n[0] + o.az[1] * n[1]);
-    return { D, W };
+    if (this.pendingRemovals.length) {
+      // A removal is equivalent to a full rebuild at the current bearing. When nothing else
+      // changed since the last rebuild, only the removed obstacle's cells need updating.
+      if (this.dirty || turned || this.drifted || bearing !== this.gridBearing) this.dirty = true;
+      else for (const idx of this.pendingRemovals) this.index.remove(this.obstacles[idx], idx);
+      this.pendingRemovals.length = 0;
+    }
+    if (this.dirty || turned) {
+      this.dirty = false;
+      this.drifted = false;
+      this.gridBearing = bearing;
+      this.version++;
+      this.index.rebuild(this.obstacles, this.global.flow(), this.params);
+      return;
+    }
+    if (bearing !== this.gridBearing && !this.drifted) {
+      // Turning slowly: keep the frame (and every cached effect) but widen the regions.
+      this.drifted = true;
+      this.index.padForDrift(this.obstacles, DRIFT_ANGLE);
+    }
   }
 
   // ── Obstacle effects ─────────────────────────────────────────────────────
 
   /** Combined effect of all nearby obstacles at point p. */
-  obstacleEffect(p: Vec3, excludeId?: EntityId): Effect {
-    const out: Effect = { factor: 1, speedup: 1, turbulence: 0, source: null, corner: false };
+  obstacleEffect(p: Vec3, excludeId?: EntityId, out: Effect = newEffect()): Effect {
+    out.factor = 1;
+    out.speedup = 1;
+    out.turbulence = 0;
+    out.source = null;
+    out.corner = false;
     if (!this.params.shelterEnabled || this.obstacles.length === 0) return out;
     this.ensureGrid();
-    const cell = this.grid[this.cellIndex(p[2]) * GRID_N + this.cellIndex(p[0])];
-    if (!cell || cell.length === 0) return out;
+    const cell = this.index.cells[this.index.cellAt(p[0], p[2])];
+    if (cell.length === 0) return out;
 
     const f = this.global.flow();
-    const n: [number, number] = [-f[2], f[0]];
+    const n0 = -f[2];
+    const n1 = f[0];
     const prm = this.params;
+    const extD = this.index.extD;
+    const extW = this.index.extW;
     let minFactor = 1;
     let maxCorner = 0;
 
@@ -183,9 +214,9 @@ export class SpatialWindField {
       const rx = p[0] - o.cx;
       const rz = p[2] - o.cz;
       const a = rx * f[0] + rz * f[2]; // along flow (+ = downstream)
-      const c = Math.abs(rx * n[0] + rz * n[1]); // across flow
-      const D = this.extD[idx];
-      const W = this.extW[idx];
+      const c = Math.abs(rx * n0 + rz * n1); // across flow
+      const D = extD[idx];
+      const W = extW[idx];
       const y = p[1];
 
       // Inside the volume (e.g. debris resting on a roof edge cell)
@@ -233,31 +264,53 @@ export class SpatialWindField {
     const f = this.global.flow();
     const s = p[0] * f[0] + p[2] * f[2] - Math.max(this.global.baseSpeed, 3) * t;
     const q = p[0] * -f[2] + p[2] * f[0] + p[1] * 0.7;
+    const nz = this.noise[channel];
     let v = 0;
-    for (const o of this.noise[channel]) v += Math.sin(s * o.k + q * o.k * 0.8 + t * o.w + o.ph);
+    for (let i = 0; i < 9; i += 3) {
+      const k = nz[i];
+      v += Math.sin(s * k + q * k * 0.8 + t * nz[i + 1] + nz[i + 2]);
+    }
     return v / 3;
   }
 
   // ── Sampling ─────────────────────────────────────────────────────────────
 
-  /** Full local-wind description at point p. `excludeId` skips the object's own wake. */
-  sample(p: Vec3, t: number, excludeId?: EntityId, cache?: SampleCache): LocalWind {
+  /**
+   * Full local-wind description at point p. `excludeId` skips the object's own wake.
+   * Pass `cache` for points that never move and `out` to avoid allocating the result.
+   */
+  sample(p: Vec3, t: number, excludeId?: EntityId, cache?: SampleCache, out?: LocalWind): LocalWind {
+    if (!simProfiler.enabled) return this.sampleImpl(p, t, excludeId, cache, out ?? createLocalWind());
+    const t0 = performance.now();
+    const r = this.sampleImpl(p, t, excludeId, cache, out ?? createLocalWind());
+    simProfiler.windMs += performance.now() - t0;
+    simProfiler.windSamples++;
+    return r;
+  }
+
+  private sampleImpl(p: Vec3, t: number, excludeId: EntityId | undefined, cache: SampleCache | undefined, out: LocalWind): LocalWind {
     const g = this.global;
     const global = g.baseSpeed;
+    const v = out.velocity;
     if (global <= 0.01) {
-      return { velocity: [0, 0, 0], speed: 0, freeStream: 0, global: 0, shelter: 1, turbulence: 0, shadowSource: null, corner: false };
+      v[0] = 0; v[1] = 0; v[2] = 0;
+      out.speed = 0; out.freeStream = 0; out.global = 0; out.shelter = 1; out.turbulence = 0; out.shadowSource = null; out.corner = false;
+      return out;
     }
     const free = g.speedAt(p, t);
     let fx: Effect;
     if (cache) {
       this.ensureGrid();
-      if (cache.version !== this.version || !cache.fx) {
-        cache.fx = this.obstacleEffect(p, excludeId);
+      const index = this.index;
+      if (cache.version !== this.version || !cache.fx || index.cellVersion[cache.cell] !== cache.cellVersion) {
+        cache.fx = this.obstacleEffect(p, excludeId, cache.fx ?? newEffect());
         cache.version = this.version;
+        cache.cell = index.cellAt(p[0], p[2]);
+        cache.cellVersion = index.cellVersion[cache.cell];
       }
       fx = cache.fx;
     } else {
-      fx = this.obstacleEffect(p, excludeId);
+      fx = this.obstacleEffect(p, excludeId, this.scratchFx);
     }
     const T = this.params.turbulence * fx.turbulence;
     const fluct = T > 0 ? 1 + T * 0.6 * this.turb(0, p, t) : 1;
@@ -267,24 +320,25 @@ export class SpatialWindField {
     const f = g.flow();
     const cs = Math.cos(wobble);
     const sn = Math.sin(wobble);
-    return {
-      velocity: [(f[0] * cs - f[2] * sn) * speed, 0, (f[0] * sn + f[2] * cs) * speed],
-      speed,
-      freeStream: free,
-      global,
-      shelter: fx.factor * fx.speedup,
-      turbulence: T,
-      shadowSource: fx.source,
-      corner: fx.corner,
-    };
+    v[0] = (f[0] * cs - f[2] * sn) * speed;
+    v[1] = 0;
+    v[2] = (f[0] * sn + f[2] * cs) * speed;
+    out.speed = speed;
+    out.freeStream = free;
+    out.global = global;
+    out.shelter = fx.factor * fx.speedup;
+    out.turbulence = T;
+    out.shadowSource = fx.source;
+    out.corner = fx.corner;
+    return out;
   }
 
-  /** Speed only (hot path for building components). */
+  /** Speed only. */
   speedAt(p: Vec3, t: number, excludeId?: EntityId): number {
     return this.sample(p, t, excludeId).speed;
   }
 
-  /** Velocity only. */
+  /** Velocity only (allocates; hot paths pass `out` to sample()). */
   velocityAt(p: Vec3, t: number, excludeId?: EntityId): Vec3 {
     return this.sample(p, t, excludeId).velocity;
   }

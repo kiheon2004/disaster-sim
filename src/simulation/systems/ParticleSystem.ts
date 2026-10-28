@@ -1,15 +1,24 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
+import { createLocalWind } from '../wind/SpatialWindField';
 
-/** Cheap kinematic particles (leaves, glass shards) carried by the wind; no physics bodies. */
+const scratch = createLocalWind();
+
+/**
+ * Cheap kinematic particles (leaves, glass shards) carried by the wind; no physics bodies.
+ * Purely visual (never read by physics or damage), so it runs at 30 Hz; the renderer
+ * extrapolates positions between updates.
+ */
 export class ParticleSystem implements SimulationSystem {
   readonly name = 'particles';
   readonly phase = 'postPhysics' as const;
+  readonly interval = 2;
 
   private step = 0;
 
   update({ runtime, env, time }: SystemContext, dt: number) {
     const ps = runtime.particles;
-    this.step = (this.step + 1) % 4;
+    // Each particle re-samples the wind every 2nd update (15 Hz), staggered.
+    this.step = (this.step + 1) % 2;
     let w = 0;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i];
@@ -17,7 +26,11 @@ export class ParticleSystem implements SimulationSystem {
       if (p.life <= 0) continue;
       const leaf = p.kind === 'leaf';
       const onGround = p.position[1] <= 0.02;
-      if (!p.wind || (i & 3) === this.step) p.wind = env.windField.velocityAt(p.position, time) as [number, number, number];
+      if (!p.wind || (i & 1) === this.step) {
+        const v = env.windField.sample(p.position, time, undefined, undefined, scratch).velocity;
+        const pw = (p.wind ??= [0, 0, 0]);
+        pw[0] = v[0]; pw[1] = v[1]; pw[2] = v[2];
+      }
       const wv = p.wind;
       // Relax toward the wind velocity (light leaves follow it closely, glass less so).
       const k = (leaf ? 1.6 : 0.5) * (onGround ? 0.25 : 1);
@@ -40,5 +53,6 @@ export class ParticleSystem implements SimulationSystem {
       ps[w++] = p;
     }
     ps.length = w;
+    runtime.particlesTime = time + dt;
   }
 }

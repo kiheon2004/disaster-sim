@@ -18,6 +18,7 @@ import { obstacleFromEntity } from './wind/obstacles';
 import { Rng } from '@/core/random';
 import { defaultSimulationSettings } from '@/core/model';
 import { DamageState } from './damage/DamageState';
+import { simProfiler } from './profiling/SimProfiler';
 import { EMPTY_STATS, useSimStore, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
 
 const MAX_STEPS_PER_FRAME = 16;
@@ -43,6 +44,8 @@ export class SimulationController {
   /** Every event spec with an absolute start time — replayed after a reset. */
   private scenario: EventSpec[] = [];
   private time = 0;
+  /** Fixed steps taken since the runtime was built (drives deterministic scheduling). */
+  private stepIndex = 0;
   private accumulator = 0;
   private status: SimStatus = 'idle';
   private speed: SimSpeed = 1;
@@ -96,6 +99,7 @@ export class SimulationController {
     this.scheduler = new EventScheduler();
     this.systems = [...createDefaultSystems(), new MetricsSystem(this.metrics)];
     this.time = 0;
+    this.stepIndex = 0;
     this.accumulator = 0;
     this.lastStates = null;
     this.lastLogLength = -1;
@@ -192,6 +196,7 @@ export class SimulationController {
 
   tick(realDt: number) {
     if (this.status !== 'running' || !this.runtime || !this.physics) return;
+    const tickStart = simProfiler.now();
     this.accumulator += Math.min(realDt, 0.1) * this.speed;
     let steps = 0;
     const start = performance.now();
@@ -204,6 +209,7 @@ export class SimulationController {
     }
     // Overloaded: drop the backlog (slow motion) rather than spiral into ever-longer frames.
     if (this.accumulator >= FIXED_DT) this.accumulator = Math.min(this.accumulator, FIXED_DT);
+    simProfiler.endTick(tickStart);
 
     if (this.time >= this.endTime() && !this.scheduler.hasPendingOrActive()) {
       this.status = 'finished';
@@ -235,6 +241,7 @@ export class SimulationController {
       runtime,
       physics,
       time: this.time,
+      step: this.stepIndex,
       rng: this.rng,
       fxRng: this.fxRng,
       log: (entityId, severity, message) => this.log(entityId, severity, message),
@@ -242,10 +249,26 @@ export class SimulationController {
     };
     this.metrics.beginStep();
     physics.clearForces();
-    for (const s of this.systems) if (s.phase === 'prePhysics') s.update(ctx, dt);
+    this.runPhase('prePhysics', ctx, dt);
+    const t0 = simProfiler.now();
     physics.step(dt);
-    for (const s of this.systems) if (s.phase === 'postPhysics') s.update(ctx, dt);
+    simProfiler.add('physics', t0);
+    this.runPhase('postPhysics', ctx, dt);
     this.time += dt;
+    this.stepIndex++;
+    simProfiler.endStep(dt);
+  }
+
+  /** Runs the systems of one phase that are due on this step (fixed-step schedule). */
+  private runPhase(phase: SimulationSystem['phase'], ctx: SystemContext, dt: number) {
+    for (const s of this.systems) {
+      if (s.phase !== phase) continue;
+      const every = s.interval ?? 1;
+      if (every > 1 && this.stepIndex % every !== 0) continue;
+      const t0 = simProfiler.now();
+      s.update(ctx, dt * every);
+      simProfiler.add(`sys.${s.name}`, t0);
+    }
   }
 
   private log(entityId: EntityId | null, severity: 'info' | 'warn' | 'danger', message: I18nMessage) {
