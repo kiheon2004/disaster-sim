@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { simulationController } from '@/simulation/SimulationController';
 import { useViewStore } from '../viewStore';
 import { UNIT_BOX } from '../geometry/primitives';
+import { Rng } from '@/core/random';
 
 const COUNT = 700;
 const RANGE = 90; // m around the camera target
@@ -12,20 +13,18 @@ const dummy = new THREE.Object3D();
 /** Translucent streaks advected by the wind field — makes direction and strength visible. */
 export function WindStreaks() {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const show = useViewStore((s) => s.showWind);
+  const show = useViewStore((s) => s.showWind && s.windViz !== 'arrows');
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
   const material = useMemo(
     () => new THREE.MeshBasicMaterial({ color: '#f4f8ff', transparent: true, opacity: 0, depthWrite: false }),
     [],
   );
-  const pts = useMemo(
-    () =>
-      Array.from({ length: COUNT }, () => ({
-        p: new THREE.Vector3((Math.random() - 0.5) * RANGE * 2, 0.5 + Math.random() * 28, (Math.random() - 0.5) * RANGE * 2),
-        phase: Math.random(),
-      })),
-    [],
-  );
+  const pts = useMemo(() => {
+    const rng = new Rng(97);
+    return Array.from({ length: COUNT }, () => ({
+        p: new THREE.Vector3(rng.spread(RANGE), rng.range(0.5, 28), rng.spread(RANGE)),
+      }));
+  }, []);
 
   useFrame((_, dt) => {
     const mesh = ref.current;
@@ -37,15 +36,18 @@ export function WindStreaks() {
     mesh.visible = show && speed > 0.5;
     if (!mesh.visible) return;
     const center = controls?.target ?? new THREE.Vector3();
-    const flow = wind.flow();
-    const yaw = Math.atan2(-flow[2], flow[0]);
+    const field = env.windField;
     const t = env.time;
-    const visualSpeed = Math.min(speed, 60) * 0.9;
+    // Advect each streak with the LOCAL wind (same field as physics): slow and veering in wakes.
+    const visualScale = Math.min(speed, 60) * 0.9 / Math.max(1, speed);
     for (let i = 0; i < COUNT; i++) {
       const s = pts[i];
-      const local = wind.speedAt([s.p.x, s.p.y, s.p.z], t) / Math.max(1, speed);
-      s.p.x += flow[0] * visualSpeed * local * dt;
-      s.p.z += flow[2] * visualSpeed * local * dt;
+      const v = field.velocityAt([s.p.x, s.p.y, s.p.z], t);
+      const sp = Math.hypot(v[0], v[2]);
+      const local = sp / Math.max(1, speed);
+      const yaw = Math.atan2(-v[2], v[0]);
+      s.p.x += v[0] * visualScale * dt;
+      s.p.z += v[2] * visualScale * dt;
       // Wrap around a box centered on the camera target.
       const dx = s.p.x - center.x;
       const dz = s.p.z - center.z;

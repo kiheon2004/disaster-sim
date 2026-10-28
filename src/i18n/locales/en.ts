@@ -327,7 +327,7 @@ export const en: Record<MessageKey, string> = {
   'log.event.started': 'Event started — {label}',
 
   'overlay.damage': 'Damage state colors',
-  'overlay.wind': 'Show wind flow',
+  'overlay.wind': 'Wind visualization',
 
   // Command system
   'parse.empty': 'Type a command.',
@@ -421,6 +421,12 @@ export const en: Record<MessageKey, string> = {
   'settings.turbulence': 'Turbulence',
   'model.approximate': '⚠ Approximate model: a semi-realistic simulation for visual understanding — not a CFD/structural-engineering prediction.',
   'model.badge': 'Approximate model',
+
+  'overlay.viz.arrows': 'Arrows',
+  'overlay.viz.particles': 'Particles',
+  'overlay.viz.both': 'Both',
+  'overlay.height': 'Height',
+  'overlay.viz.note': 'Shows the same local wind field the physics uses. Arrows shorten behind buildings.',
 
   // Generic
   'common.close': 'Close',

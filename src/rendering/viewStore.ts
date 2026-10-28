@@ -12,9 +12,18 @@ interface ViewState {
   /** Simulation overlays */
   showDamage: boolean;
   showWind: boolean;
+  /** Which wind visualization layers are drawn when showWind is on. */
+  windViz: 'arrows' | 'particles' | 'both';
+  /** Height (m) of the arrow sampling plane. */
+  arrowHeight: number;
+  /** Entity the camera follows in simulation mode. */
+  followId: string | null;
   setAzimuth: (deg: number) => void;
   toggleDamage: () => void;
   toggleWind: () => void;
+  setWindViz: (v: 'arrows' | 'particles' | 'both') => void;
+  setArrowHeight: (h: number) => void;
+  setFollow: (id: string | null) => void;
   requestFocus: (target: Vec3, distance?: number) => void;
 }
 
@@ -23,9 +32,15 @@ export const useViewStore = create<ViewState>((set) => ({
   focusRequest: null,
   showDamage: true,
   showWind: true,
+  windViz: 'both',
+  arrowHeight: 3,
+  followId: null,
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),
   toggleDamage: () => set((s) => ({ showDamage: !s.showDamage })),
   toggleWind: () => set((s) => ({ showWind: !s.showWind })),
+  setWindViz: (windViz) => set({ windViz }),
+  setArrowHeight: (arrowHeight) => set({ arrowHeight }),
+  setFollow: (followId) => set({ followId }),
   requestFocus: (target, distance = 30) =>
     set({ focusRequest: { target, distance, nonce: Math.random() } }),
 }));

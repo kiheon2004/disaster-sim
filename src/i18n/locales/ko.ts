@@ -329,7 +329,7 @@ export const ko = {
   'log.event.started': '이벤트 시작 — {label}',
 
   'overlay.damage': '피해 상태 색상',
-  'overlay.wind': '바람 흐름 표시',
+  'overlay.wind': '바람 시각화',
 
   // Command system
   'parse.empty': '명령을 입력하세요.',
@@ -423,6 +423,12 @@ export const ko = {
   'settings.turbulence': '난류 강도',
   'model.approximate': '⚠ 근사 모델: 시각적 이해를 위한 semi-realistic 시뮬레이션이며, CFD·구조공학으로 검증된 예측값이 아닙니다.',
   'model.badge': '근사 모델',
+
+  'overlay.viz.arrows': '화살표',
+  'overlay.viz.particles': '입자',
+  'overlay.viz.both': '둘 다',
+  'overlay.height': '높이',
+  'overlay.viz.note': '물리 계산과 같은 국소 바람장을 표시합니다. 건물 뒤에서는 화살표가 짧아집니다.',
 
   // Generic
   'common.close': '닫기',

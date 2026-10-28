@@ -6,6 +6,7 @@ import { SimEntity } from './SimEntities';
 import { DebrisLayer } from './DebrisLayer';
 import { ParticleLayer } from './ParticleLayer';
 import { WindStreaks } from './WindStreaks';
+import { WindArrows } from './WindArrows';
 import { StormAmbience } from './StormAmbience';
 import { DamageOverlay } from './DamageOverlay';
 
@@ -47,6 +48,7 @@ export function SimulationScene() {
         <ParticleLayer />
       </group>
       <WindStreaks />
+      <WindArrows />
     </>
   );
 }
