@@ -7,7 +7,7 @@ import { DebrisLayer } from './DebrisLayer';
 import { ParticleLayer } from './ParticleLayer';
 import { WindStreaks } from './WindStreaks';
 import { WindArrows } from './WindArrows';
-import { StormAmbience } from './StormAmbience';
+import { TyphoonEnvironment } from './environment/TyphoonEnvironment';
 import { DamageOverlay } from './DamageOverlay';
 
 /** Advances the simulation clock from the render loop (mounted first so it runs before views). */
@@ -37,7 +37,7 @@ export function SimulationScene() {
   return (
     <>
       <SimulationDriver />
-      <StormAmbience />
+      <TyphoonEnvironment />
       <GroundDeselect />
       <group key={version}>
         {entities.map((e) => (

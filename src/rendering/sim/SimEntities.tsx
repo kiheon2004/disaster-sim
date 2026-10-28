@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, type ReactNode } from 'react';
+import { memo, useRef, type ReactNode } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Quat, Vec3 } from '@/core/types';
@@ -11,6 +11,7 @@ import { CarView } from '../views/CarView';
 import { HumanView } from '../views/HumanView';
 import { RoadView, SignView, StreetLightView, WallView } from '../views/InfrastructureViews';
 import { SelectionBox } from '../SelectionBox';
+import { stormIntensity } from './environment/intensity';
 
 const tmpQ = new THREE.Quaternion();
 
@@ -83,14 +84,21 @@ const SimTree = memo(function SimTree({ e }: { e: RuntimeEntity }) {
   const upper = useRef<THREE.Group>(null);
   const canopy = useRef<THREE.Group>(null);
   const handlers = useSelectHandlers(e.id);
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (!stump.current || !upper.current) return;
     const broken = e.flags.snapped || e.flags.uprooted;
     if (broken) applyPose(upper.current, e.pose.position, e.pose.quaternion);
     else applyPose(upper.current, e.initialPose.position, swayed(e, e.visual.swayAngle));
     if (e.flags.uprooted) applyPose(stump.current, e.pose.position, e.pose.quaternion);
     else applyPose(stump.current, e.initialPose.position, e.initialPose.quaternion);
-    if (canopy.current) canopy.current.scale.setScalar(1 - 0.38 * e.visual.foliageLoss);
+    if (canopy.current) {
+      canopy.current.scale.setScalar(1 - 0.38 * e.visual.foliageLoss);
+      // Visual-only leaf flutter (environment layer); physics/damage never read this.
+      const k = stormIntensity();
+      const ph = (e.source.seed % 1000) * 0.37;
+      const t = clock.elapsedTime;
+      canopy.current.rotation.set(Math.sin(t * 6.3 + ph) * 0.025 * k, 0, Math.sin(t * 7.9 + ph * 1.3) * 0.03 * k);
+    }
   });
   const s = e.source.transform.scale;
   return (
@@ -109,7 +117,7 @@ const SimTree = memo(function SimTree({ e }: { e: RuntimeEntity }) {
 const SimHuman = memo(function SimHuman({ e }: { e: RuntimeEntity }) {
   const armL = useRef<THREE.Group>(null);
   const armR = useRef<THREE.Group>(null);
-  const phase = useMemo(() => Math.random() * 10, []);
+  const phase = (e.source.seed % 1000) * 0.01;
   useFrame(({ clock }) => {
     const b = e.flags.fallen ? 0.3 : e.visual.brace;
     const t = clock.elapsedTime * (4 + b * 6) + phase;
