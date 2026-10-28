@@ -2,7 +2,10 @@
 export const koFlood = {
   // Events
   'event.rain.describe': '폭우 {mm} mm/h · {min}분',
-  'event.risingWater.describe': '{side} 경계 수위 상승 → 표고 {level} m · {rate} m/분',
+  'event.risingWater.describe.N': '북쪽 경계 수위 상승 → 표고 {level} m · {rate} m/분',
+  'event.risingWater.describe.E': '동쪽 경계 수위 상승 → 표고 {level} m · {rate} m/분',
+  'event.risingWater.describe.S': '남쪽 경계 수위 상승 → 표고 {level} m · {rate} m/분',
+  'event.risingWater.describe.W': '서쪽 경계 수위 상승 → 표고 {level} m · {rate} m/분',
   'event.waterSource.describe': '물 공급 {rate} m³/s · ({x}, {z}) · {min}분',
   'flood.assume.riseRate': '상승 속도 미지정 → 분당 {rate} m로 가정',
   'flood.assume.duration': '지속시간 미지정 → 목표 수위 도달 시간 + {hold}초 유지 = {s}초로 가정',

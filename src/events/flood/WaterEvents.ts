@@ -98,7 +98,7 @@ export class RisingWaterEvent implements SimulationEvent<RisingWaterEventSpec> {
   }
 
   describe(): I18nMessage {
-    return { key: 'event.risingWater.describe', params: { side: this.spec.boundary, level: this.spec.level.toFixed(1), rate: this.resolved.riseRate } };
+    return { key: `event.risingWater.describe.${this.spec.boundary}`, params: { level: this.spec.level.toFixed(1), rate: this.resolved.riseRate } };
   }
 }
 

@@ -50,7 +50,9 @@ export class DamageSystem implements SimulationSystem {
   }
 
   /** Hazard behind the striking body: the debris' origin, or what last moved the entity. */
-  private hazardOf(ctx: SystemContext, other: BodyUserData): Hazard {
+  private hazardOf(ctx: SystemContext, other: BodyUserData, target?: RuntimeEntity): Hazard {
+    // Flood (Phase 14): a body carried by the water hitting something (dry runs: no flood state).
+    if (target?.flood?.dominant) return 'flood';
     if (other.debrisId) {
       // Only earthquakes tag debris; wind-only runs never search (keeps them unchanged and cheap).
       if (!ctx.runtime.seismic) return 'wind';
@@ -71,7 +73,7 @@ export class DamageSystem implements SimulationSystem {
         e.health = Math.max(0, e.health - force / 20000);
         e.lastCause = 'impact';
         if (!e.flags.fallen) {
-          e.lastHazard = this.hazardOf(ctx, other);
+          e.lastHazard = this.hazardOf(ctx, other, e);
           knockDown(e, ctx, 'impact', force);
         }
       }
@@ -81,7 +83,7 @@ export class DamageSystem implements SimulationSystem {
         const before = e.health;
         e.health = Math.max(0, e.health - dmg);
         e.lastCause = 'impact';
-        if (dmg > 0.05) ctx.recordDamage(e, { eventType: 'IMPACT', cause: 'impact', force, damageBefore: 1 - before, damageAfter: 1 - e.health, hazard: this.hazardOf(ctx, other) });
+        if (dmg > 0.05) ctx.recordDamage(e, { eventType: 'IMPACT', cause: 'impact', force, damageBefore: 1 - before, damageAfter: 1 - e.health, hazard: this.hazardOf(ctx, other, e) });
         if (!e.counters.hitLogged && dmg > 0.05) {
           e.counters.hitLogged = 1;
           ctx.log(e.id, 'warn', { key: 'log.car.hit' });

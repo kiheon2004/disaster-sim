@@ -3,7 +3,10 @@ import type { koFlood } from './ko.flood';
 /** English strings of the Flood, Rainfall & Water Simulation System (Phase 14). */
 export const enFlood: Record<keyof typeof koFlood, string> = {
   'event.rain.describe': 'Heavy rain {mm} mm/h · {min} min',
-  'event.risingWater.describe': 'Rising water at the {side} edge → elevation {level} m · {rate} m/min',
+  'event.risingWater.describe.N': 'Rising water at the northern edge → elevation {level} m · {rate} m/min',
+  'event.risingWater.describe.E': 'Rising water at the eastern edge → elevation {level} m · {rate} m/min',
+  'event.risingWater.describe.S': 'Rising water at the southern edge → elevation {level} m · {rate} m/min',
+  'event.risingWater.describe.W': 'Rising water at the western edge → elevation {level} m · {rate} m/min',
   'event.waterSource.describe': 'Water source {rate} m³/s · ({x}, {z}) · {min} min',
   'flood.assume.riseRate': 'No rise rate given → {rate} m per minute assumed',
   'flood.assume.duration': 'No duration given → time to reach the level + {hold} s hold = {s} s assumed',

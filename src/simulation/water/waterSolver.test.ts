@@ -226,6 +226,11 @@ describe('water solver: sources and stability', { timeout: 120_000 }, () => {
           expect(Number.isFinite(field.h[i])).toBe(true);
         }
         expect(field.stats.maxSpeed).toBeLessThan(15);
+        // Reconstructed cell velocities obey the Froude bound (no overshoot at wetting fronts).
+        for (let i = 0; i < field.count; i++) {
+          const he = Math.max(field.h[i], 0.01);
+          expect(field.u[i] ** 2 + field.v[i] ** 2).toBeLessThanOrEqual(9.81 * he * (1 + 1e-5));
+        }
       }
     }
     expect(relativeError(field.budget)).toBeLessThan(1e-9);

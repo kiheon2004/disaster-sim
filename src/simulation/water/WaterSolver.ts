@@ -484,8 +484,20 @@ export class WaterSolver {
           if (iz < nz0) nz0 = iz;
           else if (iz > nz1) nz1 = iz;
           const he = d > WET_DEPTH ? d : WET_DEPTH;
-          u[i] = (0.5 * (qw + qe)) / he;
-          v[i] = (0.5 * (qn + qs)) / he;
+          let uu = (0.5 * (qw + qe)) / he;
+          let vv = (0.5 * (qn + qs)) / he;
+          // Reconstructed cell velocity (objects, display, statistics — not the fluxes): at a
+          // wetting front a face discharge divided by a nearly dry cell's depth overshoots, so it
+          // obeys the same Froude bound as the faces.
+          const s2 = uu * uu + vv * vv;
+          const lim2 = FROUDE_MAX * FROUDE_MAX * G * he;
+          if (s2 > lim2) {
+            const r = Math.sqrt(lim2 / s2);
+            uu *= r;
+            vv *= r;
+          }
+          u[i] = uu;
+          v[i] = vv;
           if (d > maxDepth[i]) maxDepth[i] = d;
           if (d >= FLOOD_DEPTH) floodTime[i] += dt;
         } else {
