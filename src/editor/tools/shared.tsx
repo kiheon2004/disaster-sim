@@ -101,6 +101,10 @@ export function PlanPreview({ plan, showRejected = true }: { plan: readonly Plan
     let list = segs.current;
     const done = list.length ? list[list.length - 1].end : 0;
     if (!list.length || list[0].first !== plan[0] || done > plan.length) list = [];
+    // Small tail segments are merged into the next rebuild, so a long stroke ends up with about
+    // plan.length / SEGMENT_SIZE ghost batches (bounded draw calls), not one per pointer move.
+    const last = list[list.length - 1];
+    if (last && plan.length > last.end && last.end - last.start < SEGMENT_SIZE) list = list.slice(0, -1);
     const from = list.length ? list[list.length - 1].end : 0;
     if (plan.length > from) {
       const groups: Record<MaterialMode, WorldObject[]> = { normal: [], ghost: [], ghostWarn: [], ghostInvalid: [] };
@@ -127,6 +131,8 @@ export function PlanPreview({ plan, showRejected = true }: { plan: readonly Plan
 }
 
 const SEGMENTS = 96;
+/** Ghost objects per preview batch before a new batch is started (brush strokes). */
+const SEGMENT_SIZE = 96;
 
 /** A polyline draped on the terrain (always drawn on top). */
 export function DrapedLine({ points, color, closed = false, dashed = false }: { points: Vec2[]; color: string; closed?: boolean; dashed?: boolean }) {

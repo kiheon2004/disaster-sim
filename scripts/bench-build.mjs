@@ -79,14 +79,14 @@ for (const n of counts) {
   Object.assign(row, { idle: await page.evaluate(() => window.__fps(3000)) });
   row.gcIdleMsPerS = await gcTrace(page, 2500);
 
-  // Multi-selection of everything (+ FPS while selected).
-  row.selectAllMs = await page.evaluate(async () => {
+  // Multi-selection of everything (+ FPS while selected). The Phase 15 editor had no multi-selection.
+  if (!legacy) row.selectAllMs = await page.evaluate(async () => {
     const t0 = performance.now();
     window.__ds.editor.getState().setSelection(Object.keys(window.__ds.world.getState().doc.objects));
     await window.__frames();
     return +(performance.now() - t0).toFixed(0);
   });
-  row.selected = await page.evaluate(() => window.__fps(2000));
+  if (!legacy) row.selected = await page.evaluate(() => window.__fps(2000));
 
   if (!legacy) {
     // Group move of the whole selection (one undo step), then undo / redo of it.
