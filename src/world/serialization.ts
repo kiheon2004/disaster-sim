@@ -36,6 +36,8 @@ const objectSchema = z.object({
   components: z.array(z.any()).optional(),
   // Phase 13 (schema v3). Validated leniently and normalized (defaults / clamping) below.
   seismic: z.object({ structure: z.record(z.string(), z.any()).optional(), foundation: z.record(z.string(), z.any()).optional() }).optional(),
+  // Phase 16: editing group (optional; still schema v5 — older readers simply drop it).
+  group: z.string().min(1).max(80).optional().catch(undefined),
 });
 
 const terrainSchema = z.union([
@@ -181,7 +183,7 @@ export function parseDocument(json: string): LoadResult {
     }
     const def = getDefinition(o.type);
     const params = { ...def.defaultParams, ...o.params };
-    const { seismic: rawSeismic, ...rest } = o;
+    const { seismic: rawSeismic, group, ...rest } = o;
     const obj: WorldObject = {
       ...rest,
       id,
@@ -191,6 +193,7 @@ export function parseDocument(json: string): LoadResult {
     };
     const seismic = normalizeSeismic(o.type, rawSeismic as Parameters<typeof normalizeSeismic>[1]);
     if (seismic) obj.seismic = seismic;
+    if (group) obj.group = group;
     objects[id] = obj;
   }
   // Old (v1) files and missing terrain → flat terrain at 0 m.

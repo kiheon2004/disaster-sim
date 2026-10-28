@@ -41,6 +41,19 @@ interface TerrainStroke {
 }
 let stroke: TerrainStroke | null = null;
 
+/**
+ * One atomic world edit (Phase 16): bulk placement, multi-object transforms, duplicate, delete,
+ * group / ungroup. The next object map is built completely before anything is committed, so an
+ * exception leaves the world untouched (no partially created objects), and the whole edit is
+ * ONE undo step.
+ */
+export interface WorldEdit {
+  add?: CreateObjectInput[];
+  /** Replacement objects (matched by id; unknown ids are ignored). */
+  update?: WorldObject[];
+  remove?: EntityId[];
+}
+
 export interface MutationOptions {
   /** Record an undo step (default true). Use false for continuous edits (gizmo drags, scrubbing). */
   history?: boolean;
@@ -52,6 +65,14 @@ interface WorldState {
   future: HistoryEntry[];
   /** Incremented when the whole document is replaced (new/load), so views can reset. */
   docVersion: number;
+  /**
+   * Object / terrain edits are refused while a simulation runs on a snapshot of this document
+   * (Phase 16): the original world can never pick up simulation state or half-done edits.
+   */
+  locked: boolean;
+  setLocked: (locked: boolean) => void;
+  /** Apply a WorldEdit atomically as one undo step. Returns the ids of the added objects. */
+  applyEdit: (edit: WorldEdit, opts?: MutationOptions) => EntityId[];
 
   addObject: (input: CreateObjectInput) => EntityId;
   addObjects: (inputs: CreateObjectInput[]) => EntityId[];
@@ -117,7 +138,8 @@ function samplerOver(t: TerrainData, layers: ReturnType<typeof snapshotLayers>):
 export const useWorldStore = create<WorldState>((set, get) => {
   /** Shared write path: optionally records history, then replaces objects immutably. */
   const commit = (next: Objects, opts?: MutationOptions) => {
-    const { doc, past } = get();
+    const { doc, past, locked } = get();
+    if (locked) return;
     if (opts?.history === false) {
       set({ doc: touch(doc, next) });
     } else {
@@ -128,6 +150,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
   /** Finish a terrain change made in place: objects follow, one history entry, new doc. */
   const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect) => {
     const { doc, past } = get();
+    // (Terrain arrays are edited in place: callers check `locked` before touching them.)
     const t = doc.terrain;
     const patch = makePatch(t, before, rect);
     const objects = followTerrain(doc.objects, samplerOver(t, before), samplerFor(t));
@@ -159,17 +182,44 @@ export const useWorldStore = create<WorldState>((set, get) => {
     future: [],
     docVersion: 0,
 
+    locked: false,
+    setLocked: (locked) => set({ locked }),
+
     addObject: (input) => get().addObjects([input])[0],
 
-    addObjects: (inputs) => {
+    addObjects: (inputs) => get().applyEdit({ add: inputs }),
+
+    applyEdit: (edit, opts) => {
+      if (get().locked) return [];
       const objects = { ...get().doc.objects };
-      const ids: EntityId[] = [];
-      for (const input of inputs) {
-        const obj = createWorldObject(input, nextSerial(objects, input.type));
-        objects[obj.id] = obj;
-        ids.push(obj.id);
+      let changed = false;
+      for (const id of edit.remove ?? []) {
+        if (objects[id]) {
+          delete objects[id];
+          changed = true;
+        }
       }
-      commit(objects);
+      for (const o of edit.update ?? []) {
+        if (!objects[o.id]) continue;
+        objects[o.id] = o;
+        changed = true;
+      }
+      const ids: EntityId[] = [];
+      if (edit.add?.length) {
+        // Running serial numbers per type, computed once (not O(n) per added object).
+        const serial = new Map<string, number>();
+        for (const o of Object.values(objects)) if (o.serial > (serial.get(o.type) ?? 0)) serial.set(o.type, o.serial);
+        for (const input of edit.add) {
+          const n = (serial.get(input.type) ?? 0) + 1;
+          serial.set(input.type, n);
+          const obj = createWorldObject(input, n);
+          if (objects[obj.id]) throw new Error(`Duplicate object id ${obj.id}`);
+          objects[obj.id] = obj;
+          ids.push(obj.id);
+        }
+        changed = true;
+      }
+      if (changed) commit(objects, opts);
       return ids;
     },
 
@@ -194,6 +244,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     duplicate: (id) => {
+      if (get().locked) return null;
       const objects = get().doc.objects;
       const src = objects[id];
       if (!src) return null;
@@ -203,6 +254,8 @@ export const useWorldStore = create<WorldState>((set, get) => {
       copy.serial = nextSerial(objects, src.type);
       copy.name = src.name;
       copy.transform.position = [x + 2, y, z + 2];
+      // A single copy is not part of the source's group.
+      delete copy.group;
       const terrain = samplerFor(get().doc.terrain);
       if (isGrounded(src, terrain)) {
         const p = reseat(copy, terrain);
@@ -264,20 +317,24 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     replaceDocument: (doc) => {
+      if (get().locked) return;
       stroke = null;
       set({ doc, past: [], future: [], docVersion: get().docVersion + 1 });
     },
 
     newDocument: () => {
+      if (get().locked) return;
       stroke = null;
       set({ doc: createEmptyDocument(), past: [], future: [], docVersion: get().docVersion + 1 });
     },
 
     beginTerrainStroke: () => {
+      if (get().locked) return;
       stroke = { before: snapshotLayers(get().doc.terrain), rect: null };
     },
 
     terrainDab: (opts) => {
+      if (get().locked) return null;
       if (!stroke) get().beginTerrainStroke();
       const t0 = performance.now();
       const rect = applyDab(get().doc.terrain, opts);
@@ -294,6 +351,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     applyTerrainPreset: (preset, seed) => {
+      if (get().locked) return;
       const t = get().doc.terrain;
       const before = snapshotLayers(t);
       const next = generateTerrain(preset, seed, t);
@@ -306,6 +364,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     setWaterLevel: (level) => {
+      if (get().locked) return;
       const t = get().doc.terrain;
       const before = snapshotLayers(t);
       t.settings = { ...t.settings, waterLevel: level };
@@ -315,22 +374,23 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     checkpoint: () => {
-      const { doc, past } = get();
+      const { doc, past, locked } = get();
+      if (locked) return;
       set({ past: [...past, { objects: doc.objects, terrain: null }].slice(-HISTORY_LIMIT), future: [] });
     },
 
     undo: () => {
-      const { doc, past, future } = get();
+      const { doc, past, future, locked } = get();
       const prev = past[past.length - 1];
-      if (!prev || stroke) return;
+      if (!prev || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future] });
     },
 
     redo: () => {
-      const { doc, past, future } = get();
+      const { doc, past, future, locked } = get();
       const next = future[0];
-      if (!next || stroke) return;
+      if (!next || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1) });
     },

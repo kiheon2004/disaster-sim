@@ -78,6 +78,11 @@ export interface WorldObject {
    * other objects use type defaults. Missing in older files → filled in on load.
    */
   seismic?: SeismicProperties;
+  /**
+   * Editing group (Phase 16): objects sharing this id are selected and transformed together.
+   * A logical editor structure only — every object keeps its own physics body. Absent = none.
+   */
+  group?: string;
 }
 
 // ── Earthquake: structure & foundation (approximate model parameters) ─────────

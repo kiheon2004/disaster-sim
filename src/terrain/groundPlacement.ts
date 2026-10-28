@@ -29,11 +29,15 @@ type Placeable = Pick<WorldObject, 'type' | 'params' | 'transform'>;
 /** An object counts as standing on the ground when its origin is within this distance (m). */
 export const GROUNDED_TOLERANCE = 0.05;
 
-/** Seated pose of an object at (x, z) with heading `yaw`. */
-export function groundPose(obj: Placeable, x: number, z: number, yaw: number, terrain: TerrainSampler): GroundPose {
+/**
+ * Seated pose of an object at (x, z) with heading `yaw`. `align` overrides how much the object
+ * tilts with the slope (0 = level … 1 = ground plane); default = its category rule.
+ */
+export function groundPose(obj: Placeable, x: number, z: number, yaw: number, terrain: TerrainSampler, align?: number): GroundPose {
   if (terrain.flat) return { position: [x, 0, z], rotation: [0, yaw, 0] };
   const def = getDefinition(obj.type);
-  const fit = def.terrainFit ?? { align: 0, base: 'center' as const };
+  const base = def.terrainFit ?? { align: 0, base: 'center' as const };
+  const fit = align === undefined ? base : { ...base, align };
   const d = def.getDimensions(obj.params);
   const k = obj.transform.scale;
   const hx = (d[0] * k[0]) / 2;

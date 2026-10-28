@@ -39,6 +39,8 @@ export interface CreateObjectInput {
   name?: string;
   seed?: number;
   seismic?: WorldObject['seismic'];
+  /** Editing group id (Phase 16). */
+  group?: string;
 }
 
 export function nextSerial(objects: Record<EntityId, WorldObject>, type: ObjectType): number {
@@ -65,6 +67,7 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
   };
   const seismic = input.seismic ?? defaultSeismic(input.type);
   if (seismic) obj.seismic = structuredClone(seismic);
+  if (input.group) obj.group = input.group;
   return obj;
 }
 
