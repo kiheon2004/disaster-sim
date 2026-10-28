@@ -15,6 +15,12 @@ import { simProfiler } from '@/simulation/profiling/SimProfiler';
 import { WaterField } from '@/simulation/water/WaterField';
 import { captureWaterState } from '@/simulation/water/waterStateCodec';
 import { samplerFor } from '@/terrain/TerrainSampler';
+import { areaFill } from '@/editor/build/distribution';
+import { DEFAULT_PLACEMENT, acceptedInputs, planPlacement } from '@/editor/build/placementPlan';
+import { FootprintIndex } from '@/editor/build/footprint';
+import { parseDocument, serializeDocument } from '@/world/serialization';
+import { stressScene } from '@/world/stressScene';
+import { createEmptyDocument } from '@/world/WorldDocument';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -23,6 +29,8 @@ export function installDevtools() {
     build: useBuildStore,
     buildActions,
     editorBatches: getEditorBatches,
+    /** Phase 16 benchmarks (scripts/bench-build.mjs). */
+    buildLib: { areaFill, planPlacement, acceptedInputs, DEFAULT_PLACEMENT, FootprintIndex, parseDocument, serializeDocument, stressScene, createEmptyDocument, samplerFor },
     locale: useLocaleStore,
     actions,
     view: useViewStore,
