@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocale, useT, type MessageKey, type TFunction } from '@/i18n/i18n';
 import type { ObjectType } from '@/core/types';
 import { useSimStore } from '@/simulation/simStore';
 import type { DamageEventRecord, DamageEventType, Hazard } from '@/simulation/analysis/DamageEvent';
 import type { EarthquakeMetrics, SeismicSeries } from '@/simulation/analysis/SeismicRecorder';
+import type { FloodMetrics, FloodSeries } from '@/simulation/analysis/FloodRecorder';
 import { useWorldStore } from '@/world/worldStore';
 import { focusPosition } from '@/app/actions';
 import { useUiStore } from '@/ui/uiStore';
 import { Icon } from '@/ui/common/Icon';
 import { displayName, fmt } from '@/ui/format';
+import { DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
 import styles from './ResultsPanel.module.css';
 
 const PAGE = 400;
@@ -17,7 +19,10 @@ const EVENT_COLORS: Partial<Record<DamageEventType, string>> = {
   DESTROYED: '#8a8f98', COLLAPSED: '#ef4d4d', SNAPPED: '#f5973b', UPROOTED: '#f5973b', FALLEN: '#ef4d4d',
   OVERTURNED: '#ef4d4d', MOVED: '#e6d14a', BROKEN: '#7fb8e6', DETACHED: '#f5a13b', TOPPLED: '#f5973b',
   CRITICAL: '#ef4d4d', DAMAGED: '#f5973b', IMPACT: '#c43bd6', CRACKED: '#d9a441', TILTED: '#ef4d4d',
+  INUNDATED: '#46a0e6', FLOATED: '#2d7fd0', SCOURED: '#8a6a48',
 };
+
+const HAZARD_COLORS: Partial<Record<Hazard, string>> = { earthquake: '#ffb3a1', flood: '#9fd3ff' };
 
 function objectLabel(e: DamageEventRecord, objects: ReturnType<typeof useWorldStore.getState>['doc']['objects'], t: TFunction) {
   const o = objects[e.objectId];
@@ -54,6 +59,7 @@ function ResultsDialog() {
   const [eventFilter, setEventFilter] = useState<'all' | DamageEventType>('all');
   const [hazardFilter, setHazardFilter] = useState<'all' | Hazard>('all');
   const series = useSimStore((s) => s.seismicSeries);
+  const floodSeries = useSimStore((s) => s.floodSeries);
   const [second, setSecond] = useState<number | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const close = () => useUiStore.getState().setResultsOpen(false);
@@ -80,16 +86,21 @@ function ResultsDialog() {
   const hazards = useMemo(() => [...new Set(events.map((e) => e.hazard))], [events]);
 
   const exportCsv = () => {
-    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response'];
+    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state'];
     const rows = events.map((e) => [
       e.time.toFixed(2), e.objectId, objects[e.objectId] ? displayName(objects[e.objectId], t) : '', e.objectType, e.componentId ?? '', e.eventType, e.cause,
       ...e.worldPosition.map((v) => v.toFixed(2)), e.localWindSpeed.toFixed(2), e.globalWindSpeed.toFixed(2), e.force.toFixed(0),
       e.damageBefore.toFixed(3), e.damageAfter.toFixed(3), e.shadowSource ?? '',
       e.hazard, (e.groundAcceleration / 9.81).toFixed(3), e.response.toFixed(4),
+      (e.waterDepth ?? 0).toFixed(3), (e.flowSpeed ?? 0).toFixed(3), (e.exposure ?? 0).toFixed(1), DAMAGE_STATE_IDS[e.state ?? 0] ?? '',
     ].map((v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(','));
     download(`${name || 'simulation'}-damage-events.csv`, [head.join(','), ...rows].join('\n'), 'text/csv');
   };
-  const exportJson = () => download(`${name || 'simulation'}-results.json`, JSON.stringify({ model: 'approximate', groundMotion: metrics?.earthquake ? 'synthetic' : undefined, metrics, seismicSeries: series ?? undefined, events }, null, 2), 'application/json');
+  const exportJson = () => download(`${name || 'simulation'}-results.json`, JSON.stringify({
+    model: 'approximate', groundMotion: metrics?.earthquake ? 'synthetic' : undefined,
+    floodModel: metrics?.flood ? 'local-inertial shallow-water approximation (educational, not a validated hydraulic model)' : undefined,
+    metrics, seismicSeries: series ?? undefined, floodSeries: floodSeries ?? undefined, events,
+  }, null, 2), 'application/json');
 
   const m = metrics;
   const hist = m?.histogram ?? [];
@@ -110,8 +121,9 @@ function ResultsDialog() {
             <button className={styles.btn} onClick={close} aria-label={t('common.close')}><Icon name="x" size={14} /></button>
           </div>
         </div>
-        <div className={m?.earthquake ? `${styles.body} ${styles.bodyQuake}` : styles.body}>
+        <div className={m?.earthquake || m?.flood ? `${styles.body} ${styles.bodyHazard}` : styles.body}>
           <div className={styles.disclaimer}>{t('model.approximate')}</div>
+          {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
           {m ? (
             <div className={styles.cards}>
@@ -195,6 +207,9 @@ function ResultsDialog() {
                         <th className={styles.num}>{t('results.col.damage')}</th>
                         <th className={styles.num}>{t('results.col.ground')}</th>
                         <th className={styles.num}>{t('results.col.response')}</th>
+                        {hazards.includes('flood') && <th className={styles.num}>{t('results.col.depth')}</th>}
+                        {hazards.includes('flood') && <th className={styles.num}>{t('results.col.flow')}</th>}
+                        {hazards.includes('flood') && <th className={styles.num}>{t('results.col.exposure')}</th>}
                         <th>{t('results.col.shadow')}</th>
                       </tr>
                     </thead>
@@ -204,7 +219,7 @@ function ResultsDialog() {
                           <td className={styles.num}>{e.time.toFixed(1)}s</td>
                           <td>{objectLabel(e, objects, t)}</td>
                           <td><span className={styles.evt} style={{ color: EVENT_COLORS[e.eventType] }}>{t(`evt.${e.eventType}` as MessageKey)}</span></td>
-                          <td style={{ color: e.hazard === 'earthquake' ? '#ffb3a1' : undefined }}>{t(`hazardName.${e.hazard}`)}</td>
+                          <td style={{ color: HAZARD_COLORS[e.hazard] }}>{t(`hazardName.${e.hazard}`)}</td>
                           <td>{t(`cause.${e.cause}`)}</td>
                           <td className={styles.num}>{e.localWindSpeed.toFixed(1)}</td>
                           <td className={styles.num}>{e.globalWindSpeed.toFixed(1)}</td>
@@ -212,6 +227,9 @@ function ResultsDialog() {
                           <td className={styles.num}>{Math.round(e.damageBefore * 100)}→{Math.round(e.damageAfter * 100)}%</td>
                           <td className={styles.num}>{e.hazard === 'earthquake' ? (e.groundAcceleration / 9.81).toFixed(2) : ''}</td>
                           <td className={styles.num}>{e.hazard === 'earthquake' && e.response ? (e.cause === 'drift' ? `${(e.response * 100).toFixed(2)}%` : e.cause === 'foundation' ? `${e.response.toFixed(1)}°` : `${e.response.toFixed(2)}g`) : ''}</td>
+                          {hazards.includes('flood') && <td className={styles.num}>{e.hazard === 'flood' ? e.waterDepth.toFixed(2) : ''}</td>}
+                          {hazards.includes('flood') && <td className={styles.num}>{e.hazard === 'flood' ? e.flowSpeed.toFixed(2) : ''}</td>}
+                          {hazards.includes('flood') && <td className={styles.num}>{e.hazard === 'flood' ? Math.round(e.exposure) : ''}</td>}
                           <td>{e.shadowSource && objects[e.shadowSource] ? displayName(objects[e.shadowSource], t) : ''}</td>
                         </tr>
                       ))}
@@ -306,6 +324,90 @@ function QuakeSummary({ q, t, objects, series, events }: {
         </>
       )}
       <div className={styles.disclaimer} style={{ marginTop: 6 }}>{t('results.quake.disclaimer')}</div>
+    </div>
+  );
+}
+
+const fmtArea = (m2: number) => (m2 >= 10000 ? `${fmt(m2 / 10000, 2)} ha` : `${Math.round(m2)} m²`);
+
+/** Flood analysis block (Phase 14): summary cards, area / volume chart and the water budget. */
+function FloodSummary({ f, t, objects, series, events, name }: {
+  f: FloodMetrics; t: TFunction; objects: ReturnType<typeof useWorldStore.getState>['doc']['objects'];
+  series: FloodSeries | null; events: DamageEventRecord[]; name: string;
+}) {
+  const floodEvents = events.filter((e) => e.hazard === 'flood');
+  const b = f.budget;
+  const tMax = Math.max(1, ...(series?.t ?? [1]));
+  const aMax = Math.max(1, ...(series?.area ?? [0]));
+  const vMax = Math.max(1, ...(series?.volume ?? [0]));
+  const exportSeries = () => {
+    if (!series) return;
+    const rows = series.t.map((tt, i) => [tt.toFixed(1), series.area[i].toFixed(1), series.volume[i].toFixed(3), series.maxDepth[i].toFixed(3), series.rain[i].toFixed(2)].join(','));
+    download(`${name || 'simulation'}-flood-series.csv`, ['time_s,flooded_area_m2,water_volume_m3,max_depth_m,rain_mm_h', ...rows].join('\n'), 'text/csv');
+  };
+  const budgetRows: [string, number, string?][] = [
+    [t('results.flood.budget.initial'), b.initial],
+    [t('results.flood.budget.rain'), b.rain, '+'],
+    [t('results.flood.budget.sources'), b.sources, '+'],
+    [t('results.flood.budget.boundaryIn'), b.boundaryIn, '+'],
+    [t('results.flood.budget.boundaryOut'), b.boundaryOut, '−'],
+    [t('results.flood.budget.infiltration'), b.infiltration, '−'],
+    [t('results.flood.budget.drainage'), b.drainage, '−'],
+    [t('results.flood.budget.current'), b.current, '='],
+  ];
+  return (
+    <div className={styles.box} data-testid="flood-results">
+      <div className={styles.boxTitle} style={{ color: '#9fd3ff', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.flood.title')} · {t('flood.badge')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportSeries} disabled={!series}><Icon name="save" size={13} /> {t('results.flood.csv')}</button>
+      </div>
+      <div className={`${styles.cards} ${styles.floodCards}`}>
+        <Card label={t('results.flood.floodedArea')} value={fmtArea(f.floodedArea)} sub={t('results.flood.peakArea', { a: Math.round(f.peakFloodedArea) })} />
+        <Card label={t('results.flood.maxDepth')} value={fmt(f.maxDepth, 2)} unit="m" sub={f.maxDepthAt ? `(${Math.round(f.maxDepthAt[0])}, ${Math.round(f.maxDepthAt[1])})` : undefined} />
+        <Card label={t('results.flood.avgDepth')} value={fmt(f.averageDepth, 2)} unit="m" />
+        <Card label={t('results.flood.maxSpeed')} value={fmt(f.maxFlowSpeed, 2)} unit="m/s" />
+        <Card label={t('results.flood.volume')} value={fmt(f.totalVolume, 0)} unit="m³" />
+        <Card label={t('results.flood.buildings')} value={String(f.floodedBuildings)} sub={f.maxObject && objects[f.maxObject] ? displayName(objects[f.maxObject], t) : undefined} />
+        <Card label={t('results.flood.vehicles')} value={String(f.affectedVehicles)} sub={t('results.flood.floated', { n: f.floatedVehicles })} />
+        <Card label={t('results.flood.humans')} value={String(f.fallenHumans)} />
+        <Card label={t('results.flood.roads')} value={String(f.roadsInundated)} />
+        <Card label={t('results.flood.infra')} value={String(f.infrastructureFailed)} />
+        <Card label={t('results.flood.events')} value={String(f.floodDamageEvents)} />
+        <Card label={t('results.duration')} value={fmt(f.duration, 0)} unit="s" />
+      </div>
+      <div className={styles.floodRow} style={{ marginTop: 8 }}>
+        <div>
+          <div className={styles.cardSub}>{t('results.flood.chart')}</div>
+          {series && series.t.length > 1 ? (
+            <>
+              <svg width="100%" height="120" viewBox="0 0 1000 100" preserveAspectRatio="none" role="img" aria-label={t('results.flood.chart')}>
+                <polyline fill="none" stroke="#46a0e6" strokeWidth={1.6} vectorEffect="non-scaling-stroke" points={series.t.map((s, i) => `${(s / tMax) * 1000},${100 - (series.area[i] / aMax) * 96}`).join(' ')} />
+                <polyline fill="none" stroke="#f2d43d" strokeWidth={1.4} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" points={series.t.map((s, i) => `${(s / tMax) * 1000},${100 - (series.volume[i] / vMax) * 96}`).join(' ')} />
+                {floodEvents.map((e) => (
+                  <line key={e.id} x1={(e.time / tMax) * 1000} x2={(e.time / tMax) * 1000} y1={100} y2={92} stroke="#ef4d4d" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                ))}
+              </svg>
+              <div className={styles.cardSub}>
+                <span style={{ color: '#46a0e6' }}>■</span> {t('results.flood.area')} (≤ {fmtArea(aMax)}) · <span style={{ color: '#f2d43d' }}>■</span> {t('results.flood.water')} (≤ {fmt(vMax, 0)} m³) · <span style={{ color: '#ef4d4d' }}>■</span> {t('seis.damage')} · 0–{tMax.toFixed(0)} s
+              </div>
+            </>
+          ) : <div className={styles.cardSub}>–</div>}
+        </div>
+        <div>
+          <div className={styles.cardSub}>{t('results.flood.budget')}</div>
+          <div className={styles.budget}>
+            {budgetRows.map(([label, v, sign]) => (
+              <Fragment key={label}>
+                <span>{sign ? `${sign} ` : ''}{label}</span>
+                <span>{v.toFixed(2)}</span>
+              </Fragment>
+            ))}
+            <span style={{ color: 'var(--text-2)' }}>{t('results.flood.budget.error')}</span>
+            <span style={{ color: f.relativeError < 1e-6 ? '#4fc27a' : 'var(--warn)' }}>{b.error.toExponential(2)} ({f.relativeError.toExponential(1)})</span>
+          </div>
+        </div>
+      </div>
+      <div className={styles.disclaimer} style={{ marginTop: 6 }}>{t('flood.disclaimer')}</div>
     </div>
   );
 }

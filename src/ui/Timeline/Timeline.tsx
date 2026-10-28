@@ -62,7 +62,7 @@ export function Timeline() {
                 <svg width="100%" height="100%" viewBox="0 0 47 1" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0 }}>
                   <path
                     d={`M0 1 ${e.profile.map((v, i) => `L${i} ${1 - Math.min(1, v)}`).join(' ')} L47 1 Z`}
-                    fill="rgba(240,138,60,0.35)"
+                    fill={e.type === 'rain' || e.type === 'risingWater' || e.type === 'waterSource' ? 'rgba(70,160,230,0.45)' : 'rgba(240,138,60,0.35)'}
                   />
                 </svg>
                 <span className={styles.evtLabel}>{translateMessage(locale, e.label)}</span>

@@ -8,7 +8,8 @@ import { useSimStore } from '@/simulation/simStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWindForm } from './windFormStore';
 import { useCommandStore, type CommandEntry } from './commandStore';
-import { describeParsed, describeUnsupported } from './describeCommand';
+import { describeParsed, describeUnsupported, waterAssumptions } from './describeCommand';
+import { useWorldStore } from '@/world/worldStore';
 import bp from './BottomPanel.module.css';
 import styles from './CommandPanel.module.css';
 
@@ -158,6 +159,10 @@ function Entry({ entry }: { entry: CommandEntry }) {
           {c.notes.map((n, j) => (
             <div key={j} className={styles.note}>· {translateMessage(locale, n)}</div>
           ))}
+          {c.command.kind === 'event' &&
+            waterAssumptions(c.command.spec, useWorldStore.getState().doc.terrain, useWorldStore.getState().doc.settings.simulation.water).map((n, j) => (
+              <div key={`w${j}`} className={styles.note}>· {translateMessage(locale, n)}</div>
+            ))}
         </div>
       ))}
       {r.unsupported.map((u, i) => (

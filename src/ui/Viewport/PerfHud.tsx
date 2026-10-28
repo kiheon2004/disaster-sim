@@ -5,6 +5,7 @@ import { simProfiler, type SimProfileSnapshot } from '@/simulation/profiling/Sim
 import { simulationController } from '@/simulation/SimulationController';
 import { useWorldStore } from '@/world/worldStore';
 import { terrainStats } from '@/terrain/terrainStats';
+import { waterRenderStats } from '@/rendering/sim/water/WaterLayer';
 
 const REFRESH_MS = 250;
 
@@ -21,6 +22,8 @@ interface Row {
   terrainQueriesPerStep: number | null;
   terrainEdit: string;
   terrainBuildMs: number | null;
+  water: string | null;
+  waterRenderMs: number | null;
 }
 
 function read(): Row {
@@ -46,7 +49,17 @@ function read(): Row {
       ? `dab ${(terrainStats.dabMs / Math.max(1, terrainStats.dabs)).toFixed(2)} · mesh ${(terrainStats.meshMs / Math.max(1, terrainStats.meshUpdates)).toFixed(2)} ms`
       : '—',
     terrainBuildMs: rt ? simulationController.terrainBuildMs : null,
+    water: null,
+    waterRenderMs: waterRenderStats.updates || n ? waterRenderStats.ms / n : null,
   };
+  // Water model (Phase 14): grid activity and substeps of the last solver call.
+  const field = rt ? simulationController.getEnvironment().flood.field : null;
+  if (field) {
+    const w = (field.x1 - field.x0 + 1) * (field.z1 - field.z0 + 1);
+    row.water = `${w > 0 ? w : 0} active cells · ${field.stats.substeps} substeps`;
+  }
+  waterRenderStats.ms = 0;
+  waterRenderStats.updates = 0;
   // Terrain height queries made by the simulation (wind profile, particles, …) per fixed step.
   const terrain = rt ? simulationController.getEnvironment().terrain : null;
   if (terrain) {
@@ -90,6 +103,10 @@ export function PerfHud() {
     ['Ground mot.', s ? `${f2(s.systems.groundMotion ?? 0)} ms` : '—', 'quake forces'],
     ['Structural', s ? `${f2(s.systems.structural ?? 0)} ms` : '—', 'MDOF response'],
     ['Quake dmg', s ? `${f2(s.systems.seismicDamage ?? 0)} ms` : '—'],
+    ['Water', s ? `${f2(s.systems.waterSolver ?? 0)} ms` : '—', row.water ?? undefined],
+    ['Water forces', s ? `${f2((s.systems.waterForce ?? 0) + (s.systems.groundContact ?? 0))} ms` : '—', 'buoyancy, drag, grip'],
+    ['Flood dmg', s ? `${f2(s.systems.floodDamage ?? 0)} ms` : '—'],
+    ['Water render', row.waterRenderMs !== null ? `${f2(row.waterRenderMs)} ms` : '—', 'mesh update / frame'],
     ['Draw calls', String(Math.round(row.drawCalls)), 'incl. shadows'],
     ['Triangles', `${(row.triangles / 1000).toFixed(0)}k`],
     ['Objects', String(row.objects), row.instances !== null ? `${row.instances} instances` : undefined],

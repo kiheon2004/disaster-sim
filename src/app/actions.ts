@@ -21,6 +21,7 @@ import type { EventSpec } from '@/events/specs';
 import { RuleBasedParser } from '@/commands/RuleBasedParser';
 import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
 import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
+import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
 
 /** Select an object and center the camera on it (its live pose while simulating). */
 export function focusObject(id: EntityId) {
@@ -190,6 +191,44 @@ export async function resetSimulation() {
 export function togglePlay() {
   if (useSimStore.getState().status === 'loading') return;
   simulationController.togglePlay();
+}
+
+// ── Water state (mid-simulation snapshot, separate from the project file) ─
+
+/** Download the current water (depth + soil saturation) as a *.water.json file. */
+export function saveWaterState() {
+  const state = simulationController.captureWaterState();
+  if (!state) {
+    toast('warn', { key: 'toast.noWater' });
+    return;
+  }
+  const doc = useWorldStore.getState().doc;
+  const url = URL.createObjectURL(new Blob([serializeWaterState(state)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${(doc.meta.name || 'world').replace(/[^\w\-가-힣]+/g, '_')}-t${Math.round(state.time)}s.water.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('success', { key: 'toast.waterSaved' });
+}
+
+/** Pick a *.water.json file: the next run (reset) starts from it. */
+export async function loadWaterState() {
+  const text = await pickDocumentFile();
+  if (text === null) return;
+  const res = parseWaterState(text, useWorldStore.getState().doc.terrain);
+  if (!res.ok) {
+    toast('error', { key: 'toast.waterLoadFailed' }, res.error);
+    return;
+  }
+  simulationController.setInitialWaterState(res.state);
+  useSimStore.getState().set({ initialWaterTime: res.state.time });
+  toast('success', { key: 'toast.waterLoaded' });
+}
+
+export function clearWaterState() {
+  simulationController.setInitialWaterState(null);
+  useSimStore.getState().set({ initialWaterTime: null });
 }
 
 // ── Command system wiring ─────────────────────────────────────────────────

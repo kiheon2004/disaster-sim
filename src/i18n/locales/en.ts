@@ -555,7 +555,7 @@ export const en: Record<MessageKey, string> = {
   'terrain.range': 'Elevation range: {min} to {max} m',
   'terrain.waterLevel': 'Reference water level',
   'terrain.waterLevel.height': 'Water surface',
-  'terrain.waterLevel.hint': 'A static reference level. Water does not flow or push objects (not a flood simulation).',
+  'terrain.waterLevel.hint': 'A static reference level (normal sea / river surface). It does not flow by itself; the flood simulation uses it only for \'auto\' edges and the initial fill — dynamic water depth is computed separately by the water model.',
   'terrain.inspector.title': 'Terrain point',
   'terrain.inspector.empty': 'Click the terrain with the “Inspect” tool to see elevation, slope and ground values.',
   'terrain.position': 'Position (x, z)',

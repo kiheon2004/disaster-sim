@@ -115,6 +115,8 @@ export interface SimState {
   flood: FloodLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
+  /** Time of the loaded water state the next run starts from (null = none). */
+  initialWaterTime: number | null;
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
 }
 
@@ -135,5 +137,6 @@ export const useSimStore = create<SimState>((set) => ({
   seismicSeries: null,
   flood: null,
   floodSeries: null,
+  initialWaterTime: null,
   set: (patch) => set(patch),
 }));

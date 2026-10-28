@@ -558,7 +558,7 @@ export const ko = {
   'terrain.range': '고도 범위: {min} ~ {max} m',
   'terrain.waterLevel': '기준 수면',
   'terrain.waterLevel.height': '수면 높이',
-  'terrain.waterLevel.hint': '정적인 기준 수위입니다. 물이 흐르거나 오브젝트에 힘을 주지 않습니다 (홍수 시뮬레이션 아님).',
+  'terrain.waterLevel.hint': '정적인 기준 수위(바다·강의 평상시 수면)입니다. 그 자체로는 흐르지 않습니다. 홍수 시뮬레이션에서는 \'자동\' 경계 조건과 시작 시 수면 채우기의 기준으로만 쓰이며, 동적 수심은 물 모델이 따로 계산합니다.',
   'terrain.inspector.title': '지형 정보',
   'terrain.inspector.empty': '“지점 정보” 도구로 지형을 클릭하면 고도·경사·지표 값을 보여 줍니다.',
   'terrain.position': '위치 (x, z)',

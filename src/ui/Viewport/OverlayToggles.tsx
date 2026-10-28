@@ -7,6 +7,7 @@ import { Segmented } from '@/ui/common/Segmented';
 import { QUAKE_EXAGGERATIONS } from '@/rendering/viewStore';
 import { useSimStore } from '@/simulation/simStore';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
+import { cssGradient, DEPTH_MAX, DEPTH_STOPS, SPEED_MAX, SPEED_STOPS } from '@/rendering/sim/water/waterColors';
 
 /** Simulation view options: damage colors, wind visualization (mode, height, legend). */
 export function OverlayToggles() {
@@ -18,6 +19,8 @@ export function OverlayToggles() {
   const v = useViewStore.getState();
   const quake = useViewStore((s) => s.quakeViz);
   const hasQuake = useSimStore((s) => s.quake !== null);
+  const hasFlood = useSimStore((s) => s.flood !== null);
+  const flood = useViewStore((s) => s.floodViz);
   const gradient = `linear-gradient(90deg, ${WIND_COLOR_STOPS.map(([s, c]) => `${c} ${(s / 60) * 100}%`).join(', ')})`;
   return (
     <div
@@ -66,6 +69,42 @@ export function OverlayToggles() {
           </div>
           <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.viz.note')}</span>
         </div>
+      )}
+      {hasFlood && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9fd3ff', marginTop: 2 }}>{t('overlay.flood')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="flood-overlay">
+            <Segmented
+              size="small"
+              value={flood.mode}
+              onChange={(m) => v.setFloodViz({ mode: m })}
+              options={[
+                { value: 'normal', label: t('overlay.flood.normal') },
+                { value: 'depth', label: t('overlay.flood.depth') },
+                { value: 'flow', label: t('overlay.flood.flow') },
+                { value: 'speed', label: t('overlay.flood.speed') },
+              ]}
+            />
+            <Toggle checked={flood.arrows} onChange={(b) => v.setFloodViz({ arrows: b })} label={t('overlay.flood.arrows')} />
+            {(flood.mode === 'depth' || flood.mode === 'normal') && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: flood.mode === 'depth' ? cssGradient(DEPTH_STOPS, DEPTH_MAX) : 'linear-gradient(90deg, #6fb7cf, #0b2d55)' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>0</span><span>0.5</span><span>1.2</span><span>2</span><span>3+ m</span>
+                </div>
+              </div>
+            )}
+            {(flood.mode === 'speed' || flood.mode === 'flow' || flood.arrows) && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: cssGradient(SPEED_STOPS, SPEED_MAX) }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>0</span><span>0.8</span><span>1.5</span><span>2.2</span><span>3+ m/s</span>
+                </div>
+              </div>
+            )}
+            <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.flood.note')}</span>
+          </div>
+        </>
       )}
       {hasQuake && (
         <>

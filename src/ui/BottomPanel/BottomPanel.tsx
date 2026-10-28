@@ -3,6 +3,7 @@ import { useT } from '@/i18n/i18n';
 import { Timeline } from '@/ui/Timeline/Timeline';
 import { WindForm } from './WindForm';
 import { EarthquakeForm } from './EarthquakeForm';
+import { FloodForm } from './FloodForm';
 import { Seismogram } from '@/ui/Timeline/Seismogram';
 import { Icon } from '@/ui/common/Icon';
 import eq from './EarthquakeForm.module.css';
@@ -11,11 +12,12 @@ import styles from './BottomPanel.module.css';
 
 const KEY = 'ds.bottomHeight';
 const TAB_KEY = 'ds.hazardTab';
-type HazardTab = 'wind' | 'earthquake';
+type HazardTab = 'wind' | 'earthquake' | 'flood';
 
 function initialTab(): HazardTab {
   try {
-    return localStorage.getItem(TAB_KEY) === 'earthquake' ? 'earthquake' : 'wind';
+    const v = localStorage.getItem(TAB_KEY);
+    return v === 'earthquake' || v === 'flood' ? v : 'wind';
   } catch {
     return 'wind';
   }
@@ -50,6 +52,9 @@ export function BottomPanel() {
       </button>
       <button role="tab" className={eq.tab} aria-selected={tab === 'earthquake'} onClick={() => setTab('earthquake')}>
         <Icon name="quake" size={13} /> {t('hazard.tab.earthquake')}
+      </button>
+      <button role="tab" className={eq.tab} aria-selected={tab === 'flood'} onClick={() => setTab('flood')}>
+        <Icon name="water" size={13} /> {t('hazard.tab.flood')}
       </button>
     </span>
   );
@@ -89,7 +94,7 @@ export function BottomPanel() {
       <Seismogram />
       <div className={styles.body}>
         <div className={styles.col}>
-          {tab === 'wind' ? <WindForm tabs={tabs} /> : <EarthquakeForm tabs={tabs} />}
+          {tab === 'wind' ? <WindForm tabs={tabs} /> : tab === 'earthquake' ? <EarthquakeForm tabs={tabs} /> : <FloodForm tabs={tabs} />}
         </div>
         <div className={styles.col}>
           <CommandPanel />

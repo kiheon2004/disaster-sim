@@ -6,6 +6,8 @@ import * as actions from './actions';
 import { useViewStore } from '@/rendering/viewStore';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
+import { waterRenderStats } from '@/rendering/sim/water/WaterLayer';
+import { simProfiler } from '@/simulation/profiling/SimProfiler';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -16,5 +18,7 @@ export function installDevtools() {
     view: useViewStore,
     sim: simulationController,
     simStore: useSimStore,
+    waterRenderStats,
+    profiler: simProfiler,
   };
 }
