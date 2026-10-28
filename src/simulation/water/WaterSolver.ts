@@ -26,6 +26,9 @@
  *    Δt_sub ≤ CFL·Δx / max(√(g·h_f) + |u|) (Courant number 0.7).
  *  - determinism: fixed iteration order, no randomness, Float64 state.
  *
+ * Multi-hazard terms (Phase 15, only with interactions on, see WaterForcing): surface wind
+ * stress τ/ρ_w on faces deeper than 5 cm, and the inertial load of the shaking ground −h·Δv_g.
+ *
  * Performance: only the bounding box of cells that ever held water (+1 cell ring) is swept;
  * all buffers are preallocated (no allocation per step).
  */
@@ -36,6 +39,8 @@ import type { ResolvedBoundary, WaterForcing } from './WaterForcing';
 import { CFL, FLOOD_DEPTH, FROUDE_MAX, H_FLOW_MIN, MAX_SUBSTEPS, OPEN_EDGE_SLOPE, THETA, WET_DEPTH } from './waterParams';
 
 const G = GRAVITY;
+/** Wind stress acts only on water at least this deep (thin sheets are friction-dominated). */
+export const STRESS_MIN_DEPTH = 0.05;
 
 /*
  * ∛x for the friction term hf^(7/3) = hf²·∛hf. Math.cbrt costs ~25 ns in the face loop
@@ -72,6 +77,8 @@ export class WaterSolver {
   minDt = 0;
   /** Set when MAX_SUBSTEPS was hit (should never happen in practice). */
   saturated = false;
+  /** Duration of the current step() call (the ground-velocity change is spread over it). */
+  private callDt = 0;
 
   constructor(readonly field: WaterField, readonly forcing: WaterForcing) {
     this.rowOld = new Float64Array(field.nx);
@@ -120,6 +127,7 @@ export class WaterSolver {
   step(dt: number) {
     const f = this.field;
     let remaining = dt;
+    this.callDt = dt;
     let n = 0;
     this.minDt = dt;
     this.saturated = false;
@@ -267,6 +275,16 @@ export class WaterSolver {
     const fr2 = FROUDE_MAX * FROUDE_MAX * G;
     let hfMax = 0;
     let uMax = 0;
+    // Interaction terms (Phase 15), all zero in single-hazard runs → identical arithmetic path.
+    const ws = this.forcing.windStress;
+    const gdv = this.forcing.groundDv;
+    const share = this.callDt > 0 ? dt / this.callDt : 0;
+    const sX = ws[0] * dt;
+    const sZ = ws[1] * dt;
+    const gX = gdv[0] * share;
+    const gZ = gdv[1] * share;
+    const extX = sX !== 0 || gX !== 0;
+    const extZ = sZ !== 0 || gZ !== 0;
 
     // x faces, row by row (face k lies between cells k−1 and k).
     for (let iz = za; iz <= zb; iz++) {
@@ -291,7 +309,9 @@ export class WaterSolver {
             const q0 = th * old + th2 * (prevOld + qx[fi + 1]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            qn = ((q0 - slopeK * hf * (eR - eL)) * H) / (H + gdt * 0.5 * (n2[L] + n2[R]) * aq);
+            let num = q0 - slopeK * hf * (eR - eL);
+            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
+            qn = (num * H) / (H + gdt * 0.5 * (n2[L] + n2[R]) * aq);
             // Froude limiter: q² ≤ Fr²·g·hf³
             const lim = fr2 * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
@@ -329,7 +349,9 @@ export class WaterSolver {
             const q0 = th * old + th2 * (rowOld[ix] + qz[fi + nx]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            qn = ((q0 - slopeK * hf * (eB - eT)) * H) / (H + gdt * 0.5 * (n2[T] + n2[B]) * aq);
+            let num = q0 - slopeK * hf * (eB - eT);
+            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
+            qn = (num * H) / (H + gdt * 0.5 * (n2[T] + n2[B]) * aq);
             const lim = fr2 * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             if (hf > hfMax) hfMax = hf;

@@ -15,6 +15,8 @@ import type { Hazard } from '../analysis/DamageEvent';
 export class DamageSystem implements SimulationSystem {
   readonly name = 'damage';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['damage', 'structure', 'water', 'poses', 'airflow'] as const;
+  readonly writes = ['damage', 'debris', 'particles'] as const;
 
   update(ctx: SystemContext, dt: number) {
     for (const e of ctx.runtime.entities.values()) {

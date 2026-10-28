@@ -6,6 +6,8 @@ const OUT_OF_WORLD = 800;
 export class DebrisSystem implements SimulationSystem {
   readonly name = 'debris';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['debris', 'poses'] as const;
+  readonly writes = ['debris'] as const;
 
   update({ runtime, physics, env }: SystemContext) {
     const before = runtime.debris.length;

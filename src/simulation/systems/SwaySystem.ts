@@ -8,6 +8,8 @@ import type { SimulationSystem, SystemContext } from './SimulationSystem';
 export class SwaySystem implements SimulationSystem {
   readonly name = 'sway';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['airflow', 'poses'] as const;
+  readonly writes = ['damage'] as const;
 
   update({ env, runtime, time }: SystemContext, dt: number) {
     const global = env.wind.flow();

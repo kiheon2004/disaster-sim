@@ -10,6 +10,11 @@ export interface ParsedCommand {
   notes: I18nMessage[];
   /** Seconds from "now" until an event starts ("10초 후 …"). */
   delay?: number;
+  /**
+   * Start relative to another phenomenon (Phase 15): "10 s after the typhoon begins". Resolved
+   * at dispatch against the same command batch, then against the scheduled events.
+   */
+  after?: { type: string; anchor: 'start' | 'end'; offset: number };
 }
 
 export interface ParseResult {

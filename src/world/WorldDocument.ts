@@ -5,16 +5,18 @@ import { AIR_DENSITY, GRAVITY, WORLD_SIZE } from '@/core/units';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
+import { defaultExperiment } from '@/phenomena/types';
 
 /**
+ * 5 = Phase 15 (experiment: phenomenon instances + timing + seeds; interaction setting).
  * 4 = Phase 14 (water settings, saved flood scenario, lowland preset).
  * 3 = Phase 13 (soil layer, seismic properties, saved earthquake scenario).
  * 2 = Phase 12 (heightfield terrain). 1 = Phase 0–11 (flat). Older files are migrated on load.
  */
-export const SCHEMA_VERSION = 4 as const;
+export const SCHEMA_VERSION = 5 as const;
 
 export function defaultScenario(): ScenarioSettings {
-  return { earthquake: null, flood: defaultFloodScenario() };
+  return { earthquake: null, flood: defaultFloodScenario(), experiment: defaultExperiment() };
 }
 
 export function createEmptyDocument(name = ''): WorldDocument {

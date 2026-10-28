@@ -74,6 +74,12 @@ export class StructuralModel {
   /** Ground acceleration input (world x, z), set by the system before step(). */
   agx = new Float64Array(0);
   agz = new Float64Array(0);
+  /**
+   * External quasi-static force on the top lumped story (world x, z; N) — the mean wind load
+   * during an earthquake (Phase 15 multi-hazard interaction). 0 = none (bit-identical path).
+   */
+  fwx = new Float64Array(0);
+  fwz = new Float64Array(0);
   /** Outputs (world axes): top / foundation displacement relative to the ground (2 per unit). */
   top = new Float64Array(0);
   base = new Float64Array(0);
@@ -126,7 +132,7 @@ export class StructuralModel {
     this.off = new Int32Array(U); this.n = new Int32Array(U); this.wMax = f(U);
     this.cos = f(U); this.sin = f(U); this.driftU = f(U); this.hasF = new Uint8Array(U);
     this.fK = f(U); this.fC = f(U); this.fSlip = f(2 * U); this.fP = f(2 * U);
-    this.agx = f(U); this.agz = f(U); this.top = f(2 * U); this.base = f(2 * U);
+    this.agx = f(U); this.agz = f(U); this.fwx = f(U); this.fwz = f(U); this.top = f(2 * U); this.base = f(2 * U);
     this.drift = f(U); this.peakDrift = f(U); this.damage = f(U); this.otm = f(2 * U); this.baseShear = f(U);
     this.m = f(D); this.k = f(D); this.c = f(D); this.fy = f(2 * D); this.pdel = f(D); this.hs = f(D); this.alpha = f(D); this.z = f(D);
     this.u = f(2 * D); this.v = f(2 * D); this.p = f(2 * D); this.cum = f(D); this.thMax = f(D); this.storyD = f(D);
@@ -191,6 +197,19 @@ export class StructuralModel {
     this.inits = [];
   }
 
+  /**
+   * Reduce a unit's yield strength by a factor (0–1] — damage it already carries from another
+   * hazard when the earthquake starts (Phase 15, residual strength).
+   */
+  scaleStrength(ui: number, factor: number) {
+    if (factor >= 1) return;
+    const o = this.off[ui];
+    for (let j = 1; j <= this.n[ui]; j++) {
+      this.fy[2 * (o + j)] *= factor;
+      this.fy[2 * (o + j) + 1] *= factor;
+    }
+  }
+
   /** Advance every unit by dt with the ground accelerations in agx / agz. */
   step(dt: number) {
     for (let ui = 0; ui < this.units; ui++) this.stepUnit(ui, dt);
@@ -208,6 +227,10 @@ export class StructuralModel {
     const gz = this.agz[ui];
     const agL0 = gx * cs - gz * sn;
     const agL1 = gx * sn + gz * cs;
+    const wx = this.fwx[ui];
+    const wz = this.fwz[ui];
+    const extL0 = wx * cs - wz * sn;
+    const extL1 = wx * sn + wz * cs;
     const hasF = this.hasF[ui] === 1;
     const F = this.force;
     const A = this.accL;
@@ -257,6 +280,8 @@ export class StructuralModel {
           A[0] = 0;
         }
         for (let j = 1; j <= n; j++) A[j] = -ag - (F[j] - F[j + 1]) / m[o + j];
+        const ext = ax === 0 ? extL0 : extL1;
+        if (ext !== 0) A[n] += ext / m[o + n];
         // Semi-implicit Euler: velocities, then positions.
         for (let j = hasF ? 0 : 1; j <= n; j++) {
           const i2 = 2 * (o + j) + ax;

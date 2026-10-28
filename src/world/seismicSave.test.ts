@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createEmptyDocument, createWorldObject, nextSerial, SCHEMA_VERSION } from './WorldDocument';
 import { defaultFloodScenario } from '@/core/model';
+import { defaultExperiment } from '@/phenomena/types';
 import { parseDocument, serializeDocument } from './serialization';
 import { sampleTown } from './sampleScene';
 import { generateTerrain } from '@/terrain/TerrainPresets';
@@ -63,7 +64,7 @@ describe('save / load (schema v3)', () => {
   it('an all-default soil layer is not stored vertex by vertex', () => {
     const json = JSON.parse(serializeDocument(createEmptyDocument('x')));
     expect(json.terrain.soil).toBeNull();
-    expect(json.scenario).toEqual({ earthquake: null, flood: defaultFloodScenario() });
+    expect(json.scenario).toEqual({ earthquake: null, flood: defaultFloodScenario(), experiment: defaultExperiment() });
   });
 
   it('invalid seismic values are clamped / defaulted instead of failing the file', () => {

@@ -21,6 +21,7 @@ import type { EventSpec } from '@/events/specs';
 import { RuleBasedParser } from '@/commands/RuleBasedParser';
 import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
 import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
+import { phenomena } from '@/phenomena/registry';
 import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
 
 /** Select an object and center the camera on it (its live pose while simulating). */
@@ -238,6 +239,7 @@ export function clearWaterState() {
 export const commandParser: CommandParser = new RuleBasedParser();
 
 const commandTarget: CommandTarget = {
+  findScheduled: (type, anchor) => (simulationController.isLoaded() ? simulationController.scheduledTime(type, anchor) : null),
   runEvents: async (events) => {
     if (useEditorStore.getState().mode === 'editor') await enterSimulation();
     if (!simulationController.isLoaded()) return;
@@ -265,6 +267,12 @@ export function parseCommand(input: string, defaults: ParseDefaults): Promise<Pa
 /** Parse + execute. Returns the parse result for display. */
 export async function executeCommand(input: string, defaults: ParseDefaults): Promise<ParseResult> {
   const result = await commandParser.parse(input, defaults);
-  if (result.ok && result.commands.length) await dispatchCommands(result.commands, commandTarget);
+  if (result.ok && result.commands.length) {
+    const report = await dispatchCommands(result.commands, commandTarget);
+    for (const u of report.unresolved) {
+      const def = phenomena.get(u.type);
+      toast('warn', { key: 'cmd.warn.noRef', params: { name: def ? t(def.labelKey) : u.type, s: u.offset } });
+    }
+  }
   return result;
 }

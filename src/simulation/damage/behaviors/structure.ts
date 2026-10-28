@@ -7,6 +7,7 @@ import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris } from '../spawn';
 import { seismicHealth, seismicLevel } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
+import { integrityOf } from '../../interactions/integrity';
 import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 
 /**
@@ -58,7 +59,14 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   }
 
   const healthBefore = e.health;
-  e.health = applyFatigue(e.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+  if (ctx.interactions) {
+    // Phase 15: own wind-fatigue channel (see building.ts / interactions/integrity.ts).
+    const ig = integrityOf(e);
+    ig.windHealth = applyFatigue(ig.windHealth, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+    e.health = ig.windHealth;
+  } else {
+    e.health = applyFatigue(e.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+  }
   if (e.seismic) e.health = Math.min(e.health, seismicHealth(e.seismic));
   if (e.flood) e.health = Math.min(e.health, e.flood.health);
   if (e.health <= 0) {

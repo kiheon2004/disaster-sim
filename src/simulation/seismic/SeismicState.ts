@@ -14,6 +14,7 @@ import { foundationPlinth } from '@/terrain/groundPlacement';
 import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { createGroundMotionSample, type GroundMotionSample } from './GroundMotionField';
 import { StructuralModel } from './StructuralModel';
+import { residualStrength } from '../interactions/integrity';
 import { FOUNDATION_TYPES, STRUCTURAL_SYSTEMS, collapseDrift, infraProps, naturalPeriod, seismicOf, type DriftThresholds } from './structuralProps';
 
 export interface SeismicEntityState {
@@ -211,7 +212,14 @@ export function buildSeismicRuntime(runtime: SimulationRuntime, terrain: Terrain
   return { model, units, entities, wasActive: false, freeVibration: 0, steps: 0, byId };
 }
 
-/** Get (or lazily build) the seismic runtime. */
-export function ensureSeismicRuntime(runtime: SimulationRuntime, terrain: TerrainSampler, gravity: number): SeismicRuntime {
-  return (runtime.seismic ??= buildSeismicRuntime(runtime, terrain, gravity));
+/**
+ * Get (or lazily build) the seismic runtime. With multi-hazard interactions, structures that
+ * the wind or the water already damaged start the earthquake with reduced yield strength
+ * (residual strength, Phase 15).
+ */
+export function ensureSeismicRuntime(runtime: SimulationRuntime, terrain: TerrainSampler, gravity: number, interactions = false): SeismicRuntime {
+  if (runtime.seismic) return runtime.seismic;
+  const sr = buildSeismicRuntime(runtime, terrain, gravity);
+  if (interactions) sr.units.forEach((e, ui) => sr.model.scaleStrength(ui, residualStrength(e, 'earthquake')));
+  return (runtime.seismic = sr);
 }

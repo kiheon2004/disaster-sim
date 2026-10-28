@@ -79,6 +79,12 @@ export interface RuntimeEntity {
   lastHazard: Hazard | null;
   /** Earthquake response state; created when the first earthquake starts (Phase 13). */
   seismic?: SeismicEntityState;
+  /** Unified damage state: own wind fatigue + ordered damage history (Phase 15). */
+  integrity?: import('./interactions/integrity').IntegrityState;
+  /** Environmental exposure (people, Phase 15). */
+  exposure?: import('./response/exposure').ExposureState;
+  /** Last force per source from the ForceLedger (inspector breakdown, Phase 15). */
+  forces?: Float64Array;
   /** Flood exposure / response state; created when the water model activates (Phase 14). */
   flood?: FloodEntityState;
   components: RuntimeComponent[];

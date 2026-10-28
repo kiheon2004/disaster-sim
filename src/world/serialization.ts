@@ -3,6 +3,7 @@ import { SCHEMA_VERSION, defaultScenario } from './WorldDocument';
 import { DEFAULT_WIND_MODEL, defaultFloodScenario, defaultSimulationSettings, defaultWaterSettings, type WaterSettings, type WorldDocument, type WorldObject } from '@/core/model';
 import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
 import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from '@/events/flood/floodSchema';
+import { parseExperiment } from '@/phenomena/experimentSchema';
 import { normalizeSeismic } from '@/simulation/seismic/structuralProps';
 import { getDefinition, hasDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
@@ -97,7 +98,7 @@ function normalizeWater(raw: z.infer<typeof waterSchema> | undefined): WaterSett
 }
 
 const documentSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -118,6 +119,8 @@ const documentSchema = z.object({
         }).partial().optional(),
         // Phase 14: water model settings (absent before v4 → defaults).
         water: waterSchema.optional().catch(undefined),
+        // Phase 15: multi-hazard interactions (absent before v5 → off, see parseDocument).
+        interactions: z.object({ enabled: z.boolean() }).optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -128,6 +131,8 @@ const documentSchema = z.object({
   scenario: z.object({
     earthquake: earthquakeEventSchema.nullable().catch(null).default(null),
     flood: floodScenarioSchema.optional().catch(undefined),
+    // Phase 15: experiment plan, validated per instance in parseExperiment().
+    experiment: z.unknown().optional(),
   }).partial().optional(),
 });
 
@@ -149,7 +154,9 @@ export function serializeDocument(doc: WorldDocument, pretty = true): string {
  * Migration (automatic, any older schema → v4):
  *   v1 → flat terrain;  v1/v2 → default soil layer (dense soil), default structural and
  *   foundation properties on buildings, empty scenario;  v1–v3 → default water settings
- *   (all edges 'auto', infiltration on, 30 mm/h drainage) and an empty flood scenario.
+ *   (all edges 'auto', infiltration on, 30 mm/h drainage) and an empty flood scenario;
+ *   v1–v4 → empty experiment and multi-hazard interactions OFF, so a combined scenario saved
+ *   before Phase 15 reproduces exactly (the user can switch interactions on).
  *   Positions, physics, terrain heights and surfaces are kept exactly, so wind and earthquake
  *   results of old projects do not change.
  */
@@ -197,7 +204,12 @@ export function parseDocument(json: string): LoadResult {
   const sim = res.data.settings.simulation;
   const settings = {
     ...res.data.settings,
-    simulation: { seed: sim?.seed ?? defaults.seed, wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) }, water: normalizeWater(sim?.water) },
+    simulation: {
+      seed: sim?.seed ?? defaults.seed,
+      wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) },
+      water: normalizeWater(sim?.water),
+      interactions: { enabled: sim?.interactions?.enabled ?? res.data.schemaVersion >= 5 },
+    },
   };
   const rawFlood = res.data.scenario?.flood;
   const floodDefaults = defaultFloodScenario();
@@ -207,7 +219,7 @@ export function parseDocument(json: string): LoadResult {
     sources: rawFlood?.sources ?? [],
     enabled: { ...floodDefaults.enabled, ...(rawFlood?.enabled ?? {}) },
   };
-  const scenario = { ...defaultScenario(), earthquake: res.data.scenario?.earthquake ?? null, flood };
+  const scenario = { ...defaultScenario(), earthquake: res.data.scenario?.earthquake ?? null, flood, experiment: parseExperiment(res.data.scenario?.experiment) };
   return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped };
 }
 

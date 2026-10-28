@@ -5,6 +5,7 @@
  */
 import type { EntityId, ObjectType, Transform, Vec3 } from './types';
 import type { EarthquakeEventSpec, RainEventSpec, RisingWaterEventSpec, WaterSourceEventSpec } from '@/events/specs';
+import type { ExperimentSettings } from '@/phenomena/types';
 
 export interface PhysicalProperties {
   /** kg */
@@ -144,6 +145,14 @@ export interface SimulationSettings {
   wind: WindModelSettings;
   /** Flood / water model settings (Phase 14). Missing in older files → defaults. */
   water: WaterSettings;
+  /**
+   * Multi-hazard interaction models (Phase 15, docs/PHENOMENA.md §6–7): wind stress on water,
+   * ground shaking on water, wind on the emerged part of floating bodies, residual strength
+   * after damage by another hazard, saturated-ground bearing, wind load inside the earthquake
+   * structural model. Off = hazards act independently (Phase 13–14 behavior, bit-identical).
+   * New projects: on. Projects saved before schema v5: off (their results stay reproducible).
+   */
+  interactions: { enabled: boolean };
 }
 
 // ── Flood: water model settings (Phase 14, approximate model parameters) ─────
@@ -204,7 +213,7 @@ export const DEFAULT_WIND_MODEL: WindModelSettings = {
 };
 
 export function defaultSimulationSettings(): SimulationSettings {
-  return { seed: 1234, wind: { ...DEFAULT_WIND_MODEL }, water: defaultWaterSettings() };
+  return { seed: 1234, wind: { ...DEFAULT_WIND_MODEL }, water: defaultWaterSettings(), interactions: { enabled: true } };
 }
 
 export interface WorldSettings {
@@ -282,10 +291,12 @@ export interface ScenarioSettings {
   /** The configured earthquake (run from the earthquake form / commands), or none. */
   earthquake: EarthquakeEventSpec | null;
   flood: FloodScenario;
+  /** Multi-phenomenon experiment plan (Phase 15). */
+  experiment: ExperimentSettings;
 }
 
 export interface WorldDocument {
-  schemaVersion: 4;
+  schemaVersion: 5;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;

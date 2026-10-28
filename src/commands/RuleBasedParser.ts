@@ -13,7 +13,8 @@ import { SIM_SPEEDS, type SimSpeed } from '@/core/units';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { WindEventSpec } from '@/events/specs';
 import type { CommandParser, ParseDefaults, ParseResult, ParsedCommand } from './CommandParser';
-import { simulationCommandSchema, type UnsupportedRequest } from './schema';
+import { simulationCommandSchema } from './schema';
+import { phenomena } from '@/phenomena/registry';
 import { isEarthquakeClause, parseEarthquake } from './earthquakeParser';
 import { floodKind, parseFlood } from './floodParser';
 
@@ -47,7 +48,8 @@ export function normalize(input: string): string {
 /** Split into clauses on strong sequence separators. */
 export function splitClauses(s: string): string[] {
   return s
-    .split(/\n|;|\.\s+|,?\s*(?:그리고 나서|그런 다음|그 다음에?|그다음에?|그 후에|그리고|and then|after that|afterwards|then)\s+/)
+    // Phase 15: also after a Korean connective verb ending ("태풍을 발생시키고 10초 후 지진…").
+    .split(/\n|;|\.\s+|,?\s*(?:그리고 나서|그런 다음|그 다음에?|그다음에?|그 후에|그리고|and then|after that|afterwards|then)\s+|(?<=(?:시키|일으키|내리|올리|만들))고\s+/)
     .map((c) => c.trim().replace(/[.,]+$/, ''))
     .filter(Boolean);
 }
@@ -186,16 +188,31 @@ const PAUSE = /일시\s*정지|일시정지|멈춰|멈추|정지|중지|pause|ha
 const PLAY = /재생|시작|계속|재개|실행|play|start|resume|continue|run|go\b/;
 const SIM_SPEED_CTX = /속도|배속|speed|x\b|×|slow|fast|빠르게|느리게|슬로우/;
 
-interface Hazard {
-  event: UnsupportedRequest['event'];
-  re: RegExp;
+// Phase 15: hazards that are recognized but not simulated come from the PhenomenonRegistry
+// (planned phenomena: tornado, sinkhole, meteor, black hole …) — they are never executed.
+
+/**
+ * Relative start ("10초 후 지진 … 태풍이 시작되고", "10 seconds after the typhoon begins"):
+ * returns the clause without the relation and the reference (phenomenon type, anchor, offset s).
+ */
+export function extractAfter(clause: string): { rest: string; after?: { type: string; anchor: 'start' | 'end'; offset: number } } {
+  const typeOf = (word: string) => phenomena.listImplemented().find((d) => d.keywords.test(word))?.type;
+  const unit = (u: string) => (/^(?:분|min)/.test(u) ? 60 : 1);
+  let m = clause.match(/(\S+?)(?:이|가|을|를|의)?\s*(시작|발생|끝|종료)[가-힣]*\s*(\d+(?:\.\d+)?)\s*(초|분)\s*(?:후|뒤)에?/);
+  if (m) {
+    const type = typeOf(m[1]);
+    if (type) return { rest: clause.replace(m[0], ' ').trim(), after: { type, anchor: /끝|종료/.test(m[2]) ? 'end' : 'start', offset: parseFloat(m[3]) * unit(m[4]) } };
+  }
+  m = clause.match(/(?:(\d+(?:\.\d+)?)\s*(seconds?|secs?|s|minutes?|mins?)\s+)?after\s+(?:the\s+)?([a-z][a-z\s]*?)\s+(begins|starts|started|start|ends|ended|stops|stopped|finishes|is over)\b/);
+  if (m) {
+    const type = typeOf(m[3]);
+    if (type) {
+      const offset = m[1] ? parseFloat(m[1]) * unit(m[2]) : 0;
+      return { rest: clause.replace(m[0], ' ').trim(), after: { type, anchor: /end|stop|finish|over/.test(m[4]) ? 'end' : 'start', offset } };
+    }
+  }
+  return { rest: clause };
 }
-const HAZARDS: Hazard[] = [
-  { event: 'tsunami', re: /쓰나미|지진해일|tsunami/ },
-  { event: 'snow', re: /폭설|눈보라|눈이|눈을|snow|blizzard/ },
-  { event: 'fire', re: /화재|산불|불이|불을|불길|fire|blaze|wildfire|burn/ },
-  { event: 'explosion', re: /폭발|explosion|explode|blast|detonat/ },
-];
 
 const CATEGORY_SPEED: [RegExp, number, number][] = [
   // [pattern, speed m/s, default gust]
@@ -331,9 +348,22 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
   const clauses = splitClauses(text);
   let lastWind: { spec: WindEventSpec; delay: number } | null = null;
 
-  for (const clause of clauses) {
+  for (const raw of clauses) {
+    // Phase 15: a phenomenon that is not implemented is reported, never executed.
+    const planned = phenomena.matchPlanned(raw);
+    if (planned) {
+      result.unsupported.push({ event: planned.type, params: {} });
+      result.warnings.push({ key: 'parse.unsupported.planned' });
+      continue;
+    }
+    const rel = extractAfter(raw);
+    const clause = rel.rest;
+    const firstCommand = result.commands.length;
     const tokens = tokenizeNumbers(clause);
     const notes: I18nMessage[] = [];
+    const attach = () => {
+      if (rel.after) for (const c of result.commands.slice(firstCommand)) if (c.command.kind === 'event') c.after = rel.after;
+    };
     const windish = WIND_WORDS.test(clause) || tokens.some((t) => t.kind === 'speed');
 
     // 1) Earthquake (Phase 13)
@@ -344,6 +374,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
         if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
         else result.commands.push({ command: check.data, source: clause, notes, delay: parsed.delay } satisfies ParsedCommand);
       }
+      attach();
       continue;
     }
 
@@ -357,7 +388,10 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
         if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
         else result.commands.push({ command: check.data, source: clause, notes, delay: parsed.delay } satisfies ParsedCommand);
       }
-      if (!(water === 'rain' && WIND_WORDS.test(clause) && /태풍|폭풍|강풍|바람|typhoon|hurricane|storm|wind|gale/.test(clause))) continue;
+      if (!(water === 'rain' && WIND_WORDS.test(clause) && /태풍|폭풍|강풍|바람|typhoon|hurricane|storm|wind|gale/.test(clause))) {
+        attach();
+        continue;
+      }
       const windNotes: I18nMessage[] = [];
       const w = parseWind(clause, originals, tokens.filter((t) => t.kind !== 'rainRate' && t.kind !== 'mm'), defaults, lastWind, windNotes, result);
       if (w) {
@@ -367,23 +401,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
           lastWind = w;
         }
       }
-      continue;
-    }
-
-    // 3) Hazards the simulator does not support yet
-    const hazard = HAZARDS.find((h) => h.re.test(clause));
-    if (hazard && !windish) {
-      const params: Record<string, number> = {};
-      const mm = tokens.find((t) => t.kind === 'mm');
-      if (mm) params.mmPerHour = mm.value;
-      const cm = tokens.find((t) => t.kind === 'cm');
-      if (cm) params.cm = cm.value;
-      const mag = clause.match(/(?:규모|magnitude|\bm)\s*(\d+(?:\.\d+)?)/);
-      if (mag) params.magnitude = parseFloat(mag[1]);
-      const lvl = tokens.find((t) => t.kind === 'meter');
-      if (lvl) params.waterLevel = lvl.value;
-      result.unsupported.push({ event: hazard.event, params });
-      result.warnings.push({ key: `parse.unsupported.${hazard.event}` });
+      attach();
       continue;
     }
 
@@ -401,6 +419,7 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
           lastWind = { spec, delay };
         }
       }
+      attach();
       continue;
     }
 

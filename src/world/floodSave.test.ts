@@ -35,7 +35,7 @@ describe('save / load (schema v4: water settings + flood scenario)', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.doc.schemaVersion).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(4);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
     expect(res.doc.settings.simulation.water).toEqual(d.settings.simulation.water);
     expect(res.doc.scenario.flood).toEqual(d.scenario.flood);
   });

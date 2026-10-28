@@ -25,6 +25,13 @@ const SHAKE_FULL = 0.35 * GRAVITY;
 export class SeismicForceSystem implements SimulationSystem {
   readonly name = 'groundMotion';
   readonly phase = 'prePhysics' as const;
+  readonly reads = ['groundMotion', 'poses'] as const;
+  readonly writes = ['forces', 'structure'] as const;
+  readonly lagged = ['poses'] as const;
+
+  isActive(ctx: SystemContext) {
+    return ctx.env.groundMotion.active || ctx.runtime.seismic?.wasActive === true;
+  }
 
   update(ctx: SystemContext, dt: number) {
     const gm = ctx.env.groundMotion;
@@ -33,7 +40,7 @@ export class SeismicForceSystem implements SimulationSystem {
       if (rt.seismic?.wasActive) this.settle(ctx, dt);
       return;
     }
-    const sr = ensureSeismicRuntime(rt, ctx.env.terrain, GRAVITY);
+    const sr = ensureSeismicRuntime(rt, ctx.env.terrain, GRAVITY, ctx.interactions);
     sr.wasActive = true;
     const { physics, time } = ctx;
     const ease = Math.min(1, dt * 10);
@@ -55,7 +62,7 @@ export class SeismicForceSystem implements SimulationSystem {
       force[0] = -m * ax;
       force[1] = -m * g.a[1];
       force[2] = -m * az;
-      physics.addForce(e.body, force);
+      ctx.forces.force('groundMotion', e.body, force, e);
     }
     for (const d of rt.debris) {
       const g = gm.sample(d.pose.position[0], d.pose.position[2], time, debrisMotion);
@@ -63,7 +70,7 @@ export class SeismicForceSystem implements SimulationSystem {
       force[0] = -m * g.a[0];
       force[1] = -m * g.a[1];
       force[2] = -m * g.a[2];
-      physics.addForce(d.body, force);
+      ctx.forces.force('groundMotion', d.body, force);
     }
   }
 

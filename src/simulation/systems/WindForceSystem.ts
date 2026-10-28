@@ -4,6 +4,7 @@ import { AIR_DENSITY, WIND_FORCE_SCALE } from '@/core/units';
 import { boxProjectedArea, loadRatio } from '../damage/windLoad';
 import { createLocalWind } from '../wind/SpatialWindField';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
+import { residualStrength } from '../interactions/integrity';
 
 const conj = (q: Quat): Quat => [-q[0], -q[1], -q[2], q[3]];
 
@@ -34,11 +35,25 @@ function conjInto(q: Quat): Quat {
 export class WindForceSystem implements SimulationSystem {
   readonly name = 'windForce';
   readonly phase = 'prePhysics' as const;
+  readonly reads = ['airflow', 'poses', 'water'] as const;
+  readonly writes = ['forces'] as const;
+  readonly lagged = ['poses', 'water'] as const;
+  /**
+   * Calm: sampling returns exact zeros, so one calm pass resets every entity's wind state and
+   * later calm steps would only rewrite the same zeros — they are skipped (earthquake- or
+   * flood-only runs no longer sample the wind field for every object each step).
+   */
+  private dirty = false;
 
-  update({ env, runtime, physics, time }: SystemContext) {
+  isActive(ctx: SystemContext) {
+    return ctx.env.wind.baseSpeed > 0.01 || this.dirty;
+  }
+
+  update({ env, runtime, physics, time, forces, interactions }: SystemContext) {
     const field = env.windField;
     const rho = env.airDensity || AIR_DENSITY;
     const calm = env.wind.baseSpeed <= 0.01;
+    this.dirty = !calm;
 
     for (const e of runtime.entities.values()) {
       if (e.def.inert) continue;
@@ -54,6 +69,9 @@ export class WindForceSystem implements SimulationSystem {
       const speed = lw.speed;
       e.windAtCop = speed;
       e.loadRatio = loadRatio(speed, e.source.physics.windResistance * e.strength);
+      // Residual strength (Phase 15): earthquake / flood damage lowers the capacity the wind
+      // load is compared with (load ∝ v², capacity × (1 − 0.3·D)). Exactly 1 without them.
+      if (interactions && (e.seismic || e.flood)) e.loadRatio /= residualStrength(e, 'wind');
       if (e.loadRatio > e.peakLoadRatio) e.peakLoadRatio = e.loadRatio;
       if (speed > 0.05) {
         const inv = 1 / speed;
@@ -70,9 +88,12 @@ export class WindForceSystem implements SimulationSystem {
       if (rel < 0.05) continue;
       const dir = vScale(vRel, 1 / rel);
       // Silhouette area for the current orientation (a toppled car presents its roof, etc.).
-      const area = (e.source.physics.frontalAreaOverride ?? boxProjectedArea(e.dims, qRotate(conj(e.pose.quaternion), dir)) * e.areaFactor);
+      let area = (e.source.physics.frontalAreaOverride ?? boxProjectedArea(e.dims, qRotate(conj(e.pose.quaternion), dir)) * e.areaFactor);
+      // Wind + flood (Phase 15 interaction): only the part above the water catches the wind —
+      // the submerged part gets the water drag instead (WaterForceSystem). No double loading.
+      if (interactions && e.flood && e.flood.submerged > 0) area *= 1 - e.flood.submerged;
       const f = 0.5 * rho * e.source.physics.dragCoefficient * area * rel * rel * WIND_FORCE_SCALE;
-      physics.addForceAtPoint(e.body, vScale(dir, f), cop);
+      forces.forceAtPoint('wind', e.body, vScale(dir, f), cop, e);
     }
 
     if (calm) return;
@@ -86,7 +107,7 @@ export class WindForceSystem implements SimulationSystem {
       const f = 0.5 * rho * DEBRIS_CD * area * rel * rel * WIND_FORCE_SCALE;
       const force = vScale(dir, f);
       if (d.plate) force[1] += f * PLATE_LIFT * Math.min(1, Math.max(0, 1 - env.terrain.heightAboveGround(d.pose.position) / 60));
-      physics.addForceAtPoint(d.body, force, d.pose.position);
+      forces.forceAtPoint('wind', d.body, force, d.pose.position);
     }
   }
 }

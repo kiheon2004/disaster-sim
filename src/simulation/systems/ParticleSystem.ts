@@ -11,6 +11,8 @@ const scratch = createLocalWind();
 export class ParticleSystem implements SimulationSystem {
   readonly name = 'particles';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['particles', 'airflow'] as const;
+  readonly writes = ['particles'] as const;
   readonly interval = 2;
 
   private step = 0;

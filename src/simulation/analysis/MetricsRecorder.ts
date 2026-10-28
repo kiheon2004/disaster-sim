@@ -5,6 +5,7 @@ import { DamageState } from '../damage/DamageState';
 import type { DamageEventInput, DamageEventRecord } from './DamageEvent';
 import { SeismicRecorder, type EarthquakeMetrics } from './SeismicRecorder';
 import { FloodRecorder, type FloodMetrics } from './FloodRecorder';
+import { MilestoneRecorder } from './MilestoneRecorder';
 
 export interface SimulationMetrics {
   seed: number;
@@ -53,6 +54,8 @@ export class MetricsRecorder {
   readonly seismic = new SeismicRecorder();
   /** Water time series and peaks (Phase 14). */
   readonly flood = new FloodRecorder();
+  /** Experiment timeline milestones (Phase 15). */
+  readonly milestones = new MilestoneRecorder();
   private env: EnvironmentState | null = null;
 
   constructor(readonly seed: number) {}
@@ -89,12 +92,22 @@ export class MetricsRecorder {
       state: ev.state ?? e.state,
     };
     this.events.push(rec);
+    this.noteMilestone(rec);
     if (this.firstDamage === null) this.firstDamage = time;
     const b = Math.floor(time);
     while (this.histogram.length <= b) this.histogram.push(0);
     this.histogram[b]++;
     e.lastCause = ev.cause;
     e.lastHazard = rec.hazard;
+  }
+
+  private noteMilestone(r: DamageEventRecord) {
+    const ms = this.milestones;
+    const hz = r.hazard;
+    ms.once(`dmg:${hz}`, { time: r.time, kind: 'firstDamage', hazard: hz, subject: r.objectType, label: { key: 'milestone.firstDamage', params: { hazard: hz, event: r.eventType } } });
+    if (r.eventType === 'COLLAPSED' && r.objectType === 'building') ms.add({ time: r.time, kind: 'collapse', hazard: hz, subject: r.objectType, label: { key: 'milestone.collapse', params: { hazard: hz } } });
+    if (r.eventType === 'FALLEN') ms.once(`fall:${hz}`, { time: r.time, kind: 'firstFall', hazard: hz, subject: r.objectType, label: { key: 'milestone.firstFall', params: { hazard: hz } } });
+    if (r.eventType === 'FLOATED') ms.once('floated', { time: r.time, kind: 'floated', hazard: hz, subject: r.objectType, label: { key: 'milestone.floated' } });
   }
 
   /** Whether a specific event was already recorded for this entity in the current step. */
@@ -118,6 +131,8 @@ export class MetricsRecorder {
     this.seismic.sample(env, runtime, dt);
     this.env = env;
     this.flood.sample(env, runtime, dt);
+    const f = env.flood?.field;
+    if (f) this.milestones.floodArea(env.time, f.stats.floodedCells * f.cellArea);
   }
 
   summary(runtime: SimulationRuntime, time: number): SimulationMetrics {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { EntityId, Transform } from '@/core/types';
 import type { FloodScenario, FoundationSpec, ObjectParams, PhysicalProperties, StructuralSpec, TerrainData, TerrainPresetId, WaterSettings, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
 import { defaultFloodScenario, defaultWaterSettings } from '@/core/model';
+import { defaultExperiment, type ExperimentSettings } from '@/phenomena/types';
 import type { EarthquakeEventSpec } from '@/events/specs';
 import { normalizeSeismic, seismicOf } from '@/simulation/seismic/structuralProps';
 import { createId } from '@/core/id';
@@ -62,7 +63,9 @@ interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings> }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean }) => void;
+  /** The experiment plan (Phase 15). Not an undo step (like settings). */
+  setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
   updateSeismic: (id: EntityId, patch: { structure?: Partial<StructuralSpec>; foundation?: Partial<FoundationSpec> }, opts?: MutationOptions) => void;
   /** The earthquake saved with the project (null = none). Not an undo step (like settings). */
@@ -227,6 +230,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
               seed: patch.seed ?? cur.seed,
               wind: { ...cur.wind, ...(patch.wind ?? {}) },
               water: { ...(cur.water ?? defaultWaterSettings()), ...(patch.water ?? {}) },
+              interactions: { enabled: patch.interactions ?? cur.interactions?.enabled ?? true },
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },
@@ -245,6 +249,12 @@ export const useWorldStore = create<WorldState>((set, get) => {
     setEarthquakeScenario: (spec) => {
       const doc = get().doc;
       set({ doc: { ...doc, scenario: { ...doc.scenario, earthquake: spec ? { ...spec } : null }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
+    },
+
+    setExperiment: (patch) => {
+      const doc = get().doc;
+      const experiment = { ...(doc.scenario.experiment ?? defaultExperiment()), ...structuredClone(patch) };
+      set({ doc: { ...doc, scenario: { ...doc.scenario, experiment }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
     },
 
     setFloodScenario: (patch) => {

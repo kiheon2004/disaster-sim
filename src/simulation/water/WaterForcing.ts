@@ -77,6 +77,15 @@ export class WaterForcing {
   readonly sources: SourceForcing[] = [];
   /** Configured boundaries (resolved). */
   readonly base: Record<BoundarySide, ResolvedBoundary>;
+  /**
+   * Multi-hazard interactions (Phase 15), set by the WaterSolverSystem before each call:
+   *  - windStress: kinematic surface stress τ/ρ_w (m²/s², world x / z) from the wind
+   *  - groundDv:   change of the ground velocity over the call (m/s, world x / z) — in the
+   *                ground's frame the water receives the opposite momentum (sloshing / seiche)
+   * Both are exactly zero without wind / earthquake or with interactions off.
+   */
+  readonly windStress: [number, number] = [0, 0];
+  readonly groundDv: [number, number] = [0, 0];
   /** Event overrides (rising water). */
   readonly override: Partial<Record<BoundarySide, ResolvedBoundary & { owner: string }>> = {};
 

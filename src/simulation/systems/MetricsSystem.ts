@@ -1,6 +1,7 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { MetricsRecorder } from '../analysis/MetricsRecorder';
 import { DamageState, DAMAGE_STATE_IDS } from '../damage/DamageState';
+import { recordStateChange } from '../interactions/integrity';
 
 /**
  * Runs last: tracks peak states (recording a state-change event when no more specific event was
@@ -9,6 +10,8 @@ import { DamageState, DAMAGE_STATE_IDS } from '../damage/DamageState';
 export class MetricsSystem implements SimulationSystem {
   readonly name = 'metrics';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['damage', 'water', 'structure', 'airflow'] as const;
+  readonly writes = ['metrics'] as const;
 
   constructor(private readonly metrics: MetricsRecorder) {}
 
@@ -17,6 +20,8 @@ export class MetricsSystem implements SimulationSystem {
       if (e.def.inert || e.state <= e.peakState) continue;
       const prev = e.peakState;
       e.peakState = e.state;
+      // Ordered damage history per object (Phase 15; bookkeeping only).
+      if (e.state >= DamageState.STRESSED && this.metrics.recordedThisStep(e.id)) recordStateChange(e, ctx.time, e.lastHazard ?? 'wind', e.state);
       if (e.state >= DamageState.DAMAGED && prev < e.state && !this.metrics.recordedThisStep(e.id)) {
         // Without a specific earlier event: the earthquake when the object shakes harder than
         // the wind loads it (wind-only runs never have seismic state → always wind).
@@ -24,6 +29,7 @@ export class MetricsSystem implements SimulationSystem {
         // Flood (Phase 14): the flood channel caused it when it is the damaged one (dry runs: never).
         const flood = !e.lastHazard && !quake && e.flood !== undefined && e.flood.health < 1 && e.loadRatio < 0.3;
         const hazard = e.lastHazard ?? (quake ? 'earthquake' : flood ? 'flood' : 'wind');
+        recordStateChange(e, ctx.time, hazard, e.state);
         ctx.recordDamage(e, {
           eventType: DAMAGE_STATE_IDS[e.state] as 'DAMAGED' | 'CRITICAL' | 'DESTROYED',
           cause: e.lastCause ?? (hazard === 'earthquake' ? (e.source.type === 'building' ? 'drift' : 'shaking') : hazard === 'flood' ? 'inundation' : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),

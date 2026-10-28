@@ -1,8 +1,6 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { ensureFloodRuntime } from '../flood/FloodState';
-import {
-  updateBuildingFlood, updateCarFlood, updateExposureOnly, updateInfraFlood, updatePersonFlood, updateRoadFlood,
-} from '../damage/behaviors/flood';
+import { responses } from '../response/responses';
 
 /** Objects are evaluated in staggered rounds (each every ROUNDS steps with ROUNDS × dt): 20 Hz. */
 export const FLOOD_ROUNDS = 3;
@@ -15,6 +13,12 @@ export const FLOOD_ROUNDS = 3;
 export class FloodDamageSystem implements SimulationSystem {
   readonly name = 'floodDamage';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['water', 'poses', 'structure'] as const;
+  readonly writes = ['damage', 'debris', 'exposure'] as const;
+
+  isActive(ctx: SystemContext) {
+    return ctx.env.flood.field !== null;
+  }
 
   update(ctx: SystemContext, dt: number) {
     const field = ctx.env.flood.field;
@@ -23,28 +27,8 @@ export class FloodDamageSystem implements SimulationSystem {
     const rdt = dt * FLOOD_ROUNDS;
     const list = fr.entities;
     for (let i = ctx.step % FLOOD_ROUNDS; i < list.length; i += FLOOD_ROUNDS) {
-      const e = list[i];
-      switch (e.source.type) {
-        case 'building':
-          updateBuildingFlood(e, ctx, field, rdt);
-          break;
-        case 'car':
-          updateCarFlood(e, ctx, field, rdt);
-          break;
-        case 'human':
-          updatePersonFlood(e, ctx, field, rdt);
-          break;
-        case 'streetLight':
-        case 'sign':
-        case 'wall':
-          updateInfraFlood(e, ctx, field, rdt);
-          break;
-        case 'road':
-          updateRoadFlood(e, ctx, field, rdt);
-          break;
-        default:
-          updateExposureOnly(e, field, rdt);
-      }
+      // Object responses to the water channel (response/responses.ts).
+      responses.respond('water', list[i], ctx, rdt);
     }
   }
 }

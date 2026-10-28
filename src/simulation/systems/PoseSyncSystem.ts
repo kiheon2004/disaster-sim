@@ -20,6 +20,8 @@ const REST_STEPS = 30;
 export class PoseSyncSystem implements SimulationSystem {
   readonly name = 'poseSync';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['forces'] as const;
+  readonly writes = ['poses'] as const;
 
   update({ runtime, physics, env }: SystemContext) {
     // Never put bodies to sleep while the ground shakes (they must keep feeling it).

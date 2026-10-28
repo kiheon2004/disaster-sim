@@ -4,6 +4,12 @@
  *
  * The fixtures in __golden__/regression-*.json were generated on the Phase 13 commit (before any
  * Phase 14 code) with this same file: UPDATE_GOLDEN=1 npx vitest run src/simulation/regression.test.ts
+ *
+ * Phase 15: single-hazard cases run with the default settings (multi-hazard interactions ON —
+ * the interaction terms vanish without a second hazard). The combined wind + earthquake case is
+ * run with interactions OFF (`legacy`), which must still be bit-identical; with interactions ON
+ * it differs ON PURPOSE (wind load inside the structural model during shaking, residual
+ * strength) — see phenomena.test.ts and docs/PHENOMENA.md §16. The fixtures are not regenerated.
  */
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -20,8 +26,9 @@ import { reseat } from '@/terrain/groundPlacement';
 
 const DIR = path.join(__dirname, '__golden__');
 
-function town(seed: number, preset?: TerrainPresetId): WorldDocument {
+function town(seed: number, preset?: TerrainPresetId, legacy = false): WorldDocument {
   const d = createEmptyDocument('regression');
+  if (legacy) (d.settings.simulation as unknown as Record<string, unknown>).interactions = { enabled: false };
   if (preset) d.terrain = generateTerrain(preset, 3);
   const terrain = new TerrainSampler(d.terrain);
   for (const input of sampleTown()) {
@@ -65,7 +72,7 @@ const CASES: { name: string; build: () => WorldDocument; specs: EventSpec[]; sec
   {
     // Coastal: sand painted along the shore, static reference water level (sea) present.
     name: 'regression-wind-quake-coastal',
-    build: () => town(11, 'coastal'),
+    build: () => town(11, 'coastal', true),
     specs: [
       { event: 'wind', speed: 38, direction: 'S', duration: 30, gustStrength: 0.3, rampDuration: 3 },
       { event: 'earthquake', magnitude: 6.5, pga: 0.35, duration: 10, seed: 5 },

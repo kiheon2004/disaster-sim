@@ -2,12 +2,36 @@ import { GRAVITY } from '@/core/units';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { SeismicEntityState } from '../seismic/SeismicState';
 import type { StructuralModel } from '../seismic/StructuralModel';
+import type { RuntimeEntity } from '../SimulationRuntime';
+import type { WaterField } from '../water/WaterField';
 
 /** Free vibration is integrated this long after the shaking ends (then everything is at rest). */
 const FREE_VIBRATION = 12;
 /** Residual tilt rate (rad/s) per unit of bearing-pressure excess (approximate). */
 const TILT_RATE = 0.012;
 const MAX_EXCESS = 3;
+/** Seconds over which the mean wind load enters the structural model when shaking starts. */
+const WIND_RAMP = 2;
+/** Bearing lost when the soil under a footing is fully saturated (water-table correction). */
+const SATURATED_BEARING_LOSS = 0.5;
+
+/**
+ * Bearing-capacity factor of saturated ground (Phase 15, empirical): with the water table at
+ * the footing, the soil's unit weight in the bearing terms is the submerged one (≈ half), so the
+ * capacity drops by up to ~50 % (water-table correction of Terzaghi / Meyerhof bearing capacity,
+ * e.g. Das, Principles of Foundation Engineering). Saturation = 1 when water stands around the
+ * building, otherwise how full the soil bucket under it is. Not liquefaction.
+ */
+export function saturatedBearingFactor(e: RuntimeEntity, field: WaterField): number {
+  let sat = 0;
+  if (e.flood && e.flood.depth > 0.05) sat = 1;
+  else {
+    const p = e.initialPose.position;
+    const i = field.indexAt(p[0], p[2]);
+    if (i >= 0 && field.infilStore[i] > 0) sat = Math.min(1, field.infiltrated[i] / field.infilStore[i]);
+  }
+  return 1 - SATURATED_BEARING_LOSS * sat;
+}
 
 /**
  * Structural response (postPhysics, Phase 13): advances the reduced-order structural model of
@@ -24,6 +48,13 @@ const MAX_EXCESS = 3;
 export class StructuralResponseSystem implements SimulationSystem {
   readonly name = 'structural';
   readonly phase = 'postPhysics' as const;
+  readonly reads = ['groundMotion', 'airflow', 'structure'] as const;
+  readonly writes = ['structure'] as const;
+
+  isActive(ctx: SystemContext) {
+    const sr = ctx.runtime.seismic;
+    return sr !== undefined && (ctx.env.groundMotion.active || sr.freeVibration > 0);
+  }
 
   update(ctx: SystemContext, dt: number) {
     const sr = ctx.runtime.seismic;
@@ -35,12 +66,26 @@ export class StructuralResponseSystem implements SimulationSystem {
     sr.steps++;
     const model = sr.model;
     const units = sr.units;
+    // Phase 15 interactions: the wind keeps loading the structure while it shakes (mean drag on
+    // the top story, ramped in over WIND_RAMP s after the shaking starts so the model does not
+    // see an artificial step load), and flooded / saturated ground bears less.
+    const coupled = ctx.interactions;
+    const windRamp = coupled && ctx.env.wind.baseSpeed > 0.01 ? Math.min(1, (sr.steps * dt) / WIND_RAMP) : 0;
+    const field = coupled ? ctx.env.flood.field : null;
     for (let ui = 0; ui < units.length; ui++) {
       const e = units[ui];
       if (e.flags.collapsed || e.flags.toppled) continue;
       const st = e.seismic!;
       model.agx[ui] = st.ground.a[0];
       model.agz[ui] = st.ground.a[2];
+      if (coupled) {
+        const v = e.localWind.velocity;
+        const sp = Math.hypot(v[0], v[2]);
+        // Moment-equivalent: resultant at the pressure center → force on the top story.
+        const k = sp > 0.05 && e.windLoad > 0 ? (windRamp * e.windLoad * Math.min(1, e.copLocal[1] / Math.max(1, e.dims[1]))) / sp : 0;
+        model.fwx[ui] = k * v[0];
+        model.fwz[ui] = k * v[2];
+      }
       model.stepUnit(ui, dt);
 
       st.top[0] = model.top[2 * ui];
@@ -56,11 +101,11 @@ export class StructuralResponseSystem implements SimulationSystem {
       for (let j = 1; j <= model.n[ui]; j++) if (model.peakAcc[o + j] > st.peakFloorAcc) st.peakFloorAcc = model.peakAcc[o + j];
       const slight = st.thresholds ? st.thresholds.slight : model.driftU[ui] * 0.2;
       st.stress = st.drift / slight;
-      if (st.thresholds) this.foundation(e.source.physics.mass, st, model, ui, dt);
+      if (st.thresholds) this.foundation(e.source.physics.mass, st, model, ui, dt, field ? saturatedBearingFactor(e, field) : 1);
     }
   }
 
-  private foundation(mass: number, st: SeismicEntityState, model: StructuralModel, ui: number, dt: number) {
+  private foundation(mass: number, st: SeismicEntityState, model: StructuralModel, ui: number, dt: number, bearingFactor: number) {
     const W = mass * GRAVITY;
     // Overturning moments are in unit-local axes; footprint is along world axes — use the
     // world-rotated moments (rotation by the unit's yaw).
@@ -80,7 +125,7 @@ export class StructuralResponseSystem implements SimulationSystem {
       const L = axis === 0 ? Bz : Bx;
       const ecc = Math.abs(M) / W;
       const q = ecc <= B / 6 ? (W / A) * (1 + (6 * ecc) / B) : ecc < B / 2 ? (2 * W) / (3 * L * (B / 2 - ecc)) : Infinity;
-      const ratio = q / st.bearing;
+      const ratio = q / (st.bearing * bearingFactor);
       if (ratio > worst) worst = ratio;
       if (ratio > 1) {
         const excess = Math.min(MAX_EXCESS, ratio - 1);

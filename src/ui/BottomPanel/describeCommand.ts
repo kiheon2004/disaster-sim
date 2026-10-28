@@ -1,6 +1,7 @@
 import type { TFunction, MessageKey } from '@/i18n/i18n';
 import type { ParsedCommand } from '@/commands/CommandParser';
 import type { UnsupportedRequest } from '@/commands/schema';
+import { phenomena } from '@/phenomena/registry';
 import { nearestCompass } from '@/core/compass';
 import { resolveEarthquake } from '@/events/earthquake/resolveEarthquake';
 import { rainAssumptions, resolveRisingWater, sourceAssumptions } from '@/events/flood/resolveFlood';
@@ -84,10 +85,16 @@ export function describeParsed(pc: ParsedCommand, t: TFunction): string {
       text = t('cmd.describe.speed', { value: c.value });
       break;
   }
+  if (pc.after) {
+    const ref = phenomena.get(pc.after.type);
+    return `${t(pc.after.anchor === 'end' ? 'cmd.describe.after.end' : 'cmd.describe.after.start', { name: ref ? t(ref.labelKey) : pc.after.type, s: pc.after.offset })} · ${text}`;
+  }
   return pc.delay ? `${t('cmd.describe.delay', { s: pc.delay })} · ${text}` : text;
 }
 
 export function describeUnsupported(u: UnsupportedRequest, t: TFunction): string {
-  const params = Object.entries(u.params).map(([k, v]) => `${k}=${v}`).join(', ');
-  return `${t('cmd.describe.unsupported', { hazard: t(`hazard.${u.event}`) })}${params ? ` · ${params}` : ''}`;
+  const def = phenomena.get(u.event);
+  const name = def ? t(def.labelKey) : u.event;
+  const missing = def && def.status === 'planned' ? def.missing.map((k) => t(k)).join(', ') : '';
+  return t('cmd.describe.planned', { name, missing });
 }

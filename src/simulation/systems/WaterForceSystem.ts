@@ -31,6 +31,7 @@ import { WATER_DENSITY } from '../water/waterParams';
 import { ensureFloodRuntime, type FloodEntityState } from '../flood/FloodState';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { PhysicsEngine } from '@/physics/PhysicsEngine';
+import type { ForceLedger } from '../forces/ForceLedger';
 
 /** Car: sealed fraction of the bounding box when dry, and with a flooded cabin. */
 export const CAR_SEALED = 0.55;
@@ -91,7 +92,7 @@ function boxGeom(pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number, out: Bod
  * sample into `st` when given.
  */
 function applyWater(
-  physics: PhysicsEngine, field: WaterField, body: number, pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number,
+  physics: PhysicsEngine, ledger: ForceLedger, owner: RuntimeEntity | undefined, field: WaterField, body: number, pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number,
   volume: number, cd: number, areaFactor: number, dt: number, st: FloodEntityState | null, rest: { lastEta?: number },
 ): number {
   const g = boxGeom(pos, q, dims, centerOffsetY, geom);
@@ -131,7 +132,7 @@ function applyWater(
     point[0] = g.cx;
     point[1] = bottom + sub / 2;
     point[2] = g.cz;
-    physics.addForceAtPoint(body, force, point, false);
+    ledger.forceAtPoint('water', body, force, point, owner, false);
     return frac;
   }
   rest.lastEta = eta;
@@ -161,7 +162,7 @@ function applyWater(
   point[0] = g.cx;
   point[1] = bottom + sub / 2;
   point[2] = g.cz;
-  physics.addForceAtPoint(body, force, point);
+  ledger.forceAtPoint('water', body, force, point, owner);
   if (st) st.load = Math.hypot(force[0], force[2]);
   return frac;
 }
@@ -169,6 +170,13 @@ function applyWater(
 export class WaterForceSystem implements SimulationSystem {
   readonly name = 'waterForce';
   readonly phase = 'prePhysics' as const;
+  readonly reads = ['water', 'poses'] as const;
+  readonly writes = ['forces', 'exposure'] as const;
+  readonly lagged = ['poses'] as const;
+
+  isActive(ctx: SystemContext) {
+    return ctx.env.flood.field !== null;
+  }
 
   update(ctx: SystemContext, dt: number) {
     const field = ctx.env.flood.field;
@@ -185,18 +193,18 @@ export class WaterForceSystem implements SimulationSystem {
         st.ingress += ((1 - st.ingress) * above * dt) / CAR_INGRESS_TAU;
       }
       // Body origin sits at the base: the box center is dims.y / 2 up the body's own axis.
-      applyWater(physics, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? 1.2, e.areaFactor, dt, st, st);
+      applyWater(physics, ctx.forces, e, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? 1.2, e.areaFactor, dt, st, st);
       // The water dominates when its drag exceeds the wind load on the body.
       st.dominant = st.submerged > 0 && st.load > Math.max(50, e.windLoad);
     }
-    for (const d of runtime.debris) this.debris(physics, field, d, dt);
+    for (const d of runtime.debris) this.debris(physics, ctx.forces, field, d, dt);
   }
 
-  private debris(physics: PhysicsEngine, field: WaterField, d: DebrisPiece, dt: number) {
+  private debris(physics: PhysicsEngine, ledger: ForceLedger, field: WaterField, d: DebrisPiece, dt: number) {
     // Material volume = mass / density (a box is partly hollow), at most the box itself:
     // light roof panels float, concrete chunks sink.
     const box = d.size[0] * d.size[1] * d.size[2];
     const volume = Math.min(box, d.mass / (DEBRIS_DENSITY[d.kind] ?? 2000));
-    applyWater(physics, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d);
+    applyWater(physics, ledger, undefined, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d);
   }
 }

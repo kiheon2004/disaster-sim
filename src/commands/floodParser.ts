@@ -21,7 +21,7 @@ import { EN_DIR_WORD, KO_DIR, KO_DIR_WORD, enDir, isDelay, type NumToken } from 
 
 export type WaterKind = 'rain' | 'risingWater' | 'waterSource';
 
-const RAIN_WORDS = /폭우|호우|강우|장대비|소나기|집중\s*호우|강수|(?:^|[\s,])비(?:가|를|는|\s|$)|rain|downpour|precipitation|cloudburst|shower/;
+const RAIN_WORDS = /폭우|호우|강우|장대비|소나기|집중\s*호우|강수|(?:^|[\s,])비(?:가|를|는|와|과|의|도|랑|\s|$)|rain|downpour|precipitation|cloudburst|shower/;
 const LEVEL_WORDS = /수위|해수면|물\s*높이|범람|침수|홍수|물이\s*차|만조|water\s*level|rising\s*water|flood|inundat|storm\s*surge|high\s*tide|sea\s*level/;
 const SOURCE_WORDS = /공급|유입|방류|쏟아|분출|수도관|파열|급수|펌프|(?:물을|물이)\s*(?:흘려|부어|쏟|넣)|supply|inflow|pour|pump|discharge|water\s*source|burst|release\s+water|inject/;
 
@@ -36,7 +36,7 @@ const round = (v: number, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
 /** Which water event a clause describes (null = not a water clause). */
 export function floodKind(clause: string, tokens: NumToken[]): WaterKind | null {
   if (tokens.some((t) => t.kind === 'flow') || (SOURCE_WORDS.test(clause) && /물|water/.test(clause))) return 'waterSource';
-  if (tokens.some((t) => t.kind === 'rainRate') || RAIN_WORDS.test(clause)) return 'rain';
+  if (tokens.some((t) => t.kind === 'rainRate' || (t.kind === 'mm' && /시간당|매\s*시간|per\s+hour/.test(t.before))) || RAIN_WORDS.test(clause)) return 'rain';
   if (LEVEL_WORDS.test(clause)) return 'risingWater';
   return null;
 }

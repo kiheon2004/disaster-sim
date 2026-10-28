@@ -4,6 +4,7 @@
  */
 import { koEarthquake } from './ko.earthquake';
 import { koFlood } from './ko.flood';
+import { koPhenomena } from './ko.phenomena';
 
 export const ko = {
   // App
@@ -581,6 +582,7 @@ export const ko = {
   'toast.terrainPreset': '지형 프리셋 “{name}”을(를) 적용했습니다.',
   ...koEarthquake,
   ...koFlood,
+  ...koPhenomena,
 } as const;
 
 export type MessageKey = keyof typeof ko;

@@ -10,6 +10,7 @@ import type { SimulationMetrics } from './analysis/MetricsRecorder';
 import type { DamageEventRecord } from './analysis/DamageEvent';
 import type { SeismicSeries } from './analysis/SeismicRecorder';
 import type { FloodSeries } from './analysis/FloodRecorder';
+import type { Milestone } from './analysis/MilestoneRecorder';
 import type { BoundarySide } from '@/core/model';
 import type { ResolvedBoundaryType } from './water/WaterForcing';
 
@@ -115,6 +116,8 @@ export interface SimState {
   flood: FloodLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
+  /** Experiment timeline milestones (Phase 15). */
+  milestones: Milestone[];
   /** Time of the loaded water state the next run starts from (null = none). */
   initialWaterTime: number | null;
   set: (patch: Partial<Omit<SimState, 'set'>>) => void;
@@ -138,5 +141,6 @@ export const useSimStore = create<SimState>((set) => ({
   flood: null,
   floodSeries: null,
   initialWaterTime: null,
+  milestones: [],
   set: (patch) => set(patch),
 }));

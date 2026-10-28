@@ -30,6 +30,8 @@ import { isWaterEvent } from '@/events/specs';
 import { floodFeatures } from './water/floodFeatures';
 import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
 import type { FloodLive } from './simStore';
+import { ForceLedger } from './forces/ForceLedger';
+import { validatePipeline } from './systems/pipeline';
 
 const MAX_STEPS_PER_FRAME = 16;
 /** Wall-clock budget for physics per frame; beyond it the simulation slows instead of the UI freezing. */
@@ -78,6 +80,15 @@ export class SimulationController {
   private lastFloodSeriesLength = -1;
   /** Water state to start the next (re)load from (mid-simulation snapshot), or null. */
   private initialWater: WaterStateSnapshot | null = null;
+  private forces: ForceLedger | null = null;
+  /** Multi-hazard interaction models on (from the snapshot's settings). */
+  private interactions = true;
+  /** Headless controllers (experiment comparison) never touch the UI store. */
+  private readonly headless: boolean;
+
+  constructor(opts: { headless?: boolean } = {}) {
+    this.headless = opts.headless ?? false;
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────
 
@@ -126,6 +137,12 @@ export class SimulationController {
     this.lastEventCount = -1;
     this.scheduler = new EventScheduler();
     this.systems = [...createDefaultSystems(), new MetricsSystem(this.metrics)];
+    if (import.meta.env?.DEV) {
+      const issues = validatePipeline(this.systems);
+      if (issues.length) console.warn('simulation pipeline order issues', issues);
+    }
+    this.forces = new ForceLedger(physics);
+    this.interactions = sim.interactions?.enabled ?? true;
     this.time = 0;
     this.stepIndex = 0;
     this.accumulator = 0;
@@ -135,9 +152,12 @@ export class SimulationController {
     this.quakePeak = 0;
     this.lastSeriesLength = -1;
     this.lastFloodSeriesLength = -1;
+    this.endSeenRev = -1;
+    this.ended = new Set();
+    this.lastMilestones = -1;
     for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, this.eventDefaults()));
     this.status = 'paused';
-    useSimStore.getState().set({ runtimeVersion: useSimStore.getState().runtimeVersion + 1 });
+    if (!this.headless) useSimStore.getState().set({ runtimeVersion: useSimStore.getState().runtimeVersion + 1 });
     this.publish(true);
   }
 
@@ -155,6 +175,7 @@ export class SimulationController {
     this.snapshot = null;
     this.scenario = [];
     this.status = 'idle';
+    if (this.headless) return;
     useSimStore.getState().set({
       status: 'idle',
       time: 0,
@@ -170,6 +191,7 @@ export class SimulationController {
       seismicSeries: null,
       flood: null,
       floodSeries: null,
+      milestones: [],
     });
   }
 
@@ -252,7 +274,7 @@ export class SimulationController {
 
   private setStatus(s: SimStatus) {
     this.status = s;
-    useSimStore.getState().set({ status: s });
+    if (!this.headless) useSimStore.getState().set({ status: s });
   }
 
   // ── Loop ──────────────────────────────────────────────────
@@ -295,10 +317,14 @@ export class SimulationController {
     const runtime = this.runtime!;
     const physics = this.physics!;
     this.env.time = this.time;
-    this.scheduler.update({ env: this.env, time: this.time }, dt, (ev) =>
-      this.log(null, 'info', { key: 'log.event.started', params: { label: '', eventKey: ev.describe().key, ...ev.describe().params } }),
-    );
+    this.scheduler.update({ env: this.env, time: this.time }, dt, (ev) => {
+      this.log(null, 'info', { key: 'log.event.started', params: { label: '', eventKey: ev.describe().key, ...ev.describe().params } });
+      this.metrics.milestones.add({ time: this.time, kind: 'start', subject: ev.type, label: ev.describe() });
+    });
+    if (this.scheduler.rev !== this.endSeenRev) this.noteEnds();
 
+    const forces = this.forces!;
+    forces.beginStep(this.stepIndex);
     const ctx: SystemContext = {
       env: this.env,
       runtime,
@@ -309,6 +335,8 @@ export class SimulationController {
       fxRng: this.fxRng,
       log: (entityId, severity, message) => this.log(entityId, severity, message),
       recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
+      forces,
+      interactions: this.interactions,
     };
     this.metrics.beginStep();
     physics.clearForces();
@@ -324,14 +352,64 @@ export class SimulationController {
 
   /** Runs the systems of one phase that are due on this step (fixed-step schedule). */
   private runPhase(phase: SimulationSystem['phase'], ctx: SystemContext, dt: number) {
+    const td = simProfiler.now();
     for (const s of this.systems) {
       if (s.phase !== phase) continue;
       const every = s.interval ?? 1;
       if (every > 1 && this.stepIndex % every !== 0) continue;
+      // Phase 15: systems whose phenomena are not running are skipped (never changes a result).
+      if (s.isActive && !s.isActive(ctx)) continue;
       const t0 = simProfiler.now();
       s.update(ctx, dt * every);
       simProfiler.add(`sys.${s.name}`, t0);
     }
+    simProfiler.add('dispatch', td);
+  }
+
+  private endSeenRev = -1;
+  private lastMilestones = -1;
+  private ended = new Set<string>();
+
+  /** Phenomenon ends (finished or superseded) → experiment milestones. */
+  private noteEnds() {
+    this.endSeenRev = this.scheduler.rev;
+    for (const i of this.scheduler.list()) {
+      if ((i.status === 'done' || i.status === 'superseded') && !this.ended.has(i.event.id)) {
+        this.ended.add(i.event.id);
+        this.metrics.milestones.add({ time: i.endedAt ?? this.time, kind: 'end', subject: i.event.type, label: i.event.describe() });
+      }
+    }
+  }
+
+  /**
+   * Seconds from now to the start / end of the latest scheduled event of a type (null = none).
+   * Used to resolve "10 s after the typhoon begins" against what is already scheduled.
+   */
+  scheduledTime(type: string, anchor: 'start' | 'end'): number | null {
+    let best: number | null = null;
+    for (const i of this.scheduler.list()) {
+      if (i.event.type !== type || i.status === 'superseded') continue;
+      const t = anchor === 'start' ? i.event.startTime : i.endedAt ?? i.event.startTime + i.event.duration;
+      if (best === null || t > best) best = t;
+    }
+    return best === null ? null : best - this.time;
+  }
+
+  getMilestones() {
+    return this.metrics.milestones.list;
+  }
+
+  /** Rejected duplicate force applications in this run (should stay 0). */
+  duplicateForces(): number {
+    return this.forces?.duplicates ?? 0;
+  }
+
+  getSystems(): readonly SimulationSystem[] {
+    return this.systems;
+  }
+
+  getStep(): number {
+    return this.stepIndex;
   }
 
   private log(entityId: EntityId | null, severity: 'info' | 'warn' | 'danger', message: I18nMessage) {
@@ -345,6 +423,7 @@ export class SimulationController {
 
   private publish(force = false) {
     this.sincePublish = 0;
+    if (this.headless) return;
     const rt = this.runtime;
     const store = useSimStore.getState();
     if (!rt) return;
@@ -401,6 +480,11 @@ export class SimulationController {
     if (series.t.length !== this.lastSeriesLength || force) {
       this.lastSeriesLength = series.t.length;
       patch.seismicSeries = series.t.length ? this.metrics.seismic.downsampled(600) : null;
+    }
+    const ms = this.metrics.milestones.list;
+    if (ms.length !== this.lastMilestones || force) {
+      this.lastMilestones = ms.length;
+      patch.milestones = ms.slice();
     }
     patch.flood = this.floodLive();
     const fs = this.metrics.flood.series;

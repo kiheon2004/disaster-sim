@@ -40,6 +40,7 @@ import { DamageState } from '../DamageState';
 import { seismicOf, STRUCTURAL_SYSTEMS } from '../../seismic/structuralProps';
 import { CAR_FLOOR } from '../../systems/WaterForceSystem';
 import type { DamageCause } from '../../analysis/DamageEvent';
+import { residualStrength } from '../../interactions/integrity';
 
 const RHO = WATER_DENSITY;
 /** Scratch velocity (the per-object loops are synchronous). */
@@ -167,7 +168,8 @@ export function updateBuildingFlood(e: RuntimeEntity, ctx: SystemContext, field:
   st.load = fh + fd;
   const seismic = seismicOf(e.source);
   const cy = seismic ? STRUCTURAL_SYSTEMS[seismic.structure.system].cy * seismic.structure.strengthFactor : 0.25;
-  const capacity = cy * e.source.physics.mass * GRAVITY * Math.max(0.2, k[1]);
+  // Residual strength (Phase 15): earthquake / wind damage lowers the lateral capacity.
+  const capacity = cy * e.source.physics.mass * GRAVITY * Math.max(0.2, k[1]) * (ctx.interactions ? residualStrength(e, 'flood') : 1);
   st.loadRatio = capacity > 0 ? st.load / capacity : 0;
   if (st.loadRatio > STRUCT_ONSET) st.damage += STRUCT_RATE * ((st.loadRatio - STRUCT_ONSET) / STRUCT_ONSET) * dt * (st.loadRatio >= 1.5 ? 10 : 1);
   trackPeaks(st, dt);
@@ -337,6 +339,7 @@ export function updateInfraFlood(e: RuntimeEntity, ctx: SystemContext, field: Wa
     moment = fd * d * 0.5;
     design = 0.5 * AIR * e.source.physics.dragCoefficient * e.area * e.areaFactor * windDesign * windDesign * Math.max(0.5, e.copLocal[1]);
   }
+  if (ctx.interactions) design *= residualStrength(e, 'flood');
   st.load = moment / Math.max(0.1, H / 2);
   st.loadRatio = design > 0 ? moment / design : 0;
   trackPeaks(st, dt);

@@ -12,6 +12,7 @@ import { WaterSolverSystem } from './WaterSolverSystem';
 import { WaterForceSystem } from './WaterForceSystem';
 import { GroundContactSystem } from './GroundContactSystem';
 import { FloodDamageSystem } from './FloodDamageSystem';
+import { ExposureSystem } from '../response/exposure';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -36,5 +37,6 @@ export function createDefaultSystems(): SimulationSystem[] {
     new DamageSystem(),
     new DebrisSystem(),
     new ParticleSystem(),
+    new ExposureSystem(),
   ];
 }

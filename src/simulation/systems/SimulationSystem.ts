@@ -5,6 +5,7 @@ import type { EnvironmentState } from '../environment/EnvironmentState';
 import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import type { Rng } from '@/core/random';
 import type { DamageEventInput } from '../analysis/DamageEvent';
+import type { ForceLedger } from '../forces/ForceLedger';
 
 export interface SystemContext {
   env: Readonly<EnvironmentState>;
@@ -20,7 +21,19 @@ export interface SystemContext {
   log(entityId: EntityId | null, severity: 'info' | 'warn' | 'danger', message: I18nMessage): void;
   /** Append a structured damage event (time, wind and defaults are filled in from the entity). */
   recordDamage(e: RuntimeEntity, event: DamageEventInput): void;
+  /** The only path for continuous forces into the physics engine (Phase 15). */
+  forces: ForceLedger;
+  /** Multi-hazard interaction models on (project setting, Phase 15; see docs/PHENOMENA.md §6). */
+  interactions: boolean;
 }
+
+/**
+ * Shared world state a system reads or writes (Phase 15). Declared on every system so the
+ * pipeline order can be checked: within a phase, a writer of a key runs before its readers,
+ * unless the reader declares the key in `lagged` (it intentionally uses the previous step).
+ */
+export type StateKey =
+  | 'airflow' | 'groundMotion' | 'water' | 'forces' | 'poses' | 'structure' | 'damage' | 'exposure' | 'debris' | 'particles' | 'metrics';
 
 /**
  * A unit of simulation logic run on the fixed-step clock.
@@ -37,5 +50,15 @@ export interface SimulationSystem {
   readonly phase: 'prePhysics' | 'postPhysics';
   /** Run every N fixed steps (default 1). */
   readonly interval?: number;
+  readonly reads?: readonly StateKey[];
+  readonly writes?: readonly StateKey[];
+  /** Keys read from the previous step on purpose (no ordering constraint). */
+  readonly lagged?: readonly StateKey[];
+  /**
+   * Cheap check: does the system have anything to do this step? The controller skips inactive
+   * systems (a phenomenon that is not running costs nothing). Must be consistent with the
+   * system's own early returns — skipping may never change a result.
+   */
+  isActive?(ctx: SystemContext): boolean;
   update(ctx: SystemContext, dt: number): void;
 }

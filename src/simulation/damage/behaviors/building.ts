@@ -11,6 +11,7 @@ import { createLocalWind, createSampleCache, type LocalWind } from '../../wind/S
 import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 import { seismicLevel, seismicHealth } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
+import { integrityOf } from '../../interactions/integrity';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -270,7 +271,15 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   // Main structure: uses the entity's own load ratio (sampled at its pressure center).
   if (structure) {
     structure.loadRatio = e.loadRatio;
-    structure.health = applyFatigue(structure.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+    if (ctx.interactions) {
+      // Phase 15: wind fatigue accumulates in its own channel (no hidden sum with earthquake /
+      // flood damage); their damage enters through the reduced capacity (WindForceSystem).
+      const ig = integrityOf(e);
+      ig.windHealth = applyFatigue(ig.windHealth, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+      structure.health = ig.windHealth;
+    } else {
+      structure.health = applyFatigue(structure.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
+    }
     // Earthquake / flood damage (if any) and wind fatigue share one structural health.
     if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
     if (e.flood) structure.health = Math.min(structure.health, e.flood.health);

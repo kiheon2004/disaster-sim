@@ -24,6 +24,13 @@ export const WET_GRIP = 0.8;
 export class GroundContactSystem implements SimulationSystem {
   readonly name = 'groundContact';
   readonly phase = 'prePhysics' as const;
+  readonly reads = ['poses', 'water'] as const;
+  readonly writes = ['forces'] as const;
+  readonly lagged = ['poses'] as const;
+
+  isActive(ctx: SystemContext) {
+    return !ctx.env.terrain.uniformGround || ctx.env.flood.field !== null;
+  }
 
   update(ctx: SystemContext) {
     const terrain = ctx.env.terrain;
