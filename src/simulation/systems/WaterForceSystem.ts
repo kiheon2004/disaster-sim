@@ -125,7 +125,13 @@ function applyWater(
   const uw = st ? st.flow : field.sampleVelocity(g.cx, g.cz, vel);
   // Still water around a resting body: keep the static load without waking it.
   if (physics.isSleeping(body) && Math.abs(uw[0]) + Math.abs(uw[1]) < 0.05 && Math.abs(eta - (rest.lastEta ?? -Infinity)) < 0.01) {
-    physics.addForceAtPoint(body, [0, buoy, 0], [g.cx, bottom + sub / 2, g.cz], false);
+    force[0] = 0;
+    force[1] = buoy;
+    force[2] = 0;
+    point[0] = g.cx;
+    point[1] = bottom + sub / 2;
+    point[2] = g.cz;
+    physics.addForceAtPoint(body, force, point, false);
     return frac;
   }
   rest.lastEta = eta;

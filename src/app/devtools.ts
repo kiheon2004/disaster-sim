@@ -8,6 +8,9 @@ import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
 import { waterRenderStats } from '@/rendering/sim/water/WaterLayer';
 import { simProfiler } from '@/simulation/profiling/SimProfiler';
+import { WaterField } from '@/simulation/water/WaterField';
+import { captureWaterState } from '@/simulation/water/waterStateCodec';
+import { samplerFor } from '@/terrain/TerrainSampler';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -20,5 +23,12 @@ export function installDevtools() {
     simStore: useSimStore,
     waterRenderStats,
     profiler: simProfiler,
+    /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
+    floodStart: (depth: number) => {
+      const doc = useWorldStore.getState().doc;
+      const f = new WaterField(samplerFor(doc.terrain), doc.settings.simulation.water);
+      f.h.fill(depth);
+      simulationController.setInitialWaterState(captureWaterState(f, 0));
+    },
   };
 }

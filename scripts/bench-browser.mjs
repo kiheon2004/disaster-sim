@@ -16,8 +16,12 @@ import fs from 'node:fs';
 const [url, label, countsArg = '100,500,1000', winArg = '5'] = process.argv.slice(2);
 const counts = countsArg.split(',').map(Number);
 const WIN = Number(winArg) * 1000;
-// HAZARD=wind (default) | earthquake | both — earthquake: M6.8, PGA 0.3 g, 90 s, seed 7.
+// HAZARD=wind (default) | earthquake | both | flood | all — earthquake: M6.8, PGA 0.3 g, 90 s, seed 7;
+// flood (Phase 14): 0.5 m of water everywhere at the start + 100 mm/h rain + south edge rising to 1.2 m.
 const HAZARD = process.env.HAZARD ?? 'wind';
+const WIND = ['wind', 'both', 'all'].includes(HAZARD);
+const QUAKE = ['earthquake', 'both', 'all'].includes(HAZARD);
+const FLOOD = ['flood', 'all'].includes(HAZARD);
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const browser = await puppeteer.launch({
@@ -198,18 +202,23 @@ for (const n of counts) {
   // TERRAIN=gentleHills|valley|coastal: same scene on a terrain preset (objects re-seated).
   if (process.env.TERRAIN) await page.evaluate((p) => window.__ds.world.getState().applyTerrainPreset(p, 1), process.env.TERRAIN);
   await new Promise((r) => setTimeout(r, 1500));
+  if (FLOOD) await page.evaluate(() => window.__ds.floodStart(0.5));
   await page.evaluate(async () => {
     await window.__ds.actions.enterSimulation();
   });
   await page.waitForFunction(() => window.__ds.simStore.getState().status === 'paused', { timeout: 120_000 });
   await setCamera(page);
   // identical starting state: fast-forward synchronously past the ramp, then play
-  await page.evaluate((hazard) => {
+  await page.evaluate((h) => {
     const sim = window.__ds.sim;
-    if (hazard !== 'earthquake') sim.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 300, gustStrength: 0.25, rampDuration: 4 });
-    if (hazard !== 'wind') sim.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
+    if (h.WIND) sim.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 300, gustStrength: 0.25, rampDuration: 4 });
+    if (h.QUAKE) sim.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
+    if (h.FLOOD) {
+      sim.addEvent({ event: 'rain', intensity: 100, duration: 600 });
+      sim.addEvent({ event: 'risingWater', boundary: 'S', level: 1.2, riseRate: 2, duration: 600 });
+    }
     sim.advance(6);
-  }, HAZARD);
+  }, { WIND, QUAKE, FLOOD });
   const row = { label, hazard: HAZARD, objects: n };
   // paused frame (render only)
   await new Promise((r) => setTimeout(r, 1500));
@@ -217,7 +226,13 @@ for (const n of counts) {
   row.paused = await measure(page, 'paused');
   await page.evaluate(() => window.__ds.sim.play());
   await new Promise((r) => setTimeout(r, 2000));
+  await page.evaluate(() => { const w = window.__ds.waterRenderStats; w.ms = 0; w.updates = 0; });
   row.bare = await measure(page, 'full', true);
+  // Water mesh refresh (CPU): ms per update and per second of the bare window (Phase 14).
+  row.waterRender = await page.evaluate((win) => {
+    const w = window.__ds.waterRenderStats;
+    return { updatesPerSec: +(w.updates / (win / 1000)).toFixed(1), msPerUpdate: w.updates ? +(w.ms / w.updates).toFixed(2) : 0, vertices: w.vertices };
+  }, WIN);
   row.full = await measure(page, 'full');
   row.trace = await traceBreakdown(page, 2500);
   await page.evaluate(() => window.__ds.view.setState({ showWind: false }));

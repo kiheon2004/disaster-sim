@@ -42,6 +42,8 @@ import { CAR_FLOOR } from '../../systems/WaterForceSystem';
 import type { DamageCause } from '../../analysis/DamageEvent';
 
 const RHO = WATER_DENSITY;
+/** Scratch velocity (the per-object loops are synchronous). */
+const vScratch: [number, number] = [0, 0];
 const AIR = 1.225;
 
 /** Interior fill time constant (s): closed envelope / with broken openings. */
@@ -103,7 +105,7 @@ function samplePoints(field: WaterField, st: FloodEntityState, pts: Float64Array
   let speed = 0;
   let fx = 0;
   let fz = 0;
-  const v: [number, number] = [0, 0];
+  const v = vScratch;
   for (let i = from; i < to; i += 2) {
     const x = pts[i];
     const z = pts[i + 1];

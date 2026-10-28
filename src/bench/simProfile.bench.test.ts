@@ -4,6 +4,7 @@
  *   BENCH=1 npx vitest run src/bench --silent=false
  *   BENCH=1 BENCH_TERRAIN=gentleHills npx vitest run src/bench --silent=false   (same scenes on relief)
  *   BENCH=1 BENCH_HAZARD=earthquake npx vitest run src/bench --silent=false     (earthquake; or `both`)
+ *   BENCH=1 BENCH_HAZARD=flood npx vitest run src/bench --silent=false          (flood; or `all` = wind + earthquake + flood)
  *
  * Instrumentation is attached from the outside (method wrapping), so the same harness can be run
  * against older revisions for before/after comparisons. Skipped in the normal test run.
@@ -17,6 +18,8 @@ import type { TerrainPresetId, WorldDocument } from '@/core/model';
 import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler } from '@/terrain/TerrainSampler';
 import { reseat } from '@/terrain/groundPlacement';
+import { WaterField } from '@/simulation/water/WaterField';
+import { captureWaterState } from '@/simulation/water/waterStateCodec';
 
 const COUNTS = (process.env.BENCH_COUNTS ?? '100,500,1000').split(',').map(Number);
 const WARM_S = 4;
@@ -24,8 +27,22 @@ const MEASURE_S = 4;
 const STEP_HZ = 60;
 
 const TERRAIN = process.env.BENCH_TERRAIN as TerrainPresetId | undefined;
-/** wind (default) | earthquake | both. Earthquake: M6.8, PGA 0.3 g, 90 s, seed 7 (strong shaking for the whole window). */
+/**
+ * wind (default) | earthquake | both | flood | all. Earthquake: M6.8, PGA 0.3 g, 90 s, seed 7 (strong
+ * shaking for the whole window). Flood (Phase 14): starts from 0.5 m of water over the whole map
+ * (every cell active), 100 mm/h rain and the south edge rising to 1.2 m — the worst case for the
+ * solver (40 000 wet cells) and for the water forces (every free body in water).
+ */
 const HAZARD = process.env.BENCH_HAZARD ?? 'wind';
+const WIND = HAZARD === 'wind' || HAZARD === 'both' || HAZARD === 'all';
+const QUAKE = HAZARD === 'earthquake' || HAZARD === 'both' || HAZARD === 'all';
+const FLOOD = HAZARD === 'flood' || HAZARD === 'all';
+
+function floodStart(doc: WorldDocument) {
+  const f = new WaterField(new TerrainSampler(doc.terrain), doc.settings.simulation.water);
+  f.h.fill(0.5);
+  return captureWaterState(f, 0);
+}
 
 function stressDoc(n: number): WorldDocument {
   const doc = createEmptyDocument(`Stress ${n}`);
@@ -76,9 +93,15 @@ function countSamples(field: Any, acc: Acc) {
 
 async function profile(n: number) {
   const c = new SimulationController() as unknown as Any;
-  await c.load(stressDoc(n));
-  if (HAZARD !== 'earthquake') c.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 120, gustStrength: 0.25, rampDuration: 4 });
-  if (HAZARD !== 'wind') c.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
+  const doc = stressDoc(n);
+  if (FLOOD) c.setInitialWaterState(floodStart(doc));
+  await c.load(doc);
+  if (WIND) c.addEvent({ event: 'wind', speed: 42, direction: 'E', duration: 120, gustStrength: 0.25, rampDuration: 4 });
+  if (QUAKE) c.addEvent({ event: 'earthquake', magnitude: 6.8, pga: 0.3, duration: 90, epicenter: [40, -30], depth: 10, seed: 7 });
+  if (FLOOD) {
+    c.addEvent({ event: 'rain', intensity: 100, duration: 600 });
+    c.addEvent({ event: 'risingWater', boundary: 'S', level: 1.2, riseRate: 2, duration: 600 });
+  }
   c.advance(WARM_S);
 
   const rt = c.runtime as Any;
@@ -151,6 +174,12 @@ async function profile(n: number) {
   row['shadow-query ms (replay, uncached)'] = shadowMs.toFixed(2);
   for (const [k, v] of sampleCalls) row[`samples ${k.slice(12)}`] = (v / (steps + 1)).toFixed(0);
   for (const [k, v] of Object.entries(byWho)) row[`wind ms ${k.slice(4)}`] = v.toFixed(3);
+  const water = c.env.flood.field as WaterField | null;
+  if (water) {
+    row['water wet cells'] = water.stats.wetCells;
+    row['water substeps/call'] = water.stats.substeps;
+    row['water ms/call'] = ((acc.ms['sys.waterSolver'] ?? 0) / Math.max(1, acc.calls['sys.waterSolver'] ?? 1)).toFixed(2);
+  }
   c.unload();
   return row;
 }
