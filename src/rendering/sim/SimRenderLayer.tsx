@@ -9,6 +9,8 @@ import { SelectionBox } from '../SelectionBox';
 import { stormIntensity } from './environment/intensity';
 import { SimRenderAdapter } from './SimRenderAdapter';
 import { setActiveAdapter } from './renderStats';
+import { simulationController } from '@/simulation/SimulationController';
+import { useViewStore } from '../viewStore';
 
 /** Roads are few, textured and static: plain meshes (not part of the batches). */
 const SimRoad = memo(function SimRoad({ e }: { e: RuntimeEntity }) {
@@ -56,7 +58,7 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
   // memoized adapter would be disposed there and then reused.
   const [adapter, setAdapter] = useState<SimRenderAdapter | null>(null);
   useEffect(() => {
-    const a = new SimRenderAdapter(runtime);
+    const a = new SimRenderAdapter(runtime, simulationController.getEnvironment().terrain);
     setAdapter(a);
     setActiveAdapter(a);
     return () => {
@@ -64,7 +66,10 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
       a.dispose();
     };
   }, [runtime]);
-  useFrame(({ camera, clock }) => adapter?.update(camera, clock.elapsedTime, stormIntensity()));
+  useFrame(({ camera, clock }) => {
+    const q = useViewStore.getState().quakeViz;
+    adapter?.update(camera, clock.elapsedTime, stormIntensity(), { exaggeration: q.exaggeration, stress: q.stress });
+  });
 
   const roads = useMemo(() => [...runtime.entities.values()].filter((e) => e.source.type === 'road'), [runtime]);
   const handlers = useMemo(

@@ -301,6 +301,17 @@ export function buildingShellParts(p: BuildingParams): BoxPart[] {
   return out;
 }
 
+/**
+ * Foundation plinth under a building on a slope (Phase 13): a concrete block from the floor
+ * down to the lowest ground point of the footprint (+ a little embedment). `depth` is in the
+ * building's local (unscaled) units; empty on flat ground.
+ */
+export function buildingPlinthParts(p: BuildingParams, depth: number): BoxPart[] {
+  if (depth <= 0.02) return [];
+  const d = depth + 0.3;
+  return [{ size: [p.width + 0.2, d, p.depth + 0.2], position: [0, -d / 2, 0], color: '#8f8b84' }];
+}
+
 /** Shop sign with a lettering strip (positioned at the sign component's position). */
 export function buildingSignParts(sign: ComponentSpec): BoxPart[] {
   const strip: Vec3 = sign.normal && sign.normal[2] !== 0

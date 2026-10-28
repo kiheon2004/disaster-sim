@@ -10,6 +10,9 @@ import { WindStreaks } from './WindStreaks';
 import { WindArrows } from './WindArrows';
 import { TyphoonEnvironment } from './environment/TyphoonEnvironment';
 import { DamageOverlay } from './DamageOverlay';
+import { GroundMotionLayer } from './seismic/GroundMotionLayer';
+import { EpicenterMarker } from './seismic/EpicenterMarker';
+import { CameraShake } from './seismic/CameraShake';
 
 /** Advances the simulation clock from the render loop (mounted first so it runs before views). */
 function SimulationDriver() {
@@ -49,6 +52,9 @@ export function SimulationScene() {
       </group>
       <WindStreaks />
       <WindArrows />
+      <GroundMotionLayer />
+      <EpicenterMarker />
+      <CameraShake />
     </>
   );
 }

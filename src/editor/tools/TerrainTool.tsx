@@ -16,6 +16,7 @@ const TOOL_COLORS: Record<string, string> = {
   flatten: '#f2d36b',
   smooth: '#8fc7ff',
   paint: '#ffffff',
+  soil: '#6a9bb3',
   inspect: '#ffb067',
 };
 
@@ -90,6 +91,7 @@ export function TerrainTool() {
         dt: Math.min(dt, 1 / 20),
         targetHeight: held.current.target,
         groundType: ed.paintType,
+        soilType: ed.soilType,
       });
       markTerrainDirty(rect);
     }
@@ -120,7 +122,7 @@ export function TerrainTool() {
       return;
     }
     if (controls) controls.enabled = false; // left-drag sculpts instead of orbiting
-    held.current = { op: tool, target: hit[1] };
+    held.current = { op: tool === 'soil' ? 'paintSoil' : tool, target: hit[1] };
     useWorldStore.getState().beginTerrainStroke();
   };
 

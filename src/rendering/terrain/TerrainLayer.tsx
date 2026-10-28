@@ -79,7 +79,7 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
   const terrain = useWorldStore((s) => s.doc.terrain);
   const mode = useViewStore((s) => s.terrainView);
   // One surface per grid (commits share the arrays and only bump the object identity).
-  const surface = useMemo(() => new TerrainSurface(terrain, mode), [terrain.heights, terrain.ground]); // eslint-disable-line react-hooks/exhaustive-deps
+  const surface = useMemo(() => new TerrainSurface(terrain, mode), [terrain.heights, terrain.ground, terrain.soil]); // eslint-disable-line react-hooks/exhaustive-deps
   const { material, uniforms } = useMemo(createTerrainMaterial, []);
   const skirtMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#7a6249', roughness: 1, side: THREE.DoubleSide }), []);
   const lastRev = useRef(terrain.revision);
@@ -131,16 +131,18 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
  */
 export function TerrainLayer({ showGrid }: { showGrid: boolean }) {
   const terrain = useWorldStore((s) => s.doc.terrain);
+  const view = useViewStore((s) => s.terrainView);
+  // A painted soil layer only needs the mesh while the soil map is shown.
   const plainNow = () => {
     const s = samplerFor(terrain);
-    return s.flat && s.uniformGround;
+    return s.flat && s.uniformGround && (s.uniformSoil || useViewStore.getState().terrainView !== 'soil');
   };
   const [plain, setPlain] = useState(plainNow);
-  useEffect(() => setPlain(plainNow()), [terrain]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => setPlain(plainNow()), [terrain, view]); // eslint-disable-line react-hooks/exhaustive-deps
   // The first dab on a flat terrain changes the data without a new document: switch then.
   useFrame(() => {
-    if (!plain) return;
-    if (!plainNow()) setPlain(false);
+    const now = plainNow();
+    if (now !== plain) setPlain(now);
   });
   return plain ? <FlatGround showGrid={showGrid} /> : <TerrainMesh showGrid={showGrid} />;
 }

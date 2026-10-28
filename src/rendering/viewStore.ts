@@ -2,6 +2,22 @@ import { create } from 'zustand';
 import type { Vec3 } from '@/core/types';
 import type { TerrainViewMode } from './terrain/TerrainSurface';
 
+export interface QuakeViz {
+  /** Ground-motion surface (displacement + acceleration colors). */
+  ground: boolean;
+  /** Horizontal ground-acceleration arrows. */
+  arrows: boolean;
+  /** Tint structures by their current drift demand. */
+  stress: boolean;
+  epicenter: boolean;
+  /** Visual exaggeration of ground / structural displacement (1 = true scale). */
+  exaggeration: number;
+  /** Optional camera shake — a visual effect only, separate from the simulation. */
+  cameraShake: boolean;
+}
+
+export const QUAKE_EXAGGERATIONS = [1, 5, 10, 25] as const;
+
 /**
  * Small bridge between the 3D view and DOM overlays (compass, focus requests).
  * Kept separate from world/editor state on purpose.
@@ -22,6 +38,9 @@ interface ViewState {
   /** Terrain coloring: ground types (shaded), elevation tint + contours, or flat ground-type map. */
   terrainView: TerrainViewMode;
   setTerrainView: (m: TerrainViewMode) => void;
+  /** Earthquake visualization (render-only; never affects the simulation). */
+  quakeViz: QuakeViz;
+  setQuakeViz: (patch: Partial<QuakeViz>) => void;
   /** Developer performance HUD (off by default; `?perf` or Shift+P). */
   showPerfHud: boolean;
   togglePerfHud: () => void;
@@ -44,6 +63,8 @@ export const useViewStore = create<ViewState>((set) => ({
   followId: null,
   terrainView: 'surface',
   setTerrainView: (terrainView) => set({ terrainView }),
+  quakeViz: { ground: true, arrows: true, stress: true, epicenter: true, exaggeration: 10, cameraShake: false },
+  setQuakeViz: (patch) => set((s) => ({ quakeViz: { ...s.quakeViz, ...patch } })),
   showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
   togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),

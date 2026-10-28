@@ -13,12 +13,14 @@ import * as THREE from 'three';
 import type { TerrainData } from '@/core/model';
 import type { GridRect } from '@/terrain/TerrainData';
 import { groundMaterial } from '@/terrain/GroundMaterials';
+import { soilProfile } from '@/terrain/SoilProfiles';
 import { terrainStats } from '@/terrain/terrainStats';
 
-export type TerrainViewMode = 'surface' | 'elevation' | 'ground';
+export type TerrainViewMode = 'surface' | 'elevation' | 'ground' | 'soil';
 
 const tmpColor = new THREE.Color();
 const groundColors = Array.from({ length: 5 }, (_, i) => new THREE.Color(groundMaterial(i).color));
+const soilColors = Array.from({ length: 4 }, (_, i) => new THREE.Color(soilProfile(i).color));
 
 /** Low → high: shore green, grass, olive, ochre, brown, rock, snow-ish. */
 const ELEVATION_STOPS: [number, string][] = [
@@ -150,6 +152,8 @@ export class TerrainSurface {
         const i = v * 3;
         if (this.mode === 'elevation') {
           elevationColor(h[v], tmpColor);
+        } else if (this.mode === 'soil') {
+          tmpColor.copy(soilColors[this.t.soil[v]] ?? soilColors[1]);
         } else {
           tmpColor.copy(groundColors[ground[v]] ?? groundColors[0]);
           if (this.mode === 'surface') {

@@ -16,6 +16,11 @@
  * geometry, distant people stop drawing separate arms, and visual-only animation (arm swing,
  * canopy flutter) of distant objects is refreshed at a lower rate.
  *
+ * Earthquake (Phase 13, render-only): buildings are drawn sheared by their computed top
+ * displacement and moved with the ground/foundation displacement (× a visual exaggeration),
+ * tilted by the residual foundation tilt, tinted by their drift demand, and show crack marks;
+ * every other object moves with the ground under it. Nothing here feeds back into physics.
+ *
  * No React here; the simulation core does not know this class exists.
  */
 import * as THREE from 'three';
@@ -31,8 +36,11 @@ import type { RuntimeEntity, SimulationRuntime } from '@/simulation/SimulationRu
 import { buildMergedGeometry, vertexColorMaterial } from '../views/MergedBoxes';
 import { getMaterial } from '../materials';
 import { UNIT_BOX } from '../geometry/primitives';
+import { flatSampler, type TerrainSampler } from '@/terrain/TerrainSampler';
+import { foundationPlinth } from '@/terrain/groundPlacement';
+import { seededRandom } from '@/core/math';
 import {
-  buildingShellParts, buildingSignParts, carParts, FACADE_KINDS, FACADE_STYLE, facadeColor, humanParts, PART_MATS,
+  buildingPlinthParts, buildingShellParts, buildingSignParts, carParts, FACADE_KINDS, FACADE_STYLE, facadeColor, humanParts, PART_MATS,
   signParts, streetLightParts, treeParts, wallParts, type BoxPart, type FacadeKind, type PartMat,
 } from '../parts/objectParts';
 
@@ -43,7 +51,17 @@ const LOD_HYST = 6;
 export const ANIM_FAR = 70;
 const ANIM_STRIDE = 3;
 
-type Role = 'root' | 'stump' | 'upper' | 'canopy' | 'armL' | 'armR' | 'lamp' | 'panel' | 'shopSign';
+type Role = 'root' | 'stump' | 'upper' | 'canopy' | 'armL' | 'armR' | 'lamp' | 'panel' | 'shopSign' | 'plinth';
+
+/** Earthquake drawing options for a frame (from the view store). */
+export interface QuakeRenderOptions {
+  /** Visual displacement exaggeration (1 = true scale). */
+  exaggeration: number;
+  /** Tint structures by their drift demand. */
+  stress: boolean;
+}
+
+const CRACKS_PER_BUILDING = 8;
 
 interface PartRef {
   batch: PartBatch;
@@ -77,6 +95,14 @@ interface EntityView {
   hidden: boolean;
   /** Facade instances of a building: [kind, instance index, component index]. */
   facade?: [FacadeKind, number, number][];
+  /** Facade part matrices in the building's local frame (earthquake deformation). */
+  facadeLocal?: THREE.Matrix4[];
+  /** Crack overlay instances (index into the crack mesh) and their local matrices. */
+  cracks?: { index: number; local: THREE.Matrix4 }[];
+  /** Earthquake drawing state last applied (skip unchanged frames). */
+  quakeKey?: number;
+  cracksShown?: number;
+  tint?: number;
 }
 
 /** One BatchedMesh per material variant. */
@@ -178,6 +204,18 @@ const euler = new THREE.Euler();
 const vOne = new THREE.Vector3(1, 1, 1);
 const vScaleTmp = new THREE.Vector3();
 
+const mShear = new THREE.Matrix4();
+const mTilt = new THREE.Matrix4();
+const vShaken: [number, number, number] = [0, 0, 0];
+const cTint = new THREE.Color();
+const TINT_STOPS = [new THREE.Color(1, 1, 1), new THREE.Color(1, 0.93, 0.45), new THREE.Color(1, 0.62, 0.3), new THREE.Color(1, 0.36, 0.32)];
+
+/** Drift demand (0 … 3, × slight-damage drift) → shell tint (white = unstressed). */
+export function tintColor(x: number, out: THREE.Color): THREE.Color {
+  const i = Math.min(TINT_STOPS.length - 2, Math.floor(x));
+  return out.copy(TINT_STOPS[i]).lerp(TINT_STOPS[i + 1], Math.min(1, x - i));
+}
+
 function setQ(q: THREE.Quaternion, a: readonly number[]) {
   return q.set(a[0], a[1], a[2], a[3]);
 }
@@ -201,7 +239,10 @@ export class SimRenderAdapter {
   private frame = 0;
   private camPos = new THREE.Vector3();
 
-  constructor(private runtime: SimulationRuntime) {
+  private crackMesh: THREE.InstancedMesh;
+  private quake: QuakeRenderOptions | null = null;
+
+  constructor(private runtime: SimulationRuntime, terrain: TerrainSampler = flatSampler()) {
     this.root.name = 'sim-render-adapter';
     const entities = [...runtime.entities.values()].filter((e) => e.source.type !== 'road');
     const batch = (mat: PartMat) => {
@@ -229,6 +270,9 @@ export class SimRenderAdapter {
         case 'building': {
           const p = o.params as BuildingParams;
           add(list, 'standard', buildingShellParts(p), 'root');
+          // Slope foundation plinth (Phase 13; none on flat ground).
+          const plinth = buildingPlinthParts(p, foundationPlinth(o, terrain) / o.transform.scale[1]);
+          if (plinth.length) add(list, 'standard', plinth, 'plinth');
           const sign = o.components.find((c) => c.kind === 'sign');
           if (sign) add(list, 'shopSign', buildingSignParts(sign), 'shopSign', translation(sign.position));
           for (const c of o.components) if ((FACADE_KINDS as string[]).includes(c.kind)) facadeCounts[c.kind as FacadeKind]++;
@@ -283,6 +327,15 @@ export class SimRenderAdapter {
     }
     this.facade = new FacadeLayer(facadeCounts);
     for (const kind of FACADE_KINDS) this.root.add(this.facade.meshes[kind]);
+    const buildings = entities.filter((e) => e.source.type === 'building').length;
+    this.crackMesh = new THREE.InstancedMesh(UNIT_BOX, getMaterial('#2a2622', { roughness: 1 }), Math.max(1, buildings * CRACKS_PER_BUILDING));
+    this.crackMesh.name = 'quake:cracks';
+    this.crackMesh.count = buildings * CRACKS_PER_BUILDING;
+    for (let i = 0; i < this.crackMesh.count; i++) this.crackMesh.setMatrixAt(i, HIDDEN);
+    this.crackMesh.raycast = () => {};
+    this.crackMesh.frustumCulled = false;
+    this.crackMesh.visible = false; // no draw call until the first crack appears
+    this.root.add(this.crackMesh);
 
     entities.forEach((e, index) => {
       const view: EntityView = {
@@ -324,16 +377,38 @@ export class SimRenderAdapter {
     for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(root, part.local) : root);
     const p = v.e.source.params as BuildingParams;
     v.facade = [];
+    v.facadeLocal = [];
     const wallColor = new THREE.Color(facadeColor('wall', p));
     v.e.source.components.forEach((c, ci) => {
       if (!(FACADE_KINDS as string[]).includes(c.kind)) return;
       const kind = c.kind as FacadeKind;
-      mTmp.compose(vPos.set(c.position[0], c.position[1], c.position[2]), qB.identity(), vScaleTmp.set(c.size[0], c.size[1], c.size[2]));
-      const m = new THREE.Matrix4().multiplyMatrices(root, mTmp);
+      const local = new THREE.Matrix4().compose(vPos.set(c.position[0], c.position[1], c.position[2]), qB.identity(), vScaleTmp.set(c.size[0], c.size[1], c.size[2]));
+      const m = new THREE.Matrix4().multiplyMatrices(root, local);
       const i = this.facade.add(kind, v.e.id, m, kind === 'wall' ? wallColor : WHITE);
       v.facade!.push([kind, i, ci]);
+      v.facadeLocal!.push(local);
     });
+    // Crack marks: thin dark diagonal strips at seeded spots on the facades (hidden until cracked).
+    const rnd = seededRandom((v.e.source.seed ^ 0x6b43a9b5) >>> 0);
+    const H = p.floors * p.floorHeight;
+    v.cracks = [];
+    for (let k = 0; k < CRACKS_PER_BUILDING; k++) {
+      const face = Math.floor(rnd() * 4);
+      const along = (rnd() - 0.5) * 0.8;
+      const y = Math.min(H - 0.5, (Math.floor(rnd() * p.floors) + 0.35 + rnd() * 0.3) * p.floorHeight);
+      const len = 0.9 + rnd() * 1.4;
+      const angle = (rnd() < 0.5 ? -1 : 1) * (0.55 + rnd() * 0.35);
+      const nx = face === 0 ? 0 : face === 1 ? 0 : face === 2 ? 1 : -1;
+      const nz = face === 0 ? 1 : face === 1 ? -1 : 0;
+      const pos = nz !== 0 ? [along * p.width, y, nz * (p.depth / 2 + 0.05)] : [nx * (p.width / 2 + 0.05), y, along * p.depth];
+      // Rotate in the facade plane: about the facade normal.
+      qB.setFromAxisAngle(vAxis.set(nx, 0, nz), angle);
+      const local = new THREE.Matrix4().compose(vPos.set(pos[0], pos[1], pos[2]), qB, vScaleTmp.set(nz !== 0 ? len : 0.06, 0.07, nz !== 0 ? 0.06 : len));
+      v.cracks.push({ index: this.nextCrack++, local });
+    }
   }
+
+  private nextCrack = 0;
 
   /** Entity id for a picked object + instance (BatchedMesh batchId / InstancedMesh instanceId). */
   pick(object: THREE.Object3D, id: number | undefined): EntityId | null {
@@ -355,15 +430,83 @@ export class SimRenderAdapter {
    * Per-frame sync from simulation state. `elapsed` drives visual-only animation;
    * `storm` (0–1) scales canopy flutter.
    */
-  update(camera: THREE.Camera, elapsed: number, storm: number) {
+  update(camera: THREE.Camera, elapsed: number, storm: number, quake: QuakeRenderOptions | null = null) {
     this.frame++;
     camera.getWorldPosition(this.camPos);
+    // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).
+    this.quake = quake && this.runtime.seismic ? quake : null;
+    let cracksDirty = false;
     for (const v of this.views) {
       if (v.e.rev !== v.lastRev) this.applyRev(v);
-      if (v.hidden || v.type === 'building') continue;
+      if (v.hidden) continue;
+      if (v.type === 'building') {
+        if (this.quake && v.e.seismic && this.updateBuildingQuake(v)) cracksDirty = true;
+        continue;
+      }
       this.updateLod(v);
       this.updateTransforms(v, elapsed, storm);
     }
+    if (cracksDirty) {
+      this.crackMesh.instanceMatrix.needsUpdate = true;
+      for (const kind of FACADE_KINDS) this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Earthquake deformation of a building (render-only): M = T(position + exaggerated ground +
+   * foundation displacement) · R(residual tilt) · Shear(exaggerated drift profile) · R(yaw) · S.
+   * Returns whether instance matrices were rewritten.
+   */
+  private updateBuildingQuake(v: EntityView): boolean {
+    const e = v.e;
+    const st = e.seismic!;
+    const q = this.quake!;
+    const k = q.exaggeration;
+    const H = Math.max(1, e.dims[1]);
+    const gx = st.ground.d[0] * k + st.base[0] * k;
+    const gy = st.ground.d[1] * k;
+    const gz = st.ground.d[2] * k + st.base[1] * k;
+    const sx = ((st.top[0] - st.base[0]) * k) / H;
+    const sz = ((st.top[1] - st.base[1]) * k) / H;
+    const tilt = st.tiltMag;
+    // Stress tint: current drift / slight-damage drift → white … yellow … red.
+    const tint = q.stress ? Math.min(3, st.stress) : 0;
+    const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k;
+    const crackCount = Math.ceil(st.crack * CRACKS_PER_BUILDING);
+    // Distant buildings refresh every ANIM_STRIDE frames (visual only).
+    if (!this.isNear(v) && (this.frame + v.index) % ANIM_STRIDE !== 0) return false;
+    if (key === v.quakeKey && crackCount === v.cracksShown) return false;
+    v.quakeKey = key;
+    const t = e.source.transform;
+    // R(yaw)·S
+    mTmp.compose(vPos.set(0, 0, 0), qA.setFromEuler(euler.set(t.rotation[0], t.rotation[1], t.rotation[2])), v.scale);
+    mShear.set(1, sx, 0, 0, 0, 1, 0, 0, 0, sz, 1, 0, 0, 0, 0, 1);
+    mRoot.multiplyMatrices(mShear, mTmp);
+    if (tilt > 1e-6) {
+      vAxis.set(st.tilt[1] / tilt, 0, -st.tilt[0] / tilt);
+      mTilt.makeRotationAxis(vAxis, tilt);
+      mRoot.premultiply(mTilt);
+    }
+    mRoot.setPosition(t.position[0] + gx, t.position[1] + gy, t.position[2] + gz);
+    for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(mRoot, part.local) : mRoot);
+    if (v.facade && v.facadeLocal) {
+      for (let f = 0; f < v.facade.length; f++) {
+        const [kind, i, ci] = v.facade[f];
+        if (e.components[ci].condition === 'detached') continue;
+        this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(mRoot, v.facadeLocal[f]));
+      }
+    }
+    if (v.cracks) {
+      v.cracksShown = crackCount;
+      if (crackCount > 0) this.crackMesh.visible = true;
+      v.cracks.forEach((c, n) => this.crackMesh.setMatrixAt(c.index, n < crackCount ? mTmp.multiplyMatrices(mRoot, c.local) : HIDDEN));
+    }
+    if (tint !== v.tint) {
+      v.tint = tint;
+      tintColor(tint, cTint);
+      for (const part of v.parts) if (part.role === 'root') part.batch.mesh.setColorAt(part.id, cTint);
+    }
+    return true;
   }
 
   private updateLod(v: EntityView) {
@@ -418,6 +561,18 @@ export class SimRenderAdapter {
     }
   }
 
+  /** Pose position + the exaggerated ground displacement under the object (earthquake). */
+  private shaken(e: RuntimeEntity, p: readonly number[]): readonly number[] {
+    const st = e.seismic;
+    if (!this.quake || !st) return p;
+    const k = this.quake.exaggeration;
+    const d = st.ground.d;
+    vShaken[0] = p[0] + d[0] * k;
+    vShaken[1] = p[1] + d[1] * k;
+    vShaken[2] = p[2] + d[2] * k;
+    return vShaken;
+  }
+
   private updateTransforms(v: EntityView, elapsed: number, storm: number) {
     const e = v.e;
     // Visual-only animation: every frame nearby, every ANIM_STRIDE-th frame (staggered) beyond.
@@ -426,8 +581,8 @@ export class SimRenderAdapter {
       case 'tree': {
         const broken = e.flags.snapped || e.flags.uprooted;
         // Upper part (trunk + canopy): falling body or swaying around the base.
-        if (broken) this.compose(mRoot, e.pose.position, setQ(qA, e.pose.quaternion), v.scale);
-        else this.compose(mRoot, e.initialPose.position, this.swayed(e, e.visual.swayAngle, e.initialPose.quaternion), v.scale);
+        if (broken) this.compose(mRoot, this.shaken(e, e.pose.position), setQ(qA, e.pose.quaternion), v.scale);
+        else this.compose(mRoot, this.shaken(e, e.initialPose.position), this.swayed(e, e.visual.swayAngle, e.initialPose.quaternion), v.scale);
         if (animate) {
           const s = 1 - 0.38 * e.visual.foliageLoss;
           const ph = (e.source.seed % 1000) * 0.37;
@@ -441,15 +596,15 @@ export class SimRenderAdapter {
         }
         // Stump: stays unless uprooted.
         const stump = v.parts[0];
-        if (e.flags.uprooted) this.compose(mRoot, e.pose.position, setQ(qA, e.pose.quaternion), v.scale);
-        else this.compose(mRoot, e.initialPose.position, setQ(qA, e.initialPose.quaternion), v.scale);
+        if (e.flags.uprooted) this.compose(mRoot, this.shaken(e, e.pose.position), setQ(qA, e.pose.quaternion), v.scale);
+        else this.compose(mRoot, this.shaken(e, e.initialPose.position), setQ(qA, e.initialPose.quaternion), v.scale);
         stump.batch.mesh.setMatrixAt(stump.id, mRoot);
         return;
       }
       case 'human': {
         const lean = !e.flags.fallen && e.dynamic;
         const q = lean ? this.swayed(e, e.visual.swayAngle, e.pose.quaternion, true) : setQ(qA, e.pose.quaternion);
-        this.compose(mRoot, e.pose.position, q, v.scale);
+        this.compose(mRoot, this.shaken(e, e.pose.position), q, v.scale);
         if (animate && !v.far) {
           const b = e.flags.fallen ? 0.3 : e.visual.brace;
           const t = elapsed * (4 + b * 6) + (e.source.seed % 1000) * 0.01;
@@ -465,7 +620,24 @@ export class SimRenderAdapter {
       }
       default: {
         // Cars, street lights, signs, walls: rigid, follow the body pose.
-        this.compose(mRoot, e.pose.position, setQ(qA, e.pose.quaternion), v.scale);
+        let q = setQ(qA, e.pose.quaternion);
+        const st = e.seismic;
+        if (this.quake && st) {
+          if (v.type === 'car') {
+            // Visual rocking on the suspension: roll/pitch against the ground acceleration.
+            const ax = st.ground.a[0];
+            const az = st.ground.a[2];
+            const a = Math.hypot(ax, az);
+            if (a > 1e-3) q = qB.setFromAxisAngle(vAxis.set(-az / a, 0, ax / a), Math.min(0.12, a * 0.012)).multiply(qA);
+          } else if (!e.dynamic && st.unit >= 0) {
+            // Anchored poles / signs / walls sway with their computed top displacement.
+            const tx = st.top[0];
+            const tz = st.top[1];
+            const d = Math.hypot(tx, tz);
+            if (d > 1e-6) q = qB.setFromAxisAngle(vAxis.set(tz / d, 0, -tx / d), Math.min(0.5, (d * this.quake.exaggeration) / Math.max(1, e.dims[1]))).multiply(qA);
+          }
+        }
+        this.compose(mRoot, this.shaken(e, e.pose.position), q, v.scale);
         for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(mRoot, part.local) : mRoot);
       }
     }
@@ -495,6 +667,7 @@ export class SimRenderAdapter {
   dispose() {
     for (const b of this.batches.values()) b.mesh.dispose();
     for (const kind of FACADE_KINDS) this.facade.meshes[kind].dispose();
+    this.crackMesh.dispose();
     this.root.clear();
   }
 

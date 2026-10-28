@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import type { EntityId } from '@/core/types';
-import type { GroundTypeId } from '@/core/model';
+import type { GroundTypeId, SoilProfileId } from '@/core/model';
 
 export type AppMode = 'editor' | 'simulation';
 export type EditorTool = 'select' | 'place' | 'terrain';
 /** Terrain Editing Mode tools: sculpt, paint ground, or read values at a point. */
-export type TerrainToolId = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'inspect';
+export type TerrainToolId = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'soil' | 'inspect';
 
 export const BRUSH_RADIUS_RANGE: [number, number] = [1, 40];
 export type TransformMode = 'translate' | 'rotate' | 'scale';
@@ -30,6 +30,8 @@ interface EditorState {
   brushRadius: number;
   brushStrength: number;
   paintType: GroundTypeId;
+  /** Soil profile painted by the 'soil' tool (Phase 13). */
+  soilType: SoilProfileId;
   /** Point picked with the inspect tool (world x/z). */
   terrainProbe: { x: number; z: number } | null;
 
@@ -46,6 +48,7 @@ interface EditorState {
   setTerrainTool: (t: TerrainToolId | null) => void;
   setBrush: (patch: { radius?: number; strength?: number }) => void;
   setPaintType: (t: GroundTypeId) => void;
+  setSoilType: (t: SoilProfileId) => void;
   setTerrainProbe: (p: { x: number; z: number } | null) => void;
 }
 
@@ -64,6 +67,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   brushRadius: 8,
   brushStrength: 0.5,
   paintType: 3,
+  soilType: 2,
   terrainProbe: null,
 
   setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null }),
@@ -86,5 +90,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       brushStrength: strength === undefined ? get().brushStrength : Math.min(1, Math.max(0.05, strength)),
     }),
   setPaintType: (paintType) => set({ paintType }),
+  setSoilType: (soilType) => set({ soilType }),
   setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
 }));

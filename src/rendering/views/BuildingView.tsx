@@ -4,7 +4,10 @@ import * as THREE from 'three';
 import type { ComponentKind, ComponentSpec } from '@/core/model';
 import type { BuildingParams } from '@/objects/definitions/building';
 import type { RuntimeComponent, RuntimeEntity } from '@/simulation/SimulationRuntime';
-import { buildingShellParts, buildingSignParts, FACADE_STYLE, facadeColor, groupComponents, PART_MATS } from '../parts/objectParts';
+import { buildingPlinthParts, buildingShellParts, buildingSignParts, FACADE_STYLE, facadeColor, groupComponents, PART_MATS } from '../parts/objectParts';
+import { useWorldStore } from '@/world/worldStore';
+import { samplerFor } from '@/terrain/TerrainSampler';
+import { foundationPlinth } from '@/terrain/groundPlacement';
 import { MergedBoxes } from './MergedBoxes';
 import { ComponentInstances } from './ComponentInstances';
 import type { ViewProps } from './types';
@@ -82,10 +85,15 @@ export function BuildingView({ obj, live }: ViewProps & { live?: RuntimeEntity }
   // Core volume, plinth, floor bands and roof slab baked into one mesh.
   const shell = useMemo(() => buildingShellParts(p), [p]);
   const signParts = useMemo(() => (sign ? buildingSignParts(sign) : null), [sign]);
+  // Slope foundation (editor view; the simulation adapter draws the same parts).
+  const terrain = useWorldStore((s) => s.doc.terrain);
+  const plinthDepth = useMemo(() => foundationPlinth(obj, samplerFor(terrain)) / obj.transform.scale[1], [obj, terrain]);
+  const plinth = useMemo(() => buildingPlinthParts(p, plinthDepth), [p, plinthDepth]);
 
   return (
     <group ref={structureRef}>
       <MergedBoxes parts={shell} />
+      {plinth.length > 0 && <MergedBoxes parts={plinth} />}
 
       {INSTANCED.map((kind) => (
         <ComponentInstances

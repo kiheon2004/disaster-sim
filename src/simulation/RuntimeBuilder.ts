@@ -10,6 +10,7 @@ import { createSampleCache } from './wind/SpatialWindField';
 import type { RuntimeEntity, SimulationRuntime } from './SimulationRuntime';
 import { groundFrictionFactor } from '@/terrain/GroundMaterials';
 import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
+import { foundationPlinth } from '@/terrain/groundPlacement';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -30,13 +31,20 @@ export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
 /** Contact-force threshold so resting contact is ignored but impacts are reported. */
 export const impactThreshold = (mass: number) => Math.max(800, mass * 9.81 * 2.5);
 
-export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction'>, dynamic: boolean): BodyHandle {
+export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction'>, dynamic: boolean, plinth = 0): BodyHandle {
   const o = e.source;
+  const shapes = e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale));
+  // Slope foundation plinth (buildings on terrain, Phase 13): solid down to the ground.
+  if (plinth > 0) {
+    const d = e.def.getDimensions(o.params);
+    const k = o.transform.scale;
+    shapes.push({ type: 'box', halfExtents: [(d[0] * k[0]) / 2 + 0.1, plinth / 2, (d[2] * k[2]) / 2 + 0.1], offset: [0, -plinth / 2, 0] });
+  }
   return physics.createBody({
     kind: dynamic ? 'dynamic' : 'fixed',
     position: e.initialPose.position,
     quaternion: e.initialPose.quaternion,
-    shapes: e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale)),
+    shapes,
     mass: o.physics.mass,
     // Free-standing bodies grip according to the ground they start on (approximate; ×1 on grass).
     friction: o.physics.friction * e.groundFriction,
@@ -109,7 +117,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     windCache: createSampleCache(),
     counters: {},
   };
-  e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic);
+  e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic, foundationPlinth(o, terrain));
   if (def.inert) e.dynamic = false;
   return e;
 }
