@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import * as THREE from 'three';
 import type { Vec3 } from '@/core/types';
 import type { ObjectParams } from '@/core/model';
 import { WORLD_SIZE } from '@/core/units';
@@ -13,9 +12,8 @@ import { MaterialModeContext } from '@/rendering/materials';
 import { StaticObjectView } from '@/rendering/views';
 import { useEditorStore } from '../editorStore';
 import { isInsideWorld, snapPoint } from '../placement';
-
-const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-const tmp = new THREE.Vector3();
+import { samplerFor } from '@/terrain/TerrainSampler';
+import { groundPose, type GroundPose } from '@/terrain/groundPlacement';
 
 /** Ghost preview that follows the cursor on the ground; click places the armed preset. */
 export function PlaceTool() {
@@ -25,6 +23,7 @@ export function PlaceTool() {
   const randomize = useEditorStore((s) => s.randomize);
   const item = getPaletteItem(itemId);
   const [pos, setPos] = useState<Vec3 | null>(null);
+  const terrain = useWorldStore((s) => s.doc.terrain);
   const [variant, setVariant] = useState(() => Math.floor(Math.random() * 1e9));
 
   // Re-roll the variation whenever a new preset is armed.
@@ -45,11 +44,17 @@ export function PlaceTool() {
 
   const footprint = Math.max(preview.dims[0], preview.dims[2]);
   const valid = pos ? isInsideWorld(pos, preview.dims, yaw) : false;
+  const sampler = samplerFor(terrain);
+  /** Seated pose on the terrain for the armed preset (level / tilted per category). */
+  const poseAt = (p: Vec3): GroundPose => groundPose(preview.obj, p[0], p[2], yaw, sampler);
+  const ghost = pos ? poseAt(pos) : null;
 
-  /** Intersect the pointer ray with the y=0 ground plane (independent of mesh matrices). */
+  /** Intersect the pointer ray with the terrain data (independent of mesh matrices), snap x/z. */
   const groundHit = (e: ThreeEvent<PointerEvent | MouseEvent>): Vec3 | null => {
-    const hit = e.ray.intersectPlane(GROUND_PLANE, tmp);
-    return hit ? snapPoint([hit.x, 0, hit.z], snap, footprint) : null;
+    const o = e.ray.origin;
+    const d = e.ray.direction;
+    const hit: Vec3 = [0, 0, 0];
+    return sampler.raycast([o.x, o.y, o.z], [d.x, d.y, d.z], 3000, hit) ? snapPoint(hit, snap, footprint) : null;
   };
   const onMove = (e: ThreeEvent<PointerEvent>) => setPos(groundHit(e));
   const onClick = (e: ThreeEvent<MouseEvent>) => {
@@ -62,20 +67,20 @@ export function PlaceTool() {
       type: item.type,
       params: preview.obj.params,
       seed: preview.obj.seed,
-      transform: { position: at, rotation: [0, yaw, 0], scale: [1, 1, 1] },
+      transform: { ...poseAt(at), scale: [1, 1, 1] },
     });
     setVariant(Math.floor(Math.random() * 1e9));
   };
 
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.001} onPointerMove={onMove} onPointerOut={() => setPos(null)} onClick={onClick}>
+      <mesh rotation-x={-Math.PI / 2} position-y={-60} onPointerMove={onMove} onPointerOut={() => setPos(null)} onClick={onClick}>
         <planeGeometry args={[WORLD_SIZE * 3, WORLD_SIZE * 3]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      {pos && (
+      {ghost && (
         <MaterialModeContext.Provider value={valid ? 'ghost' : 'ghostInvalid'}>
-          <group position={pos} rotation-y={yaw} raycast={() => null}>
+          <group position={ghost.position} rotation={ghost.rotation} raycast={() => null}>
             <StaticObjectView obj={preview.obj} />
           </group>
         </MaterialModeContext.Provider>

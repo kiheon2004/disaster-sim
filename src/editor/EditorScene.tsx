@@ -10,6 +10,7 @@ import { entityNodeName } from '@/rendering/objectNames';
 import { CastShadowContext, castsShadow } from '@/rendering/materials';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
+import { TerrainTool } from './tools/TerrainTool';
 import { TransformGizmo } from './TransformGizmo';
 
 const EditorEntity = memo(function EditorEntity({
@@ -96,6 +97,7 @@ export function EditorScene() {
       ))}
       {interactive && <GroundDeselect />}
       {tool === 'place' && <PlaceTool />}
+      {tool === 'terrain' && <TerrainTool />}
       {interactive && <TransformGizmo />}
     </>
   );

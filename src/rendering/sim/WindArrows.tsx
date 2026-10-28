@@ -59,9 +59,11 @@ export function WindArrows() {
       for (let gz = -HALF_CELLS; gz <= HALF_CELLS; gz++) {
         const x = ox + gx * SPACING;
         const z = oz + gz * SPACING;
-        const s = field.sample([x, height, z], t);
+        // Arrows float `height` meters above the local ground (same reference as the wind profile).
+        const y = env.terrain.sampleHeight(x, z) + height;
+        const s = field.sample([x, y, z], t);
         const len = Math.max(0.15, Math.min(1.6, s.speed / ref10)) * SPACING * 0.7;
-        dummy.position.set(x - (s.velocity[0] / Math.max(s.speed, 1e-6)) * len * 0.5, height, z - (s.velocity[2] / Math.max(s.speed, 1e-6)) * len * 0.5);
+        dummy.position.set(x - (s.velocity[0] / Math.max(s.speed, 1e-6)) * len * 0.5, y, z - (s.velocity[2] / Math.max(s.speed, 1e-6)) * len * 0.5);
         dummy.rotation.set(0, Math.atan2(-s.velocity[2], s.velocity[0]), 0);
         dummy.scale.set(len, 1 + len * 0.15, 1 + len * 0.15);
         dummy.updateMatrix();

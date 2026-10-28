@@ -8,6 +8,7 @@ import { Panel, Section } from '@/ui/common/Panel';
 import { ObjectInspector } from './ObjectInspector';
 import { LiveStatusSection, SimSummary } from './SimInspector';
 import { SimulationSettingsSection } from './SimulationSettings';
+import { TerrainInspector } from './TerrainInspector';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -17,10 +18,13 @@ export function InspectorPanel() {
   const mode = useEditorStore((s) => s.mode);
   const obj = useWorldStore((s) => (selectedId ? s.doc.objects[selectedId] : undefined));
   const inSim = mode === 'simulation';
+  const terrainMode = useEditorStore((s) => s.tool === 'terrain');
 
   return (
     <Panel title={t('panel.inspector')}>
-      {obj ? (
+      {terrainMode && !inSim ? (
+        <TerrainInspector />
+      ) : obj ? (
         <>
           {inSim && <LiveStatusSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
@@ -50,6 +54,7 @@ function NoSelection() {
     ['Delete', 'shortcut.delete'],
     ['Ctrl/⌘ + Z', 'shortcut.undo'],
     ['G', 'shortcut.snap'],
+    ['[ / ]', 'shortcut.brush'],
     ['Esc', 'shortcut.escape'],
   ];
 

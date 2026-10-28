@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Vec3 } from '@/core/types';
+import type { TerrainViewMode } from './terrain/TerrainSurface';
 
 /**
  * Small bridge between the 3D view and DOM overlays (compass, focus requests).
@@ -18,6 +19,9 @@ interface ViewState {
   arrowHeight: number;
   /** Entity the camera follows in simulation mode. */
   followId: string | null;
+  /** Terrain coloring: ground types (shaded), elevation tint + contours, or flat ground-type map. */
+  terrainView: TerrainViewMode;
+  setTerrainView: (m: TerrainViewMode) => void;
   /** Developer performance HUD (off by default; `?perf` or Shift+P). */
   showPerfHud: boolean;
   togglePerfHud: () => void;
@@ -38,6 +42,8 @@ export const useViewStore = create<ViewState>((set) => ({
   windViz: 'both',
   arrowHeight: 3,
   followId: null,
+  terrainView: 'surface',
+  setTerrainView: (terrainView) => set({ terrainView }),
   showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
   togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),

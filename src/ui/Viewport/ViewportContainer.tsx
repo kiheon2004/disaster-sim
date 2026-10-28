@@ -20,6 +20,7 @@ export function ViewportContainer() {
   const tool = useEditorStore((s) => s.tool);
   const loading = useSimStore((s) => s.status === 'loading');
   const placeItem = getPaletteItem(useEditorStore((s) => s.placeItemId));
+  const terrainTool = useEditorStore((s) => s.terrainTool);
   const isEditor = mode === 'editor';
   const perf = useViewStore((s) => s.showPerfHud);
 
@@ -49,7 +50,9 @@ export function ViewportContainer() {
             ? t('viewport.hint.sim')
             : tool === 'place' && placeItem
               ? t('viewport.hint.place', { name: t(placeItem.labelKey) })
-              : t('viewport.hint.camera')}
+              : tool === 'terrain'
+                ? t(terrainTool === 'inspect' ? 'viewport.hint.terrainInspect' : 'viewport.hint.terrain', { tool: t(`terrain.tool.${terrainTool}`) })
+                : t('viewport.hint.camera')}
         </span>
       </div>
       {!isEditor && (

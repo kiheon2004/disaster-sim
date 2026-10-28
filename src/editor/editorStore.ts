@@ -1,8 +1,13 @@
 import { create } from 'zustand';
 import type { EntityId } from '@/core/types';
+import type { GroundTypeId } from '@/core/model';
 
 export type AppMode = 'editor' | 'simulation';
-export type EditorTool = 'select' | 'place';
+export type EditorTool = 'select' | 'place' | 'terrain';
+/** Terrain Editing Mode tools: sculpt, paint ground, or read values at a point. */
+export type TerrainToolId = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'inspect';
+
+export const BRUSH_RADIUS_RANGE: [number, number] = [1, 40];
 export type TransformMode = 'translate' | 'rotate' | 'scale';
 
 interface EditorState {
@@ -20,6 +25,13 @@ interface EditorState {
   randomize: boolean;
   /** True while a gizmo drag is in progress (used to suppress click-selection). */
   dragging: boolean;
+  terrainTool: TerrainToolId;
+  /** Brush radius (m) and strength (0–1). */
+  brushRadius: number;
+  brushStrength: number;
+  paintType: GroundTypeId;
+  /** Point picked with the inspect tool (world x/z). */
+  terrainProbe: { x: number; z: number } | null;
 
   setMode: (m: AppMode) => void;
   armPlacement: (itemId: string | null) => void;
@@ -30,6 +42,11 @@ interface EditorState {
   toggleSnap: () => void;
   toggleRandomize: () => void;
   setDragging: (d: boolean) => void;
+  /** Enter Terrain Editing Mode with a tool (null = back to select). */
+  setTerrainTool: (t: TerrainToolId | null) => void;
+  setBrush: (patch: { radius?: number; strength?: number }) => void;
+  setPaintType: (t: GroundTypeId) => void;
+  setTerrainProbe: (p: { x: number; z: number } | null) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -43,6 +60,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   snap: true,
   randomize: true,
   dragging: false,
+  terrainTool: 'raise',
+  brushRadius: 8,
+  brushStrength: 0.5,
+  paintType: 3,
+  terrainProbe: null,
 
   setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null }),
   armPlacement: (placeItemId) =>
@@ -56,4 +78,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleSnap: () => set({ snap: !get().snap }),
   toggleRandomize: () => set({ randomize: !get().randomize }),
   setDragging: (dragging) => set({ dragging }),
+  setTerrainTool: (t) =>
+    set(t ? { tool: 'terrain', terrainTool: t, placeItemId: null, selectedId: null, hoveredId: null } : { tool: 'select' }),
+  setBrush: ({ radius, strength }) =>
+    set({
+      brushRadius: radius === undefined ? get().brushRadius : Math.min(BRUSH_RADIUS_RANGE[1], Math.max(BRUSH_RADIUS_RANGE[0], radius)),
+      brushStrength: strength === undefined ? get().brushStrength : Math.min(1, Math.max(0.05, strength)),
+    }),
+  setPaintType: (paintType) => set({ paintType }),
+  setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
 }));

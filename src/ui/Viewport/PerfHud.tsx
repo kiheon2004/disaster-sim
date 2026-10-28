@@ -4,6 +4,7 @@ import { getActiveAdapter } from '@/rendering/sim/renderStats';
 import { simProfiler, type SimProfileSnapshot } from '@/simulation/profiling/SimProfiler';
 import { simulationController } from '@/simulation/SimulationController';
 import { useWorldStore } from '@/world/worldStore';
+import { terrainStats } from '@/terrain/terrainStats';
 
 const REFRESH_MS = 250;
 
@@ -17,6 +18,9 @@ interface Row {
   instances: number | null;
   heapMB: number | null;
   sim: SimProfileSnapshot | null;
+  terrainQueriesPerStep: number | null;
+  terrainEdit: string;
+  terrainBuildMs: number | null;
 }
 
 function read(): Row {
@@ -37,7 +41,19 @@ function read(): Row {
     instances: adapter ? adapter.stats().instances : null,
     heapMB: mem ? mem.usedJSHeapSize / 1048576 : null,
     sim: running ? sim : null,
+    terrainQueriesPerStep: null,
+    terrainEdit: terrainStats.dabs || terrainStats.meshUpdates
+      ? `dab ${(terrainStats.dabMs / Math.max(1, terrainStats.dabs)).toFixed(2)} · mesh ${(terrainStats.meshMs / Math.max(1, terrainStats.meshUpdates)).toFixed(2)} ms`
+      : '—',
+    terrainBuildMs: rt ? simulationController.terrainBuildMs : null,
   };
+  // Terrain height queries made by the simulation (wind profile, particles, …) per fixed step.
+  const terrain = rt ? simulationController.getEnvironment().terrain : null;
+  if (terrain) {
+    if (running && sim.steps) row.terrainQueriesPerStep = terrain.queries / sim.steps;
+    terrain.queries = 0;
+  }
+  terrainStats.reset();
   rendererStats.reset();
   return row;
 }
@@ -74,6 +90,8 @@ export function PerfHud() {
     ['Draw calls', String(Math.round(row.drawCalls)), 'incl. shadows'],
     ['Triangles', `${(row.triangles / 1000).toFixed(0)}k`],
     ['Objects', String(row.objects), row.instances !== null ? `${row.instances} instances` : undefined],
+    ['Terrain q', row.terrainQueriesPerStep !== null ? `${Math.round(row.terrainQueriesPerStep)}/step` : '—', row.terrainBuildMs !== null ? `collider ${f1(row.terrainBuildMs)} ms` : undefined],
+    ['Terrain upd', row.terrainEdit],
   ];
   if (row.heapMB !== null) lines.push(['JS heap', `${row.heapMB.toFixed(0)} MB`]);
   return (

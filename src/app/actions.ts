@@ -3,6 +3,7 @@
  * so UI components never wire them together themselves.
  */
 import type { EntityId } from '@/core/types';
+import type { TerrainPresetId } from '@/core/model';
 import { getDefinition } from '@/objects/registry';
 import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
@@ -95,6 +96,14 @@ export async function importProject() {
   const text = await pickDocumentFile();
   if (text === null) return;
   applyLoad(parseDocument(text), 'toast.importCancelled');
+}
+
+/** Replace the terrain with a generated preset (one undo step; grounded objects follow). */
+export function applyTerrainPreset(preset: TerrainPresetId, seed: number) {
+  const name = t(`terrain.preset.${preset}`);
+  if (!window.confirm(t('terrain.preset.confirm', { name }))) return;
+  useWorldStore.getState().applyTerrainPreset(preset, seed);
+  toast('success', { key: 'toast.terrainPreset', params: { name } });
 }
 
 export function newProject() {

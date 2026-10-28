@@ -59,9 +59,15 @@ export function useEditorHotkeys() {
       }
       if (mod) return;
 
+      if (ed.tool === 'terrain' && (key === '[' || key === ']')) {
+        ed.setBrush({ radius: ed.brushRadius + (key === ']' ? 1 : -1) * (e.shiftKey ? 5 : 1) });
+        return;
+      }
+
       switch (key) {
         case 'escape':
-          if (ed.tool === 'place') ed.armPlacement(null);
+          if (ed.tool === 'terrain') ed.setTerrainTool(null);
+          else if (ed.tool === 'place') ed.armPlacement(null);
           else ed.select(null);
           break;
         case 'delete':

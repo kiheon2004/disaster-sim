@@ -39,6 +39,7 @@ export function WindStreaks() {
     if (!mesh.visible) return;
     const center = controls?.target ?? new THREE.Vector3();
     const field = env.windField;
+    const terrain = env.terrain;
     const t = env.time;
     // Advect each streak with the LOCAL wind (same field as physics): slow and veering in wakes.
     const visualScale = Math.min(speed, 60) * 0.9 / Math.max(1, speed);
@@ -46,7 +47,9 @@ export function WindStreaks() {
     for (let i = 0; i < COUNT; i++) {
       const s = pts[i];
       // Re-sample each streak every 3rd frame (staggered) — same field, a third of the cost.
-      if (i % 3 === frame.current || (s.v[0] === 0 && s.v[2] === 0)) s.v = field.velocityAt([s.p.x, s.p.y, s.p.z], t) as [number, number, number];
+      // p.y is the height above the local ground.
+      const ground = terrain.flat ? 0 : terrain.sampleHeight(s.p.x, s.p.z);
+      if (i % 3 === frame.current || (s.v[0] === 0 && s.v[2] === 0)) s.v = field.velocityAt([s.p.x, s.p.y + ground, s.p.z], t) as [number, number, number];
       const v = s.v;
       const sp = Math.hypot(v[0], v[2]);
       const local = sp / Math.max(1, speed);
@@ -60,7 +63,7 @@ export function WindStreaks() {
       if (dx < -RANGE) s.p.x += RANGE * 2;
       if (dz > RANGE) s.p.z -= RANGE * 2;
       if (dz < -RANGE) s.p.z += RANGE * 2;
-      dummy.position.copy(s.p);
+      dummy.position.set(s.p.x, s.p.y + ground, s.p.z);
       dummy.rotation.set(0, yaw, 0);
       const len = 0.6 + speed * 0.06 * local;
       dummy.scale.set(len, 0.04, 0.04);

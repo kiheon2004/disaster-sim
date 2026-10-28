@@ -39,6 +39,13 @@ const paths = {
   magnet: 'M6 3v8a6 6 0 0012 0V3h-4v8a2 2 0 01-4 0V3zM6 7h4M14 7h4',
   sparkle: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  terrain: 'M2 20l7-11 4 6 3-4 6 9z',
+  raise: 'M12 19V6M7 11l5-5 5 5M4 21h16',
+  lower: 'M12 4v13M7 12l5 5 5-5M4 3h16',
+  flatten: 'M3 13h18M3 18h18M7 8l5-4 5 4',
+  smooth: 'M3 15c3-6 6-6 9 0s6 6 9 0',
+  brush: 'M14 4l6 6-8 8-6-6zM6 12l-3 3c-1 2 0 5 3 5 2 0 3-1 3-3l3-3',
+  probe: 'M12 2v8M12 22a5 5 0 100-10 5 5 0 000 10zM12 17h.01',
 } as const;
 
 export type IconName = keyof typeof paths;

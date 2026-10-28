@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import type * as THREE from 'three';
+import { useContext, useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import type { StreetLightParams } from '@/objects/definitions/streetLight';
 import type { SignParams } from '@/objects/definitions/sign';
 import type { WallParams } from '@/objects/definitions/wall';
@@ -10,6 +10,10 @@ import { PART_MATS, roadLineParts, signParts, streetLightParts, wallParts } from
 import { MergedBoxes } from './MergedBoxes';
 import type { ViewProps } from './types';
 import { useComponentHidden } from './useComponentHidden';
+import { MaterialModeContext } from '../materials';
+import { useWorldStore } from '@/world/worldStore';
+import { samplerFor } from '@/terrain/TerrainSampler';
+import { drapedRoadLines, drapedRoadSurface } from '../terrain/drapeRoad';
 
 type LiveProps = ViewProps & { live?: RuntimeEntity };
 
@@ -56,6 +60,30 @@ export function RoadView({ obj }: LiveProps) {
     return t;
   }, [p.length, p.width]);
   const lines = useMemo(() => roadLineParts(p), [p]);
+  const terrain = useWorldStore((s) => s.doc.terrain);
+  const ghost = useContext(MaterialModeContext) !== 'normal';
+  // On relief the road surface follows the ground (placement ghosts stay a flat preview).
+  const drape = useMemo(() => {
+    const sampler = samplerFor(terrain);
+    if (ghost || sampler.flat) return null;
+    return { surface: drapedRoadSurface(p, obj.transform, sampler), lines: drapedRoadLines(lines, obj.transform, sampler) };
+  }, [terrain, ghost, p, obj.transform, lines]);
+  useEffect(() => () => {
+    drape?.surface.dispose();
+    drape?.lines.dispose();
+  }, [drape]);
+  if (drape) {
+    return (
+      <group>
+        <mesh geometry={drape.surface} receiveShadow>
+          <meshStandardMaterial map={tex} roughness={0.95} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+        </mesh>
+        <mesh geometry={drape.lines}>
+          <meshStandardMaterial vertexColors roughness={0.8} polygonOffset polygonOffsetFactor={-4} polygonOffsetUnits={-4} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    );
+  }
   return (
     <group>
       <mesh position={[0, ROAD_THICKNESS / 2, 0]} receiveShadow>

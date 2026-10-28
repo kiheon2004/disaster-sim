@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { RuntimeEntity } from '@/simulation/SimulationRuntime';
 import { DAMAGE_STATE_COLORS, DamageState } from '@/simulation/damage/DamageState';
 import { useViewStore } from '../viewStore';
+import { simulationController } from '@/simulation/SimulationController';
 
 const RING = new THREE.RingGeometry(0.86, 1, 40).rotateX(-Math.PI / 2);
 const COLORS = Object.fromEntries(Object.entries(DAMAGE_STATE_COLORS).map(([k, c]) => [k, new THREE.Color(c)])) as Record<DamageState, THREE.Color>;
@@ -24,6 +25,7 @@ export function DamageOverlay({ entities }: { entities: RuntimeEntity[] }) {
     mesh.visible = show;
     if (!show) return;
     const pulse = 1 + Math.sin(clock.elapsedTime * 6) * 0.06;
+    const terrain = simulationController.getEnvironment().terrain;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (e.state === DamageState.NORMAL) {
@@ -31,7 +33,8 @@ export function DamageOverlay({ entities }: { entities: RuntimeEntity[] }) {
         continue;
       }
       const s = radii[i] * (e.state === DamageState.CRITICAL ? pulse : 1);
-      dummy.position.set(e.pose.position[0], 0.06, e.pose.position[2]);
+      const [x, , z] = e.pose.position;
+      dummy.position.set(x, terrain.sampleHeight(x, z) + 0.06, z);
       dummy.scale.set(s, 1, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);

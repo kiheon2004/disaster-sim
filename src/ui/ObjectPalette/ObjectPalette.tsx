@@ -11,26 +11,40 @@ import { Toggle } from '@/ui/common/fields';
 import { displayName } from '@/ui/format';
 import { StateDot } from '@/ui/common/StateBadge';
 import { useEntityStates } from '@/ui/useEntityStates';
+import { TerrainPanel } from '@/ui/Terrain/TerrainPanel';
 import styles from './ObjectPalette.module.css';
 
-type Tab = 'objects' | 'scene';
+type Tab = 'objects' | 'terrain' | 'scene';
 
 export function ObjectPalette() {
   countRender('ObjectPalette');
   const t = useT();
-  const [tab, setTab] = useState<Tab>('objects');
+  const [tab, setTabState] = useState<Tab>('objects');
   const count = useWorldStore((s) => Object.keys(s.doc.objects).length);
+  const terrainActive = useEditorStore((s) => s.tool === 'terrain');
+  // The Terrain tab is Terrain Editing Mode: opening it arms the last terrain tool; leaving it
+  // (or arming an object preset) returns to object editing.
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    const ed = useEditorStore.getState();
+    if (next === 'terrain' && ed.mode === 'editor') ed.setTerrainTool(ed.terrainTool);
+    else if (ed.tool === 'terrain') ed.setTerrainTool(null);
+  };
+  const shown: Tab = terrainActive ? 'terrain' : tab;
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs} role="tablist">
-        <button role="tab" aria-selected={tab === 'objects'} className={`${styles.tab} ${tab === 'objects' ? styles.active : ''}`} onClick={() => setTab('objects')}>
+        <button role="tab" aria-selected={shown === 'objects'} className={`${styles.tab} ${shown === 'objects' ? styles.active : ''}`} onClick={() => setTab('objects')}>
           {t('panel.objects')}
         </button>
-        <button role="tab" aria-selected={tab === 'scene'} className={`${styles.tab} ${tab === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
+        <button role="tab" aria-selected={shown === 'terrain'} className={`${styles.tab} ${shown === 'terrain' ? styles.active : ''}`} onClick={() => setTab('terrain')}>
+          {t('panel.terrain')}
+        </button>
+        <button role="tab" aria-selected={shown === 'scene'} className={`${styles.tab} ${shown === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
           {t('panel.scene')} ({count})
         </button>
       </div>
-      {tab === 'objects' ? <PaletteTab /> : <OutlinerTab />}
+      {shown === 'objects' ? <PaletteTab /> : shown === 'terrain' ? <TerrainPanel /> : <OutlinerTab />}
     </div>
   );
 }
