@@ -4,6 +4,7 @@ import type { ComponentSpec } from '@/core/model';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { DebrisPiece, RuntimeEntity } from '../SimulationRuntime';
 import type { Hazard } from '../analysis/DamageEvent';
+import { newForceRecord } from '../forces/ForceLedger';
 
 export const MAX_DEBRIS = 320;
 export const MAX_PARTICLES = 1600;
@@ -63,6 +64,7 @@ export function spawnDebris(
     pose: { position: opts.position, quaternion: e.pose.quaternion },
     spawnTime: ctx.time,
     hazard: opts.hazard ?? 'wind',
+    forces: newForceRecord(),
   };
   runtime.debris.push(piece);
   runtime.debrisRev++;

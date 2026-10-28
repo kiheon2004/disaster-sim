@@ -58,10 +58,22 @@ export class ResponseRegistry {
     if (map.has(key)) throw new Error(`Response already registered: ${key}`);
     map.set(key, h);
     this.all.push(h);
+    this.resolved.clear();
   }
 
+  /** channel → object type → resolved handler (type first, then category); memoized. */
+  private readonly resolved = new Map<ChannelId, Map<string, ResponseHandler | null>>();
+
   handler(channel: ChannelId, e: RuntimeEntity): ResponseHandler | undefined {
-    return this.byType.get(`${channel}:${e.source.type}`) ?? this.byCategory.get(`${channel}:${objectCategory(e.source.type)}`);
+    let byType = this.resolved.get(channel);
+    if (!byType) this.resolved.set(channel, (byType = new Map()));
+    const type = e.source.type;
+    let h = byType.get(type);
+    if (h === undefined) {
+      h = this.byType.get(`${channel}:${type}`) ?? this.byCategory.get(`${channel}:${objectCategory(type)}`) ?? null;
+      byType.set(type, h);
+    }
+    return h ?? undefined;
   }
 
   /** Dispatch one object's response to a channel (no-op without a handler). */

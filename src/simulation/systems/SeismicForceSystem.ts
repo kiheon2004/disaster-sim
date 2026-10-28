@@ -70,7 +70,7 @@ export class SeismicForceSystem implements SimulationSystem {
       force[0] = -m * g.a[0];
       force[1] = -m * g.a[1];
       force[2] = -m * g.a[2];
-      ctx.forces.force('groundMotion', d.body, force);
+      ctx.forces.force('groundMotion', d.body, force, d);
     }
   }
 

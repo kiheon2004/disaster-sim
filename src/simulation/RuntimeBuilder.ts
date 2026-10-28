@@ -11,6 +11,7 @@ import type { RuntimeEntity, SimulationRuntime } from './SimulationRuntime';
 import { groundFrictionFactor } from '@/terrain/GroundMaterials';
 import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { foundationPlinth } from '@/terrain/groundPlacement';
+import { newForceRecord } from './forces/ForceLedger';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -116,6 +117,13 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     rev: 0,
     windCache: createSampleCache(),
     counters: {},
+    // Allocated / declared up front (not added lazily) so every entity keeps one object shape
+    // in the hot loops (a property added later changes V8's hidden class for that object).
+    forces: newForceRecord(),
+    seismic: undefined,
+    flood: undefined,
+    integrity: undefined,
+    exposure: undefined,
   };
   e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic, foundationPlinth(o, terrain));
   if (def.inert) e.dynamic = false;

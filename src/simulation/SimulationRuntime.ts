@@ -120,6 +120,8 @@ export interface DebrisPiece {
   hazard: Hazard;
   /** Water surface last applied while asleep (flood, internal). */
   lastEta?: number;
+  /** ForceLedger record (Phase 15). */
+  forces?: Float64Array;
 }
 
 /** Short-lived visual particles (glass shards, leaves) — integrated without the physics engine. */

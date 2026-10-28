@@ -107,7 +107,7 @@ export class WindForceSystem implements SimulationSystem {
       const f = 0.5 * rho * DEBRIS_CD * area * rel * rel * WIND_FORCE_SCALE;
       const force = vScale(dir, f);
       if (d.plate) force[1] += f * PLATE_LIFT * Math.min(1, Math.max(0, 1 - env.terrain.heightAboveGround(d.pose.position) / 60));
-      forces.forceAtPoint('wind', d.body, force, d.pose.position);
+      forces.forceAtPoint('wind', d.body, force, d.pose.position, d);
     }
   }
 }

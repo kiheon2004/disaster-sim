@@ -25,11 +25,16 @@ const SOURCE_INDEX: Record<ForceSource, number> = { wind: 0, groundMotion: 1, wa
 /** Per-entity record: [|F| per source …, step of that value per source …]. */
 export type ForceRecord = Float64Array;
 
+export function newForceRecord(): ForceRecord {
+  return new Float64Array(FORCE_SOURCES.length * 2).fill(-1);
+}
+
 export interface ForceOwner {
   forces?: ForceRecord;
 }
 
 export class ForceLedger {
+  /** Bodies without an owner record (fallback; every current caller passes an owner). */
   private readonly applied = new Map<BodyHandle, number>();
   /** Rejected duplicate applications since the run started. */
   duplicates = 0;
@@ -43,7 +48,21 @@ export class ForceLedger {
     if (this.applied.size) this.applied.clear();
   }
 
-  private claim(source: ForceSource, h: BodyHandle): boolean {
+  /**
+   * Claim (body, source) for this step. With an owner the claim is a step stamp in the owner's
+   * record (no hashing, no allocation in the hot loop); without one a per-step map is used.
+   */
+  private claim(source: ForceSource, h: BodyHandle, owner: ForceOwner | undefined): boolean {
+    if (owner) {
+      const r = (owner.forces ??= newForceRecord());
+      const i = FORCE_SOURCES.length + SOURCE_INDEX[source];
+      if (r[i] === this.step) {
+        this.duplicates++;
+        return false;
+      }
+      r[i] = this.step;
+      return true;
+    }
     const bit = SOURCE_BIT[source];
     const mask = this.applied.get(h) ?? 0;
     if (mask & bit) {
@@ -55,16 +74,12 @@ export class ForceLedger {
   }
 
   private note(source: ForceSource, f: Readonly<Vec3>, owner?: ForceOwner) {
-    if (!owner) return;
-    const r = (owner.forces ??= new Float64Array(FORCE_SOURCES.length * 2).fill(-1));
-    const i = SOURCE_INDEX[source];
-    r[i] = Math.sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
-    r[FORCE_SOURCES.length + i] = this.step;
+    if (owner) owner.forces![SOURCE_INDEX[source]] = Math.sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
   }
 
   /** Force at a world point for this step. Returns false when rejected as a duplicate. */
   forceAtPoint(source: ForceSource, h: BodyHandle, f: Vec3, p: Vec3, owner?: ForceOwner, wake = true): boolean {
-    if (!this.claim(source, h)) return false;
+    if (!this.claim(source, h, owner)) return false;
     this.physics.addForceAtPoint(h, f, p, wake);
     this.note(source, f, owner);
     return true;
@@ -72,7 +87,7 @@ export class ForceLedger {
 
   /** Force through the center of mass for this step. */
   force(source: ForceSource, h: BodyHandle, f: Vec3, owner?: ForceOwner): boolean {
-    if (!this.claim(source, h)) return false;
+    if (!this.claim(source, h, owner)) return false;
     this.physics.addForce(h, f);
     this.note(source, f, owner);
     return true;

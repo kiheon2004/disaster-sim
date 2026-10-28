@@ -31,7 +31,7 @@ import { WATER_DENSITY } from '../water/waterParams';
 import { ensureFloodRuntime, type FloodEntityState } from '../flood/FloodState';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { PhysicsEngine } from '@/physics/PhysicsEngine';
-import type { ForceLedger } from '../forces/ForceLedger';
+import type { ForceLedger, ForceOwner } from '../forces/ForceLedger';
 
 /** Car: sealed fraction of the bounding box when dry, and with a flooded cabin. */
 export const CAR_SEALED = 0.55;
@@ -92,7 +92,7 @@ function boxGeom(pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number, out: Bod
  * sample into `st` when given.
  */
 function applyWater(
-  physics: PhysicsEngine, ledger: ForceLedger, owner: RuntimeEntity | undefined, field: WaterField, body: number, pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number,
+  physics: PhysicsEngine, ledger: ForceLedger, owner: ForceOwner, field: WaterField, body: number, pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number,
   volume: number, cd: number, areaFactor: number, dt: number, st: FloodEntityState | null, rest: { lastEta?: number },
 ): number {
   const g = boxGeom(pos, q, dims, centerOffsetY, geom);
@@ -205,6 +205,6 @@ export class WaterForceSystem implements SimulationSystem {
     // light roof panels float, concrete chunks sink.
     const box = d.size[0] * d.size[1] * d.size[2];
     const volume = Math.min(box, d.mass / (DEBRIS_DENSITY[d.kind] ?? 2000));
-    applyWater(physics, ledger, undefined, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d);
+    applyWater(physics, ledger, d, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d);
   }
 }
