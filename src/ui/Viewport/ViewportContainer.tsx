@@ -9,6 +9,9 @@ import { Compass } from './Compass';
 import { ViewportToolbar } from './ViewportToolbar';
 import { WindHud } from './WindHud';
 import { OverlayToggles } from './OverlayToggles';
+import { PerfHud } from './PerfHud';
+import { PerfProbe } from '@/rendering/PerfProbe';
+import { useViewStore } from '@/rendering/viewStore';
 import styles from './ViewportContainer.module.css';
 
 export function ViewportContainer() {
@@ -18,10 +21,14 @@ export function ViewportContainer() {
   const loading = useSimStore((s) => s.status === 'loading');
   const placeItem = getPaletteItem(useEditorStore((s) => s.placeItemId));
   const isEditor = mode === 'editor';
+  const perf = useViewStore((s) => s.showPerfHud);
 
   return (
     <div className={styles.wrap}>
-      <Viewport showGrid={isEditor}>{isEditor ? <EditorScene /> : <SimulationScene />}</Viewport>
+      <Viewport showGrid={isEditor}>
+        {isEditor ? <EditorScene /> : <SimulationScene />}
+        {perf && <PerfProbe />}
+      </Viewport>
       <div className={`${styles.overlay} ${styles.topLeft}`}>
         <span className={`${styles.badge} ${isEditor ? '' : styles.sim}`}>
           {t(isEditor ? 'mode.editorShort' : 'mode.simulationShort')}
@@ -30,6 +37,7 @@ export function ViewportContainer() {
         {!isEditor && (
           <span className={styles.approx} title={t('model.approximate')}>{t('model.badge')}</span>
         )}
+        {perf && <PerfHud />}
       </div>
       <div className={`${styles.overlay} ${styles.topRight}`}>
         <Compass />

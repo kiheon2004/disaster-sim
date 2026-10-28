@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useWorldStore } from '@/world/worldStore';
 import { deleteSelected, duplicateSelected, focusObject, togglePlay } from '@/app/actions';
 import { useEditorStore } from '@/editor/editorStore';
+import { useViewStore } from '@/rendering/viewStore';
 
 function isTyping(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
@@ -19,6 +20,12 @@ export function useEditorHotkeys() {
       const world = useWorldStore.getState();
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+
+      // Developer performance HUD (every mode).
+      if (key === 'p' && e.shiftKey && !mod) {
+        useViewStore.getState().togglePerfHud();
+        return;
+      }
 
       // Camera focus works in every mode.
       if (key === 'f' && !mod && ed.selectedId) {

@@ -511,6 +511,7 @@ export const ko = {
   'toast.finished': '시뮬레이션이 끝났습니다. 타임라인의 “결과”에서 분석을 확인하세요.',
 
   'topbar.stress': '성능 테스트 장면 ({n}개)',
+  'topbar.perfHud': '성능 HUD 표시/숨기기 (Shift+P)',
 
   // Generic
   'common.close': '닫기',

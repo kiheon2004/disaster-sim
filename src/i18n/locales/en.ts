@@ -509,6 +509,7 @@ export const en: Record<MessageKey, string> = {
   'toast.finished': 'Simulation finished. Open “Results” on the timeline for the analysis.',
 
   'topbar.stress': 'Performance test scene ({n} objects)',
+  'topbar.perfHud': 'Toggle performance HUD (Shift+P)',
 
   // Generic
   'common.close': 'Close',

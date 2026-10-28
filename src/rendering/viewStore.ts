@@ -18,6 +18,9 @@ interface ViewState {
   arrowHeight: number;
   /** Entity the camera follows in simulation mode. */
   followId: string | null;
+  /** Developer performance HUD (off by default; `?perf` or Shift+P). */
+  showPerfHud: boolean;
+  togglePerfHud: () => void;
   setAzimuth: (deg: number) => void;
   toggleDamage: () => void;
   toggleWind: () => void;
@@ -35,6 +38,8 @@ export const useViewStore = create<ViewState>((set) => ({
   windViz: 'both',
   arrowHeight: 3,
   followId: null,
+  showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
+  togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),
   toggleDamage: () => set((s) => ({ showDamage: !s.showDamage })),
   toggleWind: () => set((s) => ({ showWind: !s.showWind })),

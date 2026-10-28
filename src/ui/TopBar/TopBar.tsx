@@ -1,3 +1,4 @@
+import { useViewStore } from '@/rendering/viewStore';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n/i18n';
 import { useWorldStore } from '@/world/worldStore';
@@ -93,6 +94,7 @@ function MoreMenu({ disabled }: { disabled: boolean }) {
           {[100, 500, 1000].map((n) => (
             <button key={n} role="menuitem" onClick={run(() => loadStressScene(n))}><Icon name="list" size={14} /> {t('topbar.stress', { n })}</button>
           ))}
+          <button role="menuitem" onClick={run(() => useViewStore.getState().togglePerfHud())}><Icon name="list" size={14} /> {t('topbar.perfHud')}</button>
           <div className={styles.menuSep} />
           <button role="menuitem" onClick={run(exportProject)}><Icon name="save" size={14} /> {t('topbar.export')}</button>
           <button role="menuitem" onClick={run(() => void importProject())}><Icon name="folder" size={14} /> {t('topbar.import')}</button>
