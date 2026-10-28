@@ -508,6 +508,8 @@ export const en: Record<MessageKey, string> = {
   'results.col.shadow': 'Wind shadow',
   'toast.finished': 'Simulation finished. Open “Results” on the timeline for the analysis.',
 
+  'topbar.stress': 'Performance test scene ({n} objects)',
+
   // Generic
   'common.close': 'Close',
   'common.cancel': 'Cancel',

@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { memo, useRef, type ReactNode } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -12,6 +13,7 @@ import { HumanView } from '../views/HumanView';
 import { RoadView, SignView, StreetLightView, WallView } from '../views/InfrastructureViews';
 import { SelectionBox } from '../SelectionBox';
 import { stormIntensity } from './environment/intensity';
+import { CastShadowContext, castsShadow } from '../materials';
 
 const tmpQ = new THREE.Quaternion();
 
@@ -164,7 +166,16 @@ const SimCar = memo(function SimCar({ e }: { e: RuntimeEntity }) {
   );
 });
 
-export function SimEntity({ e }: { e: RuntimeEntity }) {
+export function SimEntity({ e, objectCount }: { e: RuntimeEntity; objectCount: number }) {
+  countRender('SimEntity');
+  return (
+    <CastShadowContext.Provider value={castsShadow(e.source.type, objectCount)}>
+      <SimEntityInner e={e} />
+    </CastShadowContext.Provider>
+  );
+}
+
+function SimEntityInner({ e }: { e: RuntimeEntity }) {
   switch (e.source.type) {
     case 'building':
       return <SimBuilding e={e} />;

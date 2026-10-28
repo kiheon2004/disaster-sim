@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { useMemo } from 'react';
 import { useT } from '@/i18n/i18n';
 import { useEditorStore } from '@/editor/editorStore';
@@ -10,6 +11,7 @@ import { SimulationSettingsSection } from './SimulationSettings';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
+  countRender('InspectorPanel');
   const t = useT();
   const selectedId = useEditorStore((s) => s.selectedId);
   const mode = useEditorStore((s) => s.mode);

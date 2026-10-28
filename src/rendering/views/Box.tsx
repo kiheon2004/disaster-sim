@@ -2,7 +2,8 @@ import { forwardRef } from 'react';
 import type * as THREE from 'three';
 import type { Vec3 } from '@/core/types';
 import { UNIT_BOX } from '../geometry/primitives';
-import { useMat, useMaterialMode, type MatOptions } from '../materials';
+import { useContext } from 'react';
+import { CastShadowContext, useMat, useMaterialMode, type MatOptions } from '../materials';
 
 /** Voxel-style box primitive: unit geometry scaled to `size`, positioned at its center. */
 export const Box = forwardRef<THREE.Mesh, {
@@ -15,6 +16,7 @@ export const Box = forwardRef<THREE.Mesh, {
 }>(function Box({ size, position, rotation, color, mat, shadow = true }, ref) {
   const m = useMat();
   const ghost = useMaterialMode() !== 'normal';
+  const lod = useContext(CastShadowContext);
   return (
     <mesh
       ref={ref}
@@ -23,7 +25,7 @@ export const Box = forwardRef<THREE.Mesh, {
       position={position}
       rotation={rotation}
       scale={size}
-      castShadow={shadow && !ghost}
+      castShadow={shadow && !ghost && lod}
       receiveShadow={!ghost}
     />
   );

@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { useFrame } from '@react-three/fiber';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
@@ -31,6 +32,7 @@ function GroundDeselect() {
 
 /** Simulation-mode scene: renders the runtime (never the editable document). */
 export function SimulationScene() {
+  countRender('SimulationScene');
   const version = useSimStore((s) => s.runtimeVersion);
   const runtime = simulationController.getRuntime();
   const entities = runtime ? [...runtime.entities.values()] : [];
@@ -41,7 +43,7 @@ export function SimulationScene() {
       <GroundDeselect />
       <group key={version}>
         {entities.map((e) => (
-          <SimEntity key={e.id} e={e} />
+          <SimEntity key={e.id} e={e} objectCount={entities.length} />
         ))}
         <DamageOverlay entities={entities} />
         <DebrisLayer />

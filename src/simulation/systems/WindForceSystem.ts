@@ -30,7 +30,8 @@ export class WindForceSystem implements SimulationSystem {
       if (e.def.inert) continue;
       const cop: Vec3 = vAdd(e.pose.position, qRotate(e.pose.quaternion, e.copLocal));
       // Local wind from the spatial field (an object never sits in its own wake).
-      const lw = field.sample(cop, time, e.id);
+      // Static objects reuse their obstacle effect until the wind turns.
+      const lw = field.sample(cop, time, e.id, e.dynamic ? undefined : e.windCache);
       e.localWind = lw;
       const v = lw.velocity;
       const speed = lw.speed;

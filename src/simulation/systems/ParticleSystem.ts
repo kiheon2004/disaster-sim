@@ -5,8 +5,11 @@ export class ParticleSystem implements SimulationSystem {
   readonly name = 'particles';
   readonly phase = 'postPhysics' as const;
 
+  private step = 0;
+
   update({ runtime, env, time }: SystemContext, dt: number) {
     const ps = runtime.particles;
+    this.step = (this.step + 1) % 4;
     let w = 0;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i];
@@ -14,7 +17,8 @@ export class ParticleSystem implements SimulationSystem {
       if (p.life <= 0) continue;
       const leaf = p.kind === 'leaf';
       const onGround = p.position[1] <= 0.02;
-      const wv = env.windField.velocityAt(p.position, time);
+      if (!p.wind || (i & 3) === this.step) p.wind = env.windField.velocityAt(p.position, time) as [number, number, number];
+      const wv = p.wind;
       // Relax toward the wind velocity (light leaves follow it closely, glass less so).
       const k = (leaf ? 1.6 : 0.5) * (onGround ? 0.25 : 1);
       p.velocity[0] += (wv[0] - p.velocity[0]) * Math.min(1, k * dt);

@@ -14,7 +14,7 @@ export function Viewport({ children, showGrid }: { children?: ReactNode; showGri
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, preserveDrawingBuffer: true }}
       onContextMenu={(e) => e.preventDefault()}
       onCreated={(state) => {
-        if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__r3f = state;
+        if (import.meta.env.DEV || location.search.includes('devtools')) (window as unknown as Record<string, unknown>).__r3f = state;
       }}
     >
       <SceneEnvironment showGrid={showGrid} />

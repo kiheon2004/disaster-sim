@@ -9,6 +9,7 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { downloadDocument, parseDocument, pickDocumentFile, storage, type LoadResult } from '@/world/serialization';
 import { sampleTown } from '@/world/sampleScene';
+import { stressScene } from '@/world/stressScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
 import { useUiStore } from '@/ui/uiStore';
@@ -100,6 +101,15 @@ export function newProject() {
   if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('confirm.new'))) return;
   useEditorStore.getState().select(null);
   useWorldStore.getState().newDocument();
+}
+
+/** Performance test scene with `count` objects (dev / benchmarking). */
+export function loadStressScene(count: number) {
+  const doc = createEmptyDocument(`Stress ${count}`);
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  useWorldStore.getState().addObjects(stressScene(count));
+  useWorldStore.setState({ past: [], future: [] });
 }
 
 export function loadSampleTown() {

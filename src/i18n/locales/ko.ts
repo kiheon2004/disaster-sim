@@ -510,6 +510,8 @@ export const ko = {
   'results.col.shadow': '바람 그림자',
   'toast.finished': '시뮬레이션이 끝났습니다. 타임라인의 “결과”에서 분석을 확인하세요.',
 
+  'topbar.stress': '성능 테스트 장면 ({n}개)',
+
   // Generic
   'common.close': '닫기',
   'common.cancel': '취소',

@@ -6,7 +6,13 @@ import { MAX_PARTICLES } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
 
 const dummy = new THREE.Object3D();
-const color = new THREE.Color();
+/** Parsed colors cached by hex string (avoids re-parsing every particle every frame). */
+const colorCache = new Map<string, THREE.Color>();
+function cachedColor(hex: string) {
+  let c = colorCache.get(hex);
+  if (!c) colorCache.set(hex, (c = new THREE.Color(hex)));
+  return c;
+}
 
 /** Leaves and glass shards: one InstancedMesh, matrices + colors rewritten each frame. */
 export function ParticleLayer() {
@@ -31,7 +37,7 @@ export function ParticleLayer() {
       else dummy.scale.set(s, s, s * 0.3);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
-      mesh.setColorAt(i, color.set(p.color));
+      mesh.setColorAt(i, cachedColor(p.color));
     }
     mesh.count = n;
     mesh.instanceMatrix.needsUpdate = true;

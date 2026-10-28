@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { useMemo, useState } from 'react';
 import { useT } from '@/i18n/i18n';
 import { CATEGORY_ORDER, PALETTE } from '@/objects/palette';
@@ -15,6 +16,7 @@ import styles from './ObjectPalette.module.css';
 type Tab = 'objects' | 'scene';
 
 export function ObjectPalette() {
+  countRender('ObjectPalette');
   const t = useT();
   const [tab, setTab] = useState<Tab>('objects');
   const count = useWorldStore((s) => Object.keys(s.doc.objects).length);

@@ -7,6 +7,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { StaticObjectView } from '@/rendering/views';
 import { SelectionBox } from '@/rendering/SelectionBox';
 import { entityNodeName } from '@/rendering/objectNames';
+import { CastShadowContext, castsShadow } from '@/rendering/materials';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
 import { TransformGizmo } from './TransformGizmo';
@@ -16,8 +17,10 @@ const EditorEntity = memo(function EditorEntity({
   interactive,
   selected,
   hovered,
+  objectCount,
 }: {
   obj: WorldObject;
+  objectCount: number;
   interactive: boolean;
   selected: boolean;
   hovered: boolean;
@@ -45,7 +48,9 @@ const EditorEntity = memo(function EditorEntity({
   const { position, rotation, scale } = obj.transform;
   return (
     <group name={entityNodeName(obj.id)} position={position} rotation={rotation} scale={scale} {...handlers}>
-      <StaticObjectView obj={obj} />
+      <CastShadowContext.Provider value={castsShadow(obj.type, objectCount)}>
+        <StaticObjectView obj={obj} />
+      </CastShadowContext.Provider>
       {(selected || hovered) && <SelectionBox dims={dims} color={selected ? '#4f8cff' : '#cfe0ff'} opacity={selected ? 1 : 0.6} />}
     </group>
   );
@@ -75,16 +80,18 @@ export function EditorScene() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const hoveredId = useEditorStore((s) => s.hoveredId);
   const interactive = tool === 'select';
+  const list = Object.values(objects);
 
   return (
     <>
-      {Object.values(objects).map((o) => (
+      {list.map((o) => (
         <EditorEntity
           key={o.id}
           obj={o}
           interactive={interactive}
           selected={o.id === selectedId}
           hovered={interactive && o.id === hoveredId && o.id !== selectedId}
+          objectCount={list.length}
         />
       ))}
       {interactive && <GroundDeselect />}

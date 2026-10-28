@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { SIM_SPEEDS, type SimSpeed } from '@/core/units';
 import { nearestCompass } from '@/core/compass';
 import { useLocale, useT, translateMessage, type MessageKey } from '@/i18n/i18n';
@@ -11,6 +12,7 @@ import { Segmented } from '@/ui/common/Segmented';
 import styles from './Timeline.module.css';
 
 export function Timeline() {
+  countRender('Timeline');
   const t = useT();
   const locale = useLocale();
   const mode = useEditorStore((s) => s.mode);

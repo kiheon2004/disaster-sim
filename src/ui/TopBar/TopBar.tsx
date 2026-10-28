@@ -7,6 +7,7 @@ import {
   importProject,
   loadProject,
   loadSampleTown,
+  loadStressScene,
   newProject,
   saveProject,
 } from '@/app/actions';
@@ -89,6 +90,9 @@ function MoreMenu({ disabled }: { disabled: boolean }) {
         <div className={styles.menu} role="menu">
           <button role="menuitem" onClick={run(newProject)}><Icon name="plus" size={14} /> {t('topbar.new')}</button>
           <button role="menuitem" onClick={run(loadSampleTown)}><Icon name="sparkle" size={14} /> {t('topbar.sample')}</button>
+          {[100, 500, 1000].map((n) => (
+            <button key={n} role="menuitem" onClick={run(() => loadStressScene(n))}><Icon name="list" size={14} /> {t('topbar.stress', { n })}</button>
+          ))}
           <div className={styles.menuSep} />
           <button role="menuitem" onClick={run(exportProject)}><Icon name="save" size={14} /> {t('topbar.export')}</button>
           <button role="menuitem" onClick={run(() => void importProject())}><Icon name="folder" size={14} /> {t('topbar.import')}</button>

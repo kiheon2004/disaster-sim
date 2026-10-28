@@ -44,6 +44,19 @@ const INSIDE_FACTOR = 0.3;
 const MIN_SHELTER = 0.15;
 const REBUILD_ANGLE = 1.5; // deg
 
+/**
+ * Per-caller cache for points that do not move (buildings, anchored trees, facade parts):
+ * the obstacle effect only changes when the wind turns or an obstacle collapses.
+ */
+export interface SampleCache {
+  version: number;
+  fx: Effect | null;
+}
+
+export function createSampleCache(): SampleCache {
+  return { version: -1, fx: null };
+}
+
 interface Effect {
   factor: number;
   speedup: number;
@@ -54,9 +67,14 @@ interface Effect {
 
 export class SpatialWindField {
   private obstacles: WindObstacle[] = [];
+  /** Projected half-depth (D) / half-width (W) per obstacle for the current wind direction. */
+  private extD = new Float64Array(0);
+  private extW = new Float64Array(0);
   private grid: Int32Array[] = [];
   private gridBearing = NaN;
   private dirty = true;
+  /** Incremented whenever the obstacle layout relative to the wind changes. */
+  private version = 0;
   /** Seeded phases/frequencies for the turbulence noise. */
   private noise: { k: number; w: number; ph: number }[][];
 
@@ -96,13 +114,18 @@ export class SpatialWindField {
     if (!this.dirty && !turned) return;
     this.dirty = false;
     this.gridBearing = bearing;
+    this.version++;
     const lists: number[][] = Array.from({ length: GRID_N * GRID_N }, () => []);
     const f = this.global.flow();
     const n: [number, number] = [-f[2], f[0]];
     const p = this.params;
+    this.extD = new Float64Array(this.obstacles.length);
+    this.extW = new Float64Array(this.obstacles.length);
     this.obstacles.forEach((o, idx) => {
-      if (!o.active) return;
       const { D, W } = this.extents(o, f, n);
+      this.extD[idx] = D;
+      this.extW[idx] = W;
+      if (!o.active) return;
       const H = o.height;
       const L = p.wakeLength * H;
       const front = -D - 0.7 * H;
@@ -153,14 +176,16 @@ export class SpatialWindField {
     let maxCorner = 0;
 
     for (let k = 0; k < cell.length; k++) {
-      const o = this.obstacles[cell[k]];
+      const idx = cell[k];
+      const o = this.obstacles[idx];
       if (!o.active || o.id === excludeId) continue;
       const H = o.height;
       const rx = p[0] - o.cx;
       const rz = p[2] - o.cz;
       const a = rx * f[0] + rz * f[2]; // along flow (+ = downstream)
       const c = Math.abs(rx * n[0] + rz * n[1]); // across flow
-      const { D, W } = this.extents(o, f, n);
+      const D = this.extD[idx];
+      const W = this.extW[idx];
       const y = p[1];
 
       // Inside the volume (e.g. debris resting on a roof edge cell)
@@ -216,14 +241,24 @@ export class SpatialWindField {
   // ── Sampling ─────────────────────────────────────────────────────────────
 
   /** Full local-wind description at point p. `excludeId` skips the object's own wake. */
-  sample(p: Vec3, t: number, excludeId?: EntityId): LocalWind {
+  sample(p: Vec3, t: number, excludeId?: EntityId, cache?: SampleCache): LocalWind {
     const g = this.global;
     const global = g.baseSpeed;
     if (global <= 0.01) {
       return { velocity: [0, 0, 0], speed: 0, freeStream: 0, global: 0, shelter: 1, turbulence: 0, shadowSource: null, corner: false };
     }
     const free = g.speedAt(p, t);
-    const fx = this.obstacleEffect(p, excludeId);
+    let fx: Effect;
+    if (cache) {
+      this.ensureGrid();
+      if (cache.version !== this.version || !cache.fx) {
+        cache.fx = this.obstacleEffect(p, excludeId);
+        cache.version = this.version;
+      }
+      fx = cache.fx;
+    } else {
+      fx = this.obstacleEffect(p, excludeId);
+    }
     const T = this.params.turbulence * fx.turbulence;
     const fluct = T > 0 ? 1 + T * 0.6 * this.turb(0, p, t) : 1;
     const speed = Math.max(0, free * fx.factor * fx.speedup * fluct);

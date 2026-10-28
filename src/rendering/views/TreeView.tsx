@@ -4,7 +4,7 @@ import type { Vec3 } from '@/core/types';
 import { seededRandom } from '@/core/math';
 import { SNAP_FRACTION, trunkHeight, type TreeParams } from '@/objects/definitions/tree';
 import { shade } from '../materials';
-import { Box } from './Box';
+import { MergedBoxes, type BoxPart } from './MergedBoxes';
 import type { ViewProps } from './types';
 
 interface Voxel { pos: Vec3; size: Vec3; color: string }
@@ -48,30 +48,37 @@ export function TreeView({
   canopyRef,
 }: ViewProps & { part?: 'all' | 'stump' | 'upper'; canopyRef?: React.Ref<THREE.Group> }) {
   const p = obj.params as TreeParams;
-  const canopy = useMemo(() => buildCanopy(p, obj.seed), [p, obj.seed]);
   const snapH = p.height * SNAP_FRACTION;
   const th = trunkHeight(p);
   const trunkW = p.trunkRadius * 2;
   const bark = '#6b4a2f';
+  // Canopy is centered on its own pivot so foliage loss shrinks it in place.
+  const { canopy, pivot } = useMemo(() => {
+    const vox = buildCanopy(p, obj.seed);
+    const cy = vox.reduce((a, v) => a + v.pos[1], 0) / Math.max(1, vox.length);
+    return {
+      pivot: cy,
+      canopy: vox.map<BoxPart>((v) => ({ size: v.size, position: [v.pos[0], v.pos[1] - cy, v.pos[2]], color: v.color })),
+    };
+  }, [p, obj.seed]);
+  const stump = useMemo<BoxPart[]>(() => [{ size: [trunkW, snapH, trunkW], position: [0, snapH / 2, 0], color: bark }], [trunkW, snapH]);
+  const trunk = useMemo<BoxPart[]>(
+    () => [{ size: [trunkW * 0.92, th - snapH + 0.4, trunkW * 0.92], position: [0, snapH + (th - snapH + 0.4) / 2, 0], color: shade(bark, 0.03) }],
+    [trunkW, th, snapH],
+  );
 
   return (
     <group>
       {/* Stump: stays in place when the trunk snaps */}
-      {part !== 'upper' && <Box size={[trunkW, snapH, trunkW]} position={[0, snapH / 2, 0]} color={bark} />}
+      {part !== 'upper' && <MergedBoxes parts={stump} />}
       {/* Upper part: sways as one unit and becomes the falling body after failure */}
       {part !== 'stump' && (
-      <group>
-        <Box
-          size={[trunkW * 0.92, th - snapH + 0.4, trunkW * 0.92]}
-          position={[0, snapH + (th - snapH + 0.4) / 2, 0]}
-          color={shade(bark, 0.03)}
-        />
-        <group ref={canopyRef}>
-          {canopy.map((v, i) => (
-            <Box key={i} size={v.size} position={v.pos} color={v.color} mat={{ roughness: 0.95 }} />
-          ))}
+        <group>
+          <MergedBoxes parts={trunk} />
+          <group ref={canopyRef} position={[0, pivot, 0]}>
+            <MergedBoxes parts={canopy} mat={{ roughness: 0.95 }} />
+          </group>
         </group>
-      </group>
       )}
     </group>
   );

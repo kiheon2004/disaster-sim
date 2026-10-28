@@ -2,7 +2,7 @@ import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { updateHuman, knockDown } from '../damage/behaviors/human';
 import { updateTree } from '../damage/behaviors/tree';
 import { updateCar } from '../damage/behaviors/car';
-import { updateBuilding } from '../damage/behaviors/building';
+import { updateBuilding, advanceComponentRound, resetComponentRound } from '../damage/behaviors/building';
 import { updateAnchoredStructure } from '../damage/behaviors/structure';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { BodyUserData } from '@/physics/PhysicsEngine';
@@ -14,6 +14,10 @@ import type { BodyUserData } from '@/physics/PhysicsEngine';
 export class DamageSystem implements SimulationSystem {
   readonly name = 'damage';
   readonly phase = 'postPhysics' as const;
+
+  constructor() {
+    resetComponentRound();
+  }
 
   update(ctx: SystemContext, dt: number) {
     for (const e of ctx.runtime.entities.values()) {
@@ -38,6 +42,7 @@ export class DamageSystem implements SimulationSystem {
       }
     }
     this.processImpacts(ctx);
+    advanceComponentRound();
   }
 
   private processImpacts(ctx: SystemContext) {

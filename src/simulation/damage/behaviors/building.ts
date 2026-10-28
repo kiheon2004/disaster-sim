@@ -7,7 +7,7 @@ import { DamageState, worst } from '../DamageState';
 import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris, spawnParticles } from '../spawn';
 import { heightFactor } from '../windLoad';
-import type { LocalWind } from '../../wind/SpatialWindField';
+import { createSampleCache, type LocalWind } from '../../wind/SpatialWindField';
 
 /** Brittle glass fails slightly earlier than ductile parts. */
 const GLASS_BREAK = 1.5;
@@ -34,6 +34,20 @@ function pressureFactor(c: RuntimeComponent, normal: Vec3 | null, flow: Vec3): n
 /** Representative pressure factor for a part (used for the indicative force value). */
 function pressureFactorFor(c: RuntimeComponent): number {
   return c.spec.kind === 'roof' ? 1.1 : 1;
+}
+
+/**
+ * Facade parts are evaluated in staggered rounds (each part every N-th step with N×dt) — the
+ * fatigue model is smooth enough that 20 Hz is plenty, and it keeps big scenes real-time.
+ */
+export const COMPONENT_ROUNDS = 3;
+let stepCounter = 0;
+export function advanceComponentRound() {
+  stepCounter = (stepCounter + 1) % COMPONENT_ROUNDS;
+}
+/** Reset at the start of a run so the stagger pattern is identical between runs (determinism). */
+export function resetComponentRound() {
+  stepCounter = 0;
 }
 
 const LOG_MILESTONES = [1, 5, 10, 20, 40, 80, 160];
@@ -156,7 +170,9 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   let breakable = 0;
   let structure: RuntimeComponent | undefined;
 
-  for (const c of e.components) {
+  const comps = e.components;
+  for (let ci = 0; ci < comps.length; ci++) {
+    const c = comps[ci];
     if (c.spec.kind === 'structure') {
       structure = c;
       continue;
@@ -170,15 +186,19 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
       c.loadRatio = 0;
       continue;
     }
-    const pos = componentWorldPos(e, c.spec);
+    if (ci % COMPONENT_ROUNDS !== stepCounter) continue;
+    const cdt = dt * COMPONENT_ROUNDS;
+    // Buildings never move: cache each part's world position, normal and obstacle effect.
+    const pos = (c.worldPos ??= componentWorldPos(e, c.spec));
+    if (c.worldNormal === undefined) c.worldNormal = componentWorldNormal(e, c.spec);
     // Local wind at the part (neighbouring buildings' wakes / corners; never its own wake).
-    const lw = field.sample(pos, ctx.time, e.id);
+    const lw = field.sample(pos, ctx.time, e.id, (c.windCache ??= createSampleCache()));
     const v = lw.speed / Math.pow(heightFactor(pos[1]), HEIGHT_DESIGN_EXPONENT);
-    const cp = pressureFactor(c, componentWorldNormal(e, c.spec), flow);
+    const cp = pressureFactor(c, c.worldNormal, flow);
     c.loadRatio = (cp * v * v) / (c.spec.windResistance * c.spec.windResistance);
     const brk = c.spec.kind === 'window' ? GLASS_BREAK : e.source.physics.breakThreshold;
     const before = c.health;
-    c.health = applyFatigue(c.health, c.loadRatio, c.spec.durability, brk, dt);
+    c.health = applyFatigue(c.health, c.loadRatio, c.spec.durability, brk, cdt);
     c.state = worst(loadLevel(c.loadRatio), healthLevel(c.health));
     if (c.health <= 0) {
       failComponent(e, c, ctx, { lw, pos, healthBefore: before, overload: c.loadRatio >= brk });

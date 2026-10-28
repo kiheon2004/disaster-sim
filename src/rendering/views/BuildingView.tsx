@@ -5,7 +5,7 @@ import type { ComponentKind, ComponentSpec } from '@/core/model';
 import { buildingHeight, type BuildingParams } from '@/objects/definitions/building';
 import type { RuntimeComponent, RuntimeEntity } from '@/simulation/SimulationRuntime';
 import { shade } from '../materials';
-import { Box } from './Box';
+import { MergedBoxes, type BoxPart } from './MergedBoxes';
 import { ComponentInstances } from './ComponentInstances';
 import type { ViewProps } from './types';
 
@@ -87,42 +87,40 @@ export function BuildingView({ obj, live }: ViewProps & { live?: RuntimeEntity }
   const structureRef = useRef<THREE.Group>(null);
   useLiveComponents(live, groups, refs, signRef, structureRef);
 
+  // Core volume, plinth, floor bands and roof slab baked into one mesh.
+  const shell = useMemo<BoxPart[]>(() => {
+    const out: BoxPart[] = [
+      { size: [p.width, H, p.depth], position: [0, H / 2, 0], color: p.color },
+      { size: [p.width + 0.16, 0.45, p.depth + 0.16], position: [0, 0.225, 0], color: shade(p.color, -0.22) },
+      { size: [p.width + 0.06, 0.1, p.depth + 0.06], position: [0, H, 0], color: shade(p.color, -0.3) },
+    ];
+    for (let i = 1; i < p.floors; i++) out.push({ size: [p.width + 0.1, 0.16, p.depth + 0.1], position: [0, i * p.floorHeight, 0], color: bandColor });
+    return out;
+  }, [p.width, p.depth, p.floors, p.floorHeight, p.color, H, bandColor]);
+  const signParts = useMemo<BoxPart[] | null>(() => {
+    if (!sign) return null;
+    const strip: [number, number, number] = sign.normal && sign.normal[2] !== 0
+      ? [sign.size[0] * 0.8, sign.size[1] * 0.36, sign.size[2] + 0.02]
+      : [sign.size[0] + 0.02, sign.size[1] * 0.36, sign.size[2] * 0.8];
+    return [
+      { size: sign.size, color: sign.color ?? '#e8483b' },
+      // Lettering strip so the sign reads as a sign
+      { size: strip, color: '#fff4d6' },
+    ];
+  }, [sign]);
+
   return (
     <group ref={structureRef}>
-      {/* Core volume */}
-      <Box size={[p.width, H, p.depth]} position={[0, H / 2, 0]} color={p.color} />
-      {/* Plinth */}
-      <Box size={[p.width + 0.16, 0.45, p.depth + 0.16]} position={[0, 0.225, 0]} color={shade(p.color, -0.22)} />
-      {/* Floor slabs as horizontal bands */}
-      {Array.from({ length: p.floors - 1 }, (_, i) => (
-        <Box
-          key={i}
-          size={[p.width + 0.1, 0.16, p.depth + 0.1]}
-          position={[0, (i + 1) * p.floorHeight, 0]}
-          color={bandColor}
-          shadow={false}
-        />
-      ))}
-      {/* Roof slab */}
-      <Box size={[p.width + 0.06, 0.1, p.depth + 0.06]} position={[0, H, 0]} color={shade(p.color, -0.3)} shadow={false} />
+      <MergedBoxes parts={shell} />
 
       <ComponentInstances meshRef={refs.window} components={groups.window ?? []} color="#7fa8cc" mat={GLASS} shadow={false} />
       <ComponentInstances meshRef={refs.roof} components={groups.roof ?? []} color="#76797e" />
       <ComponentInstances meshRef={refs.wall} components={groups.wall ?? []} color={shade(p.color, -0.06)} />
       <ComponentInstances meshRef={refs.exterior} components={groups.exterior ?? []} color="#d6d9dc" mat={{ roughness: 0.5, metalness: 0.3 }} />
 
-      {sign && (
+      {sign && signParts && (
         <group position={sign.position} ref={signRef}>
-          <Box size={sign.size} color={sign.color ?? '#e8483b'} mat={{ emissive: '#5a0d08', emissiveIntensity: 0.4 }} />
-          {/* Lettering strip so the sign reads as a sign */}
-          <Box
-            size={sign.normal && sign.normal[2] !== 0
-              ? [sign.size[0] * 0.8, sign.size[1] * 0.36, sign.size[2] + 0.02]
-              : [sign.size[0] + 0.02, sign.size[1] * 0.36, sign.size[2] * 0.8]}
-            color="#fff4d6"
-            mat={{ emissive: '#fff0c0', emissiveIntensity: 0.25 }}
-            shadow={false}
-          />
+          <MergedBoxes parts={signParts} mat={{ emissive: '#3a1a10', emissiveIntensity: 0.5 }} />
         </group>
       )}
     </group>

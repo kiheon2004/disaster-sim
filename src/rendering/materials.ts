@@ -8,6 +8,15 @@ import { createContext, useContext } from 'react';
 export type MaterialMode = 'normal' | 'ghost' | 'ghostInvalid';
 export const MaterialModeContext = createContext<MaterialMode>('normal');
 
+/** Whether meshes below should cast shadows (turned off for small objects in large scenes). */
+export const CastShadowContext = createContext(true);
+/** Above this many objects, small objects (people, cars, poles, signs) stop casting shadows. */
+export const SHADOW_LOD_THRESHOLD = 400;
+const SMALL_TYPES = new Set(['human', 'car', 'streetLight', 'sign']);
+export function castsShadow(type: string, objectCount: number) {
+  return objectCount < SHADOW_LOD_THRESHOLD || !SMALL_TYPES.has(type);
+}
+
 export interface MatOptions {
   roughness?: number;
   metalness?: number;
@@ -43,6 +52,10 @@ const ghostValid = new THREE.MeshStandardMaterial({
 const ghostInvalid = new THREE.MeshStandardMaterial({
   color: '#ff6b6b', transparent: true, opacity: 0.45, depthWrite: false, emissive: new THREE.Color('#a32020'), emissiveIntensity: 0.4,
 });
+
+export function ghostMaterial(invalid: boolean): THREE.Material {
+  return invalid ? ghostInvalid : ghostValid;
+}
 
 /** Hook used by every view: resolves a color to the right material for the current mode. */
 export function useMat() {

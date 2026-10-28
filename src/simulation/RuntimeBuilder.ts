@@ -6,6 +6,7 @@ import { getDefinition } from '@/objects/registry';
 import type { BodyHandle, PhysicsEngine } from '@/physics/PhysicsEngine';
 import { broadsideArea } from './damage/windLoad';
 import { DamageState } from './damage/DamageState';
+import { createSampleCache } from './wind/SpatialWindField';
 import type { RuntimeEntity, SimulationRuntime } from './SimulationRuntime';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
@@ -97,6 +98,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine): RuntimeEntity {
     flags: {},
     displacement: 0,
     rev: 0,
+    windCache: createSampleCache(),
     counters: {},
   };
   e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic);

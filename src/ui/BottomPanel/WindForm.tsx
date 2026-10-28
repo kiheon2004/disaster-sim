@@ -1,3 +1,4 @@
+import { countRender } from '@/utils/renderCounter';
 import { useMemo } from 'react';
 import { COMPASS_BEARING, type CompassDir } from '@/core/compass';
 import { useT, type MessageKey } from '@/i18n/i18n';
@@ -16,6 +17,7 @@ import styles from './BottomPanel.module.css';
 const ROSE: (CompassDir | null)[] = ['NW', 'N', 'NE', 'W', null, 'E', 'SW', 'S', 'SE'];
 
 export function WindForm() {
+  countRender('WindForm');
   const t = useT();
   const f = useWindForm();
   const mode = useEditorStore((s) => s.mode);

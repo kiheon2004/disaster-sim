@@ -13,6 +13,7 @@ const dummy = new THREE.Object3D();
 /** Translucent streaks advected by the wind field — makes direction and strength visible. */
 export function WindStreaks() {
   const ref = useRef<THREE.InstancedMesh>(null);
+  const frame = useRef(0);
   const show = useViewStore((s) => s.showWind && s.windViz !== 'arrows');
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
   const material = useMemo(
@@ -23,6 +24,7 @@ export function WindStreaks() {
     const rng = new Rng(97);
     return Array.from({ length: COUNT }, () => ({
         p: new THREE.Vector3(rng.spread(RANGE), rng.range(0.5, 28), rng.spread(RANGE)),
+        v: [0, 0, 0] as [number, number, number],
       }));
   }, []);
 
@@ -40,9 +42,12 @@ export function WindStreaks() {
     const t = env.time;
     // Advect each streak with the LOCAL wind (same field as physics): slow and veering in wakes.
     const visualScale = Math.min(speed, 60) * 0.9 / Math.max(1, speed);
+    frame.current = (frame.current + 1) % 3;
     for (let i = 0; i < COUNT; i++) {
       const s = pts[i];
-      const v = field.velocityAt([s.p.x, s.p.y, s.p.z], t);
+      // Re-sample each streak every 3rd frame (staggered) — same field, a third of the cost.
+      if (i % 3 === frame.current || (s.v[0] === 0 && s.v[2] === 0)) s.v = field.velocityAt([s.p.x, s.p.y, s.p.z], t) as [number, number, number];
+      const v = s.v;
       const sp = Math.hypot(v[0], v[2]);
       const local = sp / Math.max(1, speed);
       const yaw = Math.atan2(-v[2], v[0]);

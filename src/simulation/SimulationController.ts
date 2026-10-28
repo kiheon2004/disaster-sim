@@ -21,6 +21,8 @@ import { DamageState } from './damage/DamageState';
 import { EMPTY_STATS, useSimStore, type SimStats, type SimStatus, type TimelineEventView } from './simStore';
 
 const MAX_STEPS_PER_FRAME = 16;
+/** Wall-clock budget for physics per frame; beyond it the simulation slows instead of the UI freezing. */
+const STEP_BUDGET_MS = 12;
 const PUBLISH_INTERVAL = 0.1; // s (real time)
 const SETTLE_TIME = 8; // s after the last event before the run is "finished"
 const MIN_TIMELINE = 30; // s
@@ -192,12 +194,16 @@ export class SimulationController {
     if (this.status !== 'running' || !this.runtime || !this.physics) return;
     this.accumulator += Math.min(realDt, 0.1) * this.speed;
     let steps = 0;
+    const start = performance.now();
     while (this.accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME) {
       this.step(FIXED_DT);
       this.accumulator -= FIXED_DT;
       steps++;
+      // Always at least one step; stop early when over budget (fixed steps keep results deterministic).
+      if (performance.now() - start > STEP_BUDGET_MS) break;
     }
-    if (steps === MAX_STEPS_PER_FRAME) this.accumulator = 0; // too slow: drop time rather than spiral
+    // Overloaded: drop the backlog (slow motion) rather than spiral into ever-longer frames.
+    if (this.accumulator >= FIXED_DT) this.accumulator = Math.min(this.accumulator, FIXED_DT);
 
     if (this.time >= this.endTime() && !this.scheduler.hasPendingOrActive()) {
       this.status = 'finished';

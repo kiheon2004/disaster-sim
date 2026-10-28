@@ -133,7 +133,7 @@ export function SimSummary() {
       <Section title={t('sim.log')} aside={log.length}>
         {reversed.length === 0 && <div className={styles.note}>{t('sim.log.empty')}</div>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {reversed.slice(0, 120).map((l, i) => (
+          {reversed.slice(0, 60).map((l, i) => (
             <button
               key={`${l.time}-${i}`}
               onClick={() => l.entityId && objects[l.entityId] && (useEditorStore.getState().select(l.entityId), focusObject(l.entityId))}

@@ -4,7 +4,7 @@ import type { ObjectDefinition, PhysicsProfile } from '@/objects/ObjectDefinitio
 import type { I18nMessage } from '@/i18n/i18n';
 import type { BodyHandle, Pose } from '@/physics/PhysicsEngine';
 import type { DamageState } from './damage/DamageState';
-import type { LocalWind } from './wind/SpatialWindField';
+import type { LocalWind, SampleCache } from './wind/SpatialWindField';
 import type { DamageCause } from './analysis/DamageEvent';
 
 export type ComponentCondition = 'intact' | 'broken' | 'detached';
@@ -16,6 +16,10 @@ export interface RuntimeComponent {
   health: number;
   condition: ComponentCondition;
   loadRatio: number;
+  /** World position/normal of a part on a static object, computed once (internal). */
+  worldPos?: Vec3;
+  worldNormal?: Vec3 | null;
+  windCache?: SampleCache;
 }
 
 /** Purely visual animation channels written by systems and read by renderers. */
@@ -74,6 +78,8 @@ export interface RuntimeEntity {
   displacement: number;
   /** Bumped on discrete visual changes (component broken, snapped …) so views can update. */
   rev: number;
+  /** Obstacle-effect cache while the entity is static (internal). */
+  windCache: SampleCache;
   /** Running counters used to aggregate log messages. */
   counters: Record<string, number>;
 }
@@ -103,6 +109,8 @@ export interface Particle {
   maxLife: number;
   color: string;
   size: number;
+  /** Cached local wind (refreshed every few steps — particles are visual only). */
+  wind?: [number, number, number];
 }
 
 export interface SimulationLogEntry {
