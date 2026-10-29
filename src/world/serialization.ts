@@ -9,6 +9,8 @@ import { getDefinition, hasDefinition } from '@/objects/registry';
 import { createFlatTerrain } from '@/terrain/TerrainData';
 import { decodeTerrain, encodeTerrain } from '@/terrain/terrainCodec';
 import { TERRAIN_PRESETS } from '@/terrain/TerrainPresets';
+import { parseDesign } from '@/buildings/schema';
+import { deriveFields } from '@/buildings/design';
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -38,6 +40,9 @@ const objectSchema = z.object({
   seismic: z.object({ structure: z.record(z.string(), z.any()).optional(), foundation: z.record(z.string(), z.any()).optional() }).optional(),
   // Phase 16: editing group (optional; still schema v5 — older readers simply drop it).
   group: z.string().min(1).max(80).optional().catch(undefined),
+  // Phase 17: modular building design (validated by buildings/schema) and slope alignment.
+  building: z.unknown().optional(),
+  terrainAlign: z.number().min(0).max(1).optional().catch(undefined),
 });
 
 const terrainSchema = z.union([
@@ -138,7 +143,18 @@ const documentSchema = z.object({
   }).partial().optional(),
 });
 
-export type LoadResult = { ok: true; doc: WorldDocument; skipped: number } | { ok: false; error: string };
+/**
+ * Phase 17: modular building designs that could not be read completely. `invalidDesigns`: the
+ * design was unusable — the object stays a legacy building built from its saved params;
+ * `droppedMembers` / `repairedMembers`: individual members removed / repaired in valid designs.
+ */
+export interface DesignLoadReport {
+  invalidDesigns: number;
+  droppedMembers: number;
+  repairedMembers: number;
+}
+
+export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport } | { ok: false; error: string };
 
 /** JSON-ready copy of a document (terrain layers → compact encoded strings). */
 export function toSerializable(doc: WorldDocument) {
@@ -176,6 +192,7 @@ export function parseDocument(json: string): LoadResult {
   }
   const objects: Record<string, WorldObject> = {};
   let skipped = 0;
+  const designs: DesignLoadReport = { invalidDesigns: 0, droppedMembers: 0, repairedMembers: 0 };
   for (const [id, o] of Object.entries(res.data.objects)) {
     if (!hasDefinition(o.type)) {
       skipped++;
@@ -183,7 +200,7 @@ export function parseDocument(json: string): LoadResult {
     }
     const def = getDefinition(o.type);
     const params = { ...def.defaultParams, ...o.params };
-    const { seismic: rawSeismic, group, ...rest } = o;
+    const { seismic: rawSeismic, group, building: rawBuilding, terrainAlign, ...rest } = o;
     const obj: WorldObject = {
       ...rest,
       id,
@@ -194,6 +211,20 @@ export function parseDocument(json: string): LoadResult {
     const seismic = normalizeSeismic(o.type, rawSeismic as Parameters<typeof normalizeSeismic>[1]);
     if (seismic) obj.seismic = seismic;
     if (group) obj.group = group;
+    if (terrainAlign !== undefined) obj.terrainAlign = terrainAlign;
+    if (rawBuilding !== undefined && o.type === 'building') {
+      const r = parseDesign(rawBuilding);
+      designs.droppedMembers += r.dropped;
+      designs.repairedMembers += r.repaired;
+      if (r.design) {
+        // Derived fields follow the design; saved physics (incl. manual overrides) are kept.
+        const d = deriveFields(r.design, o.seed, obj.seismic);
+        obj.building = r.design;
+        obj.params = d.params;
+        obj.components = d.components;
+        obj.seismic = d.seismic;
+      } else designs.invalidDesigns++;
+    }
     objects[id] = obj;
   }
   // Old (v1) files and missing terrain → flat terrain at 0 m.
@@ -223,7 +254,7 @@ export function parseDocument(json: string): LoadResult {
     enabled: { ...floodDefaults.enabled, ...(rawFlood?.enabled ?? {}) },
   };
   const scenario = { ...defaultScenario(), earthquake: res.data.scenario?.earthquake ?? null, flood, experiment: parseExperiment(res.data.scenario?.experiment) };
-  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped };
+  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped, designs };
 }
 
 const SAVE_KEY = 'ds.project';

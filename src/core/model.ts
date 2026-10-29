@@ -36,7 +36,10 @@ export type ComponentKind =
   | 'sign'
   | 'exterior'
   | 'trunk'
-  | 'canopy';
+  | 'canopy'
+  // Phase 17 modular buildings: doors and non-structural envelope panels.
+  | 'door'
+  | 'cladding';
 
 export interface ComponentSpec {
   id: string;
@@ -54,6 +57,10 @@ export interface ComponentSpec {
   detachable: boolean;
   /** Display color hint for renderers/debris. */
   color?: string;
+  /** Euler XYZ rotation of the part box (pitched roof panels, Phase 17). Absent = axis-aligned. */
+  rotation?: Vec3;
+  /** Material id of the part (Phase 17 modular buildings; capacities and look). */
+  material?: string;
 }
 
 export type ParamValue = number | string | boolean;
@@ -83,6 +90,18 @@ export interface WorldObject {
    * A logical editor structure only — every object keeps its own physics body. Absent = none.
    */
   group?: string;
+  /**
+   * Modular building design (Phase 17): members, parametric spec, foundation policy. Absent on
+   * legacy buildings (Phase 0–16 behavior). params / physics / seismic / components of a
+   * modular building are DERIVED from it (src/buildings/design.ts) and kept in sync.
+   */
+  building?: import('@/buildings/types').BuildingDesign;
+  /**
+   * Slope alignment chosen at placement (0 = level … 1 = ground plane). Absent = the type's
+   * rule. Kept so re-seating after terrain edits / moves keeps the chosen tilt (Phase 17 fix
+   * of the Phase 16 known issue).
+   */
+  terrainAlign?: number;
 }
 
 // ── Earthquake: structure & foundation (approximate model parameters) ─────────

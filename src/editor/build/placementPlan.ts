@@ -16,6 +16,8 @@ import { isInsideWorld } from '../placement';
 import { collisionFootprint, FootprintIndex } from './footprint';
 import { subSeed } from './distribution';
 import { checkPlacement, type PlacementWarning } from './placementCheck';
+import type { BuildingDesign } from '@/buildings/types';
+import { designParams } from '@/buildings/design';
 
 /** Uniform scale range allowed for bulk placement (object definitions are designed around 1). */
 export const SCALE_BOUNDS: [number, number] = [0.5, 2];
@@ -75,6 +77,8 @@ export interface PlannedObject {
 export interface PlanItem {
   type: ObjectType;
   params?: ObjectParams;
+  /** Modular building design (Phase 17): params follow it, every copy gets the same design. */
+  building?: BuildingDesign;
   /** Whether the palette preset allows natural variation. */
   randomize?: boolean;
 }
@@ -106,8 +110,8 @@ export function planPlacement(item: PlanItem, points: readonly PlanPoint[], s: P
   const align = alignValue(s.align);
   points.forEach((p, i) => {
     const rng = new Rng(subSeed(s.seed, 'obj', startIndex + i));
-    let params: ObjectParams = { ...def.defaultParams, ...(item.params ?? {}) };
-    if (s.variation && item.randomize !== false && def.randomizeParams) {
+    let params: ObjectParams = item.building ? designParams(item.building) : { ...def.defaultParams, ...(item.params ?? {}) };
+    if (!item.building && s.variation && item.randomize !== false && def.randomizeParams) {
       params = { ...params, ...(def.randomizeParams(params, () => rng.next()) as ObjectParams) };
     }
     const seed = rng.int(2 ** 31);
@@ -125,6 +129,9 @@ export function planPlacement(item: PlanItem, points: readonly PlanPoint[], s: P
     const base = { type: item.type, params, transform: { position: [p.x, 0, p.z] as Vec3, rotation: [0, yaw, 0] as Vec3, scale } };
     const pose = groundPose(base, p.x, p.z, yaw, ctx.terrain, align);
     const input: CreateObjectInput = { type: item.type, params, seed, transform: { position: pose.position, rotation: pose.rotation, scale } };
+    if (item.building) input.building = item.building;
+    // An explicit slope alignment is remembered so later re-seating keeps it (Phase 17).
+    if (align !== undefined && align !== (def.terrainFit?.align ?? 0)) input.terrainAlign = align;
     const entry: PlannedObject = { input, ok: true, warnings: [] };
     const dims = def.getDimensions(params);
     const check = checkPlacement({ type: item.type, params, transform: input.transform }, ctx.terrain, s.slopeLimit);

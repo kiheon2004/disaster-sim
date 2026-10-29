@@ -1,7 +1,7 @@
 import type { ComponentSpec } from '@/core/model';
 import type { Vec3 } from '@/core/types';
 import { seededRandom } from '@/core/math';
-import { defineObject } from '../ObjectDefinition';
+import { defineObject, num } from '../ObjectDefinition';
 
 export interface BuildingParams {
   [k: string]: number | string | boolean;
@@ -89,7 +89,8 @@ export const buildingDefinition = defineObject<BuildingParams>({
     durability: 100,
     breakThreshold: 1.5,
   }),
-  getDimensions: (p) => [p.width, buildingHeight(p) + PARAPET_HEIGHT, p.depth],
+  // Modular buildings (Phase 17) store their roof rise in `roofHeight`; legacy ones have a parapet.
+  getDimensions: (p) => [p.width, buildingHeight(p) + num(p, 'roofHeight', PARAPET_HEIGHT), p.depth],
   centerOfPressure: (p) => [0, buildingHeight(p) * 0.55, 0],
   colliders: (p) => [
     { type: 'box', halfExtents: [p.width / 2, buildingHeight(p) / 2, p.depth / 2], offset: [0, buildingHeight(p) / 2, 0] },

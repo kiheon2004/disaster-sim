@@ -3,6 +3,7 @@ import { enEarthquake } from './en.earthquake';
 import { enFlood } from './en.flood';
 import { enPhenomena } from './en.phenomena';
 import { enBuild } from './en.build';
+import { enBuilding } from './en.building';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -582,4 +583,5 @@ export const en: Record<MessageKey, string> = {
   ...enFlood,
   ...enPhenomena,
   ...enBuild,
+  ...enBuilding,
 };

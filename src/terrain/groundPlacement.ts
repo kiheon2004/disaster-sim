@@ -24,20 +24,23 @@ export interface GroundPose {
   rotation: Vec3;
 }
 
-type Placeable = Pick<WorldObject, 'type' | 'params' | 'transform'>;
+type Placeable = Pick<WorldObject, 'type' | 'params' | 'transform'> & { terrainAlign?: number; building?: WorldObject['building'] };
 
 /** An object counts as standing on the ground when its origin is within this distance (m). */
 export const GROUNDED_TOLERANCE = 0.05;
 
 /**
  * Seated pose of an object at (x, z) with heading `yaw`. `align` overrides how much the object
- * tilts with the slope (0 = level … 1 = ground plane); default = its category rule.
+ * tilts with the slope (0 = level … 1 = ground plane); default = the object's stored
+ * `terrainAlign` (chosen at placement), else its category rule.
  */
 export function groundPose(obj: Placeable, x: number, z: number, yaw: number, terrain: TerrainSampler, align?: number): GroundPose {
   if (terrain.flat) return { position: [x, 0, z], rotation: [0, yaw, 0] };
   const def = getDefinition(obj.type);
   const base = def.terrainFit ?? { align: 0, base: 'center' as const };
-  const fit = align === undefined ? base : { ...base, align };
+  // Explicit alignment > the alignment chosen when the object was placed (Phase 17) > type rule.
+  const chosen = align ?? obj.terrainAlign;
+  const fit = chosen === undefined ? base : { ...base, align: chosen };
   const d = def.getDimensions(obj.params);
   const k = obj.transform.scale;
   const hx = (d[0] * k[0]) / 2;
@@ -97,6 +100,9 @@ function footprintMax(terrain: TerrainSampler, x: number, z: number, hx: number,
  */
 export function foundationPlinth(obj: Placeable, terrain: TerrainSampler): number {
   if (terrain.flat) return 0;
+  // Phase 17 'preserve' policy: the plinth keeps the depth it had before the terrain was edited.
+  const opts = obj.building?.options;
+  if (opts?.foundationPolicy === 'preserve' && opts.plinthDepth !== null && opts.plinthDepth !== undefined) return opts.plinthDepth > 0.02 ? opts.plinthDepth : 0;
   const def = getDefinition(obj.type);
   if (def.terrainFit?.base !== 'foundation') return 0;
   const d = def.getDimensions(obj.params);

@@ -9,6 +9,7 @@ import type { WorldObject } from '@/core/model';
 import { eulerFromQuat, qMul, quatFromAxisAngle, quatFromEuler } from '@/core/math';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { groundPose, isGrounded, yawOf } from '@/terrain/groundPlacement';
+import { releasePlinth } from '@/buildings/foundation';
 
 export interface RigidDelta {
   dx: number;
@@ -57,10 +58,10 @@ export function transformObjects(objs: readonly WorldObject[], pivot: { x: numbe
       const pose = groundPose(o, x, z, yawOf(o.transform.rotation) + d.dyaw, terrain);
       // Keep any extra tilt the user gave on flat ground (groundPose returns pure yaw there).
       const rotation = terrain.flat ? yawRotate(o.transform.rotation, d.dyaw) : pose.rotation;
-      return { ...o, transform: { ...o.transform, position: pose.position, rotation } };
+      return releasePlinth({ ...o, transform: { ...o.transform, position: pose.position, rotation } });
     }
     const y = py + d.dy;
-    return { ...o, transform: { ...o.transform, position: [x, y, z] as Vec3, rotation: yawRotate(o.transform.rotation, d.dyaw) } };
+    return releasePlinth({ ...o, transform: { ...o.transform, position: [x, y, z] as Vec3, rotation: yawRotate(o.transform.rotation, d.dyaw) } });
   });
 }
 
@@ -96,7 +97,7 @@ function moveTo(o: WorldObject, x: number, z: number, terrain: TerrainSampler): 
   if (x === p[0] && z === p[2]) return o;
   if (isGrounded(o, terrain)) {
     const pose = groundPose(o, x, z, yawOf(o.transform.rotation), terrain);
-    return { ...o, transform: { ...o.transform, position: pose.position, rotation: terrain.flat ? o.transform.rotation : pose.rotation } };
+    return releasePlinth({ ...o, transform: { ...o.transform, position: pose.position, rotation: terrain.flat ? o.transform.rotation : pose.rotation } });
   }
-  return { ...o, transform: { ...o.transform, position: [x, p[1], z] } };
+  return releasePlinth({ ...o, transform: { ...o.transform, position: [x, p[1], z] } });
 }

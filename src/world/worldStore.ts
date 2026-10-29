@@ -20,6 +20,7 @@ import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
 import { isGrounded, reseat } from '@/terrain/groundPlacement';
 import { terrainStats } from '@/terrain/terrainStats';
+import { preserveOnTerrainEdit, releasePlinth } from '@/buildings/foundation';
 
 const HISTORY_LIMIT = 100;
 
@@ -121,6 +122,15 @@ function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainS
   let out: Objects | null = null;
   for (const o of Object.values(objects)) {
     if (!isGrounded(o, before)) continue;
+    // Phase 17 foundation policy 'preserve': keep the world transform, freeze the plinth.
+    if (o.building?.options.foundationPolicy === 'preserve') {
+      const kept = preserveOnTerrainEdit(o, before);
+      if (kept !== o) {
+        out ??= { ...objects };
+        out[o.id] = kept;
+      }
+      continue;
+    }
     const p = reseat(o, after);
     const t = o.transform;
     if (p.position[1] === t.position[1] && p.rotation.every((v, i) => v === t.rotation[i])) continue;
@@ -224,7 +234,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     },
 
     updateTransform: (id, patch, opts) =>
-      patchObject(id, (o) => ({ ...o, transform: { ...o.transform, ...patch } }), opts),
+      patchObject(id, (o) => releasePlinth({ ...o, transform: { ...o.transform, ...patch } }), opts),
 
     updateParams: (id, patch, opts) => patchObject(id, (o) => applyParams(o, patch), opts),
 
