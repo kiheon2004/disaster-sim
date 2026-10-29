@@ -12,11 +12,14 @@ import { WaterSolver } from '@/simulation/water/WaterSolver';
 import { ThermalWorld, defaultThermalSettings } from '@/thermal/ThermalWorld';
 import { emptyRates } from '@/thermal/TerrainThermal';
 import { hGround } from '@/thermal/convection';
-import { dewPointChecked, esWater, humidityFromRH, qSat, saturationAdjust, specificHumidity } from './psychro';
+import { boilingPointWater, dewPointChecked, esWater, humidityFromRH, qSat, saturationAdjust, specificHumidity } from './psychro';
 import { ClimateForcing } from './forcing';
 import { climateOutlook } from './outlook';
 import { snowAlbedo } from './snow';
-import { defaultClimateSpec, type ClimateSpec } from './types';
+import { CLIMATE_SCENARIOS, climateWarnings, defaultClimateSpec, type ClimateSpec } from './types';
+import { CLIMATE_PRESETS, climatePreset, scenarioDefaults } from './presets';
+import { climate as climateDefinition } from '@/phenomena/climateDefinitions';
+import type { EventSpec } from '@/events/specs';
 import { ClimateWorld, computeShade, STORE, type ClimateWaterLink } from './ClimateWorld';
 import { CP_AIR, L_V, RHO_ICE, SIGMA, T_MELT } from './constants';
 
@@ -26,7 +29,7 @@ function spec(over: Partial<ClimateSpec>): ClimateSpec {
   return { ...defaultClimateSpec(), solar: 'off', precipitation: 0, scenario: 'custom', profile: 'constant', duration: 7200, humidity: 0.5, humidityTarget: undefined, soilMoisture: 0.2, ...over };
 }
 
-function setup(sp: ClimateSpec, water?: (x: number, z: number) => number) {
+function setup(sp: ClimateSpec, water?: (x: number, z: number) => number, pressure?: number) {
   const t = createFlatTerrain(40);
   const tw = new ThermalWorld(t, { ...defaultThermalSettings(), ambient: sp.temperature }, 1.225);
   const ws = { ...defaultWaterSettings(), boundaries: { N: { type: 'closed' as const }, E: { type: 'closed' as const }, S: { type: 'closed' as const }, W: { type: 'closed' as const } } };
@@ -45,7 +48,8 @@ function setup(sp: ClimateSpec, water?: (x: number, z: number) => number) {
     for (let iz = 0; iz < f.nz; iz++) for (let ix = 0; ix < f.nx; ix++) { const d = water(f.cellX(ix), f.cellZ(iz)); if (d > 0) { f.h[iz * f.nx + ix] = d; f.touch(ix, iz); } }
     f.budget.initial = f.totalVolume();
   }
-  const cw = new ClimateWorld(tw, t, sp, { water: () => field as ClimateWaterLink | null, ensureWater: () => (field ?? make()) as ClimateWaterLink });
+  const cw = new ClimateWorld(tw, t, sp, { water: () => field as ClimateWaterLink | null, ensureWater: () => (field ?? make()) as ClimateWaterLink }, pressure ? { p0: pressure } : {});
+  if (pressure) cw.pressure = () => pressure;
   cw.applyInitialState();
   tw.climate = cw.surf;
   tw.coverSink = (c, J) => cw.coverSink(c, J);
@@ -201,5 +205,67 @@ describe('audit: bare-surface longwave of a hot surface', () => {
     const exact = eps * SIGMA * (Ts ** 4 - Tsky ** 4) * tr.area;
     // The cold cell's own share in `base` is subtracted with it (≈ 0.3 % of the hot value).
     expect(Math.abs(hot / exact - 1)).toBeLessThan(0.01);
+  });
+});
+
+describe('audit: boiling at low pressure', () => {
+  it('water at the reference temperature boils when the local boiling point is below it (2 kPa: 17.5 °C)', () => {
+    const p = 2000, Tb = boilingPointWater(p);
+    expect(Tb).toBeLessThan(K(20));
+    const r = setup(spec({ temperature: K(20), target: K(20), humidity: 0.3 }), () => 0.05, p);
+    r.step(6);
+    // Before the audit water at the reference (heat 0) was never tested for boiling: it stayed at 20 °C.
+    expect(r.cw.water.transfers.boiling).toBeGreaterThan(0);
+    expect(r.tw.waterT(20 * 40 + 20)).toBeLessThanOrEqual(Tb + 1e-6);
+    // The boiled mass carries exactly the excess enthalpy: c·M·(T − Tb) ≈ L_v·dm (the first second's evaporation aside).
+    const M = 0.05 * 1000 * 40 * 40, dmExpected = (4186 * M * (K(20) - Tb)) / 2.501e6;
+    expect(r.cw.water.transfers.boiling / dmExpected).toBeGreaterThan(0.95);
+    expect(r.cw.water.transfers.boiling / dmExpected).toBeLessThan(1.0001);
+  });
+  it('below the triple point (500 Pa) liquid water boils down to 0 °C', () => {
+    const r = setup(spec({ temperature: K(10), target: K(10), humidity: 0.3 }), () => 0.05, 500);
+    r.step(6);
+    expect(r.tw.waterT(20 * 40 + 20)).toBeLessThanOrEqual(T_MELT + 1e-6);
+  });
+});
+
+describe('audit: HUD evaporation rate', () => {
+  it('is the mass evaporated per second over the last surface interval (before: a 5 s sum shown as /s)', () => {
+    const r = setup(spec({ temperature: K(32), target: K(32), humidity: 0.2, solar: 'constant', irradiance: 800 } as Partial<ClimateSpec>), (x) => (x < 0 ? 0.05 : 0));
+    r.step(31);
+    const m1 = r.cw.totals.evaporated;
+    r.step(5);
+    const m2 = r.cw.totals.evaporated;
+    expect(m2 - m1).toBeGreaterThan(0);
+    expect(r.cw.rates.evaporation).toBeCloseTo((m2 - m1) / 5, 9);
+  });
+});
+
+describe('audit: humidity paths of the editor scenarios and presets', () => {
+  const rhPath = (sp: ClimateSpec) => { const f = new ClimateForcing(sp, 101325); return [0, 0.25, 0.5, 0.75, 1].map((x) => f.humidity(x * sp.duration)); };
+  it('a scenario chosen in the editor runs at the humidity it shows unless it sets a humidity change', () => {
+    const field = climateDefinition.fields.find((f) => f.key === 'scenario')!;
+    for (const sc of CLIMATE_SCENARIOS) {
+      // From the default instance (a heatwave with a drying humidity target), switch the scenario.
+      const sp = field.set!(defaultClimateSpec() as unknown as EventSpec, sc) as unknown as ClimateSpec;
+      const own = scenarioDefaults(sc).humidityTarget;
+      const want = own ?? sp.humidity;
+      // Before the audit snowfall / freezing rain / humid ran at 25 % RH from t = 0 (the leftover target).
+      expect(rhPath(sp)[4]).toBeCloseTo(sc === 'custom' ? sp.humidityTarget ?? sp.humidity : want, 12);
+      if (own === undefined && sc !== 'custom') for (const v of rhPath(sp)) expect(v).toBeCloseTo(sp.humidity, 12);
+    }
+  });
+  it('presets change humidity only where they say so; the dry-snowfall warning follows the path', () => {
+    for (const id of CLIMATE_PRESETS) {
+      const p = climatePreset(id);
+      for (const e of p.events) {
+        if ((e as { event: string }).event !== 'climate') continue;
+        const sp = e as unknown as ClimateSpec;
+        const declared = sp.humidityTarget !== undefined;
+        if (!declared) for (const v of rhPath(sp)) expect(v).toBeCloseTo(sp.humidity, 12);
+        const snowing = (sp.precipitation ?? 0) > 0 && sp.precipPhase !== 'rain';
+        if (snowing && !declared && sp.humidity >= 0.5) expect(climateWarnings(sp)).not.toContain('climate.warn.drySnowfall');
+      }
+    }
   });
 });

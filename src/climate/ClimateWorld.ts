@@ -198,6 +198,10 @@ export class ClimateWorld {
   private floodSeen = false;
   /** Statistics of the last surface step. */
   readonly last = { evaporation: 0, condensation: 0, melt: 0, freeze: 0, sublimation: 0, precipitation: 0, snowfall: 0, rain: 0, drained: 0, boiled: 0 };
+  /** Evaporation (open water, soil, boiling) of the last complete surface interval (kg/s). */
+  readonly rates = { evaporation: 0 };
+  private lastFullEnd = 0;
+  private lastFullEvap = 0;
   /** Run totals (kg). */
   readonly totals = { snowfall: 0, rain: 0, melt: 0, meltToFlood: 0, evaporated: 0, condensed: 0, frozenWater: 0 };
   time = 0;
@@ -326,6 +330,7 @@ export class ClimateWorld {
   private bufShare: Float64Array | null = null;
   private bufPS: Float64Array | null = null;
   private bufPR: Float64Array | null = null;
+  private bufTb: Float64Array | null = null;
 
   /** Global energy of a cover (J, water reference). */
   private coverEnergy(M: number, U: number) {
@@ -776,6 +781,11 @@ export class ClimateWorld {
     }
     this.prepareSurface(SURFACE_DT, tEnd, group);
     mark('climate.shortwave');
+    if (full) {
+      // Evaporation rate of the interval that just closed (kg/s) — `last` holds sums, not rates.
+      if (tEnd > this.lastFullEnd) this.rates.evaporation = (this.totals.evaporated - this.lastFullEvap) / (tEnd - this.lastFullEnd);
+      this.lastFullEnd = tEnd; this.lastFullEvap = this.totals.evaporated;
+    }
   }
   private groundSteps = 0;
 
@@ -1220,15 +1230,19 @@ export class ClimateWorld {
     if (group === 0) this.boilingCells = 0;
     if (!w || !w.heat) return;
     const A = w.cellArea;
+    // Local boiling point per air column (the reference temperature itself may lie above it at low pressure — water
+    // at the reference, heat 0, then boils too). Below the triple point there is no liquid equilibrium: the water
+    // boils down to 0 °C (and then freezes).
+    const Tbc = (this.bufTb ??= new Float64Array(this.na));
+    for (let a = 0; a < this.na; a++) { const p = this.p(a); Tbc[a] = p > P_TRIPLE ? boilingPointWater(p) : T_MELT; }
+    const p0 = this.p(-1), Tb0 = p0 > P_TRIPLE ? boilingPointWater(p0) : T_MELT;
     for (let c = 0; c < this.n; c++) {
       if (this.cellGroup(c) !== group) continue;
       const h = w.h[c];
       // Films thinner than 10 µm share the ground surface temperature (Phase 26 merge) — not boiling water.
-      if (!(h > 1e-5) || w.heat[c] <= 0) continue;
+      if (!(h > 1e-5)) continue;
       const a = this.cellAir(c);
-      const p = this.p(a);
-      // Below the triple point there is no liquid equilibrium: the water boils down to 0 °C (and then freezes).
-      const Tb = p > P_TRIPLE ? boilingPointWater(p) : T_MELT;
+      const Tb = a >= 0 ? Tbc[a] : Tb0;
       const M = h * RHO_WATER * A;
       const Eb = M * C_WATER * (Tb - this.Tref);
       const X = w.heat[c] - Eb;

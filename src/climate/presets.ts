@@ -43,7 +43,9 @@ const person = (x: number, z: number, seed: number): CreateObjectInput => ({ typ
 const road = (x: number, z: number, seed: number, yaw = 0): CreateObjectInput => ({ type: 'road', seed, transform: T(x, z, yaw) });
 const flat = () => 0;
 const ASPHALT = 3;
-export const climate = (p: Partial<ClimateSpec>): EventSpec => ({ ...defaultClimateSpec(), startTime: 0, ...p } as EventSpec);
+// The default spec is a heatwave with a drying humidity target: a preset that does not ask for a humidity change keeps
+// its humidity (no inherited humidityTarget — it ran snowfall presets at 25 % RH).
+export const climate = (p: Partial<ClimateSpec>): EventSpec => ({ ...defaultClimateSpec(), humidityTarget: undefined, startTime: 0, ...p } as EventSpec);
 const wind = (speed: number, dir = 'W', startTime = 0): EventSpec => ({ event: 'wind', speed, direction: dir, duration: 3600, startTime } as EventSpec);
 
 /** Defaults the editor applies when a scenario is chosen (a starting point; every field stays editable). */

@@ -39,7 +39,8 @@ export const climate = implemented<ClimateSpec>({
   fields: [
     {
       key: 'scenario', labelKey: 'climate.f.scenario', unit: '', min: 0, max: 0, step: 0, precision: 0, options: opt('climate.scenario', CLIMATE_SCENARIOS),
-      set: (s, v) => put(s, { ...scenarioDefaults(v as ClimateSpec['scenario']), scenario: v as ClimateSpec['scenario'] }),
+      // A scenario sets its own humidity path: a humidity target left from the previous one is dropped.
+      set: (s, v) => put(s, { humidityTarget: undefined, ...scenarioDefaults(v as ClimateSpec['scenario']), scenario: v as ClimateSpec['scenario'] }),
     },
     { key: 'forcing', labelKey: 'climate.f.forcing', unit: '', min: 0, max: 0, step: 0, precision: 0, options: opt('climate.forcing', FORCING_MODES) },
     celsius('temperature', 'climate.f.temperature'),

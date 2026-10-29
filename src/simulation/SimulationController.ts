@@ -607,7 +607,7 @@ export class SimulationController {
     patch.fire = this.fireLive();
     patch.volcano = this.volcanoLive();
     patch.atmosphere = this.atmosphereLive();
-    patch.climate = this.climateLive();
+    patch.climate = this.climateLive(force);
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -803,13 +803,13 @@ export class SimulationController {
   }
 
   /** Live climate summary (Phase 30; null without a climate experiment). */
-  climateLive(): ClimateLive | null {
+  climateLive(exact = true): ClimateLive | null {
     const ch = this.env.climate;
     const rejected = ch.experiments.filter((r) => r.reason).map((r) => ({ name: r.name, reason: r.reason! }));
     const cr = ch.rt;
     if (!cr) return null;
     const cw = cr.cw, L = cr.trt.world.ledger;
-    const stats = { ...cr.stats };
+    const stats = { ...(exact ? cr.stats : cr.liveStats()) };
     return {
       name: cr.rec.name, rejected, spec: cr.spec, t: this.time - cr.rec.start, stats,
       water: { ...cw.water, transfers: { ...cw.water.transfers }, residual: cw.water.final - cw.waterExpected() },

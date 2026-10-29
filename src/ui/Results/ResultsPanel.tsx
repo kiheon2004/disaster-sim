@@ -118,7 +118,7 @@ function ResultsDialog() {
     fire: useSimStore.getState().fire ?? undefined, fireItems: fireItems(),
     volcano: useSimStore.getState().volcano ?? undefined, volcanoRoads: volcanoRoads(),
     atmosphere: useSimStore.getState().atmosphere ?? undefined,
-    climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(),
+    climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(), climateRoads: climateRoads(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -650,6 +650,20 @@ function AtmosphereSummary({ t, name }: { t: TFunction; name: string }) {
   );
 }
 
+/** Climate state of the road segments (Phase 30) for the JSON export (the CSV writes the same rows). */
+function climateRoads() {
+  const segs = simulationController.getRuntime()?.roads?.segments ?? [];
+  return segs.filter((g) => g.climate).map((g) => ({ segment: g.id, state: g.climate!.state, snow_m: g.climate!.snow, ice_m: g.climate!.ice, film_m: g.climate!.film, surfaceT_C: g.climate!.surfaceT - 273.15, friction: g.climate!.friction, impassable: g.climate!.impassable }));
+}
+
+/** Units of the climate statistics in the CSV (the stats object mixes K, kg, m, rad, mm/h, counts). */
+const CLIMATE_STAT_UNITS: Record<string, string> = {
+  meanAirT: 'K', minAirT: 'K', maxAirT: 'K', meanSurfaceT: 'K', minSurfaceT: 'K', maxSurfaceT: 'K', meanRH: '1', vapour: 'kg', condensate: 'kg', snowMass: 'kg', iceMass: 'kg', storeMass: 'kg',
+  maxSnowDepth: 'm', meanSnowDepth: 'm', snowCells: 'cells', iceCells: 'cells', maxIce: 'm', frozenSoilCells: 'cells', frostDepth: 'm', meltwater: 'kg', evaporation: 'kg', evaporationRate: 'kg/s',
+  precipRate: 'mm/h', boilingCells: 'cells', maxRoofLoad: 'kPa', roofsLoaded: 'count', roadsIcy: 'count', roadsSnow: 'count', roadsImpassable: 'count', treesBroken: 'count', waterResidual: 'relative',
+  energyResidual: 'relative', thermalResidual: 'relative', sunElevation: 'rad', solar: 'W/m2', Tsky: 'K', bgT: 'K', bgRH: '1', freezeThaw: 'cycles', solidPrecip: 'kg', floorClamps: 'count', floorEnergy: 'J',
+};
+
 /** Snow / ice stores on objects and the roads' climate state (Phase 30) for the exports. */
 function climateObjects() {
   const r = simulationController.getEnvironment().climate.rt;
@@ -672,10 +686,11 @@ function ClimateSummary({ t, name }: { t: TFunction; name: string }) {
     const rows = (pre: string, o: object): string[] => Object.entries(o).flatMap(([k, v]): string[] => (typeof v === 'object' && v !== null ? rows(`${pre}.${k}`, v) : [`${pre}.${k},${v}`]));
     const roads = (simulationController.getRuntime()?.roads?.segments ?? []).filter((g) => g.climate).map((g) => [g.id, g.climate!.state, g.climate!.snow.toFixed(3), g.climate!.ice.toFixed(4), g.climate!.film.toFixed(4), (g.climate!.surfaceT - 273.15).toFixed(2), g.climate!.friction.toFixed(3), g.climate!.impassable].join(','));
     download(`${name || 'simulation'}-climate.csv`, [
-      '# climate experiment', 'quantity,value', `scenario,${c.spec.scenario}`, `forcing,${c.spec.forcing}`, `T0_K,${c.spec.temperature}`, `T1_K,${c.spec.target}`, `profile,${c.spec.profile}`, `duration_s,${c.spec.duration}`, `RH0,${c.spec.humidity}`, `precip_mmh,${c.spec.precipitation ?? 0}`, `phase,${c.spec.precipPhase ?? 'auto'}`, `solar,${c.spec.solar}`, '',
+      // The whole spec as given (SI: K, s, m, kg/m³, mm/h, 0–1; arrays as JSON) — every input the run used.
+      '# climate experiment (spec, SI units)', 'quantity,value', ...Object.entries(c.spec).filter(([, v]) => v !== undefined).map(([k, v]) => `${k},${typeof v === 'object' ? JSON.stringify(v).replace(/,/g, ';') : v}`), '',
       '# water ledger (kg)', 'quantity,value', ...rows('water', W), '',
       '# energy ledger (J)', 'quantity,value', ...rows('energy', E), ...rows('thermal', Th), '',
-      '# state now', 'quantity,value', ...rows('stats', s), ...rows('totals', c.totals), '',
+      '# state now', 'quantity,value,unit', ...rows('stats', s).map((r) => `${r},${CLIMATE_STAT_UNITS[r.slice(6, r.indexOf(','))] ?? ''}`), ...rows('totals', c.totals).map((r) => `${r},kg`), '',
       '# object stores', 'object,type,store,area_m2,mass_kg,ice_kg,load_kPa,T_C,dropped,broken,structural', ...climateObjects().map((o) => [o.object, o.type, o.store, o.area_m2, o.mass_kg, o.ice_kg, o.load_kPa, o.T_C, o.dropped, o.broken, o.structural].join(',')), '',
       '# roads', 'segment,state,snow_m,ice_m,film_m,surfaceT_C,friction,impassable', ...roads, '',
       '# history', 't_s,meanAirT_K,meanSurfaceT_K,meanRH,snow_kg,ice_kg,meltwater_kg,evaporated_kg,precip_mmh', ...c.series.map((r) => [r.t.toFixed(1), r.T.toFixed(3), r.Ts.toFixed(3), r.rh.toFixed(4), r.snow.toFixed(2), r.ice.toFixed(2), r.melt.toFixed(2), r.evap.toFixed(3), r.P.toFixed(3)].join(',')),

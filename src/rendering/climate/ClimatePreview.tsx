@@ -1,7 +1,9 @@
 /**
  * Climate preview in the editor (Phase 30): the shortwave the bare ground would absorb at the start time — the same
- * sun, albedo, incidence and terrain / building shadows the run computes (computeShade) — on a fixed W/m² legend,
- * and the precipitation area (dashed = the whole world). No surface temperature or snow is predicted here.
+ * sun, albedo, incidence and shading function the run uses (computeShade) — on a fixed W/m² legend, and the
+ * precipitation area (dashed = the whole world). No surface temperature or snow is predicted here. The obstacles are
+ * boxes from the editor document (building spec floors × floor height + 1 m, axis-aligned): the run uses the bodies'
+ * own dimensions and rotations, so shadow edges can differ by about a cell and heights by about a metre.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';

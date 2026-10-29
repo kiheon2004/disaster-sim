@@ -49,7 +49,7 @@ export function ClimateTools({ inst }: { inst: PhenomenonInstance }) {
   const spec = inst.spec as ClimateSpec;
   const o = useMemo(() => climateOutlook(spec), [spec]);
   const [preset, setPreset] = useState<ClimatePresetId>('summerHeatwave');
-  const p = climatePreset(preset);
+  const p = useMemo(() => climatePreset(preset), [preset]);
   const first = o.path[0], last = o.path[o.path.length - 1];
   const lines: string[] = [
     t('climate.tools.path', { T0: C(first.T), T1: C(last.T), lo: C(o.Tmin), hi: C(o.Tmax), rh0: (first.RH * 100).toFixed(0), rh1: (last.RH * 100).toFixed(0) }),

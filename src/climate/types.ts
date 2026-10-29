@@ -212,18 +212,24 @@ function windowsOk(w: [number, number][] | undefined, D: number): boolean {
   return list.length > 0 && list.every(([a, b]) => { const good = fin(a) && fin(b) && a >= last && b > a && b <= D + 1e-9; last = b; return good; });
 }
 
-/** Lowest background wet-bulb temperature along the path during the precipitation window (K) — sampled. */
-function warmestWetBulbMin(s: ClimateSpec): number {
+/** Background temperature (K) and relative humidity along the path during the precipitation window — 65 samples. */
+function precipWindowPath(s: ClimateSpec): { T: number; RH: number }[] {
   const st = s.precipStart ?? 0, pd = s.precipDuration ?? s.duration - st;
   const vp = { profile: s.profile, duration: s.duration, ramp: s.ramp, stages: s.stages, period: s.period, windows: s.windows };
-  let lo = Infinity;
+  const out: { T: number; RH: number }[] = [];
   for (let k = 0; k <= 64; k++) {
     const t = st + (pd * k) / 64;
     const T = valueAt(vp, s.temperature, s.target, t);
-    const RH = s.humidity + ((s.humidityTarget ?? s.humidity) - s.humidity) * shapeOf(vp, s.temperature, s.target, t);
-    const q = humidityFromRH(Math.min(1, RH), T, STANDARD_PRESSURE);
-    lo = Math.min(lo, wetBulb(T, q, STANDARD_PRESSURE));
+    const RH = Math.min(1, s.humidity + ((s.humidityTarget ?? s.humidity) - s.humidity) * shapeOf(vp, s.temperature, s.target, t));
+    out.push({ T, RH });
   }
+  return out;
+}
+
+/** Lowest background wet-bulb temperature along the path during the precipitation window (K) — sampled. */
+function warmestWetBulbMin(s: ClimateSpec): number {
+  let lo = Infinity;
+  for (const { T, RH } of precipWindowPath(s)) lo = Math.min(lo, wetBulb(T, humidityFromRH(RH, T, STANDARD_PRESSURE), STANDARD_PRESSURE));
   return lo;
 }
 
@@ -233,7 +239,8 @@ export function climateWarnings(s: ClimateSpec): string[] {
   const P = s.precipitation ?? 0;
   if (s.scenario === 'heatwave' && s.target < s.temperature) out.push('climate.warn.heatwaveCooling');
   if (s.scenario === 'coldWave' && s.target > s.temperature) out.push('climate.warn.coldWaveWarming');
-  if (P > 0 && (s.precipPhase ?? 'auto') !== 'rain' && Math.min(s.humidity, s.humidityTarget ?? s.humidity) < DRY_SNOWFALL_RH) out.push('climate.warn.drySnowfall');
+  // Dry air while it actually snows: the humidity the path has inside the precipitation window.
+  if (P > 0 && (s.precipPhase ?? 'auto') !== 'rain' && Math.min(...precipWindowPath(s).map((x) => x.RH)) < DRY_SNOWFALL_RH) out.push('climate.warn.drySnowfall');
   if (P > 0 && s.precipPhase === 'rain' && Math.max(...pathTemperatures(s)) < T_MELT - 15) out.push('climate.warn.coldRain');
   if (s.forcing === 'prescribed') out.push('climate.warn.prescribed');
   if (Math.max(...pathTemperatures(s)) > T_MELT + 50 || Math.min(...pathTemperatures(s)) < T_MELT - 50) out.push('climate.warn.extremeRange');

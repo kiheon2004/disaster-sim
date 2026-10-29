@@ -44,7 +44,10 @@ export function ClimateLayer() {
   useEffect(() => {
     if (!live) return;
     const v = useViewStore.getState();
-    if (v.thermalViz.field !== 'off') v.setThermalViz({ field: 'off' });
+    const prev = v.thermalViz.field;
+    if (prev !== 'off') v.setThermalViz({ field: 'off' });
+    // The heat map the run switched off comes back afterwards (unless the user chose another field meanwhile).
+    return () => { const n = useViewStore.getState(); if (prev !== 'off' && n.thermalViz.field === 'off') n.setThermalViz({ field: prev }); };
   }, [live]);
   if (!live) return null;
   return <ClimateScene />;
@@ -225,7 +228,7 @@ function ClimateScene() {
       let snowShare = 1;
       if (P > 0) {
         const ph = cw.spec.precipPhase ?? 'auto';
-        snowShare = ph === 'snow' ? 1 : ph === 'rain' ? 0 : snowFraction(wetBulb(rt.stats.meanAirT, cw.bg.q, cw.p0));
+        snowShare = ph === 'snow' ? 1 : ph === 'rain' ? 0 : snowFraction(wetBulb(rt.liveStats().meanAirT, cw.bg.q, cw.p0));
       }
       S.rate = P; S.snowShare = snowShare;
       partMat.color.set(snowShare >= 0.5 ? '#ffffff' : '#9cc8ff');

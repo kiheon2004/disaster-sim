@@ -622,9 +622,19 @@ export class ClimateRuntime {
   // ── Stats & milestones ─────────────────────────────────
 
   get stats(): ClimateStats {
-    if (this.statsAt !== this.cw.steps) { this.statsAt = this.cw.steps; this.refresh(); }
+    if (this.statsAt !== this.cw.steps) { this.statsAt = this.cw.steps; this.statsTime = this.cw.time; this.refresh(); }
     return this.st;
   }
+
+  /**
+   * Statistics for displays at the publish rate: a full sweep of every cell (and the ledgers' finals) at most once per
+   * `maxAge` simulated seconds — the HUD read the exact getter 10× a second (≈ 30 ms of main thread per second).
+   */
+  liveStats(maxAge = 1): ClimateStats {
+    if (this.statsAt < 0 || this.cw.time - this.statsTime >= maxAge) return this.stats;
+    return this.st;
+  }
+  private statsTime = -Infinity;
 
   private emptyStats(): ClimateStats {
     return {
@@ -670,7 +680,7 @@ export class ClimateRuntime {
     }
     s.storeMass = sm; s.maxRoofLoad = roofMax; s.roofsLoaded = roofs; s.treesBroken = broken;
     s.meltwater = cw.totals.meltToFlood; s.evaporation = cw.totals.evaporated;
-    s.evaporationRate = cw.last.evaporation; s.precipRate = cw.forcing.precipRate(this.cw.time);
+    s.evaporationRate = cw.rates.evaporation; s.precipRate = cw.forcing.precipRate(this.cw.time);
     s.solidPrecip = cw.totals.snowfall;
     s.boilingCells = cw.boilingCells;
     let icy = 0, sn = 0, imp = 0;
