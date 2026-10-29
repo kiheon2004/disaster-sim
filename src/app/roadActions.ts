@@ -241,7 +241,10 @@ export function convertLegacyRoads(ids?: EntityId[]): { converted: number; kept:
   let net: RoadNetwork = doc.roads;
   const remove: EntityId[] = [];
   let kept = 0;
-  const legacy = Object.values(doc.objects).filter((o) => o.type === 'road' && (!ids || ids.includes(o.id))).sort((a, b) => (a.id < b.id ? -1 : 1));
+  // Largest roads first (main roads before side streets), so a side street ending on a main
+  // road snaps onto it as a T-junction, whatever the object order.
+  const area = (o: WorldObject) => Number(o.params.length) * o.transform.scale[0] * Number(o.params.width) * o.transform.scale[2];
+  const legacy = Object.values(doc.objects).filter((o) => o.type === 'road' && (!ids || ids.includes(o.id))).sort((a, b) => area(b) - area(a) || (a.id < b.id ? -1 : 1));
   for (const o of legacy) {
     const L = Number(o.params.length) * o.transform.scale[0];
     const w = Number(o.params.width) * o.transform.scale[2];

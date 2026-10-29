@@ -11,8 +11,11 @@
  *    threshold (ROAD_MATERIAL_PROPS.quakeCrackPgv) — an empirical-style indicator, not a
  *    pavement model; ground failure (liquefaction, lateral spreading, fault offset) is the main
  *    real cause of severe road damage and plugs in through `groundFailure` (Phase 21 hook);
- *  - flood: inundation depth (≥ 0.15 m inundated, ≥ 0.3 m impassable for cars, like the
- *    legacy road objects) and surface scour in fast flow above the material's scourSpeed;
+ *  - flood: water depth at the gutters and at the crown. Graded roads shed rain to the curbs
+ *    (crown cross-fall), so street flooding starts in the gutters: ≥ 0.15 m anywhere on the
+ *    carriageway (a full curb) = inundated; ≥ 0.3 m over the CROWN = impassable for cars (the
+ *    same thresholds as the legacy road objects); scour in fast flow above the material's
+ *    scourSpeed;
  *  - drainage: storm-drain inlets along the curbs, handed to the water model as sub-grid sinks
  *    (capacity per inlet INLET_CAPACITY, spread over the 1 m cell that contains the inlet).
  *
@@ -37,15 +40,20 @@ export interface RoadSegmentState {
   id: string;
   material: RoadMaterial;
   samples: { x: number; z: number }[];
+  /** Gutter points (both curbs, 0.3 m inside the carriageway edge) at the same stations. */
+  gutters: { x: number; z: number }[];
   /** Pre-existing damage (original world, 0–1). */
   condition: number;
   /** Crack index 0–1 (earthquake). */
   crack: number;
   /** Peak horizontal ground velocity seen (m/s). */
   peakPgv: number;
-  /** Current / peak flood depth over the segment (m) and current max flow speed (m/s). */
+  /** Current / peak flood depth over the carriageway (m, max of crown and gutters). */
   depth: number;
   maxDepth: number;
+  /** Current / peak depth over the crown (centerline) — passability. */
+  crownDepth: number;
+  maxCrownDepth: number;
   speed: number;
   /** Time with depth ≥ ROAD_INUNDATED (s). */
   floodTime: number;
@@ -94,13 +102,16 @@ export class RoadRuntime {
       const line = segmentLine(network, s);
       const n = Math.max(1, Math.round(line.length / SAMPLE_SPACING));
       const samples: { x: number; z: number }[] = [];
+      const gutters: { x: number; z: number }[] = [];
+      const g = Math.max(0.3, s.profile.width / 2 - 0.3);
       for (let k = 0; k <= n; k++) {
         const p = pointAt(line, (line.length * k) / n);
         samples.push({ x: p.x, z: p.z });
+        gutters.push({ x: p.x - p.tz * g, z: p.z + p.tx * g }, { x: p.x + p.tz * g, z: p.z - p.tx * g });
       }
       this.segments.push({
-        id: s.id, material: s.profile.material, samples, condition: s.condition ?? 0,
-        crack: 0, peakPgv: 0, depth: 0, maxDepth: 0, speed: 0, floodTime: 0, scour: 0, status: 'intact',
+        id: s.id, material: s.profile.material, samples, gutters, condition: s.condition ?? 0,
+        crack: 0, peakPgv: 0, depth: 0, maxDepth: 0, crownDepth: 0, maxCrownDepth: 0, speed: 0, floodTime: 0, scour: 0, status: 'intact',
       });
       // Inlets: both curbs, evenly along the segment (spacing by drainage level).
       const spacing = DRAIN_SPACING[s.profile.drainage];
@@ -135,7 +146,7 @@ export class RoadRuntime {
       if (s.crack >= 0.05) out.cracked++;
       if (s.crack >= ROAD_SEVERE) out.severe++;
       if (s.maxDepth >= ROAD_INUNDATED) out.inundated++;
-      if (s.maxDepth >= ROAD_IMPASSABLE) out.impassable++;
+      if (s.maxCrownDepth >= ROAD_IMPASSABLE) out.impassable++;
       if (s.scour >= 1) out.scoured++;
     }
     return out;

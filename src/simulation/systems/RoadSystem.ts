@@ -51,23 +51,30 @@ export class RoadSystem implements SimulationSystem {
         }
       }
       if (field) {
-        let depth = 0, speed = 0;
+        let crown = 0, speed = 0;
         for (const p of st.samples) {
           const d = field.sampleDepth(p.x, p.z);
-          if (d > depth) depth = d;
+          if (d > crown) crown = d;
           if (d > 0.02) {
             field.sampleVelocity(p.x, p.z, vel);
             speed = Math.max(speed, Math.hypot(vel[0], vel[1]));
           }
         }
-        const changed = Math.abs(depth - st.depth) > 0.01;
+        let depth = crown;
+        for (const p of st.gutters) {
+          const d = field.sampleDepth(p.x, p.z);
+          if (d > depth) depth = d;
+        }
+        const changed = Math.abs(depth - st.depth) > 0.01 || Math.abs(crown - st.crownDepth) > 0.01;
         st.depth = depth;
+        st.crownDepth = crown;
         st.speed = speed;
         if (depth > st.maxDepth) st.maxDepth = depth;
+        if (crown > st.maxCrownDepth) st.maxCrownDepth = crown;
         if (depth >= ROAD_INUNDATED) st.floodTime += rdt;
         if (changed) roads.rev++;
         if (depth >= ROAD_INUNDATED && roads.mark(st, 'inundated', ctx.time, depth)) ctx.log(null, 'warn', { key: 'log.road.inundated', params: { id: st.id, m: depth.toFixed(2) } });
-        if (depth >= ROAD_IMPASSABLE && roads.mark(st, 'impassable', ctx.time, depth)) ctx.log(null, 'danger', { key: 'log.road.impassable', params: { id: st.id, m: depth.toFixed(2) } });
+        if (crown >= ROAD_IMPASSABLE && roads.mark(st, 'impassable', ctx.time, crown)) ctx.log(null, 'danger', { key: 'log.road.impassable', params: { id: st.id, m: crown.toFixed(2) } });
         // Scour: sustained flow above the material's permissible speed (like Phase 14 road objects).
         const vs = scourThreshold(st);
         if (speed > vs && depth > 0.05 && st.scour < 1) {

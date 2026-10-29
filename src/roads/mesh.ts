@@ -105,8 +105,10 @@ export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
   const p = seg.profile;
   const prof = segmentProfile(terrain, naturalOf(terrain, n), n, seg, line);
   const w = p.width / 2;
+  const fall = ROAD_MATERIAL_PROPS[p.material].crossFall;
   const height = (x: number, z: number, cx: number, cz: number, s: number) => {
-    if (prof) return profileAt(line, prof, s);
+    // Graded / fixed: the profile at the centerline, minus the crown fall at the curbs.
+    if (prof) return profileAt(line, prof, s) - (x === cx && z === cz ? 0 : fall * w);
     // Follow: terrain, sampled a little inside so the curb ramp next to the edge is not picked up.
     const ix = x + (cx - x) * 0.35, iz = z + (cz - z) * 0.35;
     return sampler.sampleHeight(ix, iz);

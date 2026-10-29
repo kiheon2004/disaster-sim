@@ -208,3 +208,28 @@ describe('road blueprints', () => {
     expect(S().doc.objects[ids[0]]).toBeUndefined();
   });
 });
+
+describe('legacy road conversion', () => {
+  it('converts the sample town roads into one network with a T-junction; one undo step restores', async () => {
+    const { sampleTown } = await import('@/world/sampleScene');
+    const { convertLegacyRoads } = await import('@/app/roadActions');
+    const { degree } = await import('./network');
+    S().addObjects(sampleTown());
+    const before = Object.values(S().doc.objects).filter((o) => o.type === 'road').length;
+    const groundBefore = S().doc.terrain.ground.slice();
+    const r = convertLegacyRoads();
+    expect(r.converted).toBe(before);
+    expect(Object.values(S().doc.objects).filter((o) => o.type === 'road')).toHaveLength(0);
+    const n = S().doc.roads;
+    expect(Object.keys(n.nodes).filter((id) => degree(n, id) === 3)).toHaveLength(1);
+    // Converted roads follow the terrain, keep their width and have no sidewalks.
+    for (const s of Object.values(n.segments)) {
+      expect(s.profile.elevation).toBe('follow');
+      expect(s.profile.sidewalk).toBe('none');
+    }
+    S().undo();
+    expect(Object.values(S().doc.objects).filter((o) => o.type === 'road')).toHaveLength(before);
+    expect(Object.keys(S().doc.roads.segments)).toHaveLength(0);
+    expect(Array.from(S().doc.terrain.ground)).toEqual(Array.from(groundBefore));
+  });
+});

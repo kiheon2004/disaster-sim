@@ -107,7 +107,10 @@ export function profileAt(line: Centerline, prof: Float64Array, s: number): numb
   return prof[i] + (prof[i + 1] - prof[i]) * (f - i);
 }
 
-/** Longitudinal grade (max |dh/ds|) and cross slope of the natural ground (follow roads) of a segment. */
+/**
+ * Longitudinal grade (max |dh/ds|), cross slope (follow roads: of the natural ground, max over the
+ * segment; graded / fixed roads: the design crown cross-fall) and max cut / fill of a segment.
+ */
 export function segmentSlopes(t: TerrainData, nat: Natural, n: RoadNetwork, s: RoadSegment): { grade: number; crossSlope: number; cutFill: number } {
   const line = segmentLine(n, s);
   const prof = segmentProfile(t, nat, n, s, line);
@@ -127,7 +130,7 @@ export function segmentSlopes(t: TerrainData, nat: Natural, n: RoadNetwork, s: R
     if (!prof) cross = Math.max(cross, Math.abs(l - r) / (2 * w));
     if (prof) cutFill = Math.max(cutFill, Math.abs(h - naturalAt(t, nat, p.x, p.z)));
   }
-  return { grade, crossSlope: cross, cutFill };
+  return { grade, crossSlope: prof ? ROAD_MATERIAL_PROPS[s.profile.material].crossFall : cross, cutFill };
 }
 
 /** What a road claims at a vertex. */
@@ -192,6 +195,7 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
     const blend = p.elevation === 'follow' && !prof ? 0 : MAX_BLEND;
     const R = p.width / 2 + Math.max(swL, swR) + blend + 1;
     const g = ROAD_MATERIAL_PROPS[p.material].ground;
+    const fall = ROAD_MATERIAL_PROPS[p.material].crossFall;
     const trimA = ints.get(s.a)?.trim.get(s.id) ?? 0;
     const trimB = ints.get(s.b)?.trim.get(s.id) ?? 0;
     // Every vertex of the segment's reach box inside the rectangle, once.
@@ -211,12 +215,14 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
         if (hit.s < trimA - 0.5 || hit.s > line.length - trimB + 0.5) continue;
         const hc = prof ? profileAt(line, prof, hit.s) : NaN;
         const side = hit.side > 0 ? swR : swL;
-        if (hit.dist <= w) put(i, { rank: 0, dist: hit.dist, h: hc, g });
-        // Sidewalks stand a curb above the carriageway (follow roads: above the natural ground).
-        else if (hit.dist <= p.width / 2 + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : hc) + p.curbHeight, g: SIDEWALK_GROUND });
+        // Crown: the carriageway falls from the centerline to the curbs (graded / fixed roads).
+        const gutter = hc - fall * (p.width / 2);
+        if (hit.dist <= w) put(i, { rank: 0, dist: hit.dist, h: hc - fall * Math.min(hit.dist, p.width / 2), g });
+        // Sidewalks stand a curb above the gutter (follow roads: above the natural ground).
+        else if (hit.dist <= p.width / 2 + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : gutter) + p.curbHeight, g: SIDEWALK_GROUND });
         else if (blend > 0 && !Number.isNaN(hc)) {
           const edge = p.width / 2 + side;
-          const edgeH = hc + (side > 0 ? p.curbHeight : 0);
+          const edgeH = gutter + (side > 0 ? p.curbHeight : 0);
           const natH = nat.height(i);
           const bw = Math.min(MAX_BLEND, Math.max(1, 2 * Math.abs(edgeH - natH)));
           const d = hit.dist - edge;

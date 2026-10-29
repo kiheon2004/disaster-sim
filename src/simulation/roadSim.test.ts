@@ -70,7 +70,10 @@ describe('roads in the simulation', { timeout: 240_000 }, () => {
     expect(fEnh.inletCells).toBeGreaterThan(10);
     expect(fEnh.budget.drainage).toBeGreaterThan(0);
     expect(Math.abs(fEnh.budget.error)).toBeLessThan(1e-6 * Math.max(1, fEnh.totalVolume()));
-    expect(none.getRuntime()!.roads!.segments[0].maxDepth).toBeGreaterThan(0);
+    // The crown sheds the rain to the gutters: water stands at the curbs first.
+    const st = none.getRuntime()!.roads!.segments[0];
+    expect(st.maxDepth).toBeGreaterThan(0);
+    expect(st.maxDepth).toBeGreaterThan(st.maxCrownDepth);
     expect(fEnh.totalVolume()).toBeLessThan(fNone!.totalVolume());
     // Inlet capacity bound: drained ≤ inlets × capacity × time.
     expect(fEnh.budget.drainage).toBeLessThanOrEqual(fEnh.inletCells * INLET_CAPACITY * 60 + 1e-6);

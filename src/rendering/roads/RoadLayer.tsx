@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useWorldStore } from '@/world/worldStore';
 import { RoadBatches } from './RoadBatches';
 
@@ -27,6 +28,7 @@ export function RoadLayer() {
   useEffect(() => {
     batches?.sync(roads, terrain);
   }, [batches, roads, terrain]);
+  useFrame(({ camera }) => batches?.updateLod(camera));
   if (!batches) return null;
   return <primitive object={batches.root} />;
 }

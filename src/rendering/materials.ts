@@ -37,7 +37,8 @@ export function getMaterial(color: string, o: MatOptions = {}): THREE.MeshStanda
       roughness: o.roughness ?? 0.85,
       metalness: o.metalness ?? 0,
       flatShading: true,
-      emissive: o.emissive ? new THREE.Color(o.emissive) : undefined,
+      // (No emissive key at all when unset: three warns about `undefined` parameters.)
+      ...(o.emissive ? { emissive: new THREE.Color(o.emissive) } : {}),
       emissiveIntensity: o.emissiveIntensity ?? 0,
       transparent: (o.opacity ?? 1) < 1,
       opacity: o.opacity ?? 1,

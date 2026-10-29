@@ -10,7 +10,7 @@ import { ROAD_IMPASSABLE, ROAD_INUNDATED, type RoadSegmentState } from '@/simula
 export function roadDamageColor(st: RoadSegmentState): string | null {
   if (st.scour >= 1) return '#8d5a2b';
   if (st.crack >= 0.6) return '#e53935';
-  if (st.depth >= ROAD_IMPASSABLE) return '#1e63c8';
+  if (st.crownDepth >= ROAD_IMPASSABLE) return '#1e63c8';
   if (st.crack >= 0.05) return '#ff9800';
   if (st.depth >= ROAD_INUNDATED) return '#4f9be0';
   return null;

@@ -13,6 +13,9 @@
  *  - scourSpeed: flow speed (m/s) above which the surface erodes in a flood (loose surfaces
  *    first), compare permissible velocities for erosion control (~1 m/s bare soil, ~1.5–2 m/s
  *    gravel, > 3 m/s paved).
+ *  - crossFall: crown cross slope of graded / fixed roads (centerline → curb), the usual design
+ *    range: 1.5–2.5 % paved, 2–4 % gravel, 3–5 % earth. It sheds rain to the gutters (where the
+ *    inlets are) on the 1 m water grid.
  */
 import type { GroundTypeId } from '@/core/model';
 import { groundMaterial } from '@/terrain/GroundMaterials';
@@ -26,13 +29,14 @@ export interface RoadMaterialProps {
   color: string;
   /** Lane markings are drawn on this surface. */
   marked: boolean;
+  crossFall: number;
 }
 
 export const ROAD_MATERIAL_PROPS: Record<RoadMaterial, RoadMaterialProps> = {
-  asphalt: { ground: 3, quakeCrackPgv: 0.6, scourSpeed: 3.5, color: '#3d4247', marked: true },
-  concrete: { ground: 4, quakeCrackPgv: 0.45, scourSpeed: 4, color: '#a3a29c', marked: true },
-  gravel: { ground: 5, quakeCrackPgv: 1.2, scourSpeed: 1.6, color: '#8f887d', marked: false },
-  dirt: { ground: 1, quakeCrackPgv: 1.5, scourSpeed: 1.0, color: '#7d6448', marked: false },
+  asphalt: { ground: 3, quakeCrackPgv: 0.6, scourSpeed: 3.5, color: '#3d4247', marked: true, crossFall: 0.02 },
+  concrete: { ground: 4, quakeCrackPgv: 0.45, scourSpeed: 4, color: '#a3a29c', marked: true, crossFall: 0.015 },
+  gravel: { ground: 5, quakeCrackPgv: 1.2, scourSpeed: 1.6, color: '#8f887d', marked: false, crossFall: 0.03 },
+  dirt: { ground: 1, quakeCrackPgv: 1.5, scourSpeed: 1.0, color: '#7d6448', marked: false, crossFall: 0.04 },
 };
 
 /** Sidewalks are concrete (ground type 4). */

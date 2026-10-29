@@ -157,16 +157,20 @@ describe('road bake', () => {
   });
   it('raises sidewalks by the curb height', () => {
     const { t } = setup();
-    expect(t.heights[idx(t, 0, 5)] - t.heights[idx(t, 0, 0)]).toBeCloseTo(P.curbHeight, 2);
+    // Sidewalk = gutter (centerline − crown fall) + curb.
+    const fall = ROAD_MATERIAL_PROPS.asphalt.crossFall * (P.width / 2);
+    expect(t.heights[idx(t, 0, 5)] - t.heights[idx(t, 0, 0)]).toBeCloseTo(P.curbHeight - fall, 2);
   });
   it('graded roads smooth a slope, follow roads keep heights', () => {
     const g = setup({ ...P, elevation: 'graded', sidewalk: 'none' }, 0.1);
     const f = setup({ ...P, elevation: 'follow', sidewalk: 'none' }, 0.1);
     expect(f.t.heights[idx(f.t, 10, 0)]).toBeCloseTo(f.before.h[idx(f.t, 10, 0)], 5);
-    // Graded: level cross-section (both edges equal).
-    expect(g.t.heights[idx(g.t, 10, -3)]).toBeCloseTo(g.t.heights[idx(g.t, 10, 3)], 2);
+    // Graded: symmetric crown — both edges equal, the centerline 2 % above them.
+    const hl = g.t.heights[idx(g.t, 10, -3)], hr = g.t.heights[idx(g.t, 10, 3)], hc = g.t.heights[idx(g.t, 10, 0)];
+    expect(hl).toBeCloseTo(hr, 2);
+    expect(hc - hl).toBeCloseTo(0.02 * 3, 2);
     const s = segmentSlopes(g.t, naturalOf(g.t, g.n1), g.n1, Object.values(g.n1.segments)[0]);
-    expect(Math.abs(s.crossSlope)).toBeLessThan(0.01);
+    expect(s.crossSlope).toBe(ROAD_MATERIAL_PROPS.asphalt.crossFall);
   });
   it('removing the road restores the original terrain exactly', () => {
     const { t, before, n1 } = setup({ ...P, elevation: 'graded' }, 0.05);

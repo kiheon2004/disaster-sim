@@ -1,0 +1,248 @@
+{
+  "results": [
+    {
+      "name": "1 draw straight road (click, click, Enter)",
+      "ok": true,
+      "detail": {
+        "segments": 1,
+        "nodes": 2,
+        "junctions": 0,
+        "blocks": 0,
+        "past": 1,
+        "ground": 3
+      }
+    },
+    {
+      "name": "2 polyline + T-junction on the road",
+      "ok": true,
+      "detail": {
+        "segments": 4,
+        "nodes": 5,
+        "junctions": 1,
+        "blocks": 0,
+        "past": 2
+      }
+    },
+    {
+      "name": "3 curved road (one segment with control points)",
+      "ok": true,
+      "detail": {
+        "segments": 5,
+        "nodes": 7,
+        "junctions": 1,
+        "blocks": 0,
+        "past": 3,
+        "curved": 1
+      }
+    },
+    {
+      "name": "4 crossing makes a 4-way junction",
+      "ok": true,
+      "detail": {
+        "segments": 8,
+        "nodes": 10,
+        "junctions": 2,
+        "blocks": 0,
+        "past": 4,
+        "fourWay": 1
+      }
+    },
+    {
+      "name": "5a click selects a road; inspector shows it",
+      "ok": true,
+      "detail": {
+        "sel": [
+          "s8"
+        ]
+      }
+    },
+    {
+      "name": "5b drag a node handle moves it (one undo step)",
+      "ok": true,
+      "detail": {
+        "from": {
+          "id": "n1",
+          "x": -69.95,
+          "z": -30.07,
+          "y": null
+        },
+        "to": {
+          "id": "n1",
+          "x": -69.95,
+          "z": -45.85,
+          "y": null
+        }
+      }
+    },
+    {
+      "name": "6 change surface / width of the selected road (terrain re-baked)",
+      "ok": true,
+      "detail": {
+        "g": 4,
+        "h": 0
+      }
+    },
+    {
+      "name": "7 split a road by clicking",
+      "ok": true,
+      "detail": {
+        "segments": 9,
+        "nodes": 11,
+        "junctions": 2,
+        "blocks": 0,
+        "past": 7
+      }
+    },
+    {
+      "name": "8 delete a road by clicking; linked objects are kept",
+      "ok": true,
+      "detail": {
+        "segments": 8,
+        "lamps": 36,
+        "lampsAfter": 36
+      }
+    },
+    {
+      "name": "9 undo all → empty original ground; redo all → identical world",
+      "ok": true,
+      "detail": {
+        "steps": 9,
+        "empty9": {
+          "seg": 0,
+          "g": 0
+        }
+      }
+    },
+    {
+      "name": "10 terrain preset: roads re-baked on the hills, level cross-section",
+      "ok": true,
+      "detail": {
+        "left": -0.05000000074505806,
+        "right": -0.029999999329447746,
+        "g": 4
+      }
+    },
+    {
+      "name": "11 enclosed blocks detected, zoned and filled (facing roads, none on roads)",
+      "ok": true,
+      "detail": {
+        "segments": 7,
+        "nodes": 6,
+        "junctions": 2,
+        "blocks": 2,
+        "past": 2,
+        "buildings": 15,
+        "linked": 15,
+        "onRoad": 0
+      }
+    },
+    {
+      "name": "12 street furniture along roads and at junctions",
+      "ok": true,
+      "detail": {
+        "lights": 48,
+        "signs": 12
+      }
+    },
+    {
+      "name": "13 vehicles placed in lanes, linked to roads",
+      "ok": true,
+      "detail": {
+        "cars": 58
+      }
+    },
+    {
+      "name": "14 neighbourhood preset placed with one click (one undo step)",
+      "ok": true,
+      "detail": {
+        "seg": 1,
+        "objs": 35,
+        "past": 1
+      }
+    },
+    {
+      "name": "15 linked objects follow the edited road (policy follow)",
+      "ok": true,
+      "detail": {
+        "before": [
+          -58,
+          0.042000001668930226,
+          4.33
+        ],
+        "after": [
+          -57.58208438011181,
+          0.006669961068630843,
+          16.109156198881955
+        ]
+      }
+    },
+    {
+      "name": "16 legacy road objects converted safely",
+      "ok": true,
+      "detail": {
+        "legacy": 0,
+        "segments": 2
+      }
+    },
+    {
+      "name": "17 copy roads (Ctrl+C) and paste with new ids",
+      "ok": true,
+      "detail": {
+        "clip": true,
+        "before": 2,
+        "after": 3
+      }
+    },
+    {
+      "name": "18 save / load round trip identical (schema v6)",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "same": true,
+        "schema": 6,
+        "kb": 72,
+        "report": {
+          "droppedNodes": 0,
+          "droppedSegments": 0,
+          "underlayLost": false
+        }
+      }
+    },
+    {
+      "name": "19 flood: roads inundated, inlets active, live road section",
+      "ok": true,
+      "detail": {
+        "summary": {
+          "total": 3,
+          "cracked": 0,
+          "severe": 0,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "inlets": 10,
+        "section": true
+      }
+    },
+    {
+      "name": "20 earthquake cracks roads; the original road network is unchanged",
+      "ok": true,
+      "detail": {
+        "total": 3,
+        "cracked": 3,
+        "severe": 3,
+        "inundated": 0,
+        "impassable": 0,
+        "scoured": 0
+      }
+    }
+  ],
+  "perf": {
+    "roadDrawCalls": 6,
+    "roadTriangles": 2160,
+    "chunks": 3,
+    "fps": 60.1,
+    "totalCalls": 23
+  },
+  "errors": []
+}

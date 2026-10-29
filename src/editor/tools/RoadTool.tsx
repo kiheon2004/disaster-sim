@@ -35,6 +35,13 @@ function snapPoint(n: RoadNetwork, x: number, z: number, grid: number): Snap {
   return { x, z, kind: 'free' };
 }
 
+/** The network without a node and the segments that use it (snapping while dragging it). */
+function withoutNode(n: RoadNetwork, id: string): RoadNetwork {
+  const segments = Object.fromEntries(Object.entries(n.segments).filter(([, s]) => s.a !== id && s.b !== id));
+  const nodes = Object.fromEntries(Object.entries(n.nodes).filter(([k]) => k !== id));
+  return { ...n, nodes, segments };
+}
+
 /** A draped polyline (terrain height + lift). */
 function drapedPositions(pts: readonly P2[], sampler: TerrainSampler, lift = LIFT): Float32Array {
   const out = new Float32Array(pts.length * 3);
@@ -255,7 +262,8 @@ export function RoadTool() {
     const h = groundPoint(e);
     if (!h) return setHover(null);
     if (drag) {
-      const sn = drag.kind === 'node' ? snapPoint({ ...roads, nodes: Object.fromEntries(Object.entries(roads.nodes).filter(([k]) => k !== drag.id)) }, h[0], h[2], grid) : { x: h[0], z: h[2] };
+      // A dragged node snaps to other nodes / roads, never to itself or its own roads.
+      const sn = drag.kind === 'node' ? snapPoint(withoutNode(roads, drag.id), h[0], h[2], grid) : { x: h[0], z: h[2] };
       setDrag({ ...drag, x: Math.round(sn.x * 100) / 100, z: Math.round(sn.z * 100) / 100 });
       return;
     }

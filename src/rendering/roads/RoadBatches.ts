@@ -18,6 +18,8 @@ import { roadStats } from '@/roads/stats';
 import type { RoadNetwork } from '@/roads/types';
 
 export const CHUNK = 50;
+/** Distance (m) beyond which lane markings are not drawn. */
+export const MARKING_LOD = 260;
 
 type Layer = 'surface' | 'marking' | 'walk';
 const LAYERS: Layer[] = ['surface', 'marking', 'walk'];
@@ -177,6 +179,25 @@ export class RoadBatches {
     }
     this.drawCalls = calls;
     this.triangles = tris;
+  }
+
+  /**
+   * LOD: lane markings / crosswalks are hidden beyond MARKING_LOD m from the camera (sub-pixel
+   * stripes only alias there); surfaces and sidewalks always draw. Returns the visible count.
+   */
+  updateLod(camera: THREE.Camera): number {
+    const p = camera.position;
+    let visible = 0;
+    for (const [ck, st] of this.chunks) {
+      const m = st.meshes.marking;
+      if (!m) continue;
+      const [cx, cz] = ck.split(',').map(Number);
+      const dx = Math.max(0, Math.abs(p.x - (cx + 0.5) * CHUNK) - CHUNK / 2);
+      const dz = Math.max(0, Math.abs(p.z - (cz + 0.5) * CHUNK) - CHUNK / 2);
+      m.visible = Math.hypot(dx, dz, Math.max(0, p.y)) < MARKING_LOD;
+      if (m.visible) visible++;
+    }
+    return visible;
   }
 
   /** Chunk keys (tests / benchmarks). */

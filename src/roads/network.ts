@@ -112,8 +112,10 @@ const round = (v: number) => Math.round(v * 1000) / 1000;
 function splitAt(n: RoadNetwork, segId: string, s: number): string {
   const seg = n.segments[segId];
   const line = segmentLine(n, seg);
-  if (s <= MERGE_DIST) return seg.a;
-  if (s >= line.length - MERGE_DIST) return seg.b;
+  // A split closer to an end than the shortest allowed segment uses that end node instead
+  // (no sliver segments next to junctions).
+  if (s < MIN_SEGMENT) return seg.a;
+  if (s > line.length - MIN_SEGMENT) return seg.b;
   const p = pointAt(line, s);
   const mid = nodeAt(n, p.x, p.z);
   // Control points before / after the split point (by their arc length on the curve).
