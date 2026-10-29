@@ -1749,7 +1749,8 @@ export class ClimateWorld {
   static readonly EPS = EPS_SNOW;
   /** Albedo of the ground of a cell now (cover / water / ground). */
   albedo(c: number): number {
-    if (this.cM[c] > 0) return this.swe(c) > 0.5 ? this.cAlb[c] : ICE_ALBEDO;
+    // The albedo the cover absorbs with (updateCovers): volcanic ash on it included.
+    if (this.cM[c] > 0) return ashyAlbedo(this.swe(c) > 0.5 ? this.cAlb[c] : ICE_ALBEDO, this.ashAt ? this.ashAt(c) : 0);
     const w = this.link.water();
     return w && w.h[c] > WATER_MERGE ? WATER_ALBEDO : this.baseAlbedo[c];
   }

@@ -304,12 +304,14 @@ await presetRun('snowmeltFlood', 2400);
 C = await cl();
 M = await ms();
 const fl24 = await ev(() => { const f = window.__ds.sim.getEnvironment().flood.field; return f ? { vol: f.totalVolume(), flooded: f.stats.floodedCells, melt: f.budget.melt } : null; });
+// Covers that hold liquid are at the melting point (enthalpy node): the largest deviation over all wet covers.
+const t22 = await ev(() => { const cw = window.__ds.climateLib.rt().cw; let n = 0, dev = 0; for (let c = 0; c < cw.n; c++) if (cw.cM[c] > 0.5 && cw.cLiq[c] > 0) { n++; dev = Math.max(dev, Math.abs(cw.coverT(c) - 273.15)); } return { wet: n, dev }; });
 await ev(() => window.__ds.view.getState().setClimateViz({ overlay: 'water' }));
 await view(30, 0, 80, 100, 5);
 await wait(900);
 await shot('24-snowmelt-flood');
-check('22 thaw: melting started (thaw milestone), snow at 0 °C while melting', M.includes('thawStart') && C.totals.melt > 0, { melt: C.totals.melt });
-check('23 snowmelt: meltwater entered the flood model (melt budget = climate meltwater)', fl24 && fl24.melt * 1000 > 0.9 * C.totals.meltToFlood && C.totals.meltToFlood > 0, { fl24, meltToFlood: C.totals.meltToFlood });
+check('22 thaw: melting started (thaw milestone), snow at 0 °C while melting', M.includes('thawStart') && C.totals.melt > 0 && t22.wet > 0 && t22.dev < 1e-6, { melt: C.totals.melt, t22 });
+check('23 snowmelt: meltwater entered the flood model (melt budget = climate meltwater)', fl24 && C.totals.meltToFlood > 0 && Math.abs(fl24.melt * 1000 - C.totals.meltToFlood) < 1e-3 * C.totals.meltToFlood, { fl24, meltToFlood: C.totals.meltToFlood });
 check('24 snowmelt flooding: flooded cells in the valley (Phase 14 runoff)', fl24 && fl24.flooded > 0, fl24);
 await exitSim();
 
@@ -333,12 +335,13 @@ await wait(300);
 await enterRun();
 await atTime(880);
 const u27 = await ev(() => window.__ds.climateLib.rt().crowns.map((c) => c.u));
+const lit880 = await ev(() => { const fr = window.__ds.sim.getEnvironment().fire.rt; if (!fr) return 0; let lit = 0; for (let i = 0; i < fr.fw.n; i++) if (fr.fw.kind[i] === 1 && fr.fw.state[i] >= 3) lit++; return lit; });
 await atTime(960);
 const f28 = await ev(() => { const fr = window.__ds.sim.getEnvironment().fire.rt; const r = window.__ds.climateLib.rt(); if (!fr) return null; let n = 0, lit = 0; for (let i = 0; i < fr.fw.n; i++) if (fr.fw.kind[i] === 1) { n++; if (fr.fw.state[i] >= 3) lit++; } return { foliage: n, lit, u: r.crowns.map((c) => c.u) }; });
 await view(-20, 0, 40, 50);
 await shot('28-heatwave-fire');
 check('27 heatwave dries vegetation: crown moisture fell below its start (soil too dry to supply), never below the live floor', u27.every((u) => u < 1.2 && u >= 0.6 - 1e-9), u27);
-check('28 heatwave and fire: the fire model starts from the dried crowns (same water array); ignition needed a source — nothing ignited before it', !!f28 && f28.foliage > 0, f28);
+check('28 heatwave and fire: the fire model starts from the dried crowns (same water array); ignition needed a source — nothing ignited before it', !!f28 && f28.foliage > 0 && lit880 === 0, { ...f28, lit880 });
 await exitSim();
 
 // ══ 29–30: snow-loaded building ═════════════════════════════════════════════════════════════════
@@ -358,7 +361,9 @@ await presetRun('volcanoSnow', 400);
 C = await cl();
 await view(-50, 0, 50, 60, 10);
 await shot('31-volcano-snow');
-check('31 volcano and snow: lava heat on covered cells melted snow (meltwater), ash darkened the snow', C.totals.melt > 0, { melt: C.totals.melt, meltToFlood: C.totals.meltToFlood });
+// Ash on snow: where ash lies the snow is darker than clean snow of the same run (only judged when ash has fallen).
+const a31 = await ev(() => { const cw = window.__ds.climateLib.rt().cw; let na = 0, sa = 0, nc = 0, sc = 0; for (let c = 0; c < cw.n; c++) { if (!(cw.swe(c) > 1)) continue; const ash = cw.ashAt ? cw.ashAt(c) : 0; const al = cw.albedo(c); if (ash > 0.05) { na++; sa += al; } else if (ash === 0) { nc++; sc += al; } } return { ashy: na, clean: nc, aAshy: na ? sa / na : null, aClean: nc ? sc / nc : null }; });
+check('31 volcano and snow: lava heat on covered cells melted snow (meltwater); ash darkens the snow it lies on', C.totals.melt > 0 && (a31.ashy === 0 || a31.aAshy < a31.aClean), { melt: C.totals.melt, meltToFlood: C.totals.meltToFlood, a31 });
 await exitSim();
 
 // ══ 32: atmospheric removal + evaporation ═══════════════════════════════════════════════════════
@@ -407,7 +412,7 @@ const gl44 = await ev(() => { const g = window.__r3f.get().gl.info; return { cal
 C = await cl();
 await shot('44-town');
 await exitSim();
-check('44 large town (1000 houses) under snowfall: interactive frame rate, roofs loaded', fps44.mean < 100 && C.stats.roofsLoaded >= 0, { fps: +(1000 / fps44.mean).toFixed(1), worstFrameMs: +fps44.worst.toFixed(1), climateMs: C.ms, gl44 });
+check('44 large town (1000 houses) under snowfall: interactive frame rate, roofs loaded', fps44.mean < 100 && C.stats.roofsLoaded > 0, { fps: +(1000 / fps44.mean).toFixed(1), worstFrameMs: +fps44.worst.toFixed(1), climateMs: C.ms, gl44 });
 
 // ══ 45: repeated runs ═══════════════════════════════════════════════════════════════════════════
 await newWorld();
