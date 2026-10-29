@@ -1198,10 +1198,12 @@ export class ClimateWorld {
       const J = this.coverEnergy(M, U);
       const w = this.link.water();
       if (M > 1e-3 || (wet && w)) {
-        const rain = Math.min(this.cRain[c], Math.max(0, M));
-        if (rain > 0) this.toFlood(c, rain, (J * rain) / M, 'rain');
-        if (M - rain > 0) this.toFlood(c, M - rain, (J * (M - rain)) / M, 'melt');
-        else if (wet && w) this.depositWater(w, c, J, 'cover');
+        if (M > 0) {
+          // The rain that ran into the cover leaves as rain, the rest as meltwater — the energy split by mass, once.
+          const rain = Math.min(this.cRain[c], M);
+          if (rain > 0) this.toFlood(c, rain, (J * rain) / M, 'rain');
+          if (M - rain > 0) this.toFlood(c, M - rain, (J * (M - rain)) / M, 'melt');
+        } else if (wet && w) this.depositWater(w, c, J, 'cover');
         else this.depositGround(c, J, 'cover');
       } else {
         if (M > 0) this.sW[c * this.nl] += M;

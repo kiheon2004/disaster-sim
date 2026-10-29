@@ -387,3 +387,20 @@ describe('audit: object stores', () => {
     expect(t.cw.sM[k] / 15).toBeGreaterThan(0.9 * CROWN_BREAK);
   });
 });
+
+describe('audit: a cover whose liquid is all rain', () => {
+  it('passes its energy below exactly once when it clears (a regression of the rain split, scene 24: +7 kJ)', () => {
+    const r = setup(spec({ temperature: K(4), target: K(4), forcing: 'prescribed', humidity: 0.9 }), () => 0.02);
+    const cw = r.cw as unknown as { cM: Float64Array; cU: Float64Array; cRain: Float64Array; clearCover(c: number, wet: boolean): void; energy: { final: number }; closeLedgers(): void; energyExpected(): number; water: { initial: number }; waterStorage(): number; storeEnergy(): number };
+    const c = 20 * 40 + 20;
+    // 3 g of rain liquid at 0 °C in a cover on water (U = 0 relative to liquid at 0 °C).
+    cw.cM[c] = 0.003; cw.cU[c] = 0; cw.cRain[c] = 0.003;
+    (r.cw.water as { initial: number }).initial = r.cw.waterStorage(); (r.cw.energy as { initial: number }).initial = r.cw.storeEnergy();
+    const before = r.tw.ledger.residual();
+    cw.clearCover(c, true);
+    r.tw.ledger.final = r.tw.internalEnergy();
+    r.cw.closeLedgers();
+    expect(Math.abs(r.cw.energy.final - r.cw.energyExpected())).toBeLessThan(1e-6);
+    expect(Math.abs(r.tw.ledger.residual() - before)).toBeLessThan(1e-6);
+  });
+});
