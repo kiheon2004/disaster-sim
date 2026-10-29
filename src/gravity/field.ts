@@ -16,8 +16,15 @@
  * Potential Φ (g = −∇Φ) exists for the global part (Φ = −G·x) and for radial sources (central fields); a region source
  * is not curl-free at its edge, so with one active `potentialDefined` is false and no potential is invented — the
  * energy ledger then books the path work of gravity only.
+ *
+ * Phase 32: celestial point sources (softened point masses of real mass, `points`, celestial/point.ts) are ADDED after
+ * the whole Phase 31 composition (g_total = g_Phase31 + Σ g_c, docs/EXTREME_CELESTIAL.md §8); they are conservative
+ * (their Φ is added to the potential) and their gradient is analytic. Without a celestial experiment nothing of this
+ * path runs (every Phase 31 result unchanged).
  */
 import type { Vec3 } from '@/core/types';
+import { PointField } from '@/celestial/point';
+import type { CelestialSpec } from '@/celestial/types';
 import { blendAt, smoother } from './profiles';
 import type { GravitySourceSpec, GravitySpec } from './types';
 
@@ -161,6 +168,13 @@ export function experimentBlend(e: GravityExperiment, t: number): number | null 
   return b;
 }
 
+/** A celestial experiment registered with the field (Phase 32). */
+export interface CelestialExperiment {
+  id: string;
+  spec: CelestialSpec;
+  start: number;
+}
+
 export interface GravityAttribution {
   /** Index of the experiment that sets the global part (−1 = project gravity). */
   global: number;
@@ -191,6 +205,9 @@ export class GravityField {
   private adds: Live[] = [];
   private replaces: Live[] = [];
   private tmp: Vec3 = [0, 0, 0];
+  /** Celestial point sources (Phase 32) and their experiments in canonical order (start, then parameters). */
+  readonly points = new PointField();
+  celestial: CelestialExperiment[] = [];
 
   constructor(g0: number) {
     this.g0 = g0;
@@ -218,6 +235,20 @@ export class GravityField {
       return globalVector(e.spec, this.from[k], b, [0, 0, 0]);
     }
     return [0, -this.g0, 0];
+  }
+
+  /**
+   * Register a celestial experiment (Phase 32; any order — the sources are re-registered in a canonical order, the
+   * mass already captured by a growing source is kept).
+   */
+  addCelestial(e: CelestialExperiment) {
+    const grown = new Map(this.points.entries.map((x) => [x.key, x.grown]));
+    this.celestial = [...this.celestial, e].sort((a, b) => a.start - b.start || (JSON.stringify(a.spec) < JSON.stringify(b.spec) ? -1 : JSON.stringify(a.spec) > JSON.stringify(b.spec) ? 1 : 0));
+    this.points.entries.length = 0;
+    this.celestial.forEach((x, k) => this.points.add(x.spec, x.start, k));
+    for (const x of this.points.entries) x.grown = grown.get(x.key) ?? 0;
+    this.rev++;
+    this.time = -Infinity;
   }
 
   /** Index (canonical order) of an experiment. */
@@ -264,7 +295,8 @@ export class GravityField {
     const byKey = (a: Live, b: Live) => (a.key < b.key ? -1 : a.key > b.key ? 1 : a.owner - b.owner);
     this.adds.sort(byKey);
     this.replaces.sort(byKey);
-    this.uniform = this.nLive === 0;
+    this.points.prepare(t);
+    this.uniform = this.nLive === 0 && this.points.live.length === 0;
     this.potentialDefined = this.adds.every((l) => l.src.kind === 'radial') && this.replaces.length === 0;
     return this;
   }
@@ -299,9 +331,16 @@ export class GravityField {
 
   /** g at a point (m/s², written into out). Attribution of the sources acting there, if asked. */
   sample(x: number, y: number, z: number, out: Vec3, attr?: GravityAttribution): Vec3 {
+    this.sampleBase(x, y, z, out, attr);
+    if (this.points.live.length) this.points.addSample(x, y, z, out);
+    return out;
+  }
+
+  /** g of the Phase 31 part only (global + local sources, without the celestial point sources). */
+  sampleBase(x: number, y: number, z: number, out: Vec3, attr?: GravityAttribution): Vec3 {
     out[0] = this.G[0]; out[1] = this.G[1]; out[2] = this.G[2];
     if (attr) { attr.global = this.globalOwner; attr.local = 0; }
-    if (this.uniform) return out;
+    if (this.nLive === 0) return out;
     for (let k = 0; k < this.adds.length; k++) {
       const l = this.adds[k];
       const dx = x - l.cx, dy = l.shape === 1 ? 0 : y - l.cy, dz = z - l.cz;
@@ -329,9 +368,11 @@ export class GravityField {
     return out;
   }
 
-  /** Whether a point lies inside a local source's radius (affected objects, overlays). */
+  /** Whether a point lies inside a local source's radius (affected objects, overlays; celestial sources reach
+   *  everywhere they are in force). */
   inSource(x: number, y: number, z: number): boolean {
     if (this.uniform) return false;
+    if (this.points.live.length) return true;
     for (const l of this.adds) if (this.inside(l, x, y, z)) return true;
     for (const l of this.replaces) if (this.inside(l, x, y, z)) return true;
     return false;
@@ -358,17 +399,25 @@ export class GravityField {
       const I = d >= l.inner ? edgeIntegral(l, d, l.R) : lawInt(l.law, l.inner, l.r0, l.eps2) - lawInt(l.law, d, l.r0, l.eps2) + l.edgeInt;
       phi -= l.S * I;
     }
+    if (this.points.live.length) phi += this.points.potential(x, y, z);
     return phi;
   }
 
-  /** Gravity gradient ∂g_i/∂x_j at a point by central differences (h m) — row-major 3×3 into out (Phase 32 tidal interface). */
+  /**
+   * Gravity gradient ∂g_i/∂x_j at a point — row-major 3×3 into out: central differences (h m) of the Phase 31 local
+   * sources (0 for a uniform field) plus the analytic tensor of the celestial point sources (Phase 32).
+   */
   gradient(x: number, y: number, z: number, out: Float64Array | number[] = new Float64Array(9), h = 0.05): Float64Array | number[] {
-    const a = this.tmp, b: Vec3 = [0, 0, 0];
-    for (let j = 0; j < 3; j++) {
-      this.sample(x + (j === 0 ? h : 0), y + (j === 1 ? h : 0), z + (j === 2 ? h : 0), a);
-      this.sample(x - (j === 0 ? h : 0), y - (j === 1 ? h : 0), z - (j === 2 ? h : 0), b);
-      for (let i = 0; i < 3; i++) out[3 * i + j] = (a[i] - b[i]) / (2 * h);
+    for (let i = 0; i < 9; i++) out[i] = 0;
+    if (this.nLive > 0) {
+      const a = this.tmp, b: Vec3 = [0, 0, 0];
+      for (let j = 0; j < 3; j++) {
+        this.sampleBase(x + (j === 0 ? h : 0), y + (j === 1 ? h : 0), z + (j === 2 ? h : 0), a);
+        this.sampleBase(x - (j === 0 ? h : 0), y - (j === 1 ? h : 0), z - (j === 2 ? h : 0), b);
+        for (let i = 0; i < 3; i++) out[3 * i + j] = (a[i] - b[i]) / (2 * h);
+      }
     }
+    if (this.points.live.length) this.points.addGradient(x, y, z, out);
     return out;
   }
 
