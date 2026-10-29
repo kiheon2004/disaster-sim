@@ -1,0 +1,4634 @@
+{
+  "date": "2026-10-20T02:10:53.222Z",
+  "load": [
+    4.1,
+    4.5,
+    4.5
+  ],
+  "rows": [
+    {
+      "scene": "3 high gravity (2 g)",
+      "seconds": 3600,
+      "wallS": 6.2,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 4.5,
+          "heapMB": 63.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 120,
+          "msPerSimS": 2.5,
+          "heapMB": 63.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 180,
+          "msPerSimS": 2.3,
+          "heapMB": 63.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 240,
+          "msPerSimS": 1.9,
+          "heapMB": 63.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 300,
+          "msPerSimS": 1.6,
+          "heapMB": 63.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 360,
+          "msPerSimS": 1.6,
+          "heapMB": 63.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 420,
+          "msPerSimS": 1.6,
+          "heapMB": 63.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 480,
+          "msPerSimS": 1.6,
+          "heapMB": 63.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 540,
+          "msPerSimS": 1.6,
+          "heapMB": 63.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 600,
+          "msPerSimS": 1.6,
+          "heapMB": 63.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 660,
+          "msPerSimS": 1.6,
+          "heapMB": 63.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 720,
+          "msPerSimS": 1.6,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 780,
+          "msPerSimS": 1.6,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 840,
+          "msPerSimS": 1.6,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 900,
+          "msPerSimS": 1.6,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 960,
+          "msPerSimS": 1.6,
+          "heapMB": 64.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 1.6,
+          "heapMB": 64.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 1.6,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 1.6,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 1.6,
+          "heapMB": 64.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 1.6,
+          "heapMB": 64.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 1.6,
+          "heapMB": 64.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 1.6,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 1.6,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 1.5,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 1.6,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 1.6,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 1.6,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 1.6,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 1.6,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 1.6,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 1.6,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 1.6,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 1.8,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 1.8,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 1.8,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 1.8,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 1.9,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 1.9,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 1.6,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00046,
+          "workOther": -29.8
+        }
+      ]
+    },
+    {
+      "scene": "7 gravity ramp (→ 3 g over 20 s)",
+      "seconds": 3600,
+      "wallS": 6.4,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 3.8,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 120,
+          "msPerSimS": 1.7,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 180,
+          "msPerSimS": 1.8,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 240,
+          "msPerSimS": 1.7,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 300,
+          "msPerSimS": 1.6,
+          "heapMB": 64.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 360,
+          "msPerSimS": 1.6,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 420,
+          "msPerSimS": 1.7,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 480,
+          "msPerSimS": 1.6,
+          "heapMB": 64.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 540,
+          "msPerSimS": 1.7,
+          "heapMB": 64.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 600,
+          "msPerSimS": 1.7,
+          "heapMB": 64.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 660,
+          "msPerSimS": 1.7,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 720,
+          "msPerSimS": 1.9,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 780,
+          "msPerSimS": 2.1,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 840,
+          "msPerSimS": 1.7,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 900,
+          "msPerSimS": 1.7,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 960,
+          "msPerSimS": 1.8,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 1.7,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 1.7,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 1.7,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 1.9,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 2.8,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 2.1,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 1.7,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 1.7,
+          "heapMB": 65.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 1.7,
+          "heapMB": 65.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 1.7,
+          "heapMB": 65.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 1.7,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 1.6,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 1.7,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 1.8,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 1.8,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 1.7,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 1.7,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 1.8,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 1.9,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 1.9,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 1.8,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 1.8,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 1.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 1.7,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000142,
+          "workOther": -58.82
+        }
+      ]
+    },
+    {
+      "scene": "9 local gravity field (well)",
+      "seconds": 3600,
+      "wallS": 8.6,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 2.6,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000309,
+          "workOther": 1629
+        },
+        {
+          "t": 120,
+          "msPerSimS": 2.8,
+          "heapMB": 63.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000125,
+          "workOther": -4590
+        },
+        {
+          "t": 180,
+          "msPerSimS": 2.9,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000871,
+          "workOther": -2939
+        },
+        {
+          "t": 240,
+          "msPerSimS": 2.2,
+          "heapMB": 64,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000259,
+          "workOther": 2409
+        },
+        {
+          "t": 300,
+          "msPerSimS": 2.3,
+          "heapMB": 64.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000174,
+          "workOther": 11220
+        },
+        {
+          "t": 360,
+          "msPerSimS": 2.4,
+          "heapMB": 64.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000113,
+          "workOther": 17750
+        },
+        {
+          "t": 420,
+          "msPerSimS": 2.2,
+          "heapMB": 64.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000477,
+          "workOther": 14250
+        },
+        {
+          "t": 480,
+          "msPerSimS": 2.2,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00000285,
+          "workOther": 20200
+        },
+        {
+          "t": 540,
+          "msPerSimS": 2.2,
+          "heapMB": 64.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000747,
+          "workOther": 21740
+        },
+        {
+          "t": 600,
+          "msPerSimS": 2.2,
+          "heapMB": 64.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00000518,
+          "workOther": 22910
+        },
+        {
+          "t": 660,
+          "msPerSimS": 2.3,
+          "heapMB": 64.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000343,
+          "workOther": 23060
+        },
+        {
+          "t": 720,
+          "msPerSimS": 2.2,
+          "heapMB": 64.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 9.94e-7,
+          "workOther": 23840
+        },
+        {
+          "t": 780,
+          "msPerSimS": 2.3,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00000575,
+          "workOther": 24200
+        },
+        {
+          "t": 840,
+          "msPerSimS": 2.3,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000336,
+          "workOther": 24190
+        },
+        {
+          "t": 900,
+          "msPerSimS": 2.2,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00000811,
+          "workOther": 24980
+        },
+        {
+          "t": 960,
+          "msPerSimS": 2.2,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000202,
+          "workOther": 25110
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 3.4,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000196,
+          "workOther": 25370
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 2.7,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000171,
+          "workOther": 25600
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 2.2,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000264,
+          "workOther": 25540
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 2.2,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000285,
+          "workOther": 25560
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 2.3,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000241,
+          "workOther": 25680
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 3,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000309,
+          "workOther": 25560
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 2.4,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000272,
+          "workOther": 25640
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 2.2,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000322,
+          "workOther": 25530
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 2.2,
+          "heapMB": 65.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000304,
+          "workOther": 25560
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 2.2,
+          "heapMB": 65.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000341,
+          "workOther": 25470
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 2.3,
+          "heapMB": 65.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000334,
+          "workOther": 25470
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 2.3,
+          "heapMB": 65.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000363,
+          "workOther": 25390
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 2.2,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000364,
+          "workOther": 25370
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 2.3,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000386,
+          "workOther": 25300
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 2.2,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000392,
+          "workOther": 25270
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 2.3,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000041,
+          "workOther": 25210
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 2.2,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000419,
+          "workOther": 25180
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 2.3,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000435,
+          "workOther": 25120
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000445,
+          "workOther": 25080
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 2.4,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000459,
+          "workOther": 25030
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000047,
+          "workOther": 24990
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000483,
+          "workOther": 24940
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000495,
+          "workOther": 24890
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000508,
+          "workOther": 24850
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 2.4,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000519,
+          "workOther": 24800
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000532,
+          "workOther": 24750
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 2.5,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000543,
+          "workOther": 24710
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 2.7,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000555,
+          "workOther": 24660
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 2.5,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000567,
+          "workOther": 24610
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000579,
+          "workOther": 24560
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000059,
+          "workOther": 24520
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000602,
+          "workOther": 24470
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 3.5,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000613,
+          "workOther": 24420
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000625,
+          "workOther": 24380
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000636,
+          "workOther": 24330
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000647,
+          "workOther": 24280
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000659,
+          "workOther": 24240
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000067,
+          "workOther": 24190
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000681,
+          "workOther": 24140
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000692,
+          "workOther": 24100
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000703,
+          "workOther": 24050
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 2.4,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000713,
+          "workOther": 24000
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000724,
+          "workOther": 23960
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 2.3,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.0000735,
+          "workOther": 23910
+        }
+      ]
+    },
+    {
+      "scene": "10 radial field",
+      "seconds": 3600,
+      "wallS": 8.4,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 9.5,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000417,
+          "workOther": -3086000
+        },
+        {
+          "t": 120,
+          "msPerSimS": 6.1,
+          "heapMB": 64.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000398,
+          "workOther": -3150000
+        },
+        {
+          "t": 180,
+          "msPerSimS": 3.3,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 240,
+          "msPerSimS": 1.9,
+          "heapMB": 64.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 300,
+          "msPerSimS": 2,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 360,
+          "msPerSimS": 2,
+          "heapMB": 64.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 420,
+          "msPerSimS": 1.9,
+          "heapMB": 64.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 480,
+          "msPerSimS": 2,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 540,
+          "msPerSimS": 2,
+          "heapMB": 65,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 600,
+          "msPerSimS": 2,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 660,
+          "msPerSimS": 2.4,
+          "heapMB": 65.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 720,
+          "msPerSimS": 2.8,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 780,
+          "msPerSimS": 2.4,
+          "heapMB": 65.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 840,
+          "msPerSimS": 2.6,
+          "heapMB": 65.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 900,
+          "msPerSimS": 3.3,
+          "heapMB": 65.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 960,
+          "msPerSimS": 2.5,
+          "heapMB": 65.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 2.2,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 2.1,
+          "heapMB": 65.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 2,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 2.1,
+          "heapMB": 65.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 2.2,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 2,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 2.2,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 2.1,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 2,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 2,
+          "heapMB": 66,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 2,
+          "heapMB": 66,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 2,
+          "heapMB": 66.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 2,
+          "heapMB": 66.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 2,
+          "heapMB": 66.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 2.2,
+          "heapMB": 66.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 2.1,
+          "heapMB": 66.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 2.1,
+          "heapMB": 66.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 2.4,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 2.4,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 2.2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 2.2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 2.5,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 2.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 2.2,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.000397,
+          "workOther": -3153000
+        }
+      ]
+    },
+    {
+      "scene": "16 flood (lake + rain at 2 g)",
+      "seconds": 3600,
+      "wallS": 60.9,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 50.7,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.52e-14
+        },
+        {
+          "t": 120,
+          "msPerSimS": 50.6,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.79e-15
+        },
+        {
+          "t": 180,
+          "msPerSimS": 52.1,
+          "heapMB": 65.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.17e-15
+        },
+        {
+          "t": 240,
+          "msPerSimS": 51.8,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.03e-14
+        },
+        {
+          "t": 300,
+          "msPerSimS": 36.1,
+          "heapMB": 65.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 8.26e-16
+        },
+        {
+          "t": 360,
+          "msPerSimS": 21.5,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.03e-15
+        },
+        {
+          "t": 420,
+          "msPerSimS": 18.9,
+          "heapMB": 65.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.62e-15
+        },
+        {
+          "t": 480,
+          "msPerSimS": 16.5,
+          "heapMB": 66,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.38e-15
+        },
+        {
+          "t": 540,
+          "msPerSimS": 15.7,
+          "heapMB": 66.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.79e-15
+        },
+        {
+          "t": 600,
+          "msPerSimS": 15.9,
+          "heapMB": 66.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.34e-15
+        },
+        {
+          "t": 660,
+          "msPerSimS": 17.5,
+          "heapMB": 66.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.52e-15
+        },
+        {
+          "t": 720,
+          "msPerSimS": 15.8,
+          "heapMB": 66.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 0
+        },
+        {
+          "t": 780,
+          "msPerSimS": 17.1,
+          "heapMB": 66.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.34e-15
+        },
+        {
+          "t": 840,
+          "msPerSimS": 17.6,
+          "heapMB": 66.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 4.27e-15
+        },
+        {
+          "t": 900,
+          "msPerSimS": 13.1,
+          "heapMB": 66.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.75e-16
+        },
+        {
+          "t": 960,
+          "msPerSimS": 13.4,
+          "heapMB": 66.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 8.26e-16
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 13.5,
+          "heapMB": 66.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.38e-15
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 14.8,
+          "heapMB": 66.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.34e-15
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 16.1,
+          "heapMB": 66.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.72e-15
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 13.8,
+          "heapMB": 66.7,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 5.51e-16
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 13.2,
+          "heapMB": 66.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.38e-16
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 14.4,
+          "heapMB": 66.8,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.48e-15
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 13.7,
+          "heapMB": 66.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.07e-15
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 12.9,
+          "heapMB": 66.9,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 4.13e-16
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 12.6,
+          "heapMB": 67,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 0
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 12.5,
+          "heapMB": 67.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.99e-15
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 12.5,
+          "heapMB": 67.1,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.24e-15
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 12.8,
+          "heapMB": 67.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.75e-15
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 13.3,
+          "heapMB": 67.2,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.79e-15
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 14.3,
+          "heapMB": 67.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.65e-15
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 14,
+          "heapMB": 67.3,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.89e-15
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 12.6,
+          "heapMB": 67.4,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.1e-15
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 13,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.62e-15
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 13.3,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.62e-15
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 13,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.93e-15
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 13.2,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.52e-15
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 13.1,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.34e-15
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 13.1,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.24e-15
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 12.9,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 5.51e-16
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 13.9,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.58e-15
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 13.8,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.72e-15
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 13.9,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 6.89e-16
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 13.6,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.86e-15
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 14.7,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.24e-15
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 16,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 5.51e-15
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 14.3,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.99e-15
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 14.4,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.1e-15
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 12.8,
+          "heapMB": 67.5,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.24e-15
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 12.9,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.79e-15
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 12.8,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.72e-15
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 14,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.07e-15
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 12.5,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 2.07e-15
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 12.6,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 8.26e-16
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 12.8,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 5.51e-16
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 13.5,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 8.26e-16
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 12.9,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.44e-15
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 12.8,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 9.64e-16
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 13.2,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 3.17e-15
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 12.6,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 1.52e-15
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 12.6,
+          "heapMB": 67.6,
+          "bodies": 26,
+          "debris": 0,
+          "energyRelGross": 0.00213,
+          "workOther": -28.88,
+          "waterErrRel": 9.64e-16
+        }
+      ]
+    },
+    {
+      "scene": "19 snow-loaded buildings (→ 2.5 g)",
+      "seconds": 3600,
+      "wallS": 99.3,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 33.7,
+          "heapMB": 68.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.02e-14,
+          "climateE": 1.04e-15
+        },
+        {
+          "t": 120,
+          "msPerSimS": 29.6,
+          "heapMB": 68,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.43e-15,
+          "climateE": 2.3e-15
+        },
+        {
+          "t": 180,
+          "msPerSimS": 27.7,
+          "heapMB": 68,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.14e-15,
+          "climateE": 3.43e-14
+        },
+        {
+          "t": 240,
+          "msPerSimS": 30.1,
+          "heapMB": 68,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.63e-14,
+          "climateE": 3.22e-15
+        },
+        {
+          "t": 300,
+          "msPerSimS": 31.7,
+          "heapMB": 68.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.24e-14,
+          "climateE": 1.32e-14
+        },
+        {
+          "t": 360,
+          "msPerSimS": 28.1,
+          "heapMB": 68.3,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.63e-15,
+          "climateE": 1.93e-14
+        },
+        {
+          "t": 420,
+          "msPerSimS": 31.1,
+          "heapMB": 68.3,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 9.59e-15,
+          "climateE": 1.46e-14
+        },
+        {
+          "t": 480,
+          "msPerSimS": 32,
+          "heapMB": 68.4,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.78e-15,
+          "climateE": 3.56e-14
+        },
+        {
+          "t": 540,
+          "msPerSimS": 28,
+          "heapMB": 68.5,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.91e-15,
+          "climateE": 1.48e-14
+        },
+        {
+          "t": 600,
+          "msPerSimS": 30.7,
+          "heapMB": 68.6,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.86e-14,
+          "climateE": 6.9e-16
+        },
+        {
+          "t": 660,
+          "msPerSimS": 28.3,
+          "heapMB": 68.7,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.1e-14,
+          "climateE": 6.44e-15
+        },
+        {
+          "t": 720,
+          "msPerSimS": 27.9,
+          "heapMB": 68.8,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 5.81e-16,
+          "climateE": 1.38e-15
+        },
+        {
+          "t": 780,
+          "msPerSimS": 29.3,
+          "heapMB": 68.8,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.4e-14,
+          "climateE": 5.75e-15
+        },
+        {
+          "t": 840,
+          "msPerSimS": 28.2,
+          "heapMB": 68.9,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.33e-15,
+          "climateE": 1.86e-14
+        },
+        {
+          "t": 900,
+          "msPerSimS": 28,
+          "heapMB": 69,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.45e-16,
+          "climateE": 1.56e-14
+        },
+        {
+          "t": 960,
+          "msPerSimS": 27.3,
+          "heapMB": 69,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.63e-15,
+          "climateE": 1.66e-14
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 27.9,
+          "heapMB": 69.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.37e-14,
+          "climateE": 1.55e-14
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 27.9,
+          "heapMB": 69.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.15e-14,
+          "climateE": 3.44e-14
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 27.5,
+          "heapMB": 69.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 4.65e-15,
+          "climateE": 1.23e-14
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 28.1,
+          "heapMB": 69.3,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.04e-14,
+          "climateE": 4.6e-15
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 28.4,
+          "heapMB": 69.4,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.74e-15,
+          "climateE": 3.79e-15
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 28.1,
+          "heapMB": 69.4,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.38e-14,
+          "climateE": 5.75e-16
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 27.9,
+          "heapMB": 69.5,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.3e-14,
+          "climateE": 6.44e-15
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 28.2,
+          "heapMB": 69.6,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.72e-16,
+          "climateE": 2.87e-15
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 28.3,
+          "heapMB": 69.6,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 4.22e-15,
+          "climateE": 7.93e-15
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 27.5,
+          "heapMB": 69.7,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.51e-14,
+          "climateE": 2.82e-14
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 27.4,
+          "heapMB": 69.8,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.33e-15,
+          "climateE": 2.05e-14
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 27.7,
+          "heapMB": 69.8,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 7.99e-15,
+          "climateE": 8.62e-15
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 27.5,
+          "heapMB": 69.9,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.32e-14,
+          "climateE": 3.56e-15
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 28.3,
+          "heapMB": 70,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.72e-16,
+          "climateE": 7.93e-15
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 24.1,
+          "heapMB": 69.9,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.47e-15,
+          "climateE": 2.83e-14
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 25.2,
+          "heapMB": 69.9,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.18e-14,
+          "climateE": 4.94e-15
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 27.1,
+          "heapMB": 70,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 6.69e-15,
+          "climateE": 1.33e-14
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 24.6,
+          "heapMB": 70,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.8e-14,
+          "climateE": 3.01e-14
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 24.4,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.42e-14,
+          "climateE": 4.71e-15
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 23.5,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.83e-14,
+          "climateE": 1.55e-14
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 23.7,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.72e-14,
+          "climateE": 1.45e-14
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 24.1,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.96e-14,
+          "climateE": 6.43e-15
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 28,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.89e-15,
+          "climateE": 2.1e-14
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 24.7,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.87e-15,
+          "climateE": 3.95e-14
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 26.6,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.16e-14,
+          "climateE": 1.49e-15
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 25.7,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.92e-15,
+          "climateE": 1.9e-14
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 25.1,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.89e-15,
+          "climateE": 2.86e-14
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 28.8,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.34e-15,
+          "climateE": 0
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 26.7,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.24e-14,
+          "climateE": 2.22e-14
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 27.4,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.74e-15,
+          "climateE": 8.84e-15
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 26.5,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 8.58e-15,
+          "climateE": 2.34e-14
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 26.4,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 7.41e-15,
+          "climateE": 1.89e-14
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 26.1,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 5.81e-16,
+          "climateE": 7.35e-15
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 24.7,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.34e-14,
+          "climateE": 7.92e-15
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 25.8,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 6.11e-15,
+          "climateE": 1.76e-14
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 25.6,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 4.14e-14,
+          "climateE": 6.08e-15
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 25.6,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 4.22e-15,
+          "climateE": 1.95e-14
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 24.9,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.31e-15,
+          "climateE": 2.57e-14
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 27,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.18e-14,
+          "climateE": 1.14e-14
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 26.6,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 2.92e-14,
+          "climateE": 1.17e-14
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 34.8,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 3.92e-15,
+          "climateE": 1.09e-14
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 34.7,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.31e-15,
+          "climateE": 1.37e-14
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 28,
+          "heapMB": 70.2,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 6.98e-15,
+          "climateE": 9.07e-15
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 26.3,
+          "heapMB": 70.1,
+          "bodies": 42,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0,
+          "climateW": 1.35e-14,
+          "climateE": 3.56e-15
+        }
+      ]
+    },
+    {
+      "scene": "20 volcano at Mars-like g",
+      "seconds": 3600,
+      "wallS": 50.9,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 11.2,
+          "heapMB": 70.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 120,
+          "msPerSimS": 23,
+          "heapMB": 70.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 180,
+          "msPerSimS": 26.8,
+          "heapMB": 70.3,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 240,
+          "msPerSimS": 21.8,
+          "heapMB": 70.4,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 300,
+          "msPerSimS": 19.6,
+          "heapMB": 70.5,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 360,
+          "msPerSimS": 18.8,
+          "heapMB": 70.5,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 420,
+          "msPerSimS": 18.3,
+          "heapMB": 70.6,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 480,
+          "msPerSimS": 16.4,
+          "heapMB": 70.6,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 540,
+          "msPerSimS": 15,
+          "heapMB": 70.7,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 600,
+          "msPerSimS": 13.8,
+          "heapMB": 70.7,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 660,
+          "msPerSimS": 13.9,
+          "heapMB": 70.8,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 720,
+          "msPerSimS": 16.1,
+          "heapMB": 70.8,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 780,
+          "msPerSimS": 17.9,
+          "heapMB": 70.9,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 840,
+          "msPerSimS": 16.4,
+          "heapMB": 70.9,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 900,
+          "msPerSimS": 14.5,
+          "heapMB": 71,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 960,
+          "msPerSimS": 13.3,
+          "heapMB": 71.1,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 12.8,
+          "heapMB": 71.1,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 13.4,
+          "heapMB": 71.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 15,
+          "heapMB": 71.3,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 15.1,
+          "heapMB": 71.3,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 15.2,
+          "heapMB": 71.4,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 13,
+          "heapMB": 71.4,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 12.8,
+          "heapMB": 71.5,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 12.8,
+          "heapMB": 71.6,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 14.2,
+          "heapMB": 71.6,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 15.6,
+          "heapMB": 71.7,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 14.8,
+          "heapMB": 71.8,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 14.4,
+          "heapMB": 71.8,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 12.9,
+          "heapMB": 71.9,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 12.8,
+          "heapMB": 71.9,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 13.1,
+          "heapMB": 72,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 15.3,
+          "heapMB": 72,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 14.9,
+          "heapMB": 72.1,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 15.2,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 13.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 13.5,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 12.8,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 14.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 14.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 14.2,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 14.5,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 12.8,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 12.7,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 12.8,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 13.4,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 12.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 11.6,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 11.2,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 11.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 11.4,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 11.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 11.3,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 11.2,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 11.2,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 11.1,
+          "heapMB": 72.2,
+          "bodies": 2,
+          "debris": 0,
+          "energyRelGross": null,
+          "workOther": 0
+        }
+      ]
+    },
+    {
+      "scene": "23 multi-hazard city",
+      "seconds": 3600,
+      "wallS": 70.5,
+      "bad": [],
+      "samples": [
+        {
+          "t": 60,
+          "msPerSimS": 58.4,
+          "heapMB": 72.7,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.00021,
+          "workOther": -1538000,
+          "waterErrRel": 6.8e-14
+        },
+        {
+          "t": 120,
+          "msPerSimS": 51.2,
+          "heapMB": 72,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 4.22e-14
+        },
+        {
+          "t": 180,
+          "msPerSimS": 42.9,
+          "heapMB": 72.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 5.2e-14
+        },
+        {
+          "t": 240,
+          "msPerSimS": 21.1,
+          "heapMB": 72.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 5.12e-14
+        },
+        {
+          "t": 300,
+          "msPerSimS": 19.6,
+          "heapMB": 72.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 5.16e-14
+        },
+        {
+          "t": 360,
+          "msPerSimS": 18.8,
+          "heapMB": 72.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 5.05e-14
+        },
+        {
+          "t": 420,
+          "msPerSimS": 18.4,
+          "heapMB": 72.3,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 5.12e-14
+        },
+        {
+          "t": 480,
+          "msPerSimS": 18,
+          "heapMB": 72.4,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 4.87e-14
+        },
+        {
+          "t": 540,
+          "msPerSimS": 18.1,
+          "heapMB": 72.5,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 4.84e-14
+        },
+        {
+          "t": 600,
+          "msPerSimS": 18.1,
+          "heapMB": 72.5,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 4.55e-14
+        },
+        {
+          "t": 660,
+          "msPerSimS": 18.1,
+          "heapMB": 72.6,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000208,
+          "workOther": -1556000,
+          "waterErrRel": 4.79e-14
+        },
+        {
+          "t": 720,
+          "msPerSimS": 18.3,
+          "heapMB": 72.7,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.49e-14
+        },
+        {
+          "t": 780,
+          "msPerSimS": 18.1,
+          "heapMB": 72.8,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.81e-14
+        },
+        {
+          "t": 840,
+          "msPerSimS": 17.6,
+          "heapMB": 72.8,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.59e-14
+        },
+        {
+          "t": 900,
+          "msPerSimS": 17.2,
+          "heapMB": 72.9,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.7e-14
+        },
+        {
+          "t": 960,
+          "msPerSimS": 17.4,
+          "heapMB": 72.9,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.7e-14
+        },
+        {
+          "t": 1020,
+          "msPerSimS": 17.3,
+          "heapMB": 73,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.75e-14
+        },
+        {
+          "t": 1080,
+          "msPerSimS": 17.6,
+          "heapMB": 73.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.63e-14
+        },
+        {
+          "t": 1140,
+          "msPerSimS": 18.4,
+          "heapMB": 73.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 5.04e-14
+        },
+        {
+          "t": 1200,
+          "msPerSimS": 18.3,
+          "heapMB": 73.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 5.07e-14
+        },
+        {
+          "t": 1260,
+          "msPerSimS": 18.4,
+          "heapMB": 73.3,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.9e-14
+        },
+        {
+          "t": 1320,
+          "msPerSimS": 18.3,
+          "heapMB": 73.3,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.66e-14
+        },
+        {
+          "t": 1380,
+          "msPerSimS": 18.4,
+          "heapMB": 73.4,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.7e-14
+        },
+        {
+          "t": 1440,
+          "msPerSimS": 18.3,
+          "heapMB": 73.5,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000207,
+          "workOther": -1556000,
+          "waterErrRel": 4.79e-14
+        },
+        {
+          "t": 1500,
+          "msPerSimS": 18.3,
+          "heapMB": 73.5,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.48e-14
+        },
+        {
+          "t": 1560,
+          "msPerSimS": 18.3,
+          "heapMB": 73.6,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.56e-14
+        },
+        {
+          "t": 1620,
+          "msPerSimS": 18.3,
+          "heapMB": 73.6,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.68e-14
+        },
+        {
+          "t": 1680,
+          "msPerSimS": 17,
+          "heapMB": 73.7,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.43e-14
+        },
+        {
+          "t": 1740,
+          "msPerSimS": 17.5,
+          "heapMB": 73.7,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.58e-14
+        },
+        {
+          "t": 1800,
+          "msPerSimS": 17,
+          "heapMB": 73.8,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.75e-14
+        },
+        {
+          "t": 1860,
+          "msPerSimS": 17,
+          "heapMB": 73.8,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.56e-14
+        },
+        {
+          "t": 1920,
+          "msPerSimS": 17,
+          "heapMB": 73.9,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.8e-14
+        },
+        {
+          "t": 1980,
+          "msPerSimS": 17,
+          "heapMB": 74,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.51e-14
+        },
+        {
+          "t": 2040,
+          "msPerSimS": 18,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.49e-14
+        },
+        {
+          "t": 2100,
+          "msPerSimS": 17.3,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.47e-14
+        },
+        {
+          "t": 2160,
+          "msPerSimS": 17.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.8e-14
+        },
+        {
+          "t": 2220,
+          "msPerSimS": 19.4,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000206,
+          "workOther": -1556000,
+          "waterErrRel": 4.8e-14
+        },
+        {
+          "t": 2280,
+          "msPerSimS": 17.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.58e-14
+        },
+        {
+          "t": 2340,
+          "msPerSimS": 17.4,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.81e-14
+        },
+        {
+          "t": 2400,
+          "msPerSimS": 16.8,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.27e-14
+        },
+        {
+          "t": 2460,
+          "msPerSimS": 16.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.4e-14
+        },
+        {
+          "t": 2520,
+          "msPerSimS": 16.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.51e-14
+        },
+        {
+          "t": 2580,
+          "msPerSimS": 16,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.56e-14
+        },
+        {
+          "t": 2640,
+          "msPerSimS": 16.7,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.51e-14
+        },
+        {
+          "t": 2700,
+          "msPerSimS": 17.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.52e-14
+        },
+        {
+          "t": 2760,
+          "msPerSimS": 20.5,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.34e-14
+        },
+        {
+          "t": 2820,
+          "msPerSimS": 16.9,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.52e-14
+        },
+        {
+          "t": 2880,
+          "msPerSimS": 17,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.9e-14
+        },
+        {
+          "t": 2940,
+          "msPerSimS": 17.1,
+          "heapMB": 74.1,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.84e-14
+        },
+        {
+          "t": 3000,
+          "msPerSimS": 18.6,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.51e-14
+        },
+        {
+          "t": 3060,
+          "msPerSimS": 16.8,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 4.77e-14
+        },
+        {
+          "t": 3120,
+          "msPerSimS": 16.7,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000205,
+          "workOther": -1556000,
+          "waterErrRel": 5.09e-14
+        },
+        {
+          "t": 3180,
+          "msPerSimS": 18.9,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.87e-14
+        },
+        {
+          "t": 3240,
+          "msPerSimS": 19.9,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.76e-14
+        },
+        {
+          "t": 3300,
+          "msPerSimS": 17.6,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 5.16e-14
+        },
+        {
+          "t": 3360,
+          "msPerSimS": 18.5,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.61e-14
+        },
+        {
+          "t": 3420,
+          "msPerSimS": 18.9,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.61e-14
+        },
+        {
+          "t": 3480,
+          "msPerSimS": 20.2,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.98e-14
+        },
+        {
+          "t": 3540,
+          "msPerSimS": 18.4,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 5.19e-14
+        },
+        {
+          "t": 3600,
+          "msPerSimS": 19.7,
+          "heapMB": 74.2,
+          "bodies": 31,
+          "debris": 5,
+          "energyRelGross": 0.000204,
+          "workOther": -1556000,
+          "waterErrRel": 4.54e-14
+        }
+      ]
+    }
+  ]
+}
