@@ -18,7 +18,7 @@ export const enVolcano = {
   'milestone.eruptionStart': 'Eruption start {id}',
   'milestone.peakSupply': 'Peak supply {q} m³/s',
   'milestone.lavaArrival': 'Lava reached an object',
-  'milestone.lavaCrust': 'Crust: lava surface below 500 °C',
+  'milestone.lavaCrust': 'Crust: lava surface below 700 °C (dull red)',
   'milestone.solidification': 'Lava solidified (first {t} t locked up)',
   'milestone.ashDeposition': 'Ash deposition started',
   'milestone.eruptionEnd': 'Eruption end',

@@ -1,0 +1,47 @@
+{
+ "rows": [
+  {
+   "k": 0,
+   "preset": "smallVent",
+   "heapMB": 59.2,
+   "geometries": 6,
+   "textures": 3
+  },
+  {
+   "k": 1,
+   "preset": "vegetationFire",
+   "heapMB": 61.4,
+   "geometries": 7,
+   "textures": 3
+  },
+  {
+   "k": 2,
+   "preset": "ashFall",
+   "heapMB": 63.5,
+   "geometries": 7,
+   "textures": 3
+  },
+  {
+   "k": 3,
+   "preset": "smallVent",
+   "heapMB": 61.9,
+   "geometries": 7,
+   "textures": 3
+  },
+  {
+   "k": 4,
+   "preset": "vegetationFire",
+   "heapMB": 63.2,
+   "geometries": 7,
+   "textures": 3
+  },
+  {
+   "k": 5,
+   "preset": "ashFall",
+   "heapMB": 64.4,
+   "geometries": 7,
+   "textures": 3
+  }
+ ],
+ "errors": []
+}

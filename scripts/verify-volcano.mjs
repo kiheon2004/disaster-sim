@@ -125,7 +125,7 @@ const vHash = () => ev(() => {
   const L = r.world.ledger();
   return `${f.mobile.length}|${s.toExponential(12)}|${L.mass.supplied.toExponential(12)}|${L.energy.toGround.toExponential(12)}`;
 });
-const objCount = (name) => ev((name) => { let n = 0; window.__r3f.get().scene.traverse((o) => { if (o.name === name) o.traverse((m) => { if (m.isInstancedMesh) n += m.count; if (m.isPoints) n += m.geometry.drawRange.count; if (m.isMesh && !m.isInstancedMesh && m.geometry?.attributes?.position) n += 1; }); }); return n; }, name);
+const objCount = (name) => ev((name) => { let n = 0; window.__r3f.get().scene.traverse((o) => { if (o.name === name) o.traverse((m) => { if (m.isInstancedMesh) n += m.count; if (m.isPoints) n += m.geometry.drawRange.count; if ((m.isMesh && !m.isInstancedMesh) || m.isLine) { if (m.geometry?.attributes?.position) n += 1; } }); }); return n; }, name);
 const clipped = (sels) => ev((sels) => {
   const out = [];
   for (const sel of sels) for (const root of document.querySelectorAll(sel)) for (const el of root.querySelectorAll('*')) {

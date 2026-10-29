@@ -20,7 +20,7 @@ export const koVolcano: Record<keyof typeof enVolcano, string> = {
   'milestone.eruptionStart': '분출 시작 {id}',
   'milestone.peakSupply': '최대 공급 {q} m³/s',
   'milestone.lavaArrival': '용암이 물체에 도달',
-  'milestone.lavaCrust': '크러스트: 용암 표면 500 °C 미만',
+  'milestone.lavaCrust': '크러스트: 용암 표면 700 °C 미만 (어두운 적색)',
   'milestone.solidification': '용암 고화 (처음 {t} t 정지)',
   'milestone.ashDeposition': '화산재 퇴적 시작',
   'milestone.eruptionEnd': '분출 종료',

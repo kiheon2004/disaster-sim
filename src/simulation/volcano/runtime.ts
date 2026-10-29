@@ -534,7 +534,8 @@ export class VolcanoRuntime {
     const rate = vw.supplyRate(ctx.time);
     if (rate > th.peakRate + 1e-9) { th.peakRate = rate; th.peak = ctx.time; }
     else if (th.peakRate > 0 && rate < th.peakRate && !th.start) { th.start = true; ctx.milestone?.({ time: th.peak, kind: 'peakSupply', hazard: 'volcano', subject: 'volcano', label: { key: 'milestone.peakSupply', params: { q: th.peakRate.toFixed(2) } } }, 'volcano:peakSupply'); }
-    if (!th.cooling && f.mobile.some((i) => f.Ts[i] < 773.15 && f.depth(i) > 0.05)) { th.cooling = true; m('lavaCrust', 'lavaCrust'); }
+    // Cooling milestone: the first lava surface below 700 °C (dull red — a crust has formed; the interior still flows).
+    if (!th.cooling && f.mobile.some((i) => f.Ts[i] < 973.15 && f.depth(i) > 0.05)) { th.cooling = true; m('lavaCrust', 'lavaCrust'); }
     if (!th.solid && f.ledger.lockedMass > 1000) { th.solid = true; m('solidification', 'solidification', { t: f.ledger.lockedMass / 1000 }); }
     if (!th.ash && f.ledger.ashMass > 1) { th.ash = true; m('ashDeposition', 'ashDeposition'); }
     const stopped = vw.eruptions.length > 0 && vw.eruptions.every((e) => e.phase === 'stopped');

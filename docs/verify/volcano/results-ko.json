@@ -1,0 +1,397 @@
+{
+  "lang": "ko",
+  "url": "http://localhost:4198/",
+  "results": [
+    {
+      "name": "1 volcano scenario added from the Experiment tab (vents, material, temperature, supply, duration, profile)",
+      "ok": true,
+      "detail": [
+        "layout",
+        "x",
+        "z",
+        "radius",
+        "material",
+        "temperature",
+        "rate",
+        "duration",
+        "profile",
+        "bombFraction",
+        "ashFraction"
+      ]
+    },
+    {
+      "name": "2 vent placed on the map with a click",
+      "ok": true,
+      "detail": [
+        -62,
+        0
+      ]
+    },
+    {
+      "name": "3 eruption source type: fissure chosen and its second end picked on the map (then back to a central vent)",
+      "ok": true,
+      "detail": {
+        "kind": "fissure",
+        "position": [
+          -62,
+          0
+        ],
+        "end": [
+          -62,
+          14
+        ],
+        "radius": 2
+      }
+    },
+    {
+      "name": "4 lava material: andesite starts at its own eruption temperature; an impossible temperature is rejected with its reason",
+      "ok": true,
+      "detail": {
+        "s4": [
+          "andesite",
+          1050
+        ],
+        "invalid4": "⚠ 이 재료의 분출 온도 범위를 벗어났습니다"
+      }
+    },
+    {
+      "name": "5 eruption timing and supply set in the fields (8 min, 3 m³/s), ash and bomb shares",
+      "ok": true,
+      "detail": {
+        "d": 480,
+        "q": 3
+      }
+    },
+    {
+      "name": "6 preview: vent, source area and potential downslope directions; slope, bearing, initial material state",
+      "ok": true,
+      "detail": "분출구 1 (-62.0, 0.0) · 지면 9.7 m · 경사 6.0° (90° 방향) · 0.04 m보다 얇은 용암은 여기서 움직이지 않음분출 1440 m³ (2995 t) — 화산탄 5 %, 화산재 15 %분출 온도에서: 결정 23 % · 점성 635 Pa·s · 항복강도 95 Pa"
+    },
+    {
+      "name": "7 eruption starts at its start time: supply rate, eruption phase, milestone",
+      "ok": true,
+      "detail": {
+        "rate": 3,
+        "phase": "active"
+      }
+    },
+    {
+      "name": "8 lava flows downslope (+x) from the vent",
+      "ok": true,
+      "detail": {
+        "front": -37,
+        "meanAbsZ": 5.429872495446266
+      }
+    },
+    {
+      "name": "9 lava depth: HUD maximum depth, depth overlay with legend",
+      "ok": true,
+      "detail": {
+        "maxDepth": 0.83477672278729
+      }
+    },
+    {
+      "name": "10 lava speed: positive, bounded; speed overlay",
+      "ok": true,
+      "detail": {
+        "maxSpeed": 0.668180525302887
+      }
+    },
+    {
+      "name": "11 cooling: crust surface far below the interior temperature (milestone); interior never above the eruption temperature",
+      "ok": true,
+      "detail": {
+        "crust11": {
+          "n": 1477,
+          "cold": 1477
+        },
+        "maxT": 1149.8720947265624
+      }
+    },
+    {
+      "name": "12 solidification: lava locked up into deposits (mass, milestone)",
+      "ok": true,
+      "detail": {
+        "solid": 3534.423196843874
+      }
+    },
+    {
+      "name": "13 solidified lava and bombs become terrain: runtime heights and collider rise by the deposit; the document is untouched",
+      "ok": true,
+      "detail": {
+        "applied": 0.20000000298023224,
+        "rise": 0.19999980926513672,
+        "collider": 10.5,
+        "h": 10.5
+      }
+    },
+    {
+      "name": "14 flow obstruction: lava stops at the house walls and flows around it",
+      "ok": true,
+      "detail": {
+        "inside": 0,
+        "against": 0.8676744702889204
+      }
+    },
+    {
+      "name": "15 ash produced: released mass, puffs in the air",
+      "ok": true,
+      "detail": {
+        "released": 280800.0000000532,
+        "puffs": 55
+      }
+    },
+    {
+      "name": "16 ash moves: airborne puffs drift from the vent",
+      "ok": true,
+      "detail": {
+        "air": 10.257869492749181,
+        "ground": 1.1046591253114288
+      }
+    },
+    {
+      "name": "17 ash deposition on the ground and roofs (mass, thickness)",
+      "ok": true,
+      "detail": {
+        "dep": 90480.00000002017,
+        "roofs": 0,
+        "maxAsh": 0.1996770082753837
+      }
+    },
+    {
+      "name": "18 wind and ash: the deposit lies downwind (east) of the vent",
+      "ok": true,
+      "detail": {
+        "air": 10.257869492749181,
+        "ground": 1.1046591253114288
+      }
+    },
+    {
+      "name": "25 road blocked by lava / solidified lava (network unchanged)",
+      "ok": true,
+      "detail": [
+        {
+          "status": "blocked",
+          "v": {
+            "lava": 0.7551529252086949,
+            "deposit": 0.025413806264546843,
+            "ash": 0,
+            "surfaceT": 951.31201171875,
+            "peakLava": 0.7551529252086949,
+            "peakT": 1340.3197021484375,
+            "blocked": true,
+            "impassable": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 temperature overlay with its fixed °C scale",
+      "ok": true,
+      "detail": "용암과 퇴적물비행 중 화산탄화산재 (덩어리·퇴적)증기 (시각 전용 — 계산 안 함)분출구 스패터 (시각 전용)오버레이끔깊이온도속도결정화산재지면 "
+    },
+    {
+      "name": "27 ash overlay with its legend",
+      "ok": true,
+      "detail": "용암과 퇴적물비행 중 화산탄화산재 (덩어리·퇴적)증기 (시각 전용 — 계산 안 함)분출구 스패터 (시각 전용"
+    },
+    {
+      "name": "28 inspector: object (lava at it, contact, held) and ground probe (lava, temperatures, crystals, deposit layers)",
+      "ok": true,
+      "detail": {
+        "obj": "물체 위치의 용암0.53 m (최대 0.53 m)퇴적0.00 m용암 온도 · 표면 · 속도 · 결정1145 °C · 표면 690 °C · 0.1",
+        "probe": "지점(-55.0, 0.0)이동 용암0.61 m (최대 0.62 m)내부 온도1150 °C (최대 1150 °C)표면 (크러스트) 온도851 °C"
+      }
+    },
+    {
+      "name": "29 timeline milestones: eruption start, lava arrival, crust, solidification, ash deposition",
+      "ok": true,
+      "detail": [
+        "eruptionStart",
+        "ashDeposition",
+        "lavaArrival",
+        "peakTemperature",
+        "firstDamage",
+        "fireSpread",
+        "secondaryIgnition",
+        "ignition",
+        "strengthReduction",
+        "heatRelease",
+        "windowBreak",
+        "thermalFailure",
+        "heatRelease",
+        "strengthReduction",
+        "peakTemperature",
+        "firstDamage",
+        "fireDecay",
+        "lavaCrust",
+        "roadBlocked",
+        "peakTemperature",
+        "solidification",
+        "memberFailure",
+        "fireFailure"
+      ]
+    },
+    {
+      "name": "30 mass and energy ledgers close (residuals at round-off; thermal account = heat given up); HUD, results, CSV",
+      "ok": true,
+      "detail": {
+        "m": 2.5596445760654455e-13,
+        "e": -5.52503427139922e-13,
+        "clip30": []
+      }
+    },
+    {
+      "name": "30b HUD and overlay text not cut",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "33 reset restores the original world; the same eruption gives the same lava, deposits and ledgers",
+      "ok": true,
+      "detail": {
+        "r33": {
+          "v": true,
+          "t": 0
+        },
+        "h33a": "1586|1.731826164945e+6|1.872000000001e+6|1.839309905802e+10",
+        "h33b": "1586|1.731826164945e+6|1.872000000001e+6|1.839309905802e+10"
+      }
+    },
+    {
+      "name": "32 leaving the simulation leaves the original world (terrain, objects, roads) untouched (fingerprint)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "19 lava and water: lava under water heats it (heat to water), water mass kept; steam drawn as a visual only",
+      "ok": true,
+      "detail": {
+        "toWater": 6731629625.947623,
+        "waterAbove100": 0
+      }
+    },
+    {
+      "name": "20 lava and vegetation: trees in contact / under radiation (contact counted)",
+      "ok": true,
+      "detail": {
+        "contact": 20,
+        "buried": 0,
+        "held": 0,
+        "toppled": 0,
+        "damaged": 0,
+        "roofAsh": 0,
+        "maxAshLoad": 0,
+        "bombs": 0
+      }
+    },
+    {
+      "name": "21 secondary fire: crowns lit by lava heat through the fire model (cause lava), recorded as fire with source volcano",
+      "ok": true,
+      "detail": {
+        "f20": {
+          "ignited": 20,
+          "lava": 40
+        },
+        "ev21": 38
+      }
+    },
+    {
+      "name": "22 lava and buildings: walls heated by contact / radiation, heat effects attributed to the volcano (or to a fire it lit)",
+      "ok": true,
+      "detail": {
+        "buildings": 2,
+        "hot": 81,
+        "minF": 0.008035496261624364,
+        "hz": [
+          "fire",
+          "fire"
+        ]
+      }
+    },
+    {
+      "name": "23 structural strength reduction from member temperatures (material factor below 1 where members are hot)",
+      "ok": true,
+      "detail": {
+        "minFactor": 0.008035496261624364
+      }
+    },
+    {
+      "name": "24 structural collapse: the collapse engine fails members of the lava-heated houses (earthquake on top)",
+      "ok": true,
+      "detail": {
+        "records": 27
+      }
+    },
+    {
+      "name": "31 volcano scenario saved and reloaded (schema 7): vents, material, staged profile, ash share",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "version": 7,
+        "spec": {
+          "event": "volcano",
+          "vents": [
+            {
+              "kind": "fissure",
+              "position": [
+                -60,
+                -5
+              ],
+              "end": [
+                -60,
+                12
+              ],
+              "radius": 1.5
+            }
+          ],
+          "material": "andesite",
+          "temperature": 1060,
+          "rate": 1.5,
+          "duration": 900,
+          "profile": "staged",
+          "stages": [
+            0.2,
+            1,
+            0.4
+          ],
+          "ashFraction": 0.1
+        }
+      }
+    },
+    {
+      "name": "34 large town (1000 houses): runs at an interactive frame rate, only the buildings the lava reaches get member detail",
+      "ok": true,
+      "detail": {
+        "fps": 60,
+        "worstFrameMs": 16.8,
+        "refined": 0,
+        "gl34": {
+          "calls": 20,
+          "geometries": 33,
+          "textures": 7
+        },
+        "volcanoMs": 5.299999998882413
+      }
+    },
+    {
+      "name": "whole run: no page errors, the tab alive, GPU geometries back to the start",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "geo0": 17,
+        "geo1": 8
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    29.2,
+    92.3
+  ],
+  "geometries": [
+    17,
+    8
+  ],
+  "crashed": false
+}
