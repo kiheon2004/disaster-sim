@@ -21,7 +21,7 @@ import { ClimateWorld, STORE, type ClimateWaterLink, type StoreInit } from '@/cl
 import { climateIssues, climateWarnings, type ClimateSpec } from '@/climate/types';
 import { C_WATER, FROZEN_ICE_FRACTION, L_V, RHO_WATER, T_MELT } from '@/climate/constants';
 import { frictionFactor, surfaceState, SURFACE_STATES, SURF } from '@/climate/surfaceState';
-import { dewPoint, qSat, vapourPressure } from '@/climate/psychro';
+import { dewPointChecked, qSat, vapourPressure } from '@/climate/psychro';
 import { qRotate } from '@/core/math';
 import { GRAVITY } from '@/core/units';
 import { DamageState } from '../damage/DamageState';
@@ -100,6 +100,9 @@ export interface ClimateStats {
   bgRH: number;
   freezeThaw: number;
   solidPrecip: number;
+  /** Cover safety floor: times it acted and the energy it moved below (J, ≤ 0) — 0 when every node stays physical. */
+  floorClamps: number;
+  floorEnergy: number;
 }
 
 export interface ClimateSample { t: number; T: number; Ts: number; rh: number; snow: number; ice: number; melt: number; evap: number; P: number }
@@ -279,15 +282,22 @@ export class ClimateRuntime {
       this.solarAt = ctx.time;
       const B = this.trt.world.bodies, g = this.trt.world.terrain;
       const sinB = Math.sin(sun.elevation), cosB = Math.cos(sun.elevation);
-      const roofCovered = new Set<number>();
-      for (const s of this.stores) if (cw.stores[s.k].kind === STORE.roof && cw.sM[s.k] / cw.stores[s.k].area > 1) { const te = this.trt.byEntity.get(s.e.id); if (te && te.body >= 0) roofCovered.add(te.body); }
+      // The top of a body under a store (roof, vehicle top, crown) takes the shortwave its snow does not cover — the
+      // store takes the rest (ClimateWorld.storeCover): one split, never both.
+      const covered = new Map<number, number>();
+      for (const s of this.stores) {
+        const b = cw.stores[s.k].body;
+        if (b < 0) continue;
+        const f = cw.storeCover(s.k);
+        if (f > (covered.get(b) ?? 0)) covered.set(b, f);
+      }
       const deposits: Deposit[] = [];
       let P = 0;
       for (let i = 0; i < B.n; i++) {
         if (!B.alive[i] || !(B.fOut[i] > 0)) continue;
         const c = g.index(B.x[i], B.z[i]);
         const lit = c >= 0 && cw.shade[c] === 0 ? 1 : 0;
-        const top = roofCovered.has(i) ? 0 : B.Atop[i];
+        const top = B.Atop[i] * (1 - (covered.get(i) ?? 0));
         const p = (1 - BODY_ALBEDO) * B.fOut[i] * (sun.direct * lit * (sinB * top + (cosB * B.Av[i]) / Math.PI) + sun.diffuse * (top + B.Av[i] / 2));
         if (p > 0) { deposits.push({ kind: TK.body, index: i, w: p, a: top + B.Av[i] / 2 }); P += p; }
       }
@@ -601,7 +611,7 @@ export class ClimateRuntime {
     for (let l = 0; l < nl; l++) { soilW += cw.sW[c * nl + l]; soilI += cw.sI[c * nl + l]; if (cw.sI[c * nl + l] > FROZEN_ICE_FRACTION * (cw.sI[c * nl + l] + cw.sW[c * nl + l])) frost = g.depthOf(l) + g.layers[l]; }
     const hw = wf ? wf.h[c] : 0;
     return {
-      airT: T, rh: cw.rh(a), q, dew: dewPoint(e), p, surfaceT: cw.cM[c] > 0 ? cw.coverT(c) : hw > WATER_MERGE ? w.waterT(c) : g.T(c, 0),
+      airT: T, rh: cw.rh(a), q, dew: dewPointChecked(e), p, surfaceT: cw.cM[c] > 0 ? cw.coverT(c) : hw > WATER_MERGE ? w.waterT(c) : g.T(c, 0),
       snowDepth: cw.snowDepth(c), swe: cw.swe(c), snowDensity: cw.cRho[c], iceThickness: cw.iceThickness(c), liquid: cw.cLiq[c] / cw.cellArea,
       albedo: cw.albedo(c), solar: cw.surf.solar[c], shade: cw.shade[c] === 1, water: hw, soilWater: soilW / cw.cellArea, soilIce: soilI / cw.cellArea, frostDepth: frost,
       freezeThaw: cw.ftCycles[c], state: SURFACE_STATES[surfaceState(cw.swe(c) * cw.cellArea, cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, hw, cw.cRho[c])],
@@ -621,7 +631,7 @@ export class ClimateRuntime {
       meanAirT: 0, minAirT: 0, maxAirT: 0, meanSurfaceT: 0, minSurfaceT: 0, maxSurfaceT: 0, meanRH: 0, vapour: 0, condensate: 0, snowMass: 0, iceMass: 0, storeMass: 0,
       maxSnowDepth: 0, meanSnowDepth: 0, snowCells: 0, iceCells: 0, maxIce: 0, frozenSoilCells: 0, frostDepth: 0, meltwater: 0, evaporation: 0, evaporationRate: 0, precipRate: 0,
       boilingCells: 0, maxRoofLoad: 0, roofsLoaded: 0, roadsIcy: 0, roadsSnow: 0, roadsImpassable: 0, treesBroken: 0, waterResidual: 0, energyResidual: 0, thermalResidual: 0,
-      sunElevation: 0, solar: 0, Tsky: 0, bgT: 0, bgRH: 0, freezeThaw: 0, solidPrecip: 0,
+      sunElevation: 0, solar: 0, Tsky: 0, bgT: 0, bgRH: 0, freezeThaw: 0, solidPrecip: 0, floorClamps: 0, floorEnergy: 0,
     };
   }
 
@@ -675,6 +685,7 @@ export class ClimateRuntime {
     s.sunElevation = cw.sun.elevation;
     s.solar = cw.sun.elevation > 0 ? cw.sun.direct * Math.sin(cw.sun.elevation) + cw.sun.diffuse : 0;
     s.Tsky = cw.surf.Tsky; s.bgT = cw.bg.T; s.bgRH = cw.bg.RH;
+    s.floorClamps = cw.floorClamps; s.floorEnergy = cw.floorEnergy;
   }
 
   private roadsRef: { segments: { climate?: { state: string; snow: number; impassable: boolean } }[] } | null = null;

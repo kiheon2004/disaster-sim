@@ -76,12 +76,15 @@ export class ClimateForcing {
     const hour = s.solar === 'constant' ? hour0 : hour0 + t / 3600;
     const pos = sunPosition(s.latitude ?? 37.5, s.dayOfYear ?? 172, ((hour % 24) + 24) % 24);
     if (s.solar === 'constant') {
-      // Prescribed global horizontal irradiance: split as a clear sky would at the start's sun height.
+      // Prescribed global horizontal irradiance: split as a clear sky would at the start's sun height. With the sun at
+      // or below 0.05 rad (night, polar winter) it is all diffuse — a direct beam would need a direction that the
+      // clamped height does not have (a zenith direction with the beam of a 3° sun put ≈ 7·G on flat ground).
       const G = s.irradiance ?? 0;
-      const sinB = Math.max(0.05, Math.sin(pos.elevation));
-      const clear = irradiance(Math.max(0.05, pos.elevation), 0);
+      if (!(pos.elevation > 0.05)) return { elevation: 0.05, dir: [0, 1, 0], direct: 0, diffuse: G };
+      const sinB = Math.sin(pos.elevation);
+      const clear = irradiance(pos.elevation, 0);
       const share = clear.direct * sinB / Math.max(1e-9, clear.direct * sinB + clear.diffuse);
-      return { elevation: Math.max(0.05, pos.elevation), dir: pos.elevation > 0.05 ? pos.dir : [0, 1, 0], direct: (G * share) / sinB, diffuse: G * (1 - share) };
+      return { elevation: pos.elevation, dir: pos.dir, direct: (G * share) / sinB, diffuse: G * (1 - share) };
     }
     const ir = irradiance(pos.elevation, this.cloud());
     return { elevation: pos.elevation, dir: pos.dir, direct: ir.direct, diffuse: ir.diffuse };

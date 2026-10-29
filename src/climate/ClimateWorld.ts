@@ -31,9 +31,9 @@ import { hWaterSide, hGround } from '@/thermal/convection';
 import { C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
 import { ClimateForcing, type BackgroundState } from './forcing';
 import type { ClimateSpec } from './types';
-import { boilingPointWater, humidityFromRH, qSat, saturationAdjust, wetBulb } from './psychro';
+import { boilingPointWater, humidityFromRH, qSat, relativeHumidity, saturationAdjust, wetBulb } from './psychro';
 import { ashyAlbedo, compact, freshSnowDensity, initialSnowAlbedo, intercept, interceptionMax, phaseState, snowAlbedo } from './snow';
-import { autoconversion, snowFraction } from './surfaceState';
+import { autoconversion, snowFraction, SNOW_COVER } from './surfaceState';
 import { emptyResult, stepNode, type NodeInput } from './cover';
 import type { SunState } from './solar';
 import { advectFaces, courant, substepsFor } from '@/atmosphere/grid';
@@ -360,8 +360,13 @@ export class ClimateWorld {
   }
   private groupOf: Uint8Array | null = null;
   private tileLast: Float64Array = new Float64Array(0);
-  /** Times the cover temperature floor acted (diagnostic; 0 when every node stays physical). */
+  /** Times the cover temperature floor acted (diagnostic; 0 when every node stays physical), the energy it moved from
+   * the covers to what lies below them (J, ≤ 0 — booked in the thermal account `cover`) and its largest single move. */
   floorClamps = 0;
+  floorEnergy = 0;
+  floorWorst = { cell: -1, J: 0, time: 0 };
+  /** Heat that raised sub-zero water bodies to 0 °C at the start (J, thermal account `climate`). */
+  startWarming = 0;
   /** End of the interval the precipitation has been delivered for (s; every 5 s with the all-world surface parts). */
   precipTime = 0;
   private surfNow = 0;
@@ -519,16 +524,45 @@ export class ClimateWorld {
         if ((d > 0)) this.addFrozen(c, Math.min(d, 0.3) * rho * this.cellArea, Ts, false, rho);
       }
     }
+    // Water bodies: liquid colder than 0 °C (the sub-zero reference) starts at 0 °C, and so does the ground under it (a
+    // lake bed is not colder than its water) — the forcing's start state, thermal account `climate` — instead of
+    // freezing a fraction c_w·ΔT/L_f of every lake within the first seconds and drawing kW/m² into a −20 °C bed.
+    // Films merged with the ground (≤ WATER_MERGE) follow the ground surface layer and freeze with it as frost.
+    if (w0 && w0.heat) {
+      const tg = this.tw.terrain;
+      for (let c = 0; c < this.n; c++) {
+        const h = w0.h[c];
+        if (!(h > WATER_MERGE) || w0.blocked[c]) continue;
+        const Em = h * RHO_WATER * w0.cellArea * C_WATER * (T_MELT - this.Tref);
+        const d = Em - w0.heat[c];
+        if (!(d > 0)) continue;
+        w0.heat[c] = Em;
+        let dg = 0;
+        for (let l = 0; l < this.nl; l++) {
+          const j = c * this.nl + l;
+          const E0 = tg.C[j] * (T_MELT - this.Tref);
+          if (tg.E[j] < E0) { dg += E0 - tg.E[j]; tg.E[j] = E0; }
+        }
+        this.tw.ledger.climate += d + dg;
+        this.startWarming += d + dg;
+        tg.activateCell(c);
+      }
+    }
     const frost = s.initialFrost ?? 0;
-    if (frost > 0) {
-      for (let c = 0; c < this.n; c++) for (let l = 0; l < this.nl; l++) {
-        if (g.depthOf(l) >= frost) break;
+    for (let c = 0; c < this.n; c++) for (let l = 0; l < this.nl; l++) {
+      // Liquid water has no equilibrium below 0 °C: the antecedent water of a layer that starts colder (a world whose
+      // reference is a sub-zero start temperature) is frozen from the start — as ice it holds the layer's temperature
+      // instead of freezing at once and warming the whole ground to 0 °C with its latent heat.
+      if ((frost > 0 && g.depthOf(l) < frost) || g.T(c, l) < T_MELT) {
         const j = c * this.nl + l;
         this.sI[j] += this.sW[j];
         this.sW[j] = 0;
       }
     }
     this.syncIce();
+    // Sun, shortwave, soil wetness and evaporation caps of the start: the first ground step would otherwise run with
+    // none of them (no shortwave, no evaporation) and the first cover / store update in the dark.
+    this.prepareSurface(SURFACE_DT, 0, 0);
     this.water.initial = this.waterStorage();
     this.energy.initial = this.storeEnergy();
   }
@@ -572,6 +606,15 @@ export class ClimateWorld {
       this.markCover(c);
     }
     this.sM[k] = 0; this.sU[k] = 0; this.sIce[k] = 0;
+  }
+
+  /**
+   * Share of a store's area its snow / ice covers (0–1): full from 1 kg/m² (the surface-state threshold of a snow
+   * cover). The shortwave on the area is split once — this share to the store, the rest to the body under it.
+   */
+  storeCover(k: number): number {
+    const A = this.stores[k].area;
+    return this.sGone[k] || !(this.sM[k] > 0) || !(A > 0) ? 0 : Math.min(1, this.sM[k] / (A * SNOW_COVER));
   }
 
   /** Load of a store (N) — mass × g. */
@@ -707,7 +750,8 @@ export class ClimateWorld {
     if (full) L.evaporation = L.condensation = L.melt = L.freeze = L.sublimation = L.precipitation = L.snowfall = L.rain = L.drained = L.boiled = 0;
     const group = this.groundSteps++ % GROUPS;
     this.surfNow = tEnd;
-    if (this.tileLast.length !== this.coverTile.length) { this.tileLast = new Float64Array(this.coverTile.length).fill(tEnd - 1); }
+    // Covers that exist from the start (initial snow / ice) are integrated from the climate's local time 0.
+    if (this.tileLast.length !== this.coverTile.length) { this.tileLast = new Float64Array(this.coverTile.length); }
     const P = this.prof;
     let t0 = P ? this.now() : 0;
     const mark = (k: string) => { if (P) { P(k, t0); t0 = this.now(); } };
@@ -999,6 +1043,8 @@ export class ClimateWorld {
           this.cU[c] = nd.U = Umin;
           if (wet) this.depositWater(w!, c, x, 'cover'); else this.depositGround(c, x, 'cover');
           this.floorClamps++;
+          this.floorEnergy += x;
+          if (x < this.floorWorst.J) this.floorWorst = { cell: c, J: x, time: now };
         }
         stepNode(nd, r);
         this.cU[c] += r.dU;
@@ -1254,7 +1300,7 @@ export class ClimateWorld {
       const Sin = sun.direct * (this.shade[c0] ? 0 : Math.max(0, Math.sin(sun.elevation))) + sun.diffuse;
       nd.M = M; nd.U = this.sU[k]; nd.snow = snow; nd.ice = ice; nd.rho = this.sRho[k]; nd.A = st.area;
       nd.Ta = air.T(a); nd.qa = this.q(a); nd.p = this.p(a); nd.u2 = this.u2; nd.pr = air.prAt(a); nd.Tsky = this.surf.Tsky;
-      nd.S = (1 - alb) * Sin; nd.dt = dtg; nd.open = true;
+      nd.S = this.storeCover(k) * (1 - alb) * Sin; nd.dt = dtg; nd.open = true;
       const body = st.body >= 0 && B.alive[st.body] ? st.body : -1;
       nd.Tb = body >= 0 ? B.TS[body] : nd.Ta;
       nd.Gb = body >= 0 ? st.area / Math.max(1e-3, st.path) : 0;
@@ -1617,12 +1663,9 @@ export class ClimateWorld {
     return this.cIce[c] / (RHO_ICE * this.cellArea);
   }
 
-  /** Relative humidity of a column (over water). */
+  /** Relative humidity of a column over water, e/e_s,w — the definition of the input humidity (humidityFromRH). */
   rh(a: number): number {
-    const p = this.p(a), T = this.tw.air.T(a);
-    const qs = qSat(T, p);
-    const q = this.q(a);
-    return qs > 0 ? (q / (1 - q)) / (qs / (1 - qs)) : 0;
+    return relativeHumidity(this.q(a), this.tw.air.T(a), this.p(a));
   }
 
   /** Background specific humidity for a relative humidity at T (kg/kg). */
@@ -1710,7 +1753,9 @@ export function computeShade(g: CellGeometry, dir: readonly number[], cosOut: Fl
     if (horiz < 1e-6) { shadeOut[c] = 0; continue; }
     const ix0 = c % nx, iz0 = (c - ix0) / nx;
     const stepX = sx / horiz, stepZ = sz / horiz, rise = (sy / horiz) * cs;
-    let x = ix0 + 0.5, z = iz0 + 0.5, y = g.groundH[c] + 0.05;
+    // The ray leaves the surface the cell exposes to the sun: the ground, or the top of an obstacle standing on it (a
+    // roof is lit unless something higher is in the way — it must not shade itself).
+    let x = ix0 + 0.5, z = iz0 + 0.5, y = Math.max(g.groundH[c], g.obstacleTop[c]) + 0.05;
     let sh = 0;
     for (let k = 0; k < 400; k++) {
       x += stepX; z += stepZ; y += rise;

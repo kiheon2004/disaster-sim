@@ -13,7 +13,7 @@
  *                        ρ' = ρ·exp(−CR·Δt) (exact for the step's rates; the mass never changes); ρ ≤ 550
  *  conductivity          Calonne et al. (2011): k = 2.5·10⁻⁶ρ² − 1.23·10⁻⁴ρ + 0.024 W/(m·K)
  *  albedo                Douville, Royer & Mahfouf (1995): dry snow −0.008 per day, melting snow relaxes to
- *                        0.50 with 0.24 per day, fresh snow raises it by 0.35·(new SWE / 10 kg·m⁻²), 0.50–0.85;
+ *                        0.50 with 0.24 per day, fresh snow raises it by (0.85 − α)·min(1, new SWE / 10 kg·m⁻²), 0.50–0.85;
  *                        volcanic ash darkens it toward 0.1 (exponential mixing with an ash load of 0.5 kg/m²)
  *  enthalpy node         U (J) relative to liquid water at 0 °C, mass M (kg):
  *                          U < −L_f·M       all frozen, T = T_f + (U + L_f·M)/(c_i·M)
@@ -59,7 +59,8 @@ export function compact(rho: number, T: number, W: number, liquid: boolean, dt: 
 export function snowAlbedo(a: number, dt: number, melting: boolean, newSwe: number): number {
   const days = dt / 86400;
   let x = melting ? (a - SNOW_ALBEDO_MIN) * Math.exp(-0.24 * days) + SNOW_ALBEDO_MIN : a - 0.008 * days;
-  if (newSwe > 0) x += (SNOW_ALBEDO_MAX - SNOW_ALBEDO_MIN) * Math.min(1, newSwe / 10);
+  // Douville et al. (1995): the fresh snow restores a share min(1, P/10 kg·m⁻²) of the gap to the maximum.
+  if (newSwe > 0) x += (SNOW_ALBEDO_MAX - x) * Math.min(1, newSwe / 10);
   return Math.max(SNOW_ALBEDO_MIN, Math.min(SNOW_ALBEDO_MAX, x));
 }
 

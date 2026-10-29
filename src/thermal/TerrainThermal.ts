@@ -474,7 +474,7 @@ export class TerrainThermal {
           } else {
             const hc = env.pr ? hGround(T0, Ta, env.u2, 1, env.pr(air)) : hGround(T0, Ta, env.u2);
             const eps = this.emiss[c];
-            const hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tsky * Tsky) * (T0 + Tsky);
+            let hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tsky * Tsky) * (T0 + Tsky);
             // Latent: evaporation of soil water through the soil resistance (soilWet), condensation (dew / frost)
             // on the surface without it; L_s for frost below 0 °C.
             const ice = T0 < T_MELT;
@@ -485,6 +485,15 @@ export class TerrainThermal {
             const s = k > 0 ? dqSatdT(T0, pa, ice) : 0;
             // Surface temperature of the linearized balance (latent flux linear in Ts about T0).
             let Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - L * k * (qs0 - s * T0 - qa)) / (1 / r0 + hc + hr + L * k * s);
+            // The longwave secant belongs to the SURFACE temperature: far from the layer's (lava under a cold sky, a
+            // sun-heated crust) it is re-evaluated at Ts — εσ(Ts⁴ − T_sky⁴) exactly at the converged Ts (a fixed point,
+            // contracting since h_r grows with Ts); within 2 K of T0 the layer value is already within ≈ 2 %.
+            for (let it = 0; it < 4 && !closed && Math.abs(Ts - T0) > 2; it++) {
+              const h2 = eps * SIGMA * (Ts * Ts + Tsky * Tsky) * (Ts + Tsky);
+              if (Math.abs(h2 - hr) < 1e-6 * hr) break;
+              hr = h2;
+              Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - L * k * (qs0 - s * T0 - qa)) / (1 / r0 + hc + hr + L * k * s);
+            }
             let Ev = k * area * (qs0 + s * (Ts - T0) - qa);
             if (Ev > cl.evapMax[c]) {
               Ev = cl.evapMax[c];

@@ -11,16 +11,17 @@ import { Icon } from '@/ui/common/Icon';
 import eq from './EarthquakeForm.module.css';
 import x from './ExperimentPanel.module.css';
 
-const C = (K: number) => `${(K - 273.15).toFixed(1)} °C`;
+const C = (K: number) => (Number.isFinite(K) ? `${(K - 273.15).toFixed(1)} °C` : '—');
 
 /** Forcing path chart: air temperature (orange), dew point (blue), wet bulb (cyan), 0 °C line, precipitation bars (snow white / rain blue). */
 function PathChart({ path }: { path: ClimatePathPoint[] }) {
   const T = path[path.length - 1]?.t || 1;
   let lo = Infinity, hi = -Infinity, pMax = 0;
-  for (const p of path) { lo = Math.min(lo, p.dew, p.T); hi = Math.max(hi, p.T); pMax = Math.max(pMax, p.P); }
+  for (const p of path) { lo = Math.min(lo, Number.isFinite(p.dew) ? p.dew : p.T, p.T); hi = Math.max(hi, p.T); pMax = Math.max(pMax, p.P); }
   lo -= 1; hi += 1;
   const y = (K: number) => 52 - ((K - lo) / Math.max(1e-6, hi - lo)) * 48;
-  const line = (f: (p: ClimatePathPoint) => number) => path.map((p) => `${(p.t / T) * 200},${y(f(p))}`).join(' ');
+  // Points without a value (dew point of air too dry for the saturation curve) are left out of the line.
+  const line = (f: (p: ClimatePathPoint) => number) => path.filter((p) => Number.isFinite(f(p))).map((p) => `${(p.t / T) * 200},${y(f(p))}`).join(' ');
   const zero = y(273.15);
   return (
     <svg width="100%" viewBox="0 0 200 56" preserveAspectRatio="none" style={{ height: 64, background: 'rgba(255,170,90,0.06)', borderRadius: 4 }} data-testid="climate-path">

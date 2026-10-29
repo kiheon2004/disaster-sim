@@ -8,7 +8,7 @@
 import type { ClimateSpec } from './types';
 import { climateIssues, climateWarnings } from './types';
 import { ClimateForcing } from './forcing';
-import { dewPoint, boilingPointWater, qSat } from './psychro';
+import { dewPointChecked, boilingPointWater, qSat } from './psychro';
 import { freshSnowDensity } from './snow';
 import { snowFraction } from './surfaceState';
 import { globalHorizontal } from './solar';
@@ -46,7 +46,7 @@ export function climateOutlook(spec: ClimateSpec, p = 101325, n = 96): ClimateOu
     const sun = f.sun(t);
     const P = f.precipRate(t);
     const share = (spec.precipPhase ?? 'auto') === 'snow' ? 1 : spec.precipPhase === 'rain' ? 0 : snowFraction(bg.Tw);
-    path.push({ t, T: bg.T, RH: bg.RH, dew: dewPoint(bg.e), Tw: bg.Tw, P, snow: share, sunEl: sun.elevation, G: sun.elevation > 0 ? globalHorizontal(sun) : 0, Tsky: bg.Tsky });
+    path.push({ t, T: bg.T, RH: bg.RH, dew: dewPointChecked(bg.e), Tw: bg.Tw, P, snow: share, sunEl: sun.elevation, G: sun.elevation > 0 ? globalHorizontal(sun) : 0, Tsky: bg.Tsky });
     if (bg.T < Tmin) Tmin = bg.T;
     if (bg.T > Tmax) Tmax = bg.T;
     if (k < n) {
@@ -64,7 +64,7 @@ export function climateOutlook(spec: ClimateSpec, p = 101325, n = 96): ClimateOu
   const b0 = f.background(0, p), b1 = f.background(D, p);
   return {
     path, Tmin, Tmax, precipTotal: snow + rain, snowTotal: snow, rainTotal: rain, snowDepth: depth,
-    evapStart: evap(b0.T, b0.q), evapEnd: evap(b1.T, b1.q), boiling: boilingPointWater(p), dewStart: dewPoint(b0.e),
+    evapStart: evap(b0.T, b0.q), evapEnd: evap(b1.T, b1.q), boiling: boilingPointWater(p), dewStart: dewPointChecked(b0.e),
     issues: climateIssues(spec), warnings: climateWarnings(spec),
   };
 }

@@ -48,8 +48,8 @@ function if97Temperature(p: number): number {
 }
 
 /**
- * Tabulated saturation pressures (0.01 K steps over 150–400 K, linear interpolation — relative error < 2·10⁻⁸, far below
- * the equations' own uncertainty): the climate evaluates them 10⁵–10⁶ times per simulated second. Outside the table the
+ * Tabulated saturation pressures (0.01 K steps over 150–400 K, linear interpolation — relative error ≤ 8·10⁻⁷ at 150–200 K, ≤ 6·10⁻⁸ near 0 °C,
+ * ≈ 2·10⁻⁸ above 350 K (audit 2026-10-18), far below the equations' own uncertainty): the climate evaluates them 10⁵–10⁶ times per simulated second. Outside the table the
  * equations are evaluated directly.
  */
 const TAB_LO = 150, TAB_HI = 400, TAB_STEP = 0.01, TAB_N = Math.round((TAB_HI - TAB_LO) / TAB_STEP) + 1;
@@ -153,8 +153,16 @@ function invert(es: (T: number) => number, e: number, lo: number, hi: number): n
   return T;
 }
 
-/** Dew point (K) of vapour pressure e (over liquid water). */
+/** Dew point (K) of vapour pressure e (over liquid water) — clamped to the range ends (internal brackets). */
 export const dewPoint = (e: number) => invert(esWater, e, SAT_RANGE_WATER[0], SAT_RANGE_WATER[1]);
+/**
+ * Dew point for display (K): NaN outside the range where the saturation curve is defined (dry air has no dew point;
+ * e at or below e_s(123 K) or above the critical pressure) — never a range end presented as a value.
+ */
+export function dewPointChecked(e: number): number {
+  if (!(e > esWater(SAT_RANGE_WATER[0])) || !(e < esWater(SAT_RANGE_WATER[1]))) return NaN;
+  return invert(esWater, e, SAT_RANGE_WATER[0], SAT_RANGE_WATER[1]);
+}
 /** Frost point (K) of vapour pressure e (over ice) — meaningful below 0 °C. */
 export const frostPoint = (e: number) => invert(esIce, e, SAT_RANGE_ICE[0], T_TRIPLE);
 
@@ -202,16 +210,19 @@ export function saturationAdjust(T: number, mv: number, m: number, p: number, C:
   const qs0 = qSat(T, p);
   const q0 = mv / (m + mv);
   if (q0 <= qs0) return { dm: 0, T };
-  let dm = 0, Tn = T;
-  for (let k = 0; k < 20; k++) {
+  // r(dm) = q(dm) − q_s(T + L·dm/C) falls monotonically from r(0) > 0 to r(mv) < 0: Newton inside the bracket
+  // [lo, hi], bisection whenever a step would leave it (a step past the boiling temperature, where q_s = 1 and
+  // dq_s/dT = 0, otherwise ends the search supersaturated with dm = 0).
+  let dm = 0, Tn = T, lo = 0, hi = mv;
+  for (let k = 0; k < 80; k++) {
     Tn = T + (L * dm) / C;
     const r = (mv - dm) / (m + mv - dm) - qSat(Tn, p);
     if (Math.abs(r) < 1e-12) break;
+    if (r > 0) lo = dm; else hi = dm;
     // d r / d dm ≈ −1/(m + mv) − dqs/dT·L/C
     const d = -1 / (m + mv) - dqSatdT(Tn, p) * (L / C);
     let next = dm - r / d;
-    if (next < 0) next = 0;
-    if (next > mv) next = mv;
+    if (!(next > lo && next < hi)) next = 0.5 * (lo + hi);
     if (Math.abs(next - dm) < 1e-15 * Math.max(1, mv)) { dm = next; break; }
     dm = next;
   }
