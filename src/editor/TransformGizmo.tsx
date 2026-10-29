@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import { TransformControls } from '@react-three/drei';
+import { ManagedTransformControls as TransformControls } from './ManagedTransformControls';
 import type * as THREE from 'three';
 import { degToRad } from '@/core/math';
 import { useWorldStore } from '@/world/worldStore';

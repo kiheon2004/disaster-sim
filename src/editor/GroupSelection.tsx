@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import { TransformControls } from '@react-three/drei';
+import { ManagedTransformControls as TransformControls } from './ManagedTransformControls';
 import * as THREE from 'three';
 import type { EntityId } from '@/core/types';
 import type { WorldObject } from '@/core/model';
