@@ -273,7 +273,7 @@ export const koGravity = {
   "results.gravity.momentum": "중력 충격량",
   "results.gravity.momentumSub": "기타 충격량(접촉·감쇠 등) {o} kN·s",
   "results.gravity.residual": "퍼텐셜 장부 잔차",
-  "results.gravity.residualSub": "ΔU − W_장 + W_g (균일장 0, 방사형장 O(dt²))",
+  "results.gravity.residualSub": "R_Φ = ΔU − W_장 − W_이동 + W_g · 에너지 점검 R_Φ − ε {e} J (총 |W_g|의 {rel}) · 적분기 ε {i} J",
   "results.gravity.note": "사용자 정의 가속도장 실험의 계산값 — 실제 천체 환경·안전 예측에 사용할 수 없음 · 지원하지 않는 항목은 \"unsupported\"",
   "gravity.f.src1.kind": "중력원 1 · 종류",
   "gravity.f.src1.x": "중력원 1 · 중심 x",

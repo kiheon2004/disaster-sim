@@ -142,6 +142,15 @@ async function run(sc: Scene, withGravity: boolean) {
     activeBodies: g ? g.stats.bodies : 0, gravitySamples: g ? g.stats.bodies + g.stats.inSource : 0, structuresLoaded: g ? g.structures.loaded : 0, failures: g ? g.failures : 0,
     debris: c.getRuntime()?.debris.length ?? 0, fieldResidualJ: b && Number.isFinite(b.fieldResidual) ? +b.fieldResidual.toExponential(2) : null,
     workGravityJ: b ? +b.workGravity.toExponential(3) : null, residualRel: b && Number.isFinite(b.fieldResidual) && b.workGravity !== 0 ? +Math.abs(b.fieldResidual / b.workGravity).toExponential(2) : null,
+    // Phase 31 audit (M4): the checks against the GROSS path work (the net work of oscillating bodies is ≈ 0), the
+    // integrator's share ε, the energy check R_Φ − ε, the other work (contacts, damping) and moves outside the integrator.
+    grossJ: b && 'workGravityGross' in b ? +b.workGravityGross.toExponential(3) : null,
+    integratorJ: b && 'integratorResidual' in b ? +b.integratorResidual.toExponential(2) : null,
+    energyResidualJ: b && 'energyResidual' in b && Number.isFinite(b.energyResidual) ? +b.energyResidual.toExponential(2) : null,
+    energyRelGross: b && 'energyResidual' in b && Number.isFinite(b.energyResidual) && b.workGravityGross > 0 ? +Math.abs(b.energyResidual / b.workGravityGross).toExponential(2) : null,
+    fieldRelGross: b && 'workGravityGross' in b && Number.isFinite(b.fieldResidual) && b.workGravityGross > 0 ? +Math.abs(b.fieldResidual / b.workGravityGross).toExponential(2) : null,
+    workOtherJ: b ? +b.workOther.toExponential(3) : null,
+    workMovedJ: b && 'workMoved' in b ? +b.workMoved.toExponential(2) : null,
     heapMB: heapMB(), resetMs: +resetMs.toFixed(0),
   };
   c.unload();

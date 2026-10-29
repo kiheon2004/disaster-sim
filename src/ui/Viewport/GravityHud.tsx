@@ -55,7 +55,7 @@ export function GravityHud() {
         {k('gravityHud.structures')}<span className="mono" data-testid="gravity-hud-structures">{t('gravityHud.structLine', { n: g.structures.loaded, f: g.structures.failures, r: g.structures.roofFailures })}</span>
         {k('gravityHud.pressure')}<span className="mono" data-testid="gravity-hud-pressure">{(g.pressure.value / 1000).toFixed(1)} kPa {g.pressure.modelled ? '' : t('gravityHud.estimate')}</span>
         {k('gravityHud.energy')}<span className="mono" data-testid="gravity-hud-energy">K {energyText(b.kinetic)} · {Number.isFinite(b.potential) ? `U ${energyText(b.potential)}` : t('gravityHud.noPotential')}</span>
-        {k('gravityHud.work')}<span className="mono">W_g {energyText(b.workGravity)} · W_f {Number.isFinite(b.workField) ? energyText(b.workField) : '—'} · {t('gravityHud.other')} {energyText(b.workOther)}</span>
+        {k('gravityHud.work')}<span className="mono">W_g {energyText(b.workGravity)} · W_f {Number.isFinite(b.workField) ? energyText(b.workField) : '—'} · {t('gravityHud.other')} {energyText(b.workOther)} · ε {energyText(b.integratorResidual)}</span>
         {k('gravityHud.momentum')}<span className="mono">J_g {imp(Math.hypot(...b.impulse))} · {t('gravityHud.other')} {imp(Math.hypot(...b.impulseOther))}</span>
         {k('gravityHud.residual')}<span className="mono" data-testid="gravity-residual">{Number.isFinite(b.fieldResidual) ? b.fieldResidual.toExponential(1) : '—'} J</span>
         {k('gravityHud.cost')}<span className="mono">{g.ms.toFixed(2)} ms</span>

@@ -273,7 +273,7 @@ export const enGravity = {
   "results.gravity.momentum": "Gravity impulse",
   "results.gravity.momentumSub": "other impulse (contacts, damping …) {o} kN·s",
   "results.gravity.residual": "Potential ledger residual",
-  "results.gravity.residualSub": "ΔU − W_field + W_g (0 uniform, O(dt²) radial)",
+  "results.gravity.residualSub": "R_Φ = ΔU − W_field − W_moved + W_g · energy check R_Φ − ε {e} J ({rel} of gross |W_g|) · integrator ε {i} J",
   "results.gravity.note": "Computed values of a user-defined acceleration field — not for real bodies or safety · unsupported items are marked \"unsupported\"",
   "gravity.f.src1.kind": "Source 1 · kind",
   "gravity.f.src1.x": "Source 1 · centre x",

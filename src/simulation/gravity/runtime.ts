@@ -82,6 +82,10 @@ export interface GravitySeriesPoint {
   workGravity: number;
   workField: number;
   workOther: number;
+  /** Phase 31 audit: moves outside the integrator, the integrator's share ε, the energy check R_Φ − ε. */
+  workMoved: number;
+  integrator: number;
+  energyResidual: number;
   px: number; py: number; pz: number;
   jx: number; jy: number; jz: number;
   bodies: number;
@@ -278,7 +282,7 @@ export class GravityRuntime {
     if (ctx.time + dt >= this.nextSeries) {
       this.nextSeries = ctx.time + dt + SERIES_DT;
       const b = ledger.balance(), G = f.G;
-      this.series.push({ t: ctx.time + dt, gx: G[0], gy: G[1], gz: G[2], magnitude: Math.hypot(G[0], G[1], G[2]), kinetic: b.kinetic, potential: b.potential, workGravity: b.workGravity, workField: b.workField, workOther: b.workOther, px: b.momentum[0], py: b.momentum[1], pz: b.momentum[2], jx: b.impulse[0], jy: b.impulse[1], jz: b.impulse[2], bodies: b.bodies, failed: this.failures });
+      this.series.push({ t: ctx.time + dt, gx: G[0], gy: G[1], gz: G[2], magnitude: Math.hypot(G[0], G[1], G[2]), kinetic: b.kinetic, potential: b.potential, workGravity: b.workGravity, workField: b.workField, workOther: b.workOther, workMoved: b.workMoved, integrator: b.integratorResidual, energyResidual: b.energyResidual, px: b.momentum[0], py: b.momentum[1], pz: b.momentum[2], jx: b.impulse[0], jy: b.impulse[1], jz: b.impulse[2], bodies: b.bodies, failed: this.failures });
       if (this.series.length > SERIES_MAX) this.series.splice(0, this.series.length - SERIES_MAX);
     }
     this.stats.ms += performance.now() - t0;
