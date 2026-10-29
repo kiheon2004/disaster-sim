@@ -20,6 +20,7 @@ import { SedimentForceSystem } from './SedimentForceSystem';
 import { ImpactSystem } from './ImpactSystem';
 import { BlastSystem } from './BlastSystem';
 import { StructuralCollapseSystem } from './StructuralCollapseSystem';
+import { ThermalSystem } from './ThermalSystem';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -54,6 +55,9 @@ export function createDefaultSystems(): SimulationSystem[] {
     new RoadSystem(),
     new SwaySystem(),
     new DamageSystem(),
+    // Phase 26: heat sources → heat transfer → temperatures → material factors / thermal forces, read
+    // by the collapse engine right after (idle without a heat source).
+    new ThermalSystem(),
     // Phase 25: member failures of this step are resolved by the collapse engine (redistribution
     // round, falling blocks, fragments, rubble) after every hazard has evaluated its damage.
     new StructuralCollapseSystem(),

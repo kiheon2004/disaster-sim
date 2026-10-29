@@ -187,6 +187,12 @@ export interface SimulationSettings {
    * forest and tree toppling by flood flow. Absent / off = Phase 18 behavior (bit-identical).
    */
   vegetation?: { canopyShelter: boolean; floodResponse: boolean };
+  /**
+   * Thermal physics (Phase 26): ambient (reference) air temperature K, height of the resolved air
+   * layer, axial restraint mode of heated members. Absent = defaults (15 °C, 10 m, frame); only read
+   * when a heat source runs — runs without one are unchanged.
+   */
+  thermal?: import('@/thermal/ThermalWorld').ThermalSettings;
 }
 
 // ── Flood: water model settings (Phase 14, approximate model parameters) ─────

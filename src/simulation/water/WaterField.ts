@@ -135,6 +135,17 @@ export class WaterField {
   readonly maxDepth: Float32Array;
   readonly floodTime: Float32Array;
 
+  /**
+   * Heat carried by the water (Phase 26, J per cell above the thermal reference; null unless a
+   * thermal run attached it). The solver moves it with the SAME face volumes as the water (upwind
+   * temperature) — inflows (rain, sources, boundaries) enter at the reference temperature; heat leaving
+   * with infiltration goes to `infilHeat` (→ ground), with drains / edges to `heatOut` (lost).
+   */
+  heat: Float64Array | null = null;
+  infilHeat: Float64Array | null = null;
+  heatOut = 0;
+  heatMoved = 0;
+
   /** Inclusive cell range that may hold water (empty when x0 > x1). */
   x0 = 1;
   x1 = 0;

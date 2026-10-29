@@ -96,8 +96,9 @@ export const CONNECTION_KEYS = ['beamSeat', 'beamBeam', 'splice', 'base', 'trans
  *  - facade:       a facade part (cladding, window, door, roof covering) detached by its own model
  *  - removed:      taken out by the user's removal preview in the building editor (alternate-path check)
  */
-export type FailCause = 'drift' | 'axial' | 'bending' | 'shear' | 'connection' | 'support' | 'impact' | 'foundation' | 'bearing' | 'story' | 'overpressure' | 'facade' | 'removed';
-export const FAIL_CAUSES: readonly FailCause[] = ['drift', 'axial', 'bending', 'shear', 'connection', 'support', 'impact', 'foundation', 'bearing', 'story', 'overpressure', 'facade', 'removed'];
+export type FailCause = 'drift' | 'axial' | 'bending' | 'shear' | 'connection' | 'support' | 'impact' | 'foundation' | 'bearing' | 'story' | 'overpressure' | 'facade' | 'removed' | 'thermal';
+/** 'thermal' (Phase 26): axial capacity exceeded by restrained thermal expansion (thermal buckling of a beam) — appended last. */
+export const FAIL_CAUSES: readonly FailCause[] = ['drift', 'axial', 'bending', 'shear', 'connection', 'support', 'impact', 'foundation', 'bearing', 'story', 'overpressure', 'facade', 'removed', 'thermal'];
 
 /** Ratio of expected (mean) to characteristic strength: a member fails at u ≥ OVERLOAD. */
 export const OVERLOAD = 1.25;

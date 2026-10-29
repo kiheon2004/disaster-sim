@@ -16,6 +16,7 @@ export type EventType =
   | 'landslide'
   | 'impact'
   | 'blast'
+  | 'heatSource'
   | 'flood'
   | 'tsunami'
   | 'snow'
@@ -135,7 +136,7 @@ export interface WaterSourceEventSpec {
 
 export type WaterEventSpec = RainEventSpec | RisingWaterEventSpec | WaterSourceEventSpec;
 
-export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec;
+export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec;
 
 export function isWaterEvent(s: EventSpec): s is WaterEventSpec {
   return s.event === 'rain' || s.event === 'risingWater' || s.event === 'waterSource';

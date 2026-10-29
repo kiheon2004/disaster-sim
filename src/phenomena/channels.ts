@@ -56,8 +56,10 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     readers: ['blast (structures, facade parts, bodies, trees, debris)', 'structural (lateral load)', 'waterSolver (pressure gradient)', 'renderer', 'inspector'],
   },
   temperature: {
-    id: 'temperature', labelKey: 'channel.temperature', status: 'interface', quantity: 'air / surface temperature °C, heat flux W/m²',
-    owner: '— (future ThermalField)', writers: [], readers: ['exposure (baseline constant)'],
+    id: 'temperature', labelKey: 'channel.temperature', status: 'active', quantity: 'temperature K (shown °C), heat flow W, heat flux W/m², energy J',
+    owner: 'env.thermal (ThermalChannel → ThermalWorld: ground columns, water heat, air layer, rooms, body nodes, ledger; Phase 26)',
+    writers: ['HeatSourceEvent', 'ImpactEvent (thermalShare of the unresolved impact energy)'],
+    readers: ['thermal (heat transfer)', 'structuralCollapse (material factor / thermal load via the thermal system)', 'waterSolver (heat advection)', 'exposure (air temperature, radiant flux)', 'renderer', 'inspector'],
   },
   gravity: {
     id: 'gravity', labelKey: 'channel.gravity', status: 'uniform', quantity: 'gravitational acceleration m/s²',

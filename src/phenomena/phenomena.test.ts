@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast']);
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource']);
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -144,7 +144,7 @@ describe('scheduler and pipeline', () => {
     expect(validatePipeline(systems)).toEqual([]);
     expect(describePipeline(systems).map((s) => `${s.phase === 'prePhysics' ? 'pre' : 'post'}:${s.name}`)).toEqual([
       'pre:impact', 'pre:groundFailure', 'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:blast', 'pre:waterSolver', 'pre:waterForce', 'pre:sedimentForce', 'pre:groundContact',
-      'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:structuralCollapse', 'post:debris', 'post:particles', 'post:exposure', 'post:metrics',
+      'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:thermal', 'post:structuralCollapse', 'post:debris', 'post:particles', 'post:exposure', 'post:metrics',
     ]);
     // Moving the water solver after the water forces breaks the data flow → reported.
     const bad = [...systems];
@@ -245,7 +245,7 @@ describe('unified damage and interactions', () => {
     expect(residualStrength(fake({ eq: 0.5 }), 'earthquake')).toBe(1); // own damage is in its own model
     expect(residualStrength(fake({ eq: 0.4, flood: 0.6 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.6, 12);
     expect(residualStrength(fake({ eq: 3 }), 'flood')).toBeCloseTo(1 - STRENGTH_LOSS, 12);
-    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0, impact: 0, blast: 0 }); // Phase 23: + impact, Phase 24: + blast
+    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0 }); // Phase 23: + impact, Phase 24: + blast, Phase 26: + thermal (always 0 — heat acts through the material factor)
     expect(residualStrength(fake({ eq: 0.2, ground: 0.5 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.5, 12); // ground joins the envelope
   });
 

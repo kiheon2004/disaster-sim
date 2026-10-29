@@ -22,6 +22,7 @@ import { TerrainDeformationEvent } from '@/events/deformation/TerrainDeformation
 import { landslide, sinkhole } from './groundDefinitions';
 import { impact } from './impactDefinitions';
 import { blast } from './blastDefinitions';
+import { heatSource } from './thermalDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -208,7 +209,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -221,15 +222,15 @@ export const PLANNED: PlannedPhenomenon[] = [
   }),
   planned({
     type: 'volcano', labelKey: 'phen.volcano', icon: 'warning', channels: ['temperature', 'terrainDeformation', 'atmosphere', 'groundMotion'], models: [],
-    keywords: /화산|용암|화산재|분화|volcan|lava|eruption|ash\s*fall/, missing: ['missing.thermal', 'missing.lavaFlow', 'missing.ash'], reuses: ['reuse.waterSolverPattern', 'reuse.groundMotion'],
+    keywords: /화산|용암|화산재|분화|volcan|lava|eruption|ash\s*fall/, missing: ['missing.lavaFlow', 'missing.ash'], reuses: ['reuse.thermal', 'reuse.waterSolverPattern', 'reuse.groundMotion'],
   }),
   planned({
     type: 'fire', labelKey: 'phen.fire', icon: 'warning', channels: ['temperature', 'atmosphere'], models: [],
-    keywords: /화재|산불|불길|불이\s*나|fire|blaze|wildfire/, missing: ['missing.thermal', 'missing.combustion'], reuses: ['reuse.airflow', 'reuse.exposure'],
+    keywords: /화재|산불|불길|불이\s*나|fire|blaze|wildfire/, missing: ['missing.combustion'], reuses: ['reuse.thermal', 'reuse.airflow', 'reuse.exposure'],
   }),
   planned({
     type: 'extremeTemperature', labelKey: 'phen.extremeTemperature', icon: 'warning', channels: ['temperature'], models: [],
-    keywords: /폭염|혹한|한파|극한\s*(?:온도|기온)|heat\s*wave|cold\s*snap|extreme\s*(?:heat|cold|temperature)/, missing: ['missing.thermal'], reuses: ['reuse.exposure'],
+    keywords: /폭염|혹한|한파|극한\s*(?:온도|기온)|heat\s*wave|cold\s*snap|extreme\s*(?:heat|cold|temperature)/, missing: ['missing.climate'], reuses: ['reuse.thermal', 'reuse.exposure'],
   }),
   planned({
     type: 'atmosphereLoss', labelKey: 'phen.atmosphereLoss', icon: 'warning', channels: ['atmosphere', 'pressure'], models: [],
@@ -250,7 +251,7 @@ export const PLANNED: PlannedPhenomenon[] = [
   }),
   planned({
     type: 'snow', labelKey: 'phen.snow', icon: 'warning', channels: ['temperature', 'mechanicalForce'], models: [],
-    keywords: /폭설|눈보라|눈이\s*(?:많이|쌓)|snow|blizzard/, missing: ['missing.snowLoad', 'missing.thermal'], reuses: ['reuse.structural'],
+    keywords: /폭설|눈보라|눈이\s*(?:많이|쌓)|snow|blizzard/, missing: ['missing.snowLoad', 'missing.climate'], reuses: ['reuse.thermal', 'reuse.structural'],
   }),
 ];
 

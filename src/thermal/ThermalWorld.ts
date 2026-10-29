@@ -30,6 +30,9 @@ import { SIGMA, CP_AIR, C_WATER, RHO_WATER } from './units';
 export const TK = { ground: 0, water: 1, air: 2, comp: 3, body: 4 } as const;
 export type TargetKind = (typeof TK)[keyof typeof TK];
 
+/** Key of a receiver in the per-source contribution maps. */
+export const contributionKey = (kind: number, index: number) => kind * 1e8 + index;
+
 export type RestraintMode = 'frame' | 'full' | 'none';
 export interface ThermalSettings {
   /** Ambient (reference) air temperature, K. */
@@ -70,6 +73,8 @@ export interface SourceStep {
   /** Prescribed temperature over this step (K) — temperature sources. */
   temperature?: number;
   exchanges?: readonly Exchange[];
+  /** Share of the output released above the resolved air layer (convected plume of a high source) — booked lost. */
+  aboveLayer?: number;
 }
 
 /** Building room (one story of a modular building). */
@@ -112,8 +117,11 @@ export class ThermalWorld {
   maxSubsteps = 1;
   last: StepInfo = { substeps: 0, maxRate: 0, airSubsteps: 0 };
   /** Per source: energy deposited on each receiver (for the inspector), keyed `${kind}:${index}`. */
-  readonly contributions = new Map<string, Map<string, number>>();
+  readonly contributions = new Map<string, Map<number, number>>();
   private readonly rates: ThermalRates = emptyRates();
+  /** The ground advances on its own step (its time constants are ≥ minutes); energy is exact either way. */
+  groundDt = 1;
+  private groundAcc = 0;
 
   constructor(t: TerrainData, readonly settings: ThermalSettings, airDensity = 1.225, opts: { closed?: boolean; layers?: readonly number[]; insulatedGround?: boolean } = {}) {
     this.insulated = !!opts.insulatedGround;
@@ -133,8 +141,19 @@ export class ThermalWorld {
     return this.comps.length - 1;
   }
 
+  /** Room temperature; a room that no longer exists (its story collapsed) is the outdoors. */
   compT(c: number): number {
-    return c < 0 ? this.Tref : this.Tref + this.comps[c].E / this.comps[c].C;
+    if (c < 0) return this.Tref;
+    const cp = this.comps[c];
+    return cp.alive ? this.Tref + cp.E / cp.C : this.air.T(cp.air);
+  }
+
+  /** Heat into a room (or, once it is gone, into the outdoor air it opened to). */
+  private toComp(c: number, W: number, G: number) {
+    const cp = this.comps[c];
+    if (cp.alive) { cp.dE += W; cp.gS += G; }
+    else if (cp.air >= 0) { this.air.dE[cp.air] += W; this.air.gS[cp.air] += G; }
+    else this.rates.aboveLayer += W;
   }
 
   /** Water deep enough to be its own node at a cell. */
@@ -168,7 +187,7 @@ export class ThermalWorld {
         else { this.terrain.E[i * this.terrain.nl] += J; this.terrain.activateCell(i); }
         break;
       case TK.air: this.air.E[i] += J; break;
-      case TK.comp: this.comps[i].E += J; break;
+      case TK.comp: { const cp = this.comps[i]; if (cp.alive) cp.E += J; else if (cp.air >= 0) this.air.E[cp.air] += J; else this.ledger.lost.aboveLayer += J; break; }
       default: this.bodies.ES[i] += J; this.bodies.Esrc[i] += J; this.bodies.refresh(i); break;
     }
   }
@@ -178,13 +197,14 @@ export class ThermalWorld {
     switch (kind) {
       case TK.ground:
       case TK.water:
+        // Only evaluated in the ground step (its rates are applied with the ground's dt).
         if (this.wet(i)) this.terrain.dW[i] += W;
         else this.terrain.dE[i * this.terrain.nl] += W;
         this.terrain.activateCell(i);
         this.terrain.extraRate(i, G, this.wet(i));
         break;
       case TK.air: this.air.dE[i] += W; this.air.gS[i] += G; break;
-      case TK.comp: this.comps[i].dE += W; this.comps[i].gS += G; break;
+      case TK.comp: this.toComp(i, W, G); break;
       default: this.bodies.dS[i] += W; this.bodies.gS[i] += G; break;
     }
   }
@@ -208,27 +228,42 @@ export class ThermalWorld {
         let per = this.contributions.get(s.id);
         if (!per) this.contributions.set(s.id, (per = new Map()));
         for (const d of s.deposits) {
+          // A receiver that merged / left since the geometry was built: its share stays unresolved.
+          if (d.kind === TK.body && !this.bodies.alive[d.index]) continue;
           const J = s.energy * d.w;
           this.deposit(d.kind, d.index, J);
           used += J;
-          if (d.kind === TK.body || d.kind === TK.ground) { const key = `${d.kind}:${d.index}`; per.set(key, (per.get(key) ?? 0) + J); }
+          if (d.kind === TK.body || d.kind === TK.ground) { const key = contributionKey(d.kind, d.index); per.set(key, (per.get(key) ?? 0) + J); }
         }
+        const above = s.energy * (s.aboveLayer ?? 0);
         L.added += s.energy;
-        L.lost.unresolvedRadiation += s.energy - used;
+        L.lost.aboveLayer += above;
+        L.lost.unresolvedRadiation += s.energy - used - above;
         L.bySource.set(s.id, (L.bySource.get(s.id) ?? 0) + s.energy);
       }
     }
-    // Exchange with stability-limited sub-steps.
-    let maxRate = this.evaluate(sources);
-    let n = 1;
-    if (dt * maxRate > 0.9) n = Math.ceil((dt * maxRate) / 0.9);
-    const h = dt / n;
-    this.commit(h);
-    for (let k = 1; k < n; k++) {
-      const r = this.evaluate(sources);
-      if (r > maxRate) maxRate = r;
-      this.commit(h);
+    // Slow operator: the ground (and water on it) on its own step.
+    this.groundAcc += dt;
+    let maxRate = 0, n = 1;
+    if (this.groundAcc >= this.groundDt - 1e-9) {
+      const g = this.groundOp(this.groundAcc, sources);
+      this.groundAcc = 0;
+      maxRate = g.maxRate;
+      n = g.substeps;
     }
+    // Fast operator: bodies, rooms, air, prescribed-temperature exchanges with them.
+    let rate = this.evaluateFast(sources);
+    let m = 1;
+    if (dt * rate > 0.9) m = Math.ceil((dt * rate) / 0.9);
+    const h = dt / m;
+    this.commitFast(h);
+    for (let k = 1; k < m; k++) {
+      const r = this.evaluateFast(sources);
+      if (r > rate) rate = r;
+      this.commitFast(h);
+    }
+    if (rate > maxRate) maxRate = rate;
+    n = Math.max(n, m);
     if (n > this.maxSubsteps) this.maxSubsteps = n;
     // Air advection by the mean wind at mid-layer.
     const U = this.u10 * Math.pow(Math.max(0.5, this.air.H / 2) / 10, 0.14);
@@ -243,20 +278,76 @@ export class ThermalWorld {
     return this.last;
   }
 
-  /** One evaluation of every exchange into the rate accumulators; returns max ΣG/C. */
-  private evaluate(sources: readonly SourceStep[]): number {
+  /** Ground step: column / lateral conduction, surface ↔ air / sky, water ↔ bed / air, spheres ↔ ground. */
+  private groundOp(dt: number, sources: readonly SourceStep[]): { maxRate: number; substeps: number } {
+    const air = this.air;
+    const acc = this.rates;
+    const u2 = this.u10 * Math.pow(0.2, 0.14);
+    const toAir = (a: number, W: number, G: number) => { if (a >= 0) { air.dE[a] += W; air.gS[a] += G; } else acc.aboveLayer += W; };
+    const tr = this.terrain;
+    const cx = tr.originX + 0.5 * tr.cell, cz = tr.originZ + 0.5 * tr.cell;
+    const ix2a = (ix: number, iz: number) => air.index(cx + ix * tr.cell, cz + iz * tr.cell);
+    const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc };
+    const evaluate = () => {
+      let r = tr.fluxes(env);
+      this.sphereExchanges(sources, true);
+      for (let a = 0; a < air.count; a++) { const q = air.gS[a] / air.C; if (q > r) r = q; air.gS[a] = 0; }
+      return r;
+    };
+    let maxRate = evaluate();
+    const n = dt * maxRate > 0.9 ? Math.ceil((dt * maxRate) / 0.9) : 1;
+    const h = dt / n;
+    for (let k = 0; k < n; k++) {
+      if (k > 0) { const r = evaluate(); if (r > maxRate) maxRate = r; }
+      tr.apply(h, this.water);
+      air.apply(h);
+      this.book(h);
+    }
+    return { maxRate, substeps: n };
+  }
+
+  /** Prescribed-temperature spheres with their receivers: ground / water ones (slow) or the rest (fast). */
+  private sphereExchanges(sources: readonly SourceStep[], ground: boolean) {
+    const acc = this.rates;
+    for (const s of sources) {
+      if (s.temperature === undefined || !s.exchanges) continue;
+      const Ts = s.temperature;
+      const Ts4 = Ts * Ts * Ts * Ts;
+      for (const x of s.exchanges) {
+        if ((x.kind === TK.ground || x.kind === TK.water) !== ground) continue;
+        if (x.kind === TK.body && !this.bodies.alive[x.index]) continue;
+        const T = this.targetT(x.kind, x.index);
+        let q = 0, G = 0;
+        if (x.aRad > 0) {
+          q += x.eps * SIGMA * x.aRad * (Ts4 - T * T * T * T);
+          const Tm = T > Ts ? T : Ts;
+          G += 4 * x.eps * SIGMA * x.aRad * Tm * Tm * Tm;
+        }
+        if (x.aConv > 0) {
+          const gas = x.kind === TK.air || x.kind === TK.comp;
+          const h = gas ? hSphere(Ts, T, x.kind === TK.air ? this.u10 : 0, 2 * x.L) : x.kind === TK.body ? hBox(T, Ts, 0, x.aConv, 0, 0, x.L, x.L, x.L) : hGround(T, Ts, 0);
+          const qc = h * x.aConv * (Ts - T);
+          q += qc;
+          G += (4 / 3) * h * x.aConv;
+          acc.convection += Math.abs(qc);
+        }
+        acc.radiation += Math.abs(q);
+        acc.boundarySupply += q;
+        this.addRate(x.kind, x.index, q, G);
+      }
+    }
+  }
+
+  /** One evaluation of the fast exchanges into the rate accumulators; returns max ΣG/C. */
+  private evaluateFast(sources: readonly SourceStep[]): number {
     const air = this.air;
     const acc = this.rates;
     const closed = this.closed;
-    const u2 = this.u10 * Math.pow(0.2, 0.14);
     const toAir = (a: number, W: number, G: number) => { air.dE[a] += W; air.gS[a] += G; };
-    const ix2a = (ix: number, iz: number) => air.index(this.terrain.originX + (ix + 0.5) * this.terrain.cell, this.terrain.originZ + (iz + 0.5) * this.terrain.cell);
-    let maxRate = this.terrain.fluxes({ closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a) => air.T(a), toAir, acc });
-    const r1 = this.bodies.fluxes({
+    let maxRate = this.bodies.fluxes({
       closed, acc, airT: (a) => air.T(a), toAir, compT: (c) => this.compT(c),
-      toComp: (c, W, G) => { const cp = this.comps[c]; cp.dE += W; cp.gS += G; },
+      toComp: (c, W, G) => this.toComp(c, W, G),
     });
-    if (r1 > maxRate) maxRate = r1;
     this.bodies.contactFluxes(this.terrain, acc);
     // Rooms: ventilation with the outdoors.
     for (const cp of this.comps) {
@@ -264,35 +355,12 @@ export class ThermalWorld {
       const Tc = this.Tref + cp.E / cp.C;
       const Ta = air.T(cp.air);
       const q = cp.Gv * (Tc - Ta);
-      cp.dE -= q;
-      if (cp.air >= 0) toAir(cp.air, q, cp.Gv); else if (!closed) acc.aboveLayer += q; else cp.dE += q;
+      if (cp.air >= 0) { cp.dE -= q; toAir(cp.air, q, cp.Gv); }
+      else if (!closed) { cp.dE -= q; acc.aboveLayer += q; }
       acc.convection += Math.abs(q);
       cp.gS += cp.Gv;
     }
-    // Prescribed-temperature spheres.
-    for (const s of sources) {
-      if (s.temperature === undefined || !s.exchanges) continue;
-      const Ts = s.temperature;
-      const Ts4 = Ts * Ts * Ts * Ts;
-      for (const x of s.exchanges) {
-        const T = this.targetT(x.kind, x.index);
-        let q = 0, G = 0;
-        if (x.aRad > 0) {
-          q += x.eps * SIGMA * x.aRad * (Ts4 - T * T * T * T);
-          G += 4 * x.eps * SIGMA * x.aRad * Math.max(T, Ts) ** 3;
-        }
-        if (x.aConv > 0) {
-          const gas = x.kind === TK.air || x.kind === TK.comp;
-          const h = gas ? hSphere(Ts, T, x.kind === TK.air ? this.u10 : 0, 2 * x.L) : x.kind === TK.body ? hBox(T, Ts, 0, x.aConv, 0, 0, x.L, x.L, x.L) : hGround(T, Ts, 0);
-          q += h * x.aConv * (Ts - T);
-          G += (4 / 3) * h * x.aConv;
-          acc.convection += Math.abs(h * x.aConv * (Ts - T));
-        }
-        acc.radiation += Math.abs(q);
-        acc.boundarySupply += q;
-        this.addRate(x.kind, x.index, q, G);
-      }
-    }
+    this.sphereExchanges(sources, false);
     // Buoyant venting of the air layer (also collects the air stability).
     const v = air.vent(closed);
     acc.atmosphere += v.lost;
@@ -308,13 +376,18 @@ export class ThermalWorld {
     return maxRate;
   }
 
-  /** Apply the evaluated rates over h and book the ledger. */
-  private commit(h: number) {
-    const L = this.ledger, acc = this.rates;
-    this.terrain.apply(h, this.water);
+  /** Apply the fast rates over h and book the ledger. */
+  private commitFast(h: number) {
     this.bodies.apply(h);
     this.air.apply(h);
+    this.terrain.applyPending(h);
     for (const cp of this.comps) { if (cp.alive) cp.E += cp.dE * h; cp.dE = 0; }
+    this.book(h);
+  }
+
+  /** Book the accumulated loss / transfer rates over h. */
+  private book(h: number) {
+    const L = this.ledger, acc = this.rates;
     L.lost.deepGround += acc.deepGround * h;
     L.lost.radiationSky += acc.radiationSky * h;
     L.lost.atmosphere += acc.atmosphere * h;

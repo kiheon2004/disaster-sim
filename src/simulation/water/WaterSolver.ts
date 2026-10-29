@@ -175,6 +175,8 @@ export class WaterSolver {
     }
     this.computeFluxes(dt);
     this.limitOutflow(dt);
+    // Phase 26: heat rides on the limited face volumes (no-op without a thermal run).
+    if (f.heat) this.advectHeat(dt);
     this.updateDepth(dt);
   }
 
@@ -222,12 +224,14 @@ export class WaterSolver {
     const f = this.field;
     if (!f.hasWater()) return;
     const { h, infilRate, infilStore, infiltrated, drainRate, nx } = f;
+    const heat = f.heat;
     let inf = 0;
     let drn = 0;
     for (let iz = f.z0; iz <= f.z1; iz++) {
       for (let i = iz * nx + f.x0, e = iz * nx + f.x1; i <= e; i++) {
         let d = h[i];
         if (d <= 0) continue;
+        let aInf = 0, aDrn = 0;
         const store = infilStore[i];
         if (store > 0) {
           const room = store - infiltrated[i];
@@ -239,6 +243,7 @@ export class WaterSolver {
             d -= a;
             infiltrated[i] += a;
             inf += a;
+            aInf = a;
           }
         }
         const dr = drainRate[i];
@@ -247,6 +252,14 @@ export class WaterSolver {
           if (a > d) a = d;
           d -= a;
           drn += a;
+          aDrn = a;
+        }
+        if (heat !== null && heat[i] !== 0 && d < h[i]) {
+          // Water leaving takes its share of the heat (well mixed): soil ← infiltration, drains → lost.
+          const e = heat[i] / h[i];
+          f.infilHeat![i] += e * aInf;
+          f.heatOut += e * aDrn;
+          heat[i] -= e * (aInf + aDrn);
         }
         h[i] = d;
       }
@@ -466,6 +479,75 @@ export class WaterSolver {
         if (qs > 0) qz[s] = qs * r;
       }
     }
+  }
+
+  // ── 4b. Heat advection (Phase 26) ──────────────────────
+
+  private heatDelta: Float64Array | null = null;
+
+  /**
+   * Upwind heat transport with the face volumes the depth update is about to use: a face carries
+   * the donor cell's heat in proportion to the depth it removes (q·Δt/Δx of its h). Exactly
+   * conservative and bounded (the limiter keeps every outflow ≤ the donor's water, hence ≤ its
+   * heat); water entering through an edge carries the reference temperature (no heat).
+   */
+  private advectHeat(dt: number) {
+    const f = this.field;
+    const { nx, nz, h, qx, qz } = f;
+    const heat = f.heat!;
+    const d = (this.heatDelta ??= new Float64Array(f.count));
+    const W = nx + 1;
+    const k = dt / f.cell;
+    const xa = Math.max(0, f.x0 - 1);
+    const xb = Math.min(nx - 1, f.x1 + 1);
+    const za = Math.max(0, f.z0 - 1);
+    const zb = Math.min(nz - 1, f.z1 + 1);
+    const share = (c: number, vol: number) => (h[c] > 0 && heat[c] !== 0 ? (heat[c] * vol) / h[c] : 0);
+    let moved = 0, out = 0;
+    for (let iz = za; iz <= zb; iz++) {
+      const row = iz * nx;
+      for (let kx = xa; kx <= xb + 1; kx++) {
+        const q = qx[iz * W + kx];
+        if (q === 0) continue;
+        const L = kx - 1, R = kx;
+        if (q > 0) {
+          if (L < xa) continue; // inflow from the edge / outside the range: reference water
+          const e = share(row + L, q * k);
+          d[row + L] -= e;
+          if (R <= nx - 1) d[row + R] += e; else out += e;
+          moved += Math.abs(e);
+        } else {
+          if (R > xb) continue;
+          const e = share(row + R, -q * k);
+          d[row + R] -= e;
+          if (L >= 0) d[row + L] += e; else out += e;
+          moved += Math.abs(e);
+        }
+      }
+    }
+    for (let kz = za; kz <= zb + 1; kz++) {
+      for (let ix = xa; ix <= xb; ix++) {
+        const q = qz[kz * nx + ix];
+        if (q === 0) continue;
+        const T = kz - 1, B = kz;
+        if (q > 0) {
+          if (T < za) continue;
+          const e = share(T * nx + ix, q * k);
+          d[T * nx + ix] -= e;
+          if (B <= nz - 1) d[B * nx + ix] += e; else out += e;
+          moved += Math.abs(e);
+        } else {
+          if (B > zb) continue;
+          const e = share(B * nx + ix, -q * k);
+          d[B * nx + ix] -= e;
+          if (T >= 0) d[T * nx + ix] += e; else out += e;
+          moved += Math.abs(e);
+        }
+      }
+    }
+    for (let iz = za; iz <= zb; iz++) for (let i = iz * nx + xa, e = iz * nx + xb; i <= e; i++) if (d[i] !== 0) { heat[i] += d[i]; d[i] = 0; }
+    f.heatOut += out;
+    f.heatMoved += moved;
   }
 
   // ── 5. Continuity, boundary bookkeeping, velocities ──────

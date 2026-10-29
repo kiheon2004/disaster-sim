@@ -196,6 +196,18 @@ export const MODELS: Record<string, ModelInfo> = {
     id: 'collapseDust', labelKey: 'model.collapseDust', level: 'visual',
     assumptions: [], units: [], validRange: '—', limitations: ['model.lim.visualOnly'], reference: 'docs/STRUCTURAL_DESTRUCTION.md §24',
   }),
+  heatTransfer: m({
+    id: 'heatTransfer', labelKey: 'model.heatTransfer', level: 'physics',
+    assumptions: ['model.as.lumpedNodes', 'model.as.groundColumns', 'model.as.convectionCorrelations', 'model.as.grayRadiation', 'model.as.airLayer', 'model.as.waterTracer'],
+    units: ['K', 'J', 'W', 'W/m²'], validRange: 'material data 20–1200 °C (codes) / near room temperature (handbook values); wind function ≤ 7 m/s',
+    limitations: ['model.lim.noCfd', 'model.lim.noPhaseChange', 'model.lim.noViewFactors', 'model.lim.noCombustion'], reference: 'docs/THERMAL_PHYSICS.md §5–17',
+  }),
+  thermalStructure: m({
+    id: 'thermalStructure', labelKey: 'model.thermalStructure', level: 'empirical',
+    assumptions: ['model.as.enReduction', 'model.as.zoneAverage', 'model.as.restraintStiffness'],
+    units: ['K', 'N', '—'], validRange: 'steel / concrete 20–1200 °C, timber 20–300 °C (EN 1993/1992/1995-1-2); masonry, glass: no reduction',
+    limitations: ['model.lim.notFireDesign', 'model.lim.uniaxial', 'model.lim.notEngineering'], reference: 'docs/THERMAL_PHYSICS.md §19–22',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

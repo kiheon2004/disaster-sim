@@ -64,6 +64,12 @@ export class TerrainThermal {
   /** Stability scratch: Σ conductance per cell-layer (W/K) and the water rate per cell (1/s). */
   private readonly gS: Float64Array;
   private readonly gW: Float64Array;
+  /** Static conductances (W/K): column (l → l+1; the last one to the deep boundary), east / south faces; half-layer resistance of the surface (m²·K/W); node temperature scratch. */
+  private readonly Gc: Float64Array;
+  private readonly Gx: Float64Array;
+  private readonly Gz: Float64Array;
+  private readonly R0: Float64Array;
+  private readonly Tn: Float64Array;
   readonly ntx: number;
   readonly ntz: number;
   readonly tileOn: Uint8Array;
@@ -107,6 +113,23 @@ export class TerrainThermal {
           this.C[c * this.nl + l] = m.density * (m.constantC ?? m.c(20)) * layers[l] * this.area;
           this.k[c * this.nl + l] = m.k(20);
         }
+      }
+    }
+    // Conductances (constant properties of the ground layers): series of half-layers, harmonic means.
+    this.Gc = new Float64Array(n * this.nl);
+    this.Gx = new Float64Array(n * this.nl);
+    this.Gz = new Float64Array(n * this.nl);
+    this.R0 = new Float64Array(n);
+    this.Tn = new Float64Array(n * this.nl);
+    const L = layers, k = this.k, nl = this.nl;
+    for (let c = 0; c < n; c++) {
+      const j = c * nl;
+      this.R0[c] = L[0] / (2 * k[j]);
+      for (let l = 0; l < nl; l++) {
+        const a = j + l;
+        this.Gc[a] = l < nl - 1 ? this.area / (L[l] / (2 * k[a]) + L[l + 1] / (2 * k[a + 1])) : this.area / (L[l] / (2 * k[a]));
+        if ((c % this.nx) + 1 < this.nx) this.Gx[a] = (2 * L[l] * k[a] * k[a + nl]) / (k[a] + k[a + nl]);
+        if (c + this.nx < n) this.Gz[a] = (2 * L[l] * k[a] * k[a + this.nx * nl]) / (k[a] + k[a + this.nx * nl]);
       }
     }
     this.ntx = Math.ceil(this.nx / TILE);
@@ -203,100 +226,121 @@ export class TerrainThermal {
    * ΣG/C (1/s) over the active nodes — the explicit stability limit is dt·max < 1.
    */
   fluxes(env: TerrainEnv): number {
-    const { nx, nl, E, C, k, dE, dW, area, gS, gW } = this;
-    const L = this.layers;
+    const { nx, nl, E, dE, dW, area, gS, gW, Tn, Gc, Gx, Gz, R0 } = this;
+    const C = this.C;
     const Tref = this.Tref;
     const acc = env.acc;
     const water = env.water;
     const closed = env.closed;
-    const lat = (a: number, b: number, l: number) => {
-      const G = (2 * L[l] * k[a] * k[b]) / (k[a] + k[b]);
-      const q = G * (E[a] / C[a] - E[b] / C[b]);
-      gS[a] += G; gS[b] += G;
-      if (q !== 0) { dE[a] -= q; dE[b] += q; acc.conduction += Math.abs(q); }
-    };
+    const ntx = this.ntx, tileOn = this.tileOn;
+    let cond = 0, conv = 0, deep = 0, sky = 0;
+    // Node temperatures of the active cells (once per evaluation).
     for (const t of this.tiles) {
-      const tx = t % this.ntx, tz = (t / this.ntx) | 0;
+      const tx = t % ntx, tz = (t / ntx) | 0;
       const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
+      for (let iz = z0; iz < z1; iz++) for (let j = (iz * nx + x0) * nl, e = (iz * nx + x1) * nl; j < e; j++) Tn[j] = Tref + E[j] / C[j];
+    }
+    for (const t of this.tiles) {
+      const tx = t % ntx, tz = (t / ntx) | 0;
+      const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
+      const eastOn = tx + 1 < ntx && tileOn[t + 1] === 1;
+      const southOn = tz + 1 < this.ntz && tileOn[t + ntx] === 1;
       for (let iz = z0; iz < z1; iz++) {
+        const lastRow = iz + 1 === z1;
         for (let ix = x0; ix < x1; ix++) {
           const c = iz * nx + ix;
           const j = c * nl;
-          // Column conduction.
+          // Column conduction and the deep boundary below the last layer.
           for (let l = 0; l < nl - 1; l++) {
-            const a = j + l, b = a + 1;
-            const G = area / (L[l] / (2 * k[a]) + L[l + 1] / (2 * k[b]));
-            const q = G * (E[a] / C[a] - E[b] / C[b]);
-            gS[a] += G; gS[b] += G;
-            dE[a] -= q; dE[b] += q;
-            acc.conduction += Math.abs(q);
+            const a = j + l;
+            const G = Gc[a];
+            const q = G * (Tn[a] - Tn[a + 1]);
+            gS[a] += G; gS[a + 1] += G;
+            dE[a] -= q; dE[a + 1] += q;
+            cond += q < 0 ? -q : q;
           }
-          // Deep boundary below the last layer (adiabatic in a closed world).
           if (!closed) {
             const a = j + nl - 1;
-            const G = area / (L[nl - 1] / (2 * k[a]));
-            const q = G * (E[a] / C[a]);
+            const G = Gc[a];
+            const q = G * (Tn[a] - Tref);
             gS[a] += G;
             dE[a] -= q;
-            acc.deepGround += q;
+            deep += q;
           }
           // Lateral conduction (east and south faces; the neighbour must be active).
-          if (ix + 1 < nx && this.tileOn[tz * this.ntx + (((ix + 1) / TILE) | 0)]) for (let l = 0; l < nl; l++) lat(j + l, j + nl + l, l);
-          if (iz + 1 < this.nz && this.tileOn[(((iz + 1) / TILE) | 0) * this.ntx + tx]) for (let l = 0; l < nl; l++) lat(j + l, j + nx * nl + l, l);
+          if (ix + 1 < nx && (ix + 1 < x1 || eastOn)) {
+            for (let l = 0; l < nl; l++) {
+              const a = j + l, b = a + nl, G = Gx[a];
+              const q = G * (Tn[a] - Tn[b]);
+              gS[a] += G; gS[b] += G;
+              if (q !== 0) { dE[a] -= q; dE[b] += q; cond += q < 0 ? -q : q; }
+            }
+          }
+          if (iz + 1 < this.nz && (!lastRow || southOn)) {
+            for (let l = 0; l < nl; l++) {
+              const a = j + l, b = a + nx * nl, G = Gz[a];
+              const q = G * (Tn[a] - Tn[b]);
+              gS[a] += G; gS[b] += G;
+              if (q !== 0) { dE[a] -= q; dE[b] += q; cond += q < 0 ? -q : q; }
+            }
+          }
           // Surface.
           if (this.covered[c] || env.noSurface) continue;
-          const T0 = Tref + E[j] / C[j];
+          const T0 = Tn[j];
           const air = env.airIndex(ix, iz);
           const Ta = env.airT(air);
-          const R0 = L[0] / (2 * k[j]); // half-layer resistance (m²·K/W)
+          const r0 = R0[c]; // half-layer resistance (m²·K/W)
           const hw = water ? water.h[c] : 0;
           if (hw > WATER_MERGE) {
             // Water over the bed: bed ↔ water conduction, water ↔ air (convection + radiation).
             const Cw = RHO_WATER * C_WATER * hw * area;
             const Tw = Tref + water!.heat[c] / Cw;
             const hws = hWaterSide(Tw, T0);
-            const Gwb = hws > 0 ? area / (1 / hws + R0) : 0;
+            const Gwb = hws > 0 ? area / (1 / hws + r0) : 0;
             const qb = Gwb * (Tw - T0);
             dE[j] += qb; dW[c] -= qb;
-            acc.conduction += Math.abs(qb);
+            cond += Math.abs(qb);
             const hc = hGround(Tw, Ta, env.u2);
             const eps = 0.96;
             const qc = hc * area * (Tw - Ta);
             const qr = closed ? 0 : eps * SIGMA * area * (Tw * Tw * Tw * Tw - Tref * Tref * Tref * Tref);
             dW[c] -= qc + qr;
             env.toAir(air, qc, (4 / 3) * hc * area);
-            acc.convection += Math.abs(qc);
-            acc.radiationSky += qr;
-            // Bed side uses the water-side tangent (4/3: natural convection grows with ΔT^(1/3)).
+            conv += Math.abs(qc);
+            sky += qr;
             gS[j] += Gwb * (4 / 3);
             gW[c] = (Gwb * (4 / 3) + (4 / 3) * hc * area + (closed ? 0 : 4 * eps * SIGMA * Tw * Tw * Tw * area)) / Cw;
           } else {
-            const eps = this.emiss[c];
             const hc = hGround(T0, Ta, env.u2);
+            if (hc === 0 && T0 === Tref) continue;
+            const eps = this.emiss[c];
             const hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tref * Tref) * (T0 + Tref);
             // Surface temperature of the linearized balance through the half-layer resistance.
-            const Ts = (T0 / R0 + hc * Ta + hr * Tref) / (1 / R0 + hc + hr);
+            const Ts = (T0 / r0 + hc * Ta + hr * Tref) / (1 / r0 + hc + hr);
             const qc = hc * area * (Ts - Ta);
             const qr = hr * area * (Ts - Tref);
             dE[j] -= qc + qr;
-            env.toAir(air, qc, area / (R0 + 1 / Math.max(1e-12, (4 / 3) * hc)));
-            acc.convection += Math.abs(qc);
-            acc.radiationSky += qr;
+            env.toAir(air, qc, area / (r0 + 1 / Math.max(1e-12, (4 / 3) * hc)));
+            conv += qc < 0 ? -qc : qc;
+            sky += qr;
             const hTan = (4 / 3) * hc + (closed ? 0 : 4 * eps * SIGMA * T0 * T0 * T0);
-            gS[j] += hTan > 0 ? area / (R0 + 1 / hTan) : 0;
+            gS[j] += hTan > 0 ? area / (r0 + 1 / hTan) : 0;
           }
         }
       }
     }
+    acc.conduction += cond;
+    acc.convection += conv;
+    acc.deepGround += deep;
+    acc.radiationSky += sky;
     // Stability: the largest ΣG/C of the visited nodes (cleared for the next evaluation).
     let maxRate = this.extra;
     this.extra = 0;
     for (const t of this.tiles) {
-      const tx = t % this.ntx, tz = (t / this.ntx) | 0;
+      const tx = t % ntx, tz = (t / ntx) | 0;
       const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
       for (let iz = z0; iz < z1; iz++) {
-        for (let ix = x0; ix < x1; ix++) {
-          const c = iz * nx + ix;
+        for (let c = iz * nx + x0, ce = iz * nx + x1; c < ce; c++) {
           const j = c * nl;
           for (let l = 0; l < nl; l++) { const r = gS[j + l] / C[j + l]; if (r > maxRate) maxRate = r; gS[j + l] = 0; }
           if (gW[c] > maxRate) maxRate = gW[c];
@@ -305,6 +349,17 @@ export class TerrainThermal {
       }
     }
     return maxRate;
+  }
+
+  /** Rates (W) into surface layers from the fast operator (body contacts), applied with its step. */
+  private pend = new Map<number, number>();
+  addPending(c: number, W: number) {
+    this.pend.set(c, (this.pend.get(c) ?? 0) + W);
+  }
+  applyPending(h: number) {
+    if (!this.pend.size) return;
+    for (const [c, W] of this.pend) this.E[c * this.nl] += W * h;
+    this.pend.clear();
   }
 
   /** Apply the accumulated rates over dt and clear them. Water heat applies to the link. */

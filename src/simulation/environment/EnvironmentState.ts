@@ -10,6 +10,8 @@ import { DeformationChannel } from '../deformation/DeformationChannel';
 import { GroundFailureChannel } from '../ground/GroundFailureChannel';
 import { ImpactChannel } from '../impact/ImpactChannel';
 import { BlastChannel } from '../blast/BlastChannel';
+import { ThermalChannel } from '../thermal/ThermalChannel';
+import { defaultThermalSettings, type ThermalSettings } from '@/thermal/ThermalWorld';
 
 /**
  * Shared environmental fields. Events WRITE the global values; systems READ local values.
@@ -39,7 +41,9 @@ export interface EnvironmentState {
   impact: ImpactChannel;
   /** Pressure channel (Phase 24): air-pressure waves (virtual releases, impact airbursts / air-coupled shares). */
   blast: BlastChannel;
-  // Future: fire?: FireField;
+  /** Temperature channel (Phase 26): heat sources, impact heat deposits, the thermal state of the run. */
+  thermal: ThermalChannel;
+  // Future: fire?: FireField (Phase 27, on top of the temperature channel).
 }
 
 export function createEnvironment(
@@ -48,6 +52,7 @@ export function createEnvironment(
   seed = 1,
   terrain: TerrainSampler = flatSampler(),
   water: WaterSettings = defaultWaterSettings(),
+  thermal: ThermalSettings = defaultThermalSettings(),
 ): EnvironmentState {
   const wind = new WindField();
   wind.terrain = terrain;
@@ -59,6 +64,7 @@ export function createEnvironment(
     groundFailure: new GroundFailureChannel(terrain.data, deformation),
     impact: new ImpactChannel(),
     blast: new BlastChannel(),
+    thermal: new ThermalChannel(thermal, airDensity),
   };
 }
 

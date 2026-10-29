@@ -45,6 +45,15 @@ export interface ImpactSpec {
   airBlast?: boolean;
   /** Fraction of the ground-impact kinetic energy coupled into the air (default 0.02; 0.001–0.5). */
   airCoupling?: number;
+  /**
+   * Share of the ground-impact kinetic energy deposited as HEAT in the crater's surface (Phase 26,
+   * opt-in; absent / 0 = Phase 25 behaviour). Taken out of the energy the crater model leaves
+   * unresolved (after the air-coupled share), never out of the seismic or ejecta shares; capped at
+   * what is left. Literature puts the internal energy of the target at tens of percent for
+   * hypervelocity impacts (e.g. O'Keefe & Ahrens 1977), but most of it is in melt / vapour that this
+   * model does not resolve — the share is a user choice, not a prediction.
+   */
+  thermalShare?: number;
   seed?: number;
   startTime?: number;
   name?: string;
@@ -56,6 +65,7 @@ export const IMPACT_LIMITS = {
   speed: [1000, 72000],
   angle: [5, 90],
   airCoupling: [0.001, 0.5],
+  thermalShare: [0, 0.5],
 } as const;
 
 /**

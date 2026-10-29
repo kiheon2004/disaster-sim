@@ -25,6 +25,11 @@ export interface ExposureState {
   atmosphereMeasured: false;
   /** Peaks over the run. */
   peak: { wind: number; waterDepth: number; flowSpeed: number; groundAccel: number };
+  /**
+   * Thermal exposure (Phase 26, only in runs with a heat source): air-layer temperature around the
+   * person (K) and the radiant flux of the sources they face (W/m²), current and peak. No physiology.
+   */
+  thermal?: { airT: number; radiant: number; peakAirT: number; peakRadiant: number };
   /** Seconds with water ≥ 0.1 m / wind ≥ 20 m/s / shaking ≥ 0.1 g. */
   time: { water: number; wind: number; shaking: number };
 }

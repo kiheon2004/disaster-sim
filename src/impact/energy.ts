@@ -37,14 +37,18 @@ export interface EnergyPartition {
   blast: number;
   /** Part of `atmosphere` released as an airburst pressure wave (Phase 24; 0 otherwise). Not an extra share. */
   airburstBlast: number;
+  /** Heat deposited in the crater's surface (Phase 26 `thermalShare`), taken from what is still unresolved. */
+  thermal: number;
 }
 
-export function partition(initial: number, impact: number, seismic: number, ejectaKinetic: number, airCoupling = 0, airburst = 0): EnergyPartition {
+export function partition(initial: number, impact: number, seismic: number, ejectaKinetic: number, airCoupling = 0, airburst = 0, thermalShare = 0): EnergyPartition {
   const atmosphere = Math.max(0, initial - impact);
   const left = Math.max(0, impact - seismic - ejectaKinetic);
   // The air takes its share from the unresolved energy only (never the seismic / ejecta shares).
   const blast = Math.min(left, Math.max(0, airCoupling) * impact);
-  return { initial, atmosphere, impact, seismic, ejectaKinetic, unresolved: left - blast, blast, airburstBlast: Math.min(atmosphere, Math.max(0, airburst)) };
+  // Heat (Phase 26): from what is still unresolved after the air's share.
+  const thermal = Math.min(left - blast, Math.max(0, thermalShare) * impact);
+  return { initial, atmosphere, impact, seismic, ejectaKinetic, unresolved: left - blast - thermal, blast, airburstBlast: Math.min(atmosphere, Math.max(0, airburst)), thermal };
 }
 
 export const tntTonnes = (E: number) => E / TNT_J_PER_TONNE;

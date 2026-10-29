@@ -37,7 +37,9 @@ export interface SystemContext {
 export type StateKey =
   | 'airflow' | 'groundMotion' | 'water' | 'forces' | 'poses' | 'structure' | 'damage' | 'exposure' | 'debris' | 'particles' | 'metrics'
   // Phase 21: the ground surface itself (heights, collider) — written only by the DeformationSystem.
-  | 'terrain';
+  | 'terrain'
+  // Phase 26: the thermal state (temperatures, heat) — written only by the ThermalSystem.
+  | 'temperature';
 
 /**
  * A unit of simulation logic run on the fixed-step clock.

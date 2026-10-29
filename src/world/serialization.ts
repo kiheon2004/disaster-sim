@@ -1,3 +1,4 @@
+import { AMBIENT_LIMITS } from '@/thermal/units';
 import { z } from 'zod';
 import { SCHEMA_VERSION, defaultScenario } from './WorldDocument';
 import { DEFAULT_WIND_MODEL, defaultFloodScenario, defaultSimulationSettings, defaultWaterSettings, type WaterSettings, type WorldDocument, type WorldObject } from '@/core/model';
@@ -140,6 +141,12 @@ const documentSchema = z.object({
         interactions: z.object({ enabled: z.boolean() }).optional().catch(undefined),
         // Phase 19: vegetation options (absent = off).
         vegetation: z.object({ canopyShelter: z.boolean(), floodResponse: z.boolean() }).partial().optional().catch(undefined),
+        // Phase 26: thermal settings (absent = defaults; invalid values are dropped, not fixed).
+        thermal: z.object({
+          ambient: z.number().min(AMBIENT_LIMITS[0]).max(AMBIENT_LIMITS[1]),
+          airLayerHeight: z.number().min(2).max(50),
+          restraint: z.enum(['frame', 'full', 'none']),
+        }).optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -340,6 +347,7 @@ export function parseDocument(json: string): LoadResult {
       wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) },
       water: normalizeWater(sim?.water),
       interactions: { enabled: sim?.interactions?.enabled ?? res.data.schemaVersion >= 5 },
+      ...(sim?.thermal ? { thermal: { ...sim.thermal } } : {}),
       ...(sim?.vegetation ? { vegetation: { canopyShelter: !!sim.vegetation.canopyShelter, floodResponse: !!sim.vegetation.floodResponse } } : {}),
     },
   };

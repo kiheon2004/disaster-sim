@@ -67,6 +67,7 @@ export const impact = implemented<ImpactSpec>({
       ...nested<ImpactSpec>((s) => (s.airBlast ? 'on' : 'off'), (s, v) => { const n = { ...s, airBlast: v === 'on' }; if (!n.airBlast) delete n.airCoupling; return n; }),
     },
     { visible: (s) => !!(s as ImpactSpec).airBlast, key: 'airCoupling', labelKey: 'impact.f.airCoupling', unit: '%', min: IMPACT_LIMITS.airCoupling[0] * 100, max: IMPACT_LIMITS.airCoupling[1] * 100, step: 0.5, precision: 1, scale: 100, optional: true, autoValue: () => DEFAULT_AIR_COUPLING },
+    { key: 'thermalShare', labelKey: 'impact.f.thermalShare', unit: '%', min: 0, max: IMPACT_LIMITS.thermalShare[1] * 100, step: 1, precision: 1, scale: 100, optional: true, autoValue: () => 0 },
   ] as ParamField[],
   createEvent: (spec, now, ctx) => new ImpactEvent(spec, now, ctx.seed),
   duration: (spec) => impactEventDuration(spec),
@@ -89,6 +90,8 @@ export const impact = implemented<ImpactSpec>({
       const E = p.airburst ? p.partition.airburstBlast : p.partition.blast;
       out.push({ key: p.airburst ? 'impact.as.airBlastBurst' : 'impact.as.airBlast', params: { E: fmtE(E), pct: ((spec.airCoupling ?? DEFAULT_AIR_COUPLING) * 100).toFixed(1) } });
     } else out.push({ key: 'impact.as.noAirBlast' });
+    // Phase 26: heat deposited in the crater (opt-in share of the unresolved energy).
+    out.push(p.partition.thermal > 0 ? { key: 'impact.as.thermal', params: { E: fmtE(p.partition.thermal), pct: ((spec.thermalShare ?? 0) * 100).toFixed(1) } } : { key: 'impact.as.noThermal' });
     for (const w of p.warnings) out.push({ key: w.key as MessageKey, params: w.params });
     return out;
   },

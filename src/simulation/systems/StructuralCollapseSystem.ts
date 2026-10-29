@@ -44,6 +44,7 @@ export function damageCause(c: FailCause, storyCause?: DamageCause): DamageCause
     case 'overpressure': return 'overpressure';
     case 'impact': return 'impact';
     case 'foundation': case 'bearing': return 'foundation';
+    case 'thermal': return 'thermal';
     case 'story': return storyCause ?? 'drift';
     default: return 'gravity';
   }

@@ -95,6 +95,8 @@ export class ImpactEvent implements SimulationEvent<ImpactSpec> {
       env.impact.blasts.push({ source: `impact:${name}`, position: [x, plan.entry.airburst.altitude, z], time: this.startTime + plan.entry.airburst.time, energy: plan.entry.airburst.energy, kind: 'airburst' });
     } else if (plan.crater) {
       env.impact.blasts.push({ source: `impact:${name}`, position: [...plan.arc.point], time: this.startTime + plan.timeToImpact, energy: plan.partition.blast, kind: 'surface' });
+      // Phase 26: the heat share (opt-in) goes into the crater's surface at the moment of impact.
+      if (plan.partition.thermal > 0) env.thermal.addDeposit({ id: `impact:${name}`, time: this.startTime + plan.timeToImpact, energy: plan.partition.thermal, x: plan.arc.point[0], z: plan.arc.point[2], radius: Math.max(0.5, plan.crater.radius) });
     }
     // Phase 24: the recorded blast source becomes a pressure wave — with exactly the energy recorded
     // for it (airburst energy, or the air-coupled share of the ground impact), nothing else.

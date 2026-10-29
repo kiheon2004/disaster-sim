@@ -106,9 +106,30 @@ export const WIND_SLOPE = 3.0;
 /** Upper wind speed of the measured range of the wind function (m/s). */
 export const WIND_FUNCTION_MAX = 7;
 
+/**
+ * Air properties tabulated per kelvin of film temperature for the hot loops (ground cells):
+ * conductivity and g/(T·ν·α), so Ra = RA·ΔT·L³ (same Sutherland relations as airProps()).
+ */
+const TAB0 = 150, TABN = 2351;
+const TAB_K = new Float64Array(TABN), TAB_RA = new Float64Array(TABN);
+for (let i = 0; i < TABN; i++) {
+  const p = airProps(TAB0 + i);
+  TAB_K[i] = p.k;
+  TAB_RA[i] = GRAVITY / ((TAB0 + i) * p.nu * p.alpha);
+}
+
 /** Outdoor ground / water surface facing up: natural (L = 1 m cell) + wind function. */
 export function hGround(Ts: number, Ta: number, U2: number, L = 1): number {
-  return mixed(hNaturalHorizontal(Ts, Ta, L, true), WIND_SLOPE * Math.max(0, U2));
+  const hF = WIND_SLOPE * (U2 > 0 ? U2 : 0);
+  const dT = Ts - Ta;
+  if (dT === 0) return hF;
+  const i = Math.max(0, Math.min(TABN - 1, Math.round(0.5 * (Ts + Ta)) - TAB0));
+  const k = TAB_K[i];
+  const Ra = TAB_RA[i] * (dT > 0 ? dT : -dT) * L * L * L;
+  // Heated face up: 0.54·Ra^¼ / 0.15·Ra^⅓; cooled face up (stable): 0.52·Ra^⅕.
+  const Nu = dT > 0 ? (Ra <= 1e7 ? 0.54 * Math.sqrt(Math.sqrt(Ra)) : 0.15 * Math.cbrt(Ra)) : 0.52 * Math.pow(Ra, 0.2);
+  const hN = (Nu * k) / L;
+  return hF === 0 ? hN : Math.cbrt(hN * hN * hN + hF * hF * hF);
 }
 
 /**

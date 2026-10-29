@@ -20,6 +20,7 @@ export const impactSchema = z.object({
   entry: z.enum(['atmosphere', 'direct']),
   airBlast: z.boolean().optional(),
   airCoupling: range(IMPACT_LIMITS.airCoupling).optional(),
+  thermalShare: range(IMPACT_LIMITS.thermalShare).optional(),
   seed: z.number().int().nonnegative().optional(),
   startTime: z.number().min(0).optional(),
   name: z.string().max(40).optional(),
