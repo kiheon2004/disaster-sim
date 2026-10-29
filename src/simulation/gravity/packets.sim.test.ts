@@ -15,6 +15,7 @@ import { T_MELT } from '@/climate/constants';
 import { MS } from '@/structure/types';
 import { GRAVITY } from '@/core/units';
 import type { CollapseModel } from '@/structure/collapse';
+import { worldFingerprint } from '@/world/fingerprint';
 import { gravity } from './testSpecs';
 
 const S = () => useWorldStore.getState();
@@ -132,6 +133,27 @@ describe('roof-snow packets (H2 / M2)', { timeout: 900_000 }, () => {
     const stored = r.cw.packetMass();
     const carriedPk = r.packets.reduce((s, q) => s + r.cw.packets[q.p].m, 0);
     expect(stored).toBeCloseTo(carriedPk, 6);
+    c.unload();
+  });
+
+  it('restoration (§16): roof snow packets falling under 2 g then reversed gravity — reset gives the original world, the rerun is identical', async () => {
+    const events = [climate({ initialSnow: 1.2, initialSnowDensity: 300 }), gravity({ magnitude: 2 * 9.81, startTime: 1, duration: 5 }), gravity({ name: 'rev', magnitude: 9.81, direction: [0, 1, 0], startTime: 6, duration: 2 })];
+    const c = await start('house', events);
+    const doc = structuredClone(S().doc);
+    const fp = worldFingerprint(doc);
+    c.advance(9);
+    const sig = (cc: SimulationController) => {
+      const r = crt(cc), m = model(cc);
+      return JSON.stringify([r.cw.packets.map((p) => [p.m, p.done, p.to ?? '']), Array.from(m.state), m.records.length, r.stats.waterResidual < 1e-8, cc.getEnvironment().gravity.rt!.balance().workGravity]);
+    };
+    const s1 = sig(c);
+    expect(crt(c).cw.packets.length).toBeGreaterThan(0);
+    await c.reset();
+    expect(c.getEnvironment().gravity.field).toBeNull();
+    for (const e of events) c.addEvent(e);
+    c.advance(9);
+    expect(sig(c)).toBe(s1);
+    expect(worldFingerprint(S().doc)).toBe(fp);
     c.unload();
   });
 });

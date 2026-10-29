@@ -180,3 +180,62 @@ describe.skipIf(!process.env.BENCH)('gravity benchmark', () => {
     if (process.env.BENCH_OUT) fs.writeFileSync(process.env.BENCH_OUT, JSON.stringify({ date: new Date().toISOString(), node: process.version, cpus: os.cpus()[0]?.model, load: os.loadavg().map((v) => +v.toFixed(1)), build: HAS ? 'phase31' : 'phase30', rows }, null, 2));
   });
 });
+
+/**
+ * Phase 31 audit (§19): long runs — LONG=<seconds> (≥ 600) of the scenes in LONG_SCENES (prefixes), 1 s steps, a
+ * health sample every 60 simulated seconds: non-finite / negative values in the gravity ledger, the water budget,
+ * the climate / thermal ledgers, the structural mass ledger; heap, Rapier bodies, debris, cost per simulated second.
+ *   BENCH=1 LONG=600 LONG_SCENES="3 ,9 ,10 ,7 ,19 ,16 ,20 ,23 " NODE_OPTIONS=--expose-gc npx vitest run src/bench/gravity.bench (BENCH_OUT=file.json)
+ */
+describe.skipIf(!process.env.BENCH || !process.env.LONG)('gravity long runs', () => {
+  it('long', { timeout: 28_800_000 }, async () => {
+    const T = +process.env.LONG!;
+    const only = (process.env.LONG_SCENES ?? '3 ,9 ,10 ,7 ,19 ,16 ,20 ,23 ').split(',');
+    const rows: Any[] = [];
+    for (const sc of SCENES) {
+      if (!only.some((o) => sc.name.startsWith(o))) continue;
+      const c = new SimulationController({ headless: true });
+      await c.load(sc.doc());
+      // The gravity experiments run for the whole long run (held at their end value).
+      for (const e of sc.events) c.addEvent(e.event === 'gravity' ? ({ ...e, duration: Math.max(T, (e as Any).duration), end: (e as Any).end === 'restore' && (e as Any).profile !== 'pulse' && (e as Any).profile !== 'cyclic' ? 'hold' : (e as Any).end } as EventSpec) : e);
+      const samples: Any[] = [];
+      let bad: string[] = [];
+      const t0 = performance.now();
+      let last = t0;
+      for (let s = 1; s <= T; s++) {
+        c.advance(1);
+        if (s % 60 !== 0 && s !== T) continue;
+        const env = c.getEnvironment() as unknown as Any;
+        const b = env.gravity?.rt?.balance();
+        const now = performance.now();
+        const sample: Any = { t: s, msPerSimS: +((now - last) / 60).toFixed(1), heapMB: heapMB(), bodies: c.getPhysics()!.bodyCount(), debris: c.getRuntime()!.debris.length };
+        last = now;
+        if (b) {
+          for (const [k, v] of Object.entries(b)) for (const x of Array.isArray(v) ? v : [v]) if (typeof x === 'number' && !Number.isFinite(x) && !['potential', 'fieldResidual', 'energyResidual', 'workField'].includes(k)) bad.push(`t${s} gravity.${k}`);
+          sample.energyRelGross = Number.isFinite(b.energyResidual) && b.workGravityGross > 0 ? +Math.abs(b.energyResidual / b.workGravityGross).toExponential(2) : null;
+          sample.workOther = +b.workOther.toExponential(3);
+        }
+        const f = env.flood?.field;
+        if (f) {
+          sample.waterErrRel = +(Math.abs(f.budget.error) / Math.max(1, f.budget.initial + f.budget.rain + f.budget.sources + f.budget.boundaryIn)).toExponential(2);
+          for (let i = 0; i < f.count; i++) if (!Number.isFinite(f.h[i]) || f.h[i] < 0) { bad.push(`t${s} water.h[${i}]`); break; }
+        }
+        const cs = env.climate?.rt?.stats;
+        if (cs) { sample.climateW = +cs.waterResidual.toExponential(2); sample.climateE = +cs.energyResidual.toExponential(2); if (!Number.isFinite(cs.waterResidual) || !Number.isFinite(cs.energyResidual)) bad.push(`t${s} climate`); }
+        for (const e of c.getRuntime()!.entities.values()) {
+          if (!e.pose.position.every(Number.isFinite)) bad.push(`t${s} pose ${e.id}`);
+          const m = e.modular?.structure?.model;
+          if (m) for (let i = 0; i < m.n; i++) if (!Number.isFinite(m.s.load[i]) || m.s.extra[i] < -1e-6) { bad.push(`t${s} struct ${e.id}#${i}`); break; }
+        }
+        samples.push(sample);
+      }
+      bad = [...new Set(bad)].slice(0, 20);
+      const row = { scene: sc.name, seconds: T, wallS: +((performance.now() - t0) / 1000).toFixed(1), bad, samples };
+      console.log(JSON.stringify({ scene: row.scene, wallS: row.wallS, bad: row.bad, first: samples[0], last: samples[samples.length - 1] }));
+      rows.push(row);
+      c.unload();
+    }
+    if (process.env.BENCH_OUT) fs.writeFileSync(process.env.BENCH_OUT, JSON.stringify({ date: new Date().toISOString(), load: os.loadavg().map((v) => +v.toFixed(1)), rows }, null, 2));
+  });
+});
+
