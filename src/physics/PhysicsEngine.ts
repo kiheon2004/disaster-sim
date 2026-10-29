@@ -99,6 +99,8 @@ export interface PhysicsEngine {
   isSleeping(h: BodyHandle): boolean;
   /** Total mass of a body (kg). */
   getMass(h: BodyHandle): number;
+  /** The body exists (not removed). */
+  hasBody(h: BodyHandle): boolean;
   wake(h: BodyHandle): void;
   /** Put a body to sleep (it wakes on the next applied force or contact change). */
   sleep(h: BodyHandle): void;

@@ -278,6 +278,10 @@ export class RapierEngine implements PhysicsEngine {
     return this.bodies.get(h)?.mass() ?? 0;
   }
 
+  hasBody(h: BodyHandle) {
+    return this.bodies.has(h);
+  }
+
   isSleeping(h: BodyHandle) {
     return this.bodies.get(h)?.isSleeping() ?? true;
   }

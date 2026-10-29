@@ -37,11 +37,15 @@ interface Tracked {
   /** Contact threshold: floor (N) and factor on the resting weight (RuntimeBuilder / spawn / fragments). */
   thrMin: number;
   thrK: number;
-  /** Φ(x₁, t) of the last step (NaN without a potential) and the last velocity (bodies leaving). */
-  phi: number;
-  v: Vec3;
-  seen: number;
+  /** Start of this step: position, velocity, Φ(x₀, t). */
   x0: Vec3;
+  v0: Vec3;
+  phi0: number;
+  /** End of the last step: position, velocity, Φ(x₁, t) (NaN without a potential) — what the ledger last booked. */
+  x1: Vec3;
+  v: Vec3;
+  phi: number;
+  seen: number;
   g: Vec3;
 }
 
@@ -115,6 +119,9 @@ export class GravityRuntime {
   private readonly vel = new Float64Array(3);
   /** Uniform vector of the previous step (structures: a static field needs no re-sampling). */
   private lastG: Vec3 = [NaN, NaN, NaN];
+  /** Bodies moved outside the integrator since the last ledger step (scratch), time of that step. */
+  private readonly movedBodies: Tracked[] = [];
+  private lastTime = 0;
 
   constructor(ch: GravityChannel) {
     this.ch = ch;
@@ -154,23 +161,28 @@ export class GravityRuntime {
       let tr = this.tracked.get(h);
       const fresh = !tr;
       if (!tr) {
-        tr = { h, m: physics.getMass(h), owner, thrMin, thrK, phi: NaN, v: [0, 0, 0], seen: 0, x0: [0, 0, 0], g: [0, 0, 0] };
+        tr = { h, m: physics.getMass(h), owner, thrMin, thrK, x0: [0, 0, 0], v0: [0, 0, 0], phi0: NaN, x1: [0, 0, 0], v: [0, 0, 0], phi: NaN, seen: 0, g: [0, 0, 0] };
         this.tracked.set(h, tr);
       }
       tr.seen = stamp;
-      const x = tr.x0;
+      const x = tr.x0, v0 = tr.v0;
       physics.readMotion(h, this.pos, this.vel, 0);
       const p = this.pos, v = this.vel;
       x[0] = p[0]; x[1] = p[1]; x[2] = p[2];
+      v0[0] = v[0]; v0[1] = v[1]; v0[2] = v[2];
       if (thresholds || (fresh && thrG > this.ch.g0)) physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
       if (thresholds) physics.wake(h);
       const phi = f.potential(x[0], x[1], x[2]);
+      tr.phi0 = phi;
       if (start) {
         k0 += 0.5 * tr.m * (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
         u0 += tr.m * phi;
         p0[0] += tr.m * v[0]; p0[1] += tr.m * v[1]; p0[2] += tr.m * v[2];
       } else if (fresh) ledger.boundary(1, tr.m, v, phi);
-      else if (!Number.isNaN(phi) && !Number.isNaN(tr.phi)) ledger.workField += tr.m * (phi - tr.phi);
+      // Moved outside the integrator since the last ledger step (pose set by a later system): the field-change term
+      // needs Φ at the last step's time at the NEW position (evaluated below, once for all moved bodies).
+      else if (x[0] !== tr.x1[0] || x[1] !== tr.x1[1] || x[2] !== tr.x1[2]) this.movedBodies.push(tr);
+      else ledger.field(tr.m, phi, tr.phi);
       const g = f.sample(x[0], x[1], x[2], tr.g);
       if (!f.uniform) {
         const dx = g[0] - G[0], dy = g[1] - G[1], dz = g[2] - G[2];
@@ -193,10 +205,21 @@ export class GravityRuntime {
     // Bodies that left the set (removed debris, bodies made fixed).
     for (const [h, tr] of this.tracked) {
       if (tr.seen === stamp) continue;
-      if (!start) ledger.boundary(-1, tr.m, tr.v, Number.isNaN(tr.phi) ? 0 : tr.phi);
+      if (!start) ledger.boundary(-1, tr.m, tr.v, tr.phi);
       this.tracked.delete(h);
     }
     if (start) ledger.start(k0, u0, p0);
+    if (this.movedBodies.length) {
+      // Φ(x′, t_prev): the field of the last step, then back to this step's (prepare is deterministic and idempotent).
+      f.prepare(this.lastTime);
+      for (const tr of this.movedBodies) {
+        const old = f.potential(tr.x0[0], tr.x0[1], tr.x0[2]);
+        ledger.moved(tr.m, old, tr.phi);
+        ledger.field(tr.m, tr.phi0, old);
+      }
+      f.prepare(ctx.time);
+      this.movedBodies.length = 0;
+    }
     this.fieldChanging = this.fieldSignature();
     const ts = performance.now();
     const moved = G[0] !== this.lastG[0] || G[1] !== this.lastG[1] || G[2] !== this.lastG[2];
@@ -235,13 +258,22 @@ export class GravityRuntime {
     const physics = ctx.physics, f = this.field, ledger = this.ledger;
     ledger.beginStep();
     for (const tr of this.tracked.values()) {
+      // Removed after the field step and before this one (a prePhysics system recycling debris): it leaves with its
+      // state at the start of the step (no motion of a body that no longer exists is booked).
+      if (!physics.hasBody(tr.h)) {
+        ledger.boundary(-1, tr.m, tr.v0, tr.phi0);
+        this.tracked.delete(tr.h);
+        continue;
+      }
       physics.readMotion(tr.h, this.pos, this.vel, 0);
       const p = this.pos, v = this.vel;
       const phi = f.potential(p[0], p[1], p[2]);
-      ledger.body(tr.m, tr.x0, p, v, tr.g, dt, phi, phi);
+      ledger.body(tr.m, tr.x0, p, tr.v0, v, tr.g, dt, tr.phi0, phi);
       tr.phi = phi;
+      tr.x1[0] = p[0]; tr.x1[1] = p[1]; tr.x1[2] = p[2];
       tr.v[0] = v[0]; tr.v[1] = v[1]; tr.v[2] = v[2];
     }
+    this.lastTime = ctx.time;
     ledger.endStep(f.potentialDefined);
     if (ctx.time + dt >= this.nextSeries) {
       this.nextSeries = ctx.time + dt + SERIES_DT;
