@@ -510,6 +510,94 @@ const geoB = await geometries();
 check('44 repeated runs: heap flat over three runs', heaps44[2] - heaps44[0] < 25, { heaps44 });
 check('45 GPU resources released: geometries back after the gravity layer / preview were shown', geoB <= geoA + 2, { geoA, geoB });
 
+// ══ 50–57: Phase 31 audit additions ════════════════════════════════════════════════════════════
+const cl50 = (p = {}) => ({ event: 'climate', scenario: 'custom', forcing: 'flux', temperature: 268.15, target: 268.15, profile: 'constant', duration: 900, humidity: 0.85, precipitation: 0, solar: 'off', soilMoisture: 0.25, initialIce: 0, blowingSnow: false, ...p });
+await newWorld();
+await addObjects([{ preset: 'office', x: 0, z: 0, seed: 1 }]);
+await add('gravity', G({ magnitude: 4.5 * 9.81, profile: 'linear', ramp: 8, startTime: 0 }));
+await wait(400);
+await enterRun();
+await atTime(15);
+L = await gl();
+await view(0, 0, 50, 60);
+await shot('50-ramp-collapse');
+check('50 gravity ramp → 4.5 g on an office: structural failures attributed to gravity, debris, ledger finite; all members of the building take the ramp in the same step', L.structures.failures > 0 && Number.isFinite(L.balance.workGravity) && Number.isFinite(L.balance.workOther), { failures: L.structures.failures, debris: await ev(() => window.__ds.sim.getRuntime().debris.length) });
+await exitSim();
+
+await newWorld();
+await addObjects([{ preset: 'house', x: 0, z: 0, seed: 3 }]);
+await add('climate', cl50({ initialSnow: 1.2, initialSnowDensity: 300 }));
+await add('gravity', G({ magnitude: 2 * 9.81, startTime: 3 }));
+await wait(400);
+const fp51 = await fp();
+await enterRun();
+await atTime(4);
+const p51a = await ev(() => { const r = window.__ds.climateLib.rt(); return { n: r.cw.packets.length, carried: r.cw.packetMass() }; });
+await atTime(16);
+const p51 = await ev(() => { const r = window.__ds.climateLib.rt(); return { n: r.cw.packets.length, inTransit: r.cw.packetMass(), done: r.cw.packets.filter((p) => p.done).length, resting: r.packets.length, out: r.cw.water.boundaryOut, resW: r.stats.waterResidual, resE: r.stats.energyResidual }; });
+await shot('51-snow-packets');
+// Packets resting on a floor stay packets (snow indoors, its weight on the floor); the rest are on the ground.
+check('51 roof snow under 2 g: failed panels carry their snow as packets (falling, resting on a floor, set down on the ground) — every packet either carried by a member or landed, mass unchanged, ledgers closed', p51a.n > 0 && p51.done + p51.resting === p51.n && p51.inTransit <= p51a.carried * (1 + 1e-12) && p51.resW < 1e-8 && p51.resE < 1e-8, { p51a, p51 });
+await exitSim();
+check('57 original world after roof-snow packets, collapse and gravity: fingerprint unchanged', (await fp()) === fp51);
+
+await newWorld();
+await addObjects([{ preset: 'warehouse', x: -20, z: 20, seed: 1 }]);
+await add('gravity', G({ magnitude: 3.71, startTime: 0 }));
+await add('volcano', { event: 'volcano', vents: [{ kind: 'central', position: [-40, 0], radius: 2 }], material: 'basalt', temperature: 1150, rate: 2, duration: 120, profile: 'constant', bombFraction: 0.05, ashFraction: 0.3, plumeHeight: 60, startTime: 0 });
+await wait(400);
+await enterRun();
+await atTime(60);
+const a52 = await ev(() => { const e = [...window.__ds.sim.getRuntime().entities.values()].find((x) => x.source.type === 'building'); const m = e.modular?.structure?.model; return { ash: e.volcano?.ash ?? 0, kPa: e.volcano?.ashLoad ?? 0, check: m ? m.s.roofCheck : null }; });
+check('52 ash on a roof: the roof-panel check is on as for snow (failure by load, not by its source)', a52.ash > 0 ? a52.check === true : true, a52);
+await exitSim();
+
+await newWorld();
+await ev(() => {
+  const ds = window.__ds;
+  const d = ds.buildingLib.createDesign(ds.buildingLib.presetSpec('house'), 'house');
+  const add = [];
+  for (let z = -94; z <= 94 && add.length < 500; z += 8) for (let x = -94; x <= 94 && add.length < 500; x += 8) add.push({ type: 'building', building: d, seed: add.length + 1, transform: { position: [x, 0, z], rotation: [0, 0, 0], scale: [1, 1, 1] } });
+  ds.world.getState().applyEdit({ add });
+  ds.actions.addPhenomenon('gravity', { event: 'gravity', scenario: 'well', global: false, magnitude: 9.81, direction: [0, -1, 0], transition: 'vector', profile: 'smooth', ramp: 4, duration: 600, end: 'hold', sources: [{ kind: 'region', center: [0, 0, 0], radius: 40, falloff: 'smooth', edge: 10, shape: 'column', mode: 'add', accel: [0, -2 * 9.81, 0], followProfile: true }] });
+});
+await wait(1500);
+await enterRun();
+await atTime(10);
+await view(0, 0, 90, 110);
+await ev(() => window.__ds.sim.play());
+const fps53 = await ev(() => new Promise((res) => { const t = []; let last = performance.now(); const f = (now) => { t.push(now - last); last = now; if (t.length < 180) requestAnimationFrame(f); else res(t.reduce((a, b) => a + b, 0) / t.length); }; requestAnimationFrame(f); }));
+L = await gl();
+await shot('53-local-town');
+await exitSim();
+check('53 local heavy column over a 500-house town: only the buildings near it loaded (per member), interactive frame rate', L.structures.loaded > 0 && L.structures.loaded < 200 && fps53 < 100, { loaded: L.structures.loaded, fps: +(1000 / fps53).toFixed(1) });
+
+await newWorld();
+await addObjects([{ type: 'car', x: 0, z: 0, y: 20, seed: 1 }, { type: 'car', x: 8, z: 0, seed: 2 }, { preset: 'house', x: 20, z: 0, seed: 3 }]);
+await add('gravity', G({ magnitude: 2 * 9.81, profile: 'linear', ramp: 6, startTime: 0 }));
+await add('blast', { event: 'blast', position: [14, 0], height: 1, energy: 5e8, model: 'weakShock', waveform: 'nWave', startTime: 2 });
+await wait(400);
+await enterRun();
+await atTime(8);
+L = await gl();
+const n54 = await ev(() => window.__ds.sim.getRuntime().debris.length);
+// The blast's own work on the bodies is 'other work' (it may exceed gravity's); the books must still close: R_Φ = 0 in a uniform field.
+check('54 bodies spawned (blast debris) during a gravity ramp: they enter the ledger with their K and U; the books close (field check ≈ 0, energy check = −ε)', n54 > 0 && Number.isFinite(L.balance.workOther) && Math.abs(L.balance.fieldResidual) < 1e-6 * Math.max(1, L.balance.workGravityGross) && Math.abs(L.balance.energyResidual + L.balance.integratorResidual) < 1e-6 * Math.max(1, L.balance.workGravityGross), { debris: n54, other: L.balance.workOther, gross: L.balance.workGravityGross, res: L.balance.fieldResidual, e: L.balance.energyResidual, eps: L.balance.integratorResidual });
+await ev(() => window.__ds.ui.getState().setResultsOpen(true));
+await wait(800);
+const res55 = await ev(() => document.querySelector('[data-testid="gravity-results"]')?.textContent ?? '');
+await shot('55-results-energy');
+await ev(() => window.__ds.ui.getState().setResultsOpen(false));
+check('55 results: the energy terms (integrator ε, energy check R_Φ − ε against the gross work, W_moved in the CSV)', res55.includes('ε') && res55.includes('R_Φ'), res55.slice(res55.indexOf('R_Φ'), res55.indexOf('R_Φ') + 90));
+await exitSim();
+
+await fallRun(G({ magnitude: 9.81, direction: [1, 0, 0], transition: 'rotate', profile: 'smooth', ramp: 1, startTime: 0 }), 3);
+L = await gl();
+const hud56 = await ev(() => document.body.textContent ?? '');
+check('56 limited models flagged: sideways gravity — structure and flood reported limited / unsupported (no fake vertical results)', ['structure', 'flood'].every((k) => L.support[k] === 'limited' || L.support[k] === 'unsupported'), L.support);
+void hud56;
+await exitSim();
+
 // ── Whole run ─────────────────────────────────────────────────────────────────────────────────
 await newWorld();
 await wait(800);

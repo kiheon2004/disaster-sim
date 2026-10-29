@@ -1,6 +1,6 @@
 {
   "lang": "ko",
-  "url": "http://localhost:4231/",
+  "url": "http://localhost:4199/",
   "results": [
     {
       "name": "1 gravity tool: a gravity experiment added from the Experiment tab (scenario, global, magnitude, multiple, direction, transition, profile, duration, end, add source)",
@@ -325,8 +325,8 @@
       "ok": true,
       "detail": {
         "rooms": 2,
-        "smokeAir": 0.0023352378136346956,
-        "minVisibility": 36.915682012508555
+        "smokeAir": 0.002335237813604283,
+        "minVisibility": 36.915682012989315
       }
     },
     {
@@ -470,7 +470,7 @@
           "geometries": 17,
           "textures": 3
         },
-        "ms": 0.10000000149011612
+        "ms": 0
       }
     },
     {
@@ -479,7 +479,7 @@
       "detail": {
         "heaps44": [
           57.3,
-          57.8,
+          57.7,
           58.1
         ]
       }
@@ -490,6 +490,99 @@
       "detail": {
         "geoA": 8,
         "geoB": 8
+      }
+    },
+    {
+      "name": "50 gravity ramp → 4.5 g on an office: structural failures attributed to gravity, debris, ledger finite; all members of the building take the ramp in the same step",
+      "ok": true,
+      "detail": {
+        "failures": 60,
+        "debris": 0
+      }
+    },
+    {
+      "name": "51 roof snow under 2 g: failed panels carry their snow as packets (falling, resting on a floor, set down on the ground) — every packet either carried by a member or landed, mass unchanged, ledgers closed",
+      "ok": true,
+      "detail": {
+        "p51a": {
+          "n": 4,
+          "carried": 23889.599999999995
+        },
+        "p51": {
+          "n": 4,
+          "inTransit": 23889.599999999995,
+          "done": 0,
+          "resting": 4,
+          "out": 0,
+          "resW": 2.2615883567241404e-14,
+          "resE": 4.227459777919744e-14
+        }
+      }
+    },
+    {
+      "name": "57 original world after roof-snow packets, collapse and gravity: fingerprint unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "52 ash on a roof: the roof-panel check is on as for snow (failure by load, not by its source)",
+      "ok": true,
+      "detail": {
+        "ash": 2685.331754348675,
+        "kPa": 0.010990433638599507,
+        "check": true
+      }
+    },
+    {
+      "name": "53 local heavy column over a 500-house town: only the buildings near it loaded (per member), interactive frame rate",
+      "ok": true,
+      "detail": {
+        "loaded": 108,
+        "fps": 60.3
+      }
+    },
+    {
+      "name": "54 bodies spawned (blast debris) during a gravity ramp: they enter the ledger with their K and U; the books close (field check ≈ 0, energy check = −ε)",
+      "ok": true,
+      "detail": {
+        "debris": 23,
+        "other": -2581568.004756484,
+        "gross": 1693949.0189848791,
+        "res": -1.9350106969222782e-10,
+        "e": -411.87788605832174,
+        "eps": 411.87788605812307
+      }
+    },
+    {
+      "name": "55 results: the energy terms (integrator ε, energy check R_Φ − ε against the gross work, W_moved in the CSV)",
+      "ok": true,
+      "detail": "R_Φ = ΔU − W_장 − W_이동 + W_g · 에너지 점검 R_Φ − ε -4.1e+2 J (총 |W_g|의 2.4e-4) · 적분기 ε 4.1e+2 J사"
+    },
+    {
+      "name": "56 limited models flagged: sideways gravity — structure and flood reported limited / unsupported (no fake vertical results)",
+      "ok": true,
+      "detail": {
+        "rigid": "full",
+        "contact": "full",
+        "vehicles": "full",
+        "people": "full",
+        "debris": "full",
+        "structure": "limited",
+        "roofSnow": "limited",
+        "collapse": "limited",
+        "flood": "unsupported",
+        "buoyancy": "unsupported",
+        "atmosphere": "unsupported",
+        "convection": "limited",
+        "fire": "scaled",
+        "snow": "limited",
+        "precipitation": "limited",
+        "ash": "unsupported",
+        "bombs": "full",
+        "lava": "unsupported",
+        "meteor": "scaled",
+        "blast": "full",
+        "ground": "unsupported"
       }
     },
     {
@@ -505,7 +598,7 @@
   "errors": [],
   "heap": [
     29.9,
-    56.6
+    50.8
   ],
   "geometries": [
     17,
