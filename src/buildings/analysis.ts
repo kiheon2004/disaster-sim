@@ -30,11 +30,11 @@ import { MATERIALS, material, type FillKind, type MaterialId } from './materials
 import { boxVolume, lengthAxis, memberBounds, scaledSize, type Box3 } from './geometry';
 import { isLateralRole, isStructuralRole, OCCUPANCY_MASS, ROOF_SUPERIMPOSED, type BuildingDesign, type BuildingMember } from './types';
 
-const TOL = 0.06;
+export const TOL = 0.06;
 /** Vertical search window below a column / wall for what it stands on (m). */
-const BEARING_GAP = 0.6;
+export const BEARING_GAP = 0.6;
 /** Largest gap considered at all (roof panels over beams of halls). */
-const NEAR_GAP = 1;
+export const NEAR_GAP = 1;
 
 export type WarningCode =
   | 'unsupported' | 'nonStructuralMaterial' | 'overloaded' | 'cantilever' | 'noLateral' | 'softStory' | 'weakStory'
@@ -307,7 +307,9 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
     // Slabs: the beams / walls / columns right under them. Roofs: whatever is under their
     // footprint (slab, wall tops, beams of a hall) — pitched panels touch only along an edge.
     if (m.type === 'slab') {
-      a.supports.push(...under(0.15).filter((j) => src[j].type !== 'slab'));
+      // Beams / walls must run along the slab edge (Phase 25: the collinear beam of the next bay,
+      // touching only at the slab's corner, is not a support); columns support at a point.
+      a.supports.push(...under(0.15).filter((j) => src[j].type !== 'slab' && slabBears(src[j], out[j], a)));
     } else {
       const u = under(NEAR_GAP);
       a.supports.push(...(u.length ? u : cand.filter((j) => out[j].box.min[1] < a.box.min[1])));
@@ -524,6 +526,20 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   };
 }
 
+/**
+ * Whether a member under a slab really supports it: columns always (point support); beams / walls
+ * only when they run along the slab over at least min(0.5 m, ¼ of their length) — a member that
+ * only touches the slab's corner or end carries nothing of it.
+ */
+export function slabBears(m: BuildingMember, a: MemberAnalysis, slab: MemberAnalysis): boolean {
+  if (m.type !== 'beam' && m.type !== 'wall') return true;
+  const ax = lengthAxis(m);
+  const ox = Math.min(a.box.max[0], slab.box.max[0]) - Math.max(a.box.min[0], slab.box.min[0]);
+  const oz = Math.min(a.box.max[2], slab.box.max[2]) - Math.max(a.box.min[2], slab.box.min[2]);
+  const along = Math.abs(ax[0]) * ox + Math.abs(ax[1]) * oz;
+  return along >= Math.min(0.5, 0.25 * a.size[0]);
+}
+
 /** Position of a member center along a beam's axis, relative to the beam center (m). */
 function along(beam: MemberAnalysis, axis: [number, number], o: MemberAnalysis): number {
   const bc = [(beam.box.min[0] + beam.box.max[0]) / 2, (beam.box.min[2] + beam.box.max[2]) / 2];
@@ -532,7 +548,7 @@ function along(beam: MemberAnalysis, axis: [number, number], o: MemberAnalysis):
 }
 
 /** A beam is held when it has supports on both sides of its center, or one support near the middle third (cantilever allowed). */
-function beamHeld(m: BuildingMember, a: MemberAnalysis, sup: MemberAnalysis[]): boolean {
+export function beamHeld(m: BuildingMember, a: MemberAnalysis, sup: MemberAnalysis[]): boolean {
   if (!sup.length) return false;
   const ax = lengthAxis(m);
   const L = a.size[0];
@@ -545,7 +561,7 @@ function beamHeld(m: BuildingMember, a: MemberAnalysis, sup: MemberAnalysis[]): 
   return neg || pos;
 }
 
-function isCantilever(m: BuildingMember, a: MemberAnalysis, sup: MemberAnalysis[]): boolean {
+export function isCantilever(m: BuildingMember, a: MemberAnalysis, sup: MemberAnalysis[]): boolean {
   const ax = lengthAxis(m);
   const L = a.size[0];
   let neg = false, pos = false;
@@ -725,7 +741,7 @@ function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: num
 }
 
 /** High axial load makes columns / walls less ductile. */
-function axialPenalty(util: number): number {
+export function axialPenalty(util: number): number {
   return util > 0.3 ? Math.max(0.4, 1 - 0.8 * (util - 0.3)) : 1;
 }
 

@@ -21,7 +21,8 @@ import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicS
 import { seismicDamageIndex } from '../damage/seismicLevels';
 
 /** Strength degradation per unit damage index (same as StructuralModel: F_y·(1 − 0.3·D)). */
-export const STRENGTH_LOSS = 0.3;
+import { STRENGTH_LOSS } from '@/structure/policy';
+export { STRENGTH_LOSS };
 
 export interface IntegrityState {
   /** Wind fatigue health of the structure, tracked on its own (1 → 0). */
