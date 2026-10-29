@@ -46,7 +46,7 @@
 | Water Depth / Flow | **작동** | 수심·수면·유속 | `env.flood.field` (솔버만 기록) | 물 이벤트(강제) → 솔버 → 부력·마찰·피해·노출·렌더 |
 | Gravity Field | 균일 상수 | m/s² | Rapier 전역 중력(프로젝트 설정) | `GravityField` 인터페이스 + `UniformGravity`만 존재 |
 | Pressure | 인터페이스만 | 과압 Pa | — | 구현 시스템 없음 |
-| Temperature / Heat Flux | 인터페이스만 | °C, W/m² | — | 노출 상태에는 **기준 상수**만 |
+| Temperature / Heat Flux | **작동(Phase 26)** | K(표시 °C), W, W/m², J | `env.thermal` (ThermalWorld: 지면 기둥·물 열·공기층·구획·노드·장부) | HeatSourceEvent·운석 열 몫 → 열 시스템 → 구조 계수·열하중·노출·렌더 — [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md) |
 | Terrain Deformation | 인터페이스만 | 표고 변화 m | TerrainData(실행 중 고정) | `TerrainDeformationRequest` 계약만 |
 | Atmospheric State | 인터페이스만 | kPa, O₂, 밀도 | — | `BASELINE_ATMOSPHERE` 상수(표준 대기) |
 
@@ -224,7 +224,9 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 대기 압력파는 Phase 24(공중 폭발·대기 결합 몫 → 압력 채널). 남은 것: 열 | — |
 | Explosion | **대기 압력파 구현됨(Phase 24)** — 가상 에너지 방출, Sedov–Taylor + 약충격 N파, 지면 반사·차폐, 압력 채널(`pressure` active), ForceLedger `blast`, 구조 외부 횡하중·외장 SDOF·외벽 면외·사람 전도 기준, `blast` 해저드, [BLAST.md](BLAST.md). 남은 것: 열·연소(Phase 26–27) | — |
 | Structural Destruction (교차 해저드) | **구현됨(Phase 25)** — 구조 그래프·증분 하중 재분배·접합부·연쇄/부분 붕괴·낙하 블록 충돌·잔해(질량 장부)·2차 피해·기초 지지 상실, 모든 해저드 공통, [STRUCTURAL_DESTRUCTION.md](STRUCTURAL_DESTRUCTION.md). 남은 것: 부재 온도·열팽창·온도 의존 강도(Phase 26 — `setMaterialFactor` 확장 지점) | 해저드별 손상 모델, Phase 17 해석·층 모델, Rapier, ForceLedger |
-| Volcano | 열·온도장, 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
+| Heat / Thermal (교차) | **구현됨(Phase 26)** — 열원 5종(점·원판·표면·체적·지정 온도), 전도·대류·복사, 물 열 운반, 공기층, 부재 온도 → EN 강도·열팽창 → 구조 엔진, 잔해 열, 운석 열 몫, `thermal` 해저드, [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md). 남은 것: 연소·화재 확산(Phase 27), 극한 기후·결빙(Phase 30) | 구조 파괴 엔진(`setMaterialFactor`·`addLoad`), 물 솔버 유량, 바람장, 실험·장부 패턴 |
+| Fire | 연소·발화·연기·산소(Phase 27) | **열물리 엔진(Phase 26)**: 노드 온도·질량·재료, 구획 노드, 열원 = HRR 자리, 복사 기하 |
+| Volcano | 열·온도장(Phase 26 재사용), 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
 | Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |
 | Gravity Change | 공간 중력장(오브젝트별 힘, Rapier 전역 중력은 기준 유지) | `GravityField` 인터페이스, ForceLedger(`gravityField` 출처 예약), 구조 모델 gravity 입력 |
 | Black Hole | 공간 중력장 + 조석력(크기 있는 물체의 차등 가속) | ForceLedger, 파편, 비교 실행, "실험적·가상" 모델 수준 |
