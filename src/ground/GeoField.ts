@@ -13,6 +13,7 @@
  *   loose, looseMass                 deposited (already loosened) material on top       m, kg
  *   h, mass, mu                      mobile sediment: thickness (bulked), mass, basal μ m, kg, –
  *   qx, qz                           face fluxes of the mobile layer                    m²/s
+ *   hfx, hfz                         flowing depth at the faces at the last flux update m
  *   fs                               last factor of safety (∞ = not evaluated / flat)   –
  *   nmV, nmD                         Newmark relative velocity / displacement           m/s, m
  *   owner                            phenomenon index that governs a vertex (−1 none)   –
@@ -77,6 +78,9 @@ export class GeoField {
   readonly mu: Float32Array;
   readonly qx: Float32Array;
   readonly qz: Float32Array;
+  /** Flowing depth at each face when its flux was last computed (m). */
+  readonly hfx: Float32Array;
+  readonly hfz: Float32Array;
   readonly rest: Float32Array;
   readonly fs: Float32Array;
   readonly nmV: Float32Array;
@@ -89,6 +93,23 @@ export class GeoField {
   rev = 0;
   /** Bounding box of vertices with mobile sediment (empty when x1 < x0). */
   active = { x0: 0, z0: 0, x1: -1, z1: -1 };
+  /** Vertices whose bed + h changed since the deformation source last sampled (x1 < x0: none). */
+  dirty = { x0: 0, z0: 0, x1: -1, z1: -1 };
+
+  /** Mark a vertex box as changed (terrain contribution G = bed + h). */
+  touch(x0: number, z0: number, x1 = x0, z1 = z0) {
+    const d = this.dirty;
+    if (d.x1 < d.x0) { d.x0 = x0; d.z0 = z0; d.x1 = x1; d.z1 = z1; return; }
+    if (x0 < d.x0) d.x0 = x0;
+    if (z0 < d.z0) d.z0 = z0;
+    if (x1 > d.x1) d.x1 = x1;
+    if (z1 > d.z1) d.z1 = z1;
+  }
+
+  private touchVertex(i: number) {
+    const ix = i % this.nx;
+    this.touch(ix, (i - ix) / this.nx);
+  }
 
   constructor(t: TerrainData) {
     this.nx = t.nx;
@@ -111,6 +132,8 @@ export class GeoField {
     this.mu = new Float32Array(n);
     this.qx = new Float32Array((t.nx - 1) * t.nz);
     this.qz = new Float32Array(t.nx * (t.nz - 1));
+    this.hfx = new Float32Array((t.nx - 1) * t.nz);
+    this.hfz = new Float32Array(t.nx * (t.nz - 1));
     this.rest = new Float32Array(n);
     this.fs = new Float32Array(n).fill(Infinity);
     this.nmV = new Float32Array(n);
@@ -178,6 +201,7 @@ export class GeoField {
     this.mass[i] += m;
     this.rest[i] = 0;
     this.grow(i);
+    this.touchVertex(i);
     this.rev++;
     return d * A;
   }
@@ -191,6 +215,7 @@ export class GeoField {
     this.thickness[i] = Math.max(0, this.thickness[i] - depth);
     this.budget.intoCavity += depth * A;
     this.budget.intoCavityMass += depth * A * p.density;
+    this.touchVertex(i);
     this.rev++;
   }
 

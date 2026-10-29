@@ -122,4 +122,11 @@ export interface DeformationSource {
   overburdenAt?(x: number, z: number): number;
   /** Contribution at a point now (inspector; non-separable sources, Phase 22). */
   valueAt?(x: number, z: number, localTime: number): number;
+  /**
+   * Sub-rectangle of `rect` where the contribution may have changed since the last `sample`
+   * (null = nowhere). Sources covering a large rect but changing locally (Phase 22's ground-
+   * failure field covers the whole grid) let the engine diff, write and report only that part.
+   * `sample` must still fill the whole rect.
+   */
+  changedRect?(): GridRect | null;
 }

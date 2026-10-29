@@ -82,6 +82,12 @@ export interface GridRect {
 
 export const fullRect = (t: TerrainData): GridRect => ({ x0: 0, z0: 0, x1: t.nx - 1, z1: t.nz - 1 });
 
+/** Intersection of two rectangles (null when they do not overlap). */
+export function intersectRect(a: GridRect, b: GridRect): GridRect | null {
+  const r = { x0: Math.max(a.x0, b.x0), z0: Math.max(a.z0, b.z0), x1: Math.min(a.x1, b.x1), z1: Math.min(a.z1, b.z1) };
+  return r.x1 < r.x0 || r.z1 < r.z0 ? null : r;
+}
+
 export function unionRect(a: GridRect | null, b: GridRect | null): GridRect | null {
   if (!a) return b;
   if (!b) return a;

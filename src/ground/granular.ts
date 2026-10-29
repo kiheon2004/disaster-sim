@@ -3,6 +3,7 @@
  * infill of collapse pits. Conservative finite volumes on the terrain's vertex grid with face
  * fluxes (the local-inertial form also used by the Phase 14 water solver, Bates et al. 2010):
  *
+ *   q ← q·min(1, h_f / h_f,prev)                   momentum stays with the mass (a draining face keeps u, not q)
  *   q ← q − g·h_f·∂s/∂x·cos²β·Δt                  pressure + gravity (s = ground + mobile thickness;
  *                                                horizontal projection of the along-slope terms)
  *   Coulomb basal friction: |q| reduced by μ·g·h_f·cos²β·Δt, never reversed; a layer at rest stays
@@ -20,7 +21,7 @@
  * Exactness: every face flux is subtracted from one cell and added to its neighbour, and
  * outflows are limited to the volume a cell holds (positivity), so volume and mass are conserved
  * to round-off; open edges record what leaves. A cell whose faces are all at rest for REST_TIME
- * becomes static deposit (the surface does not change).
+ * (or creep below U_REST) becomes static deposit (the surface does not change).
  */
 import type { GeoField } from './GeoField';
 
@@ -29,6 +30,12 @@ export const XI_DEFAULT = 400;
 const H_MIN = 1e-3;
 /** A layer at rest this long becomes deposit (s). */
 export const REST_TIME = 0.5;
+/**
+ * Below this speed a face counts as at rest (m/s): creep at the repose slope (flux ~1e-5 m²/s
+ * that never quite reaches zero in the explicit friction update) must not keep a settled pit
+ * "moving" — and the terrain / collider updating — indefinitely.
+ */
+export const U_REST = 0.01;
 const G = 9.81;
 const CFL = 0.4;
 
@@ -70,11 +77,15 @@ export function flowStep(f: GeoField, duration: number, opt: FlowOptions): FlowS
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) {
       const i = iz * nx + ix;
       s[(iz - z0) * ww + (ix - x0)] = opt.ground(i) + h[i];
-      if (h[i] > H_MIN) {
-        const c = Math.sqrt(G * h[i]);
-        const ux = ix < nx - 1 ? Math.abs(qx[iz * (nx - 1) + ix]) / h[i] : 0;
-        const uz = iz < nz - 1 ? Math.abs(qz[iz * nx + ix]) / h[i] : 0;
-        const v = Math.max(ux, uz) + c;
+      // Speed at the right / lower face of the cell: the flux over the DEEPER side's depth (the
+      // donor of a front). Dividing by the receiving cell's (near-zero) depth would report
+      // spurious km/s speeds at wetting fronts and collapse the time step.
+      let u = 0;
+      if (ix < nx - 1) u = Math.abs(qx[iz * (nx - 1) + ix]) / Math.max(H_MIN, h[i], h[i + 1]);
+      if (iz < nz - 1) u = Math.max(u, Math.abs(qz[iz * nx + ix]) / Math.max(H_MIN, h[i], h[i + nx]));
+      if (u > stats.maxSpeed) stats.maxSpeed = u;
+      if (h[i] > H_MIN || u > 0) {
+        const v = u + Math.sqrt(G * h[i]);
         if (v > vmax) vmax = v;
       }
     }
@@ -88,11 +99,11 @@ export function flowStep(f: GeoField, duration: number, opt: FlowOptions): FlowS
     // Face fluxes (x faces between ix and ix+1).
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix < x1; ix++) {
       const i = iz * nx + ix, j = i + 1, k = iz * (nx - 1) + ix;
-      qx[k] = faceFlux(qx[k], S(ix, iz), S(ix + 1, iz), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
+      qx[k] = faceFlux(qx[k], f.hfx, k, S(ix, iz), S(ix + 1, iz), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
     }
     for (let iz = z0; iz < z1; iz++) for (let ix = x0; ix <= x1; ix++) {
       const i = iz * nx + ix, j = i + nx, k = iz * nx + ix;
-      qz[k] = faceFlux(qz[k], S(ix, iz), S(ix, iz + 1), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
+      qz[k] = faceFlux(qz[k], f.hfz, k, S(ix, iz), S(ix, iz + 1), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
     }
     // Positivity: scale the outflows of a cell to what it holds.
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) {
@@ -136,17 +147,19 @@ export function flowStep(f: GeoField, duration: number, opt: FlowOptions): FlowS
     }
     t += dt;
     stats.substeps++;
+    // Every vertex of the window may have gained / lost mobile thickness (terrain contribution).
+    f.touch(x0, z0, x1, z1);
     // Rest bookkeeping and the new active box.
     let nx0 = nx, nx1 = -1, nz0 = nz, nz1 = -1;
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) {
       const i = iz * nx + ix;
       if (h[i] <= 0) continue;
-      const moving = (ix < nx - 1 && qx[iz * (nx - 1) + ix] !== 0) || (ix > 0 && qx[iz * (nx - 1) + ix - 1] !== 0)
-        || (iz < nz - 1 && qz[iz * nx + ix] !== 0) || (iz > 0 && qz[(iz - 1) * nx + ix] !== 0);
+      // Moving = a face carries more than creep (U_REST over the deeper side's depth).
+      const lim = (j: number) => U_REST * Math.max(H_MIN, h[i], h[j]);
+      const moving = (ix < nx - 1 && Math.abs(qx[iz * (nx - 1) + ix]) > lim(i + 1)) || (ix > 0 && Math.abs(qx[iz * (nx - 1) + ix - 1]) > lim(i - 1))
+        || (iz < nz - 1 && Math.abs(qz[iz * nx + ix]) > lim(i + nx)) || (iz > 0 && Math.abs(qz[(iz - 1) * nx + ix]) > lim(i - nx));
       if (moving) {
         rest[i] = 0;
-        const sp = Math.max(ix < nx - 1 ? Math.abs(qx[iz * (nx - 1) + ix]) : 0, iz < nz - 1 ? Math.abs(qz[iz * nx + ix]) : 0) / Math.max(H_MIN, h[i]);
-        if (sp > stats.maxSpeed) stats.maxSpeed = sp;
       } else if ((rest[i] += dt) >= REST_TIME || h[i] < 1e-4) {
         f.deposit(i);
         continue;
@@ -197,9 +210,15 @@ function edgeOutflow(f: GeoField, ix: number, iz: number, i: number, dt: number)
 }
 
 /** Face flux update (see the header); bed slope for cosβ from the two ground heights. */
-function faceFlux(q: number, si: number, sj: number, gi: number, gj: number, hi: number, hj: number, mui: number, muj: number, dx: number, dt: number, xi: number): number {
+function faceFlux(q: number, hfs: Float32Array, k: number, si: number, sj: number, gi: number, gj: number, hi: number, hj: number, mui: number, muj: number, dx: number, dt: number, xi: number): number {
   const hf = Math.max(si, sj) - Math.max(gi, gj);
+  const hfPrev = hfs[k];
+  hfs[k] = hf > H_MIN ? hf : 0;
   if (hf <= H_MIN || (hi <= H_MIN && hj <= H_MIN)) return 0;
+  // q = h·u is carried between substeps: when the flowing depth at the face dropped (the donor
+  // drained), the remaining layer keeps its velocity, not its flux — otherwise thin trailing
+  // films would inherit the flux of the bulk and run at unphysical speeds.
+  if (hfPrev > hf) q *= hf / hfPrev;
   const slope = (sj - si) / dx;
   const bed = (gj - gi) / dx;
   // Horizontal fluxes on an inclined bed: driving g·sinβ and normal force g·cosβ act along the

@@ -144,6 +144,31 @@ describe('granular flow', () => {
     expect(Math.abs(f.budget.residualMass)).toBeLessThan(1e-6 * f.budget.releasedMass);
   });
 
+  it('a released block never runs faster than its Voellmy terminal speed + the gravity-wave speed (draining faces keep their velocity, not their flux); the time step stays at the CFL of real speeds', () => {
+    const n = 121, f = grid(n, 1), beta = 32 * DEG, tb = Math.tan(beta), mu = 0.39, xi = 400, h0 = 2.5;
+    const ground = (i: number) => -tb * (i % n) + f.bed[i];
+    for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) {
+      if (Math.hypot(ix - 30, iz - 60) > 15) continue;
+      const i = iz * n + ix;
+      f.thickness[i] = h0;
+      f.release(i, h0, mu);
+      f.bed[i] += h0; // the block sits on the plane
+    }
+    let vmax = 0, hmax = 0, worstSub = 0;
+    for (let k = 0; k < 150 && f.active.x1 >= f.active.x0; k++) {
+      const st = flowStep(f, 0.1, { ground, xi });
+      vmax = Math.max(vmax, st.maxSpeed);
+      worstSub = Math.max(worstSub, st.substeps);
+      for (let i = 0; i < f.n; i++) hmax = Math.max(hmax, f.h[i]);
+    }
+    const S = Math.sin(beta) * Math.cos(beta) - mu * Math.cos(beta) ** 2;
+    const bound = Math.sqrt(xi * hmax * S) + 2 * Math.sqrt(9.81 * hmax);
+    expect(vmax).toBeGreaterThan(2); // it does move
+    expect(vmax).toBeLessThan(bound);
+    // CFL substeps per 0.1 s at that speed (dx = 1 m, CFL 0.4): a handful, not hundreds.
+    expect(worstSub).toBeLessThan(Math.ceil((bound * 0.1) / 0.4) + 2);
+  });
+
   it('runout converges with the grid and does not depend on the call interval', () => {
     // A block released on a 35° slope that ends on flat ground; runout = farthest deposit.
     const runout = (dx: number, call: number) => {

@@ -20,7 +20,7 @@
  * region.
  */
 import type { TerrainData } from '@/core/model';
-import { unionRect, type GridRect } from '@/terrain/TerrainData';
+import { intersectRect, unionRect, type GridRect } from '@/terrain/TerrainData';
 import { TerrainSampler } from '@/terrain/TerrainSampler';
 import { amplitude, eventDuration, shapeAt, shapeGrid, timeFactor } from './field';
 import type { DeformationSource, ModelClass, TerrainDeformationSpec } from './types';
@@ -96,6 +96,8 @@ interface Entry {
   contrib: Float32Array;
   /** Second buffer (swapped with contrib on each update). */
   spare?: Float32Array;
+  /** Part of the rect changed in the current update (null = nothing). */
+  sub?: GridRect | null;
 }
 
 export class DeformationEngine {
@@ -163,8 +165,22 @@ export class DeformationEngine {
       if (v === e.version) continue;
       // A jump of more than 5 % of the final state in one update (instant start, a stage).
       if (Math.abs(v - (Number.isNaN(e.version) ? 0 : e.version)) > 0.05) discontinuous = true;
+      // Only the part the source reports as changed (whole rect when it cannot tell).
+      const sub = e.source.changedRect ? e.source.changedRect() : e.source.rect;
+      e.sub = sub ? intersectRect(sub, e.source.rect) : null;
       changed.push(e);
-      rect = unionRect(rect, e.source.rect);
+      if (e.sub) rect = unionRect(rect, e.sub);
+    }
+    if (!rect && changed.length) {
+      // Version moved but nothing changed on the grid: resample to stay in step, no terrain write.
+      for (const e of changed) {
+        const next = (e.spare ??= new Float32Array(e.contrib.length));
+        e.source.sample(time - e.source.startTime, next);
+        e.spare = e.contrib;
+        e.contrib = next;
+        e.version = e.source.version(time - e.source.startTime);
+      }
+      return null;
     }
     if (!rect) return null;
     const t = this.terrain;
@@ -179,11 +195,13 @@ export class DeformationEngine {
       // Two buffers per source, swapped (no allocation per update).
       const next = (e.spare ??= new Float32Array(e.contrib.length));
       e.source.sample(tau, next);
-      const r = e.source.rect;
-      const w = r.x1 - r.x0 + 1, h = r.z1 - r.z0 + 1, prev = e.contrib;
-      for (let j = 0; j < h; j++) {
-        const src = j * w, dst = (r.z0 + j) * t.nx + r.x0, dd = (r.z0 + j - rect.z0) * rw + (r.x0 - rect.x0);
-        for (let i = 0; i < w; i++) {
+      const r = e.source.rect, u = e.sub ?? { x0: 0, z0: 0, x1: -1, z1: -1 };
+      const w = r.x1 - r.x0 + 1, prev = e.contrib;
+      // Diff only over the changed part (outside it next = prev by the source's contract).
+      for (let jz = u.z0; jz <= u.z1 && u.x1 >= u.x0; jz++) {
+        const j = jz - r.z0;
+        const src = j * w + (u.x0 - r.x0), dst = jz * t.nx + u.x0, dd = (jz - rect.z0) * rw + (u.x0 - rect.x0);
+        for (let i = 0, n = u.x1 - u.x0 + 1; i < n; i++) {
           const d = next[src + i] - prev[src + i];
           if (d === 0) continue;
           W[dst + i] += d;

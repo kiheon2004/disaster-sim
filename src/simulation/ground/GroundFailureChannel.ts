@@ -12,9 +12,12 @@ import { GeoField } from '@/ground/GeoField';
 import type { SinkholeModel } from '@/ground/sinkhole';
 import type { LandslideModel } from '@/ground/landslide';
 
+/** Largest difference between the field and the terrain left unsynchronized (m). */
+export const SYNC_TOLERANCE = 0.001;
+
 /**
  * The field's contribution to the terrain, G = bed + h, over the whole grid. Its version is the
- * field revision (changes only when sediment moved or ground failed).
+ * field revision at the last change larger than SYNC_TOLERANCE.
  */
 export class GroundFailureSource implements DeformationSource {
   readonly id = 'src:groundFailure';
@@ -32,14 +35,44 @@ export class GroundFailureSource implements DeformationSource {
     this.applied = new Float32Array(field.n);
   }
 
+  /**
+   * The field revision last published to the engine. A new one is published only when G
+   * differs from what the terrain carries by more than SYNC_TOLERANCE somewhere in the changed
+   * box: sub-millimetre creep of a settled layer accumulates in the field (exact budget) and goes
+   * to the terrain with the next real change, instead of rebuilding the collider at 10 Hz.
+   */
+  private published = -1;
+  private checked = -1;
+
   version() {
-    return this.field.rev;
+    const f = this.field;
+    if (f.rev !== this.checked) {
+      this.checked = f.rev;
+      const d = f.dirty;
+      let drift = 0;
+      for (let iz = d.z0; iz <= d.z1 && drift <= SYNC_TOLERANCE; iz++) {
+        for (let i = iz * f.nx + d.x0, e = iz * f.nx + d.x1; i <= e; i++) {
+          const v = Math.abs(f.bed[i] + f.h[i] - this.applied[i]);
+          if (v > drift) drift = v;
+        }
+      }
+      if (drift > SYNC_TOLERANCE) this.published = f.rev;
+    }
+    return this.published;
   }
 
   sample(_tau: number, out: Float32Array) {
     const { bed, h } = this.field;
     for (let i = 0; i < out.length; i++) out[i] = bed[i] + h[i];
     this.applied.set(out);
+    const d = this.field.dirty;
+    d.x0 = 0; d.z0 = 0; d.x1 = -1; d.z1 = -1;
+  }
+
+  /** Where G changed since the last sample (the field's dirty box) — usually a small part of the grid. */
+  changedRect() {
+    const d = this.field.dirty;
+    return d.x1 < d.x0 ? null : { x0: d.x0, z0: d.z0, x1: d.x1, z1: d.z1 };
   }
 
   /** Displacement of the ground-failure field at a point (nearest vertex). */

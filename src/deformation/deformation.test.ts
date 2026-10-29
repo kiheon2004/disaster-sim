@@ -230,3 +230,49 @@ describe('ground material extension point', () => {
     for (const soil of [0, 1, 2, 3] as const) expect(groundResponseFor(soil)).toBeNull();
   });
 });
+
+describe('sources that report their changed part (Phase 22)', () => {
+  /** A whole-grid source whose field changes in a few local patches over time. */
+  const patchy = (t: ReturnType<typeof createFlatTerrain>, report: boolean) => {
+    const G = new Float32Array(t.nx * t.nz);
+    let rev = 0;
+    let dirty: { x0: number; z0: number; x1: number; z1: number } | null = null;
+    const src = {
+      id: 'g', phenomenon: 'g', kind: 'groundFailure', model: 'physics' as const, startTime: 0, duration: Infinity,
+      rect: { x0: 0, z0: 0, x1: t.nx - 1, z1: t.nz - 1 },
+      version: () => rev,
+      sample: (_tau: number, out: Float32Array) => { out.set(G); dirty = null; },
+      ...(report ? { changedRect: () => dirty } : {}),
+    };
+    const poke = (x0: number, z0: number, w: number, v: number) => {
+      for (let iz = z0; iz < z0 + w; iz++) for (let ix = x0; ix < x0 + w; ix++) G[iz * t.nx + ix] += v;
+      const r = { x0, z0, x1: x0 + w - 1, z1: z0 + w - 1 };
+      dirty = dirty ? { x0: Math.min(dirty.x0, r.x0), z0: Math.min(dirty.z0, r.z0), x1: Math.max(dirty.x1, r.x1), z1: Math.max(dirty.z1, r.z1) } : r;
+      rev++;
+    };
+    return { src, poke };
+  };
+
+  it('diffing only the changed part gives the same terrain as the whole rect; the update reports only that part', () => {
+    const results = [true, false].map((report) => {
+      const t = createFlatTerrain();
+      for (let i = 0; i < t.heights.length; i++) t.heights[i] = (i % 5) * 0.05;
+      const e = new DeformationEngine(t);
+      const { src, poke } = patchy(t, report);
+      e.add(src);
+      const rects: number[] = [];
+      const steps: [number, number, number, number][] = [[10, 10, 4, -1], [100, 50, 6, 0.5], [12, 11, 3, 0.25], [150, 150, 2, -2]];
+      steps.forEach(([x, z, w, v], k) => {
+        poke(x, z, w, v);
+        const u = e.update(k + 1)!;
+        rects.push((u.rect.x1 - u.rect.x0 + 1) * (u.rect.z1 - u.rect.z0 + 1));
+      });
+      expect(e.update(10)).toBeNull(); // nothing changed since
+      return { h: t.heights.slice(), W: e.field.slice(), rects };
+    });
+    expect(results[0].h).toEqual(results[1].h);
+    expect(results[0].W).toEqual(results[1].W);
+    expect(results[0].rects).toEqual([16, 36, 9, 4]);
+    expect(results[1].rects.every((n) => n === 201 * 201)).toBe(true);
+  });
+});
