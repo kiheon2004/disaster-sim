@@ -25,6 +25,7 @@ import { celestialDemo } from '@/celestial/demos';
 import { G_N, M_SUN } from '@/celestial/constants';
 import { celestialSpec, labSource, probe } from './testSpecs';
 import { gravity } from '../gravity/testSpecs';
+import { phenomena } from '@/phenomena/registry';
 
 const S = () => useWorldStore.getState();
 const tf = (x: number, z: number, y = 0, yaw = 0) => ({ position: [x, y, z] as Vec3, rotation: [0, yaw, 0] as Vec3, scale: [1, 1, 1] as Vec3 });
@@ -120,7 +121,7 @@ describe('celestial experiments in whole worlds', { timeout: 1_800_000 }, () => 
     }
   });
 
-  it('combinations — flood, air, heat, fire, volcano, meteor, blast, earthquake, snow: finite, water volume conserved', async () => {
+  it('combinations — flood, air, heat, fire, volcano, meteor, blast, earthquake, ground, snow: finite, water volume conserved', async () => {
     const bh = celestialSpec({ duration: 60, startTime: 0.5, sources: [labSource({ center: [10, 25, 0], mass: 4e4 / G_N, softening: 2, capture: 2, ramp: 2 })] });
     const K = (c: number) => c + 273.15;
     const combos: [string, EventSpec[], boolean][] = [
@@ -131,6 +132,7 @@ describe('celestial experiments in whole worlds', { timeout: 1_800_000 }, () => 
       ['meteor', [{ event: 'impact', target: [0, 30], material: 'stony', diameter: 1, speed: 15000, angle: 60, azimuth: 45, entry: 'direct', airBlast: true, startTime: 1 } as EventSpec], false],
       ['blast', [{ event: 'blast', position: [30, 30], height: 1, energy: 1e9, model: 'weakShock', waveform: 'nWave', startTime: 1 } as EventSpec], false],
       ['earthquake', [{ event: 'earthquake', magnitude: 6.5, pga: 0.35, duration: 8, seed: 3, startTime: 1 } as EventSpec], false],
+      ['ground (sinkhole)', [{ ...phenomena.implemented('sinkhole')!.defaults(), startTime: 1 } as EventSpec], false],
       ['snow', [{ event: 'climate', scenario: 'custom', forcing: 'flux', temperature: K(-3), target: K(-3), profile: 'constant', duration: 3600, humidity: 0.85, mixTime: 900, precipitation: 0, precipPhase: 'auto', precipProfile: 'constant', solar: 'off', soilMoisture: 0.25, blowingSnow: false, roofSnow: true, initialSnow: 0.3, initialSnowDensity: 200, startTime: 0 } as EventSpec], false],
     ];
     for (const [name, evs, fire] of combos) {

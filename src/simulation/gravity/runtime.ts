@@ -24,6 +24,7 @@ import type { GravityChannel } from './GravityChannel';
 import type { ForceOwner } from '../forces/ForceLedger';
 import { GravityStructures } from './structures';
 import { CelestialRuntime } from '../celestial/runtime';
+import { simProfiler as P } from '../profiling/SimProfiler';
 
 /** Wake every dynamic body when the uniform gravity moved by this share of max(|G|, 0.05 g₀) since the last wake. */
 const WAKE_SHARE = 0.02;
@@ -167,7 +168,7 @@ export class GravityRuntime {
     const p0: Vec3 = [0, 0, 0];
     let n = 0, inSrc = 0, forces = 0;
     const cel = f.celestial.length ? (this.celestial ??= new CelestialRuntime(f)) : null;
-    if (cel) { cel.beginStep(); cel.pre(ctx); }
+    if (cel) { const tc = P.now(); cel.beginStep(); cel.pre(ctx); P.add('celestial.pre', tc); }
     const visit = (h: BodyHandle, owner: ForceOwner, thrMin: number, thrK: number) => {
       let tr = this.tracked.get(h);
       const fresh = !tr;
@@ -239,7 +240,7 @@ export class GravityRuntime {
     const moved = G[0] !== this.lastG[0] || G[1] !== this.lastG[1] || G[2] !== this.lastG[2];
     this.lastG[0] = G[0]; this.lastG[1] = G[1]; this.lastG[2] = G[2];
     this.structures.update(ctx, f, moved || this.fieldChanging);
-    if (cel) cel.structuresStep(ctx);
+    if (cel) { const tc = P.now(); cel.structuresStep(ctx); P.add('celestial.struct', tc); }
     this.stats.structMs = performance.now() - ts;
     const s = this.stats;
     s.G = [G[0], G[1], G[2]];
@@ -284,7 +285,10 @@ export class GravityRuntime {
       }
       // Phase 32: a free body near celestial sources takes the KDK increment instead of Rapier's first-order one.
       const cel = this.celestial, ko = this.kOut;
-      if (cel && cel.integrate(ctx, tr.h, tr.m, tr.x0, tr.v0, tr.g, tr.phi0, dt, ledger, ko)) {
+      const tk = cel ? P.now() : 0;
+      const kdk = cel !== null && cel.integrate(ctx, tr.h, tr.m, tr.x0, tr.v0, tr.g, tr.phi0, dt, ledger, ko);
+      if (cel) P.add('celestial.kdk', tk);
+      if (kdk) {
         if (ko.captured >= 0) { this.captures.push({ tr, k: ko.captured, x: [...ko.x] as Vec3, v: [...ko.v] as Vec3 }); continue; }
         tr.phi = f.potential(ko.x[0], ko.x[1], ko.x[2]);
         tr.x1[0] = ko.x[0]; tr.x1[1] = ko.x[1]; tr.x1[2] = ko.x[2];
@@ -310,7 +314,7 @@ export class GravityRuntime {
     this.captures.length = 0;
     this.lastTime = ctx.time;
     ledger.endStep(f.potentialDefined);
-    this.celestial?.post(ctx, dt);
+    if (this.celestial) { const tc = P.now(); this.celestial.post(ctx, dt); P.add('celestial.post', tc); }
     if (ctx.time + dt >= this.nextSeries) {
       this.nextSeries = ctx.time + dt + SERIES_DT;
       const b = ledger.balance(), G = f.G;

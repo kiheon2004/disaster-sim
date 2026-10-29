@@ -104,6 +104,38 @@ describe('celestial sources in the simulation', () => {
     expect(cel.ledger.grown).toBe(cel.ledger.mass);
   });
 
+  it('capture by a MOVING source: J = m·(V_s − v), constraint work J·V_s, and ½m·V_s² − ½m·v² = J·V_s − K_rel', async () => {
+    // A probe at rest in zero uniform gravity, a source sweeping towards it at 8 m/s.
+    const c = await controller(world(), [ZERO, celestialSpec({ sources: [labSource({ center: [-30, 60, 0], mass: 2e4 / G_N, softening: 1, capture: 1.5, motion: 'velocity', velocity: [8, 0, 0] })], probes: [probe([0, 60, 0], 'custom', 1, [1, 0, 0], { velocity: [0, 0, 0] })] })]);
+    c.advance(8);
+    const cel = c.getEnvironment().gravity.rt!.celestial!;
+    expect(cel.ledger.count).toBe(1);
+    const r = cel.ledger.records[0], V: Vec3 = [8, 0, 0];
+    const v = r.momentum.map((p) => p / r.mass);
+    for (let i = 0; i < 3; i++) expect(r.constraintImpulse[i]).toBeCloseTo(r.mass * (V[i] - v[i]), 6);
+    expect(r.constraintWork).toBeCloseTo(r.constraintImpulse[0] * 8, 6);
+    expect(0.5 * r.mass * 64 - r.kinetic).toBeCloseTo(r.constraintWork - r.kineticRel, 3);
+  });
+
+  it('structural fragments follow the field and their capture moves their mass to the building\'s captured account', async () => {
+    const S2 = useWorldStore.getState();
+    S2.setLocked(false);
+    S2.newDocument();
+    const { createDesign } = await import('@/buildings/design');
+    const { presetSpec } = await import('@/buildings/spec');
+    S2.applyEdit({ add: [{ type: 'building', building: createDesign({ ...presetSpec('house')!, floors: 1 }, 'house'), seed: 1, transform: tf(0, 0, 0) }] as never });
+    const d = structuredClone(useWorldStore.getState().doc);
+    const c = await controller(d, [celestialSpec({ sources: [labSource({ center: [0, 14, 0], mass: 2e4 / G_N, softening: 2, capture: 2, ramp: 0.5 })] })]);
+    c.advance(6);
+    const b = [...c.getRuntime()!.entities.values()].find((e) => e.modular)!;
+    const L = b.modular!.structure!.model.ledger;
+    const cel = c.getEnvironment().gravity.rt!.celestial!;
+    expect(cel.ledger.byKind.fragment.n).toBeGreaterThan(0);
+    // Every captured fragment's mass left 'bodies' for 'captured' in the building's ledger; the ledger still closes.
+    expect(L.mass.captured).toBeCloseTo(cel.ledger.byKind.fragment.m, 3);
+    expect(Math.abs(L.residual())).toBeLessThan(1e-6 * L.original);
+  });
+
   it('determinism: the same run twice gives the same probe states and ledgers', async () => {
     const ev = [ZERO, celestialSpec({ sources: [labSource()], probes: [probe([25, 60, 0], 'circular', 0.8, [0, 0.3, 1]), probe([0, 60, 30], 'escape', 1.1, [1, 0, 0])] })];
     const a = await controller(world(), ev), b = await controller(world(), ev);

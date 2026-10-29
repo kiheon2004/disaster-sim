@@ -393,6 +393,17 @@ export class CollapseModel {
     if (f < this.s.groundFactor[i]) this.dynamicNext = true;
   }
 
+  /**
+   * Rubble of this building (and the mass it carries) coming to rest on member r (N, from member `from`). Phase 32
+   * (Phase 31 audit residual, docs/PHASE31_AUDIT.md §22): a spanning roof panel is checked against its roof-system
+   * capacity whatever loads it — rubble alone included (before, only hazard surcharges switched the roof check on, so a
+   * roof under its own fallen upper parts never failed by its panel).
+   */
+  addRubble(r: number, N: number, from: number) {
+    if (N > 0 && this.g.roofCap[r] > 0) this.s.enableRoofCheck();
+    this.s.addExtra(r, N, from);
+  }
+
   /** Static surcharge (e.g. rubble resting on a member) — not dynamic. */
   addLoad(i: number, N: number, hazard?: string) {
     if (hazard) this.causeHazard[i] = this.hz(hazard);
@@ -424,7 +435,7 @@ export class CollapseModel {
     this.carried[i] += kg;
     const b = this.blockOf[i];
     if (b >= 0 && this.blocks[b].active) this.blocks[b].mass += kg;
-    else if (this.state[i] === MS.RESTING && this.restOn[i] >= 0) this.s.addExtra(this.restOn[i], kg * GRAVITY, i);
+    else if (this.state[i] === MS.RESTING && this.restOn[i] >= 0) this.addRubble(this.restOn[i], kg * GRAVITY, i);
   }
 
   // ── Time evolution ─────────────────────────────────────────
@@ -679,7 +690,7 @@ export class CollapseModel {
       this.restOn[i] = r;
       (this.resting.get(r) ?? this.resting.set(r, []).get(r)!).push(i);
       this.ledger.move('falling', 'resting', G.mass[i]);
-      this.s.addExtra(r, G.weight[i] + this.carried[i] * GRAVITY, i);
+      this.addRubble(r, G.weight[i] + this.carried[i] * GRAVITY, i);
     } else {
       this.set(i, MS.SETTLED);
       this.ledger.move('falling', 'rubble', G.mass[i]);
@@ -994,7 +1005,7 @@ export class CollapseModel {
       this.ledger.move('falling', 'resting', G.mass[i]);
       // The rubble is what loads the floor now: a later overload failure is part of its chain. Its carried mass (R2 roof
       // snow) rests with it — the same weight every release path (resumeResting, a failing receiver) takes off again.
-      this.s.addExtra(r, G.weight[i] + this.carried[i] * GRAVITY, i);
+      this.addRubble(r, G.weight[i] + this.carried[i] * GRAVITY, i);
     }
     for (const i of onGround) {
       const o = 6 * i;
