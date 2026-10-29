@@ -17,6 +17,7 @@ import { BlastObjectSection, BlastProbeSection } from './BlastInspector';
 import { ThermalObjectSection, ThermalProbeSection } from './ThermalInspector';
 import { FireObjectSection } from './FireInspector';
 import { VolcanoObjectSection, VolcanoProbeSection } from './VolcanoInspector';
+import { AtmosphereObjectSection, AtmosphereProbeSection } from './AtmosphereInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
 import { MemberInspector } from '@/ui/Building/MemberInspector';
@@ -57,6 +58,7 @@ export function InspectorPanel() {
           {inSim && <BlastObjectSection id={obj.id} />}
           {inSim && <ThermalObjectSection id={obj.id} />}
           {inSim && <VolcanoObjectSection id={obj.id} />}
+          {inSim && <AtmosphereObjectSection id={obj.id} />}
           {inSim && <FireObjectSection id={obj.id} />}
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
@@ -64,6 +66,7 @@ export function InspectorPanel() {
       ) : inSim ? (
         <>
           <VolcanoProbeSection />
+          <AtmosphereProbeSection />
           <GroundProbeSection />
           <BlastProbeSection />
           <ThermalProbeSection />

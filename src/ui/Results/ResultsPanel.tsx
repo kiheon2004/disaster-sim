@@ -117,6 +117,7 @@ function ResultsDialog() {
     thermal: useSimStore.getState().thermal ?? undefined, thermalMembers: thermalMembers(),
     fire: useSimStore.getState().fire ?? undefined, fireItems: fireItems(),
     volcano: useSimStore.getState().volcano ?? undefined, volcanoRoads: volcanoRoads(),
+    atmosphere: useSimStore.getState().atmosphere ?? undefined,
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -146,6 +147,7 @@ function ResultsDialog() {
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
           <ThermalSummary t={t} name={name} />
           <VolcanoSummary t={t} name={name} />
+          <AtmosphereSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
           {m ? (
@@ -606,6 +608,42 @@ function VolcanoSummary({ t, name }: { t: TFunction; name: string }) {
         <Card label={t('results.volcano.residual')} value={(M.residual / Math.max(1, M.supplied)).toExponential(1)} sub={t('results.volcano.residualSub', { e: (E.residual / Math.max(1, E.supplied)).toExponential(1) })} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.volcano.note')}</div>
+    </div>
+  );
+}
+
+/** Atmosphere experiment results (Phase 29): cards, CSV (ledgers, history), the JSON carries the live summary. */
+function AtmosphereSummary({ t, name }: { t: TFunction; name: string }) {
+  const a = useSimStore((x) => x.atmosphere);
+  if (!a) return null;
+  const s = a.stats, M = a.mass, E = a.energy, O = a.oxygen, G = a.gas, P = a.momentum;
+  const kt = (kg: number) => fmt(kg / 1e6, 2);
+  const exportCsv = () => {
+    const rows = (pre: string, o: object) => Object.entries(o).map(([k, v]) => `${pre}.${k},${v}`);
+    download(`${name || 'simulation'}-atmosphere.csv`, [
+      '# atmosphere reference state', 'quantity,value', `p0_Pa,${a.p0}`, `T0_K,${a.T0}`, `rho0_kgm3,${a.rho0}`, `altitude_m,${a.spec.altitude}`, `boundary,${a.spec.boundary}`, `removal,${a.spec.removal}`, `extent,${a.spec.extent ?? 'uniform'}`, `restore,${a.spec.restore ?? 'none'}`, '',
+      '# ledgers (kg, J, kg·m/s)', 'quantity,value', ...rows('mass', M), ...rows('energy', E), ...rows('oxygen', O), ...rows('gas', G), ...rows('momentum', P), `thermal.airMass,${a.thermalAirMass}`, '',
+      '# state now', 'quantity,value', ...rows('stats', s), '',
+      '# history', 't_s,datumPressure_Pa,minPressure_Pa,minDensity_kgm3,massShare,maxFlow_ms,meanLayerT_K,layerO2_kg', ...a.series.map((r) => [r.t.toFixed(1), r.p.toFixed(3), r.pMin.toFixed(3), r.rho.toFixed(5), r.share.toFixed(6), r.v.toFixed(4), r.T.toFixed(3), r.o2.toFixed(3)].join(',')),
+    ].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="atmos-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.atmos.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="atmos-csv"><Icon name="save" size={13} /> {t('results.atmos.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.atmos.pressure')} value={fmt(s.datumPressure / 1000, 2)} unit="kPa" sub={t('results.atmos.pressureSub', { p0: fmt(a.p0 / 1000, 2), min: fmt(s.minPressure / 1000, 3) })} />
+        <Card label={t('results.atmos.mass')} value={kt(s.mass)} unit="kt" sub={t('results.atmos.massSub', { r: kt(M.removed), s: kt(M.restored), i: kt(M.boundaryIn), o: kt(M.boundaryOut) })} />
+        <Card label={t('results.atmos.density')} value={fmt(s.minDensity, 3)} unit="kg/m³" sub={t('results.atmos.densitySub', { r0: fmt(a.rho0, 3), m: fmt(s.meanDensity, 3) })} />
+        <Card label={t('results.atmos.flow')} value={fmt(s.peakSpeed, 2)} unit="m/s" sub={t('results.atmos.flowSub', { t: fmt(s.peakSpeedTime, 0) })} />
+        <Card label={t('results.atmos.temp')} value={fmt(s.meanLayerT - 273.15, 1)} unit="°C" sub={t('results.atmos.tempSub', { a: fmt(s.Tcol - 273.15, 1), T0: fmt(a.T0 - 273.15, 1) })} />
+        <Card label={t('results.atmos.energy')} value={energyText(E.removed)} sub={t('results.atmos.energySub', { w: energyText(E.pressureWork), q: energyText(E.heatIn), r: energyText(E.restored) })} />
+        <Card label={t('results.atmos.o2')} value={fmt(O.layer / 1000, 2)} unit="t" sub={t('results.atmos.o2Sub', { f: fmt(s.o2Fraction * 100, 1), n: s.o2LimitedEver })} />
+        <Card label={t('results.atmos.residual')} value={s.massResidual.toExponential(1)} sub={t('results.atmos.residualSub', { e: s.energyResidual.toExponential(1) })} />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.atmos.note')}</div>
     </div>
   );
 }

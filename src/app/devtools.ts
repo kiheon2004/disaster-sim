@@ -1,4 +1,7 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
+import { ATMOS_PRESETS } from '@/atmosphere/presets';
+import { atmosphereOutlook } from '@/atmosphere/outlook';
+import type { AtmosphereSpec } from '@/atmosphere/types';
 import { FIRE_PRESETS } from '@/fire/presets';
 import { VOLCANO_PRESETS } from '@/volcano/presets';
 import { volcanoOutlook } from '@/volcano/outlook';
@@ -173,6 +176,11 @@ export function installDevtools() {
       outlook: (spec: FireSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return fireOutlook(spec, d.objects, (x, z) => s.sampleHeight(x, z), { ...defaultFireSettings(), ...(d.settings.simulation.fire ?? {}) }); },
     },
     /** Phase 28 volcano (benchmarks / browser verification): the run's volcano state, presets and the preview outlook. */
+    atmosLib: {
+      rt: () => simulationController.getEnvironment().atmosphere.rt,
+      presets: ATMOS_PRESETS,
+      outlook: (spec: AtmosphereSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return atmosphereOutlook(spec, d.terrain, (x, z) => s.sampleHeight(x, z)); },
+    },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,
       presets: VOLCANO_PRESETS,

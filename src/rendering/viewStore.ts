@@ -161,11 +161,29 @@ export interface VolcanoViz {
   overlay: VolcanoOverlay;
 }
 
+/**
+ * Atmosphere views (Phase 29, render-only — never read by the simulation):
+ *  - overlay: one computed field over the 5 m air columns with a fixed SI legend — surface pressure,
+ *    pressure change from the start, layer density, layer temperature, flow speed, air mass per area,
+ *    O₂ in the layer, smoke, volcanic gas, ash in the air (puffs), updraft (buoyancy proxy). Blast
+ *    overpressure never shares this legend (Phase 24 has its own).
+ *  - arrows: the computed layer flow (column + layer) as instanced arrows; streamlines: lines traced
+ *    through the same flow (visual integration of computed velocities); indicator: the remaining-air
+ *    badge (no darkening of the scene is claimed as physics).
+ */
+export type AtmosOverlay = 'off' | 'pressure' | 'pressureChange' | 'density' | 'temperature' | 'speed' | 'mass' | 'oxygen' | 'smoke' | 'gas' | 'ash' | 'updraft';
+export const ATMOS_OVERLAYS: readonly AtmosOverlay[] = ['off', 'pressure', 'pressureChange', 'density', 'temperature', 'speed', 'mass', 'oxygen', 'smoke', 'gas', 'ash', 'updraft'];
+export interface AtmosViz {
+  overlay: AtmosOverlay;
+  arrows: boolean;
+  streamlines: boolean;
+}
+
 export interface GroundPick {
   id: string;
   mode: 'point' | 'polygon';
   /** Volcano (Phase 28): what the click places — the first vent, the fissure's second end, or an extra vent. */
-  target?: 'vent' | 'end' | 'add';
+  target?: 'vent' | 'end' | 'add' | 'sink';
 }
 
 export interface DeformViz {
@@ -229,6 +247,8 @@ interface ViewState {
   setFireViz: (patch: Partial<FireViz>) => void;
   volcanoViz: VolcanoViz;
   setVolcanoViz: (patch: Partial<VolcanoViz>) => void;
+  atmosViz: AtmosViz;
+  setAtmosViz: (patch: Partial<AtmosViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -285,6 +305,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setFireViz: (patch) => set((s) => ({ fireViz: { ...s.fireViz, ...patch } })),
   volcanoViz: { lava: true, ejecta: true, ash: true, steam: true, fountain: true, overlay: 'off' },
   setVolcanoViz: (patch) => set((s) => ({ volcanoViz: { ...s.volcanoViz, ...patch } })),
+  atmosViz: { overlay: 'off', arrows: true, streamlines: false },
+  setAtmosViz: (patch) => set((s) => ({ atmosViz: { ...s.atmosViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

@@ -37,6 +37,8 @@ import { ThermalPreview } from '../thermal/ThermalPreview';
 import { FirePreview } from '../fire/FirePreview';
 import { VolcanoPreview, fissureOutline } from '../volcano/VolcanoPreview';
 import type { VolcanoSpec } from '@/volcano/types';
+import type { AtmosphereSpec } from '@/atmosphere/types';
+import { AtmospherePreview } from '../atmosphere/AtmospherePreview';
 import type { FireSpec } from '@/fire/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
 
@@ -47,7 +49,7 @@ function groundTerrain(): TerrainData {
 }
 
 function useGroundInstance(id: string | null): PhenomenonInstance | null {
-  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire' || i.type === 'volcano')) ?? null : null));
+  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire' || i.type === 'volcano' || i.type === 'atmosphere')) ?? null : null));
 }
 
 /** Points of a closed (or open) line on the ground, lifted a little. */
@@ -155,7 +157,8 @@ export function GroundPicker() {
         else if (cur.type === 'blast') updatePhenomenon(id, { spec: { ...(cur.spec as BlastSpec), position: p } });
         else if (cur.type === 'heatSource') updatePhenomenon(id, { spec: { ...(cur.spec as HeatSourceSpec), position: p } });
         else if (cur.type === 'fire') updatePhenomenon(id, { spec: { ...(cur.spec as FireSpec), position: p } });
-        else if (cur.type === 'volcano') updatePhenomenon(id, { spec: placeVent(cur.spec as VolcanoSpec, p, target ?? 'vent') });
+        else if (cur.type === 'volcano') updatePhenomenon(id, { spec: placeVent(cur.spec as VolcanoSpec, p, (target ?? 'vent') as 'vent' | 'end' | 'add') });
+        else if (cur.type === 'atmosphere') updatePhenomenon(id, { spec: { ...(cur.spec as AtmosphereSpec), position: p } });
         else if (cur.type === 'sinkhole') updatePhenomenon(id, { spec: { ...(cur.spec as SinkholeSpec), center: p } });
         else updatePhenomenon(id, { spec: { ...(cur.spec as LandslideSpec), area: moveArea((cur.spec as LandslideSpec).area, p) } });
         return done();
@@ -214,6 +217,7 @@ export function GroundPicker() {
     if (pick.target === 'end' && v) return <GroundLine pts={fissureOutline(v.position, hover, v.radius)} color="#ff6a1a" />;
     return <GroundLine pts={circlePts(hover[0], hover[1], v?.radius ?? 2)} color="#ff6a1a" />;
   }
+  if (inst.type === 'atmosphere') return <GroundLine pts={circlePts(hover[0], hover[1], (inst.spec as AtmosphereSpec).radius ?? 25)} color="#5fb8ff" />;
   if (inst.type === 'heatSource') {
     const hs = inst.spec as HeatSourceSpec;
     return hs.kind === 'point' ? <AimMarker x={hover[0]} z={hover[1]} color="#ff8a3d" /> : <GroundLine pts={circlePts(hover[0], hover[1], hs.radius)} color="#ff8a3d" />;
@@ -296,5 +300,6 @@ export function GroundPreview() {
   if (inst.type === 'heatSource') return <ThermalPreview inst={inst} />;
   if (inst.type === 'fire') return <FirePreview inst={inst} />;
   if (inst.type === 'volcano') return <VolcanoPreview inst={inst} />;
+  if (inst.type === 'atmosphere') return <AtmospherePreview inst={inst} />;
   return inst.type === 'sinkhole' ? <SinkholePreview inst={inst} /> : <LandslidePreview inst={inst} />;
 }

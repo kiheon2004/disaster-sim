@@ -23,6 +23,7 @@ import { BlastTools } from './BlastTools';
 import { ThermalTools } from './ThermalTools';
 import { FireTools } from './FireTools';
 import { VolcanoTools } from './VolcanoTools';
+import { AtmosphereTools } from './AtmosphereTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -200,6 +201,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         {inst.type === 'heatSource' && <ThermalTools inst={inst} />}
         {inst.type === 'fire' && <FireTools inst={inst} />}
         {inst.type === 'volcano' && <VolcanoTools inst={inst} />}
+        {inst.type === 'atmosphere' && <AtmosphereTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

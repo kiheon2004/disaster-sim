@@ -22,6 +22,7 @@ import { StructureHud } from './StructureHud';
 import { ThermalHud } from './ThermalHud';
 import { FireHud } from './FireHud';
 import { VolcanoHud } from './VolcanoHud';
+import { AtmosphereHud } from './AtmosphereHud';
 import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
@@ -67,6 +68,7 @@ export function ViewportContainer() {
         {!isEditor && <ImpactHud />}
         {!isEditor && <BlastHud />}
         {!isEditor && <VolcanoHud />}
+        {!isEditor && <AtmosphereHud />}
         {!isEditor && <FireHud />}
         {!isEditor && <ThermalHud />}
         {!isEditor && <StructureHud />}

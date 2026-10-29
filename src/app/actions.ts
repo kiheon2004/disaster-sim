@@ -29,6 +29,7 @@ import { parseWaterState, serializeWaterState } from '@/simulation/water/waterSt
 import { deleteSelection, duplicateSelection } from './buildActions';
 import { useBuildStore } from '@/editor/buildStore';
 import { volcanoPreset, type VolcanoPresetId } from '@/volcano/presets';
+import { atmosPreset, type AtmosPresetId } from '@/atmosphere/presets';
 import { worldFingerprint } from '@/world/fingerprint';
 import { firePreset, type FirePresetId } from '@/fire/presets';
 
@@ -177,6 +178,26 @@ export function loadVolcanoPreset(id: VolcanoPresetId) {
   useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'volcano.preset.loaded', params: { name: t(`volcano.preset.${id}`) } });
+}
+
+/** Load an atmosphere preset (Phase 29): terrain, objects, the experiment and its companion phenomena. */
+export function loadAtmosPreset(id: AtmosPresetId) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('atmos.preset.confirm', { name: t(`atmos.preset.${id}`) }))) return;
+  const p = atmosPreset(id);
+  const doc = createEmptyDocument(t(`atmos.preset.${id}`));
+  if (p.fire) doc.settings.simulation.fire = { ...p.fire };
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  const t0 = useWorldStore.getState().doc.terrain;
+  const heights = new Float32Array(t0.heights.length);
+  for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) heights[iz * t0.nx + ix] = p.height(t0.originX + ix * t0.cellSize, t0.originZ + iz * t0.cellSize);
+  useWorldStore.getState().applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+  useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'atmos.preset.loaded', params: { name: t(`atmos.preset.${id}`) } });
 }
 
 export function loadSampleTown() {

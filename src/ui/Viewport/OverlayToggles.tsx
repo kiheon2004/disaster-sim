@@ -1,3 +1,5 @@
+import { ATMOS_OVERLAYS, type AtmosOverlay } from '@/rendering/viewStore';
+import { atmosGradient, atmosLabels } from '@/rendering/atmosphere/atmosColors';
 import { useT } from '@/i18n/i18n';
 import { useViewStore } from '@/rendering/viewStore';
 import { WIND_COLOR_STOPS } from '@/rendering/sim/windColors';
@@ -284,6 +286,7 @@ export function OverlayToggles() {
       )}
       <ThermalToggles />
       <VolcanoToggles />
+      <AtmosphereToggles />
       <FireToggles />
       <StructureToggles />
     </div>
@@ -398,6 +401,32 @@ function VolcanoToggles() {
         {o === 'off' && viz.lava && <Legend gradient={GLOW_GRADIENT} labels={['300 °C', '750 °C', '1200 °C']} note={t('overlay.volcano.glowNote')} />}
         {o !== 'off' && <Legend gradient={overlayGradient(o)} labels={[`0 ${OVERLAY_SCALE[o].unit}`.trim(), `${OVERLAY_SCALE[o].max / 2} ${OVERLAY_SCALE[o].unit}`.trim(), `${OVERLAY_SCALE[o].max} ${OVERLAY_SCALE[o].unit}`.trim()]} note={t(`overlay.volcano.ot.${o}`)} />}
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.volcano.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Atmosphere views (Phase 29): shown while an atmosphere experiment runs. Fixed SI legends. */
+function AtmosphereToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.atmosphere !== null);
+  const viz = useViewStore((s) => s.atmosViz);
+  const set = useViewStore.getState().setAtmosViz;
+  if (!live) return null;
+  const o = viz.overlay;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#5fb8ff', marginTop: 2 }}>{t('overlay.atmos')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="atmos-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.atmos.overlay')}</span>
+        <select value={o} onChange={(e) => set({ overlay: e.target.value as AtmosOverlay })} aria-label={t('overlay.atmos.overlay')} data-testid="atmos-overlay-select"
+          style={{ fontSize: 11, background: 'var(--surface-2, #1c2128)', color: 'var(--text-1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4, padding: '2px 4px' }}>
+          {ATMOS_OVERLAYS.map((v) => <option key={v} value={v} title={t(`overlay.atmos.ot.${v}`)}>{t(`overlay.atmos.o.${v}`)}</option>)}
+        </select>
+        {o !== 'off' && <Legend gradient={atmosGradient(o)} labels={atmosLabels(o)} note={t(`overlay.atmos.ot.${o}`)} />}
+        <Toggle checked={viz.arrows} onChange={(b) => set({ arrows: b })} label={t('overlay.atmos.arrows')} />
+        <Toggle checked={viz.streamlines} onChange={(b) => set({ streamlines: b })} label={t('overlay.atmos.streamlines')} />
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.atmos.note')}</span>
       </div>
     </>
   );
