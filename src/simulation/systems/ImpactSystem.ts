@@ -32,7 +32,6 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 const SMALL = new Set(['streetLight', 'sign', 'wall', 'tree']);
 /** Bucket size of the object grid used to find objects under a landing (m). */
 const GRID = 8;
-const force: [number, number, number] = [0, 0, 0];
 
 function impactOf(e: RuntimeEntity, source: string) {
   return (e.impact ??= { damage: 0, ejectaRatio: 0, hits: 0, impulse: 0, source });
@@ -49,6 +48,8 @@ export class ImpactSystem implements SimulationSystem {
   private shockPeak = new Map<string, { a: number; time: number; done: boolean }>();
   /** Model events already turned into log / timeline entries (per model). */
   private seen = new Map<string, number>();
+  /** Ejecta forces of this step per body (applied once after all landings). */
+  private pending = new Map<RuntimeEntity, [number, number, number]>();
 
   isActive(ctx: SystemContext) {
     return ctx.env.impact.active;
@@ -72,6 +73,10 @@ export class ImpactSystem implements SimulationSystem {
         const a = performance.now();
         const grid = this.objectGrid(ctx);
         for (const l of landings) this.respond(ctx, m, l, dt, grid);
+        // Several parcels may land on one body in a step: their impulses are summed and applied once
+        // (Phase 24 fix — the ForceLedger rejected the second application, losing its momentum).
+        for (const [e, f] of this.pending) ctx.forces.force('impact', e.body!, f, e);
+        this.pending.clear();
         objectsMs += performance.now() - a;
         ch.stats.landings += landings.length;
         ctx.env.groundFailure.urgent = true;
@@ -244,11 +249,12 @@ export class ImpactSystem implements SimulationSystem {
     const vh = Math.min(v, Math.max(0, l.vh)), vv = Math.sqrt(Math.max(0, v * v - vh * vh));
     const J = mHit * v;
     st.impulse += J;
-    // Impulse over one step as a force through the ledger (downward + outward).
-    force[0] = (mHit * vh * l.dirX) / dt;
-    force[1] = (-mHit * vv) / dt;
-    force[2] = (mHit * vh * l.dirZ) / dt;
-    ctx.forces.force('impact', e.body!, force, e);
+    // Impulse over one step as a force (downward + outward), summed per body, applied once per step.
+    let f = this.pending.get(e);
+    if (!f) this.pending.set(e, (f = [0, 0, 0]));
+    f[0] += (mHit * vh * l.dirX) / dt;
+    f[1] += (-mHit * vv) / dt;
+    f[2] += (mHit * vh * l.dirZ) / dt;
     if (e.source.type === 'human' && !e.flags.fallen) {
       const mass = e.source.physics.mass;
       const h = e.dims[1] / 2, b = FOOT_LEVER;

@@ -45,6 +45,8 @@ export interface ShieldBox {
 /** Heights of the run's (or document's) ground. */
 export interface GroundHeight {
   sampleHeight(x: number, z: number): number;
+  /** Highest ground anywhere (m), if known: a path entirely above it cannot be blocked. */
+  readonly maxHeight?: number;
   readonly data: { originX: number; originZ: number; nx: number; nz: number; cellSize: number };
 }
 
@@ -186,9 +188,12 @@ export class ShieldIndex {
   private readonly cell = 8;
   private readonly grid = new Map<number, number[]>();
   readonly boxes: ShieldBox[];
+  private readonly stamp: Int32Array;
+  private query = 0;
 
   constructor(boxes: ShieldBox[]) {
     this.boxes = boxes;
+    this.stamp = new Int32Array(boxes.length);
     boxes.forEach((b, i) => {
       const r = Math.hypot(b.hx, b.hz);
       for (let gx = Math.floor((b.cx - r) / this.cell); gx <= Math.floor((b.cx + r) / this.cell); gx++) {
@@ -202,21 +207,34 @@ export class ShieldIndex {
     });
   }
 
-  /** Boxes whose cells the plan segment (x0, z0) → (x1, z1) passes (deduplicated, ascending index). */
+  /**
+   * Boxes registered in the cells the plan segment (x0, z0) → (x1, z1) passes through (exact grid
+   * traversal, Amanatides & Woo 1987; boxes are registered in every cell their bounding circle
+   * touches, so a box crossing the segment is always found), deduplicated, in traversal order.
+   */
   along(x0: number, z0: number, x1: number, z1: number, out: number[]): number[] {
     out.length = 0;
-    const L = Math.hypot(x1 - x0, z1 - z0);
-    const n = Math.max(1, Math.ceil(L / (this.cell / 2)));
-    const seen = new Set<number>();
-    for (let k = 0; k <= n; k++) {
-      const x = x0 + ((x1 - x0) * k) / n, z = z0 + ((z1 - z0) * k) / n;
-      const gx = Math.floor(x / this.cell), gz = Math.floor(z / this.cell);
-      for (let ox = -1; ox <= 1; ox++) for (let oz = -1; oz <= 1; oz++) {
-        const l = this.grid.get((gx + ox) * 8192 + gz + oz);
-        if (l) for (const i of l) if (!seen.has(i)) { seen.add(i); out.push(i); }
+    const q = ++this.query;
+    const c = this.cell;
+    let gx = Math.floor(x0 / c), gz = Math.floor(z0 / c);
+    const ex = Math.floor(x1 / c), ez = Math.floor(z1 / c);
+    const dx = x1 - x0, dz = z1 - z0;
+    const sx = dx > 0 ? 1 : -1, sz = dz > 0 ? 1 : -1;
+    const tdx = dx !== 0 ? Math.abs(c / dx) : Infinity, tdz = dz !== 0 ? Math.abs(c / dz) : Infinity;
+    let tx = dx !== 0 ? ((dx > 0 ? (gx + 1) * c - x0 : x0 - gx * c) / Math.abs(dx)) : Infinity;
+    let tz = dz !== 0 ? ((dz > 0 ? (gz + 1) * c - z0 : z0 - gz * c) / Math.abs(dz)) : Infinity;
+    for (let guard = 0; guard < 4096; guard++) {
+      const l = this.grid.get(gx * 8192 + gz);
+      if (l) for (const i of l) if (this.stamp[i] !== q) { this.stamp[i] = q; out.push(i); }
+      if (gx === ex && gz === ez) break;
+      if (tx < tz) { tx += tdx; gx += sx; } else { tz += tdz; gz += sz; }
+      if (tx > 1 && tz > 1 && (gx !== ex || gz !== ez)) {
+        // Past the end point (numerical edge): visit the end cell and stop.
+        const le = this.grid.get(ex * 8192 + ez);
+        if (le) for (const i of le) if (this.stamp[i] !== q) { this.stamp[i] = q; out.push(i); }
+        break;
       }
     }
-    out.sort((a, b) => a - b);
     return out;
   }
 }
@@ -235,7 +253,7 @@ export function shielding(s: Readonly<Vec3>, p: Readonly<Vec3>, T: number, c: nu
   // the ground under a receiver is the reflecting plane, handled by the image wave). Ends excluded.
   const d = ground.data;
   const step = Math.max(0.5, d.cellSize * 0.7);
-  const n = Math.ceil(L / step);
+  const n = ground.maxHeight !== undefined && Math.min(s[1], p[1]) >= ground.maxHeight ? 0 : Math.ceil(L / step);
   const margin = Math.min(0.2, 3 / L);
   for (let k = 1; k < n; k++) {
     const f = k / n;

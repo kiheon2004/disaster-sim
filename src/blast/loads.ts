@@ -212,16 +212,21 @@ export const newSdof = (period: number, ductility: number): Sdof => ({ x: 0, v: 
  * Advance over [t0, t1]. `drive(a, b)` returns ∫ load/capacity dt over [a, b] (s). Exact for a load
  * constant in each sub-step.
  */
-export function advanceSdof(s: Sdof, drive: (a: number, b: number) => number, t0: number, t1: number) {
+export function advanceSdof(s: Sdof, drive: (a: number, b: number) => number, t0: number, t1: number, cumulative?: (t: number) => number) {
   const dt = t1 - t0;
   if (dt <= 0) return;
   const w = s.omega;
-  const m = Math.min(256, Math.max(1, Math.ceil((w * dt) / 0.25)));
+  const m = Math.min(256, Math.max(1, Math.ceil((w * dt) / 0.4)));
   const h = dt / m, cw = Math.cos(w * h), sw = Math.sin(w * h);
   let x = s.x, v = s.v, peak = s.peak;
+  // With a cumulative integral the sub-step loads cost one evaluation per boundary (not two per sub-step).
+  let prev = cumulative ? cumulative(t0) : 0;
   for (let k = 0; k < m; k++) {
     const a = t0 + k * h;
-    const xs = drive(a, a + h) / h;
+    let I: number;
+    if (cumulative) { const next = cumulative(a + h); I = next - prev; prev = next; }
+    else I = drive(a, a + h);
+    const xs = I / h;
     const e = x - xs;
     x = xs + e * cw + (v / w) * sw;
     v = -e * w * sw + v * cw;
@@ -229,6 +234,16 @@ export function advanceSdof(s: Sdof, drive: (a: number, b: number) => number, t0
     if (ax > peak) peak = ax;
   }
   s.x = x; s.v = v; s.peak = peak;
+}
+
+/**
+ * Upper bound of the peak response of an undamped oscillator (x'' + ω²x = ω²f) to loads that never
+ * exceed f_max in magnitude and whose |f| integrates to F: |x| ≤ min(4·f_max, ω·F) (a single
+ * reversal at most doubles the static-step bound of 2; the impulse bound holds for any shape).
+ * Parts whose bound stays below their damage threshold are never integrated (rigorous pruning).
+ */
+export function responseBound(s: Sdof, fMax: number, F: number): number {
+  return Math.min(4 * fMax, s.omega * F);
 }
 
 /** Free-vibration amplitude (the peak the element will still reach with no further load). */

@@ -45,6 +45,9 @@ export interface BlastStats {
   structureMs: number;
   partsMs: number;
   totalMs: number;
+  /** Totals of the activation (shielding, face loads, parts) and response parts (ms). */
+  fieldTotalMs: number;
+  forceTotalMs: number;
   updates: number;
   /** Objects / parts evaluated in the last update. */
   objects: number;
@@ -54,7 +57,7 @@ export interface BlastStats {
 export class BlastChannel {
   readonly waves: WaveRecord[] = [];
   readonly events: BlastModelEvent[] = [];
-  stats: BlastStats = { fieldMs: 0, forceMs: 0, structureMs: 0, partsMs: 0, totalMs: 0, updates: 0, objects: 0, parts: 0 };
+  stats: BlastStats = { fieldMs: 0, forceMs: 0, structureMs: 0, partsMs: 0, totalMs: 0, fieldTotalMs: 0, forceTotalMs: 0, updates: 0, objects: 0, parts: 0 };
   /** Some structure received a blast load in the current step (keeps the structural model running). */
   loading = false;
 

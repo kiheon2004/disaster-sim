@@ -73,6 +73,7 @@ export class StructuralResponseSystem implements SimulationSystem {
     const coupled = ctx.interactions;
     const windRamp = coupled && ctx.env.wind.baseSpeed > 0.01 ? Math.min(1, (sr.steps * dt) / WIND_RAMP) : 0;
     const field = coupled ? ctx.env.flood.field : null;
+    const gmActive = ctx.env.groundMotion.active;
     for (let ui = 0; ui < units.length; ui++) {
       const e = units[ui];
       if (e.flags.collapsed || e.flags.toppled) continue;
@@ -87,6 +88,8 @@ export class StructuralResponseSystem implements SimulationSystem {
         model.fwx[ui] = k * v[0];
         model.fwz[ui] = k * v[2];
       }
+      // Without ground motion a unit exactly at rest with no load stays exactly at rest (Phase 24).
+      if (!gmActive && model.idle(ui)) continue;
       model.stepUnit(ui, dt);
 
       st.top[0] = model.top[2 * ui];

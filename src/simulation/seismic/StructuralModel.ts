@@ -325,6 +325,21 @@ export class StructuralModel {
     }
   }
 
+  /**
+   * Whether a unit is exactly at rest with no input this step (no ground acceleration, no external
+   * load): stepping it would leave every state value exactly as it is, so callers may skip it
+   * (Phase 24: blast-only runs load a few units at a time).
+   */
+  idle(ui: number): boolean {
+    if (this.agx[ui] !== 0 || this.agz[ui] !== 0 || this.fwx[ui] !== 0 || this.fwz[ui] !== 0 || this.fbx[ui] !== 0 || this.fbz[ui] !== 0) return false;
+    const o = this.off[ui], n = this.n[ui];
+    for (let j = 0; j <= n; j++) {
+      const d = 2 * (o + j);
+      if (this.u[d] !== 0 || this.u[d + 1] !== 0 || this.v[d] !== 0 || this.v[d + 1] !== 0) return false;
+    }
+    return true;
+  }
+
   /** Advance every unit by dt with the ground accelerations in agx / agz. */
   step(dt: number) {
     for (let ui = 0; ui < this.units; ui++) this.stepUnit(ui, dt);

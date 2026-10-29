@@ -79,6 +79,8 @@ export interface BlastEntityState {
   damage: number;
   /** Facade parts / attachments failed by the blast. */
   broken: number;
+  /** Exterior walls that reached their limit, waiting for the next load-path re-analysis (20 Hz). */
+  pendingWalls: { p: PartEntry; ratio: number }[];
   done: boolean;
   noted: Set<string>;
 }
@@ -86,6 +88,6 @@ export interface BlastEntityState {
 export function newBlastState(): BlastEntityState {
   return {
     source: '', peak: 0, impulse: 0, arrival: Infinity, zone: 'weak', exposure: 'direct', shieldedBy: null, il: 0, waves: [], parts: null,
-    sdof: null, cap: 0, sdofT: -Infinity, dv: 0, dvPeak: 0, J: 0, peakForce: 0, aEq: 0, damage: 0, broken: 0, done: false, noted: new Set(),
+    sdof: null, cap: 0, sdofT: -Infinity, dv: 0, dvPeak: 0, J: 0, peakForce: 0, aEq: 0, damage: 0, broken: 0, pendingWalls: [], done: false, noted: new Set(),
   };
 }

@@ -74,6 +74,13 @@ function clearingTo(a: Arrival, tc: number, t: number): number {
   return a.dp * (tau - 0.5 * tau * tau * (1 / a.T + 1 / tc) + (tau * tau * tau) / (3 * a.T * tc));
 }
 
+/** ∫ p_face dt from the arrival to t (cumulative form of faceImpulse). */
+export function faceImpulseTo(a: Arrival, C: number, tc: number, t: number): number {
+  let I = impulseTo(a, t);
+  if (C !== 1) I += (C - 1) * clearingTo(a, tc, t);
+  return I;
+}
+
 /**
  * ∫ p_face dt over [t0, t1] for a face with reflection factor C (1 = side-on) and clearing time tc.
  */

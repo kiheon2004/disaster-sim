@@ -30,6 +30,7 @@ import { NO_SHIELD, ShieldIndex, shielding, type Contribution } from '@/blast/wa
 import { qRotate } from '@/core/math';
 import { newSample } from '@/blast/source';
 import { obstacleFromEntity } from '../wind/obstacles';
+import { simProfiler } from '../profiling/SimProfiler';
 import type { ShieldBox } from '@/blast/wave';
 
 /** Objects are activated this long before the front can reach them (s). */
@@ -84,18 +85,22 @@ export class BlastSystem implements SimulationSystem {
     const still: RuntimeEntity[] = [];
     for (const e of this.active) {
       const st = e.blast!;
+      const tr = simProfiler.now();
       responses.respond('pressure', e, ctx, dt);
+      simProfiler.add(`blast.respond.${e.source.type}`, tr);
       if (st.parts) for (const p of st.parts) if (!p.done) parts++;
       if (sr && e.seismic && e.seismic.unit >= 0 && (sr.model.fbx[e.seismic.unit] !== 0 || sr.model.fbz[e.seismic.unit] !== 0)) this.loadedUnits.push(e.seismic.unit);
       const end = st.waves.reduce((m, w) => Math.max(m, w.end), -Infinity);
-      const partsDone = !st.parts || st.parts.every((p) => p.done);
+      const partsDone = (!st.parts || st.parts.every((p) => p.done)) && st.pendingWalls.length === 0;
       const sdofDone = !st.sdof || t0 > end + 0.5;
       if (t0 > end + dt && partsDone && sdofDone && !(e.dynamic && t0 <= end + 0.2)) st.done = true;
       else still.push(e);
     }
     this.active = still;
     const a1 = performance.now();
+    const td = simProfiler.now();
     this.debris(ctx, t0, t1, dt);
+    simProfiler.add('blast.debris', td);
     if (ctx.interactions && ctx.env.flood.field) this.waterImpulse(ctx, t0, t1);
     this.milestones(ctx, t0);
     const st = ch.stats;
@@ -104,6 +109,8 @@ export class BlastSystem implements SimulationSystem {
     st.parts = parts;
     st.fieldMs = a0 - w0;
     st.forceMs = a1 - a0;
+    st.fieldTotalMs += st.fieldMs;
+    st.forceTotalMs += st.forceMs;
     st.totalMs += performance.now() - w0;
   }
 
@@ -153,7 +160,9 @@ export class BlastSystem implements SimulationSystem {
     const faces = boxFaces(pos, e.dims, q, e.areaFactor);
     const centre: Vec3 = faces.center;
     const s0 = w.sample(Math.hypot(centre[0] - w.init.position[0], centre[1] - w.init.position[1], centre[2] - w.init.position[2]));
+    const ts = simProfiler.now();
     const sh = shielding(w.init.position, centre, s0.T, w.sourceAmbient.c, ctx.env.terrain, this.shieldIndex(ctx), e.id);
+    simProfiler.add('blast.shielding', ts);
     const centreC: Contribution[] = [];
     w.contributions(centre, sh, centreC);
     const statik = !e.dynamic;
@@ -187,7 +196,9 @@ export class BlastSystem implements SimulationSystem {
     if (structure) {
       ensureSeismicRuntime(ctx.runtime, ctx.env.terrain, GRAVITY, ctx.interactions);
       // Parts are rebuilt with every wave they will see.
+      const tp = simProfiler.now();
       if (e.components.length > 1 || e.modular) st.parts = [...buildParts(e, ctx, faces), ...buildWalls(e, ctx, faces)];
+      simProfiler.add('blast.buildParts', tp);
     }
     if (fresh || st.done) {
       st.done = false;

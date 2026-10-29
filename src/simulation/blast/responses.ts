@@ -36,12 +36,13 @@ import { residualStrength } from '../interactions/integrity';
 import { failMembers } from '../buildings/modular';
 import { MATERIALS } from '@/buildings/materials';
 import { facadeNormal } from '@/buildings/generate';
-import { advanceSdof, boxFaces, dragImpulse, faceFactor, reliefTime, faceLoads, freeAmplitude, netImpulse, newSdof, pressureCentre, projectedArea, type FaceLoad, type Faces } from '@/blast/loads';
-import { facePressure, faceImpulse, span } from '@/blast/pulse';
+import { advanceSdof, boxFaces, dragImpulse, faceFactor, reliefTime, responseBound, faceLoads, freeAmplitude, netImpulse, newSdof, pressureCentre, projectedArea, type FaceLoad, type Faces } from '@/blast/loads';
+import { facePressure, faceImpulse, faceImpulseTo, negAmp, negDur, span } from '@/blast/pulse';
 import { qRotate } from '@/core/math';
 import type { Contribution } from '@/blast/wave';
 import type { BlastEntityState, PartEntry, WaveLoad } from './state';
 import { blastWave } from './access';
+import { simProfiler } from '../profiling/SimProfiler';
 
 /** Facade parts / attachments: SDOF period (s) and ductility (typical values, approximate). */
 const PART: Partial<Record<ComponentKind, { T: number; mu: number }>> = {
@@ -154,7 +155,9 @@ export function buildParts(e: RuntimeEntity, ctx: SystemContext, faces: Faces): 
       out.push(prev);
       return;
     }
-    out.push({ ci, sdof: newSdof(prop.T, prop.mu), cap: partCapacity(e, ci, pos, ctx), loads, first, end, impulse: 0, tDone: first - 1e-3, peakP: 0, done: false });
+    const entry: PartEntry = { ci, sdof: newSdof(prop.T, prop.mu), cap: partCapacity(e, ci, pos, ctx), loads, first, end, impulse: 0, tDone: first - 1e-3, peakP: 0, done: false };
+    if (!canDamage(entry)) return;
+    out.push(entry);
   });
   return out;
 }
@@ -211,9 +214,26 @@ export function buildWalls(e: RuntimeEntity, ctx: SystemContext, faces: Faces): 
     if (!loads.length) return;
     const prev = st.parts?.find((p) => p.member === i);
     if (prev) { prev.loads = loads; prev.first = Math.min(prev.first, first); prev.end = Math.max(prev.end, end); prev.done = false; out.push(prev); return; }
-    out.push({ ci: -1, member: i, sdof: newSdof((2 * Math.PI) / Math.max(1e-3, w1), mu), cap, loads, first, end, impulse: 0, tDone: first - 1e-3, peakP: 0, done: false });
+    const entry: PartEntry = { ci: -1, member: i, sdof: newSdof((2 * Math.PI) / Math.max(1e-3, w1), mu), cap, loads, first, end, impulse: 0, tDone: first - 1e-3, peakP: 0, done: false };
+    if (!canDamage(entry)) return;
+    out.push(entry);
   });
   return out;
+}
+
+/**
+ * Whether the loads of a part can bring it to its damage threshold at all (0.75·x_f): the rigorous
+ * response bound (loads.ts) of the summed face pressures. Parts that cannot are never integrated —
+ * far-field windows cost nothing.
+ */
+function canDamage(p: PartEntry): boolean {
+  let fMax = 0, F = 0;
+  for (const l of p.loads) {
+    const C = Math.max(1, l.C);
+    fMax += C * Math.max(l.a.dp, l.a.waveform === 'nWave' ? negAmp(l.a) : 0);
+    F += C * 0.5 * l.a.dp * l.a.T + (l.a.waveform === 'nWave' ? 0.5 * negAmp(l.a) * negDur(l.a) : 0);
+  }
+  return responseBound(p.sdof, fMax / p.cap, F / p.cap) >= 0.75 * p.sdof.xFail;
 }
 
 /** Advance the parts of an object over the step; fail those that reach their limit. */
@@ -222,6 +242,8 @@ export function respondParts(e: RuntimeEntity, ctx: SystemContext, dt: number): 
   if (!st.parts) return 0;
   const t0 = ctx.time, t1 = t0 + dt;
   let n = 0;
+  // Walls that reached their limit are re-analysed together, at most every WALL_ROUNDS steps.
+  const walls = st.pendingWalls;
   for (const p of st.parts) {
     if (p.done || t1 < p.first) continue;
     if (p.member !== undefined) {
@@ -236,7 +258,11 @@ export function respondParts(e: RuntimeEntity, ctx: SystemContext, dt: number): 
       let s = 0;
       for (const l of loads) s += faceImpulse(l.a, l.C, l.tc, a, b);
       return s / cap;
-    }, from, t1);
+    }, from, t1, (t) => {
+      let s = 0;
+      for (const l of loads) s += faceImpulseTo(l.a, l.C, l.tc, t);
+      return s / cap;
+    });
     for (const l of loads) {
       p.impulse += faceImpulse(l.a, l.C, l.tc, from, t1);
       const pk = facePressure(l.a, l.C, l.tc, Math.max(from, l.a.t));
@@ -246,8 +272,12 @@ export function respondParts(e: RuntimeEntity, ctx: SystemContext, dt: number): 
     const ended = t0 > p.end;
     const peak = ended ? Math.max(s.peak, freeAmplitude(s)) : s.peak;
     if (peak >= s.xFail) {
-      if (p.member !== undefined) failWall(e, ctx, p, peak / s.xFail);
-      else failPart(e, ctx, p, peak / s.xFail);
+      if (p.member !== undefined) walls.push({ p, ratio: peak / s.xFail });
+      else {
+        const tf = simProfiler.now();
+        failPart(e, ctx, p, peak / s.xFail);
+        simProfiler.add('blast.partFail', tf);
+      }
       p.done = true;
       continue;
     }
@@ -257,20 +287,37 @@ export function respondParts(e: RuntimeEntity, ctx: SystemContext, dt: number): 
     }
     if (ended) p.done = true;
   }
+  // Each building has its own phase (deterministic, from its id) so the re-analyses do not bunch up.
+  if (walls.length && ((ctx.step + (hashString(e.id) >>> 0)) % WALL_ROUNDS === 0 || st.parts.every((p) => p.done))) {
+    const tf = simProfiler.now();
+    if (!e.flags.collapsed) failWalls(e, ctx, walls.slice());
+    walls.length = 0;
+    simProfiler.add('blast.wallFail', tf);
+  }
   return n;
 }
 
 const LOG_STEPS = [1, 10, 40, 160];
+/**
+ * Exterior walls failing within a building go through the Phase 17 load-path re-analysis in batches,
+ * every 3 fixed steps (20 Hz — the rate the facade parts are evaluated at under wind): a wall that
+ * reached its limit is removed at most 33 ms later (one re-analysis instead of one per wall / step).
+ */
+const WALL_ROUNDS = 3;
 
-function failWall(e: RuntimeEntity, ctx: SystemContext, p: PartEntry, ratio: number) {
+/** Exterior walls that failed out of plane in this step: one batch through the member path. */
+function failWalls(e: RuntimeEntity, ctx: SystemContext, list: { p: PartEntry; ratio: number }[]) {
   const st = e.blast!;
-  let kx = 0, kz = 0, best = -1;
-  for (const l of p.loads) if (l.a.dp > best) { best = l.a.dp; kx = l.a.k[0]; kz = l.a.k[2]; }
+  let kx = 0, kz = 0, best = -1, ratio = 0;
+  for (const { p, ratio: r } of list) {
+    ratio = Math.max(ratio, r);
+    for (const l of p.loads) if (l.a.dp > best) { best = l.a.dp; kx = l.a.k[0]; kz = l.a.k[2]; }
+  }
   const kh = Math.hypot(kx, kz) || 1;
-  st.broken++;
+  st.broken += list.length;
   e.lastHazard = 'blast';
   e.lastCause = 'overpressure';
-  failMembers(e, ctx, [p.member!], { hazard: 'blast', cause: 'overpressure', response: ratio, dir: [kx / kh, 0, kz / kh] });
+  failMembers(e, ctx, list.map((w) => w.p.member!), { hazard: 'blast', cause: 'overpressure', response: ratio, dir: [kx / kh, 0, kz / kh] });
   const cnt = (e.counters.blastWall = (e.counters.blastWall ?? 0) + 1);
   if (cnt === 1) ctx.log(e.id, 'danger', { key: 'log.blast.wall' });
 }
