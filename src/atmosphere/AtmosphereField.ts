@@ -53,6 +53,9 @@ export interface FieldInit {
   tau?: number;
 }
 
+/** Step of the column-mass redistribution (s): it changes over ≳ 1 s (multi-rate with the 0.1 s coupling). */
+export const BARO_DT = 0.5;
+
 /** Layer-flow sources below this (m/s of vertical velocity) are treated as none (no solve). */
 export const LAYER_MIN = 0.02;
 /** Buoyancy-only layer flow is re-solved every this many steps (the updraft field changes slowly); sinks every step. */
@@ -216,6 +219,7 @@ export class AtmosphereField implements Grid {
   solves = 0;
   lastIterations = 0;
   layerIterations = 0;
+  private baroAcc = 0;
   maxSpeed = 0;
   maxLayerSpeed = 0;
   private readonly work: Float64Array[];
@@ -462,8 +466,11 @@ export class AtmosphereField implements Grid {
       this.Tcol = ((up - upAdded) * this.Tcol + upAdded * F.Tin) / up;
     }
     smid.set(this.sigma);
-    // 2–3. Column redistribution (skipped at rest).
-    const it = this.redistribute(dt, F.bgShare);
+    // 2–3. Column redistribution (skipped at rest) on its own step of ≥ BARO_DT (backward Euler is
+    //      stable for any step; the mass moved is exact in flux form whatever the step).
+    this.baroAcc += dt;
+    let it = -1;
+    if (this.baroAcc >= BARO_DT - 1e-9) { it = this.redistribute(this.baroAcc, F.bgShare); this.baroAcc = 0; }
     r.iterations = it;
     // 4. Pressure work: the air of every column expands / is compressed adiabatically by its actual
     //    pressure change over the step (p ∝ σ). Air carried in or out by the column flow is mixed at

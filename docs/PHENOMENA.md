@@ -25,7 +25,7 @@
 |---|---|---|
 | `PhenomenonDefinition` | `src/phenomena/types.ts`, `definitions.ts` | 현상 유형별 **고유 타입의 파라미터**(zod 스키마), 편집 필드(단위·범위·배율), 기본값, 가정, 효과 채널, 사용 모델, 이벤트 생성, 지속시간, 설명 |
 | `PhenomenonInstance` | `types.ts` | 실험 속 한 번의 발생: id, type, spec, enabled, start(절대 시각 또는 다른 현상의 시작/종료 + 간격), seed, visualize |
-| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종; Phase 27 현재: 구현 12종(+ 열원·화재) + 계획 8종; Phase 28 현재: 구현 13종(+ 화산) + 계획 7종 |
+| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종; Phase 27 현재: 구현 12종(+ 열원·화재) + 계획 8종; Phase 28 현재: 구현 13종(+ 화산) + 계획 7종; Phase 29 현재: 구현 14종(+ 대기) + 계획 7종(대기 소멸은 산소 분율 변경·저산소로 좁혀 계획 유지) |
 | Lifecycle | 기존 `SimulationEvent` | onStart → update(고정 스텝) → onEnd(finished / superseded), 채널별 대체 규칙 유지 |
 | `PhenomenonContext` | `types.ts` | 시드, 고정 지형, 물 설정(기본값 해석용) |
 | Output | 효과 채널(§3) | 현상은 채널만 쓰고, 시스템이 힘·피해·노출로 바꿈 |
@@ -48,7 +48,7 @@
 | Pressure | 인터페이스만 | 과압 Pa | — | 구현 시스템 없음 |
 | Temperature / Heat Flux | **작동(Phase 26)** | K(표시 °C), W, W/m², J | `env.thermal` (ThermalWorld: 지면 기둥·물 열·공기층·구획·노드·장부) | HeatSourceEvent·운석 열 몫 → 열 시스템 → 구조 계수·열하중·노출·렌더 — [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md) |
 | Terrain Deformation | 인터페이스만 | 표고 변화 m | TerrainData(실행 중 고정) | `TerrainDeformationRequest` 계약만 |
-| Atmospheric State | 인터페이스만 | kPa, O₂, 밀도 | — | `BASELINE_ATMOSPHERE` 상수(표준 대기) |
+| Atmospheric State | **구현(Phase 29)** — 대기 실험 중 `env.atmosphere`(기둥 질량·기압·밀도·기류·O₂) | Pa, kg/m³, m/s, kg | AtmosphereEvent, 화산(가스) | 열·화재·바람 힘·물·화산·폭발/운석(옵트인)·인스펙터; 실험이 없으면 `BASELINE_ATMOSPHERE` 상수 |
 
 산소 농도·온도처럼 힘으로 환원할 수 없는 효과가 있으므로 하나의 힘 벡터로 합치지 않았습니다. 인터페이스만 있는 채널은 UI에 "인터페이스만 (미구현)"으로 표시되며, 실행되는 기능처럼 보이지 않습니다.
 
@@ -227,7 +227,7 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | Heat / Thermal (교차) | **구현됨(Phase 26)** — 열원 5종(점·원판·표면·체적·지정 온도), 전도·대류·복사, 물 열 운반, 공기층, 부재 온도 → EN 강도·열팽창 → 구조 엔진, 잔해 열, 운석 열 몫, `thermal` 해저드, [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md). 연소·화재 확산은 Phase 27(구현됨). 남은 것: 극한 기후·결빙(Phase 30) | 구조 파괴 엔진(`setMaterialFactor`·`addLoad`), 물 솔버 유량, 바람장, 실험·장부 패턴 |
 | Fire | **구현됨(Phase 27)** — 연료 항목(목조 부재·수관·줄기·실내 가연물·잔해), 열유속-시간 착화, 연소율·화학에너지 장부(= 열 장부 연소 계정), 방 화재(개구부·Rockett 환기·산소 한계·외부 화염·플래시오버), 연기·가시거리, 화염 복사·기울기 확산, 탄화 단면 → 구조 엔진, `fire` 해저드·원인, [FIRE_COMBUSTION.md](FIRE_COMBUSTION.md). 남은 것: 불티 착화·지표 연료·2구역·화학종 | **열물리 엔진(Phase 26)**: 노드 온도·질량·재료, 구획 노드, 점원 복사 기하, 물 열 추적자, 구조 계수 경로 |
 | Volcano | **구현됨(Phase 28)** — 분출원(중앙·균열·여러 분출구, 시간 프로파일), Bingham 용암 흐름(GRD 점성·결정·항복강도), Phase 26 엔탈피(잠열)로 냉각·고화, 축약 크러스트, 고화 퇴적 → Phase 21 지형 경로, 화산탄(Phase 23 비행), 화산재(별도 물질·바람·침강·지붕 하중), 물·화재·식생·건물·도로·차량 연동, `volcano` 해저드·원인 `lava`/`ashLoad`, [VOLCANO.md](VOLCANO.md). 남은 것: 저장소·폭발 역학, 끓음·증기, 가스 화학, 플룸 역학(Phase 29) | **열물리(26)**: 엔탈피 표·원천 단계·공기층·물 열, **화재(27)**: `incidentProviders`(파일럿)·착화 규칙, **지형 변형(21)**: 원천 계약, **운석(23)**: `fly()`, **구조(25)**: `addLoad`·재료 계수 |
-| Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |
+| Atmosphere | **구현됨(Phase 29)** — 기둥 질량·정수압·상태방정식, 반암시적 기류·근지면 수렴, 대기 제거(일정·누출·예약·처방 기압, 균일·국소)·복원(저장소·경계), 단열/등온, 국소 밀도의 공기역학·대류·연소 산소·연기/가스/화산재 수송, 물·지형, 폭발·운석 옵트인, [ATMOSPHERE.md](ATMOSPHERE.md). 남은 것: 산소 분율 변경·생리(계획 `atmosphereLoss`, Phase 34), 습도·상변화(Phase 30) | **열물리(26)**: 공기층(온도 소유)·대류·장부, **화재(27)**: O₂·그을음, **화산(28)**: 가스·화산재, **바람(15)**: 처방 배경, **폭발(24)**·**운석(23)**: 기준 상태 입력 |
 | Gravity Change | 공간 중력장(오브젝트별 힘, Rapier 전역 중력은 기준 유지) | `GravityField` 인터페이스, ForceLedger(`gravityField` 출처 예약), 구조 모델 gravity 입력 |
 | Black Hole | 공간 중력장 + 조석력(크기 있는 물체의 차등 가속) | ForceLedger, 파편, 비교 실행, "실험적·가상" 모델 수준 |
 

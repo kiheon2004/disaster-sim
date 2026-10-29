@@ -1,0 +1,100 @@
+{
+ "date": "2026-10-17",
+ "bench": "src/bench/identity.bench.test.ts (IDENTITY_ATMOS=1: base + heat + fire + atmosphere-era scenes; thermal, fire and volcano state hashed)",
+ "A": "e7a7ce9 (Phase 28)",
+ "B": "b732502 (Phase 29, no atmosphere experiment)",
+ "scenes": {
+  "street earthquake 1.1 g": {
+   "phase28": "350f4ad6f2deb4fe6c6603a1b89b54fe18cb8381df27cece279cdaeb9be5db55",
+   "phase29": "350f4ad6f2deb4fe6c6603a1b89b54fe18cb8381df27cece279cdaeb9be5db55",
+   "identical": true
+  },
+  "blast 12 houses": {
+   "phase28": "df4e67d2e4f0b9dfc13b726f82d3027f117b55c81bd2eb240ec2d0ce0c8e4a61",
+   "phase29": "df4e67d2e4f0b9dfc13b726f82d3027f117b55c81bd2eb240ec2d0ce0c8e4a61",
+   "identical": true
+  },
+  "flood + rain": {
+   "phase28": "ff688a76f066f598c5a80802b1f2cee5b7ad12499981354eab234fcede260606",
+   "phase29": "ff688a76f066f598c5a80802b1f2cee5b7ad12499981354eab234fcede260606",
+   "identical": true
+  },
+  "wind cladding": {
+   "phase28": "6788bdb953389f66ad55f07e0bb5cef0efc65a3ba13c6ebf82304f6b436a2331",
+   "phase29": "6788bdb953389f66ad55f07e0bb5cef0efc65a3ba13c6ebf82304f6b436a2331",
+   "identical": true
+  },
+  "impact": {
+   "phase28": "9db357d87b60aade4e2529e3a05c2aeeba8f0e5a4d181750ab06c22a43b559b0",
+   "phase29": "9db357d87b60aade4e2529e3a05c2aeeba8f0e5a4d181750ab06c22a43b559b0",
+   "identical": true
+  },
+  "heat: warehouse room fire-like source": {
+   "phase28": "daa9055b7db8d36c7fa198ae5b04e7c8e5e2fb4c4518a9ba7df2bbe1a2641f8f",
+   "phase29": "daa9055b7db8d36c7fa198ae5b04e7c8e5e2fb4c4518a9ba7df2bbe1a2641f8f",
+   "identical": true
+  },
+  "heat: house + trees, ramp": {
+   "phase28": "86481def120ff897e9a58fa3906307624ca4fdb011af1d7acf8c2405233c91f3",
+   "phase29": "86481def120ff897e9a58fa3906307624ca4fdb011af1d7acf8c2405233c91f3",
+   "identical": true
+  },
+  "heat: apartment temperature sphere + earthquake": {
+   "phase28": "d1b3717df80ab9f453e3fd76bd8fc5c129ea1ccd6c599c56676dd29de1c47eef",
+   "phase29": "d1b3717df80ab9f453e3fd76bd8fc5c129ea1ccd6c599c56676dd29de1c47eef",
+   "identical": true
+  },
+  "heat: surface + rain": {
+   "phase28": "87155031d01f9c4440f1d867c35fa0a14d528b40ef3f440c5ebbea07a9509462",
+   "phase29": "87155031d01f9c4440f1d867c35fa0a14d528b40ef3f440c5ebbea07a9509462",
+   "identical": true
+  },
+  "fire: house room fire, windows open": {
+   "phase28": "bccd5be01b27ffe7478a755c6f85e8833b8eb3d89d54728d821a48dffa61cbc8",
+   "phase29": "bccd5be01b27ffe7478a755c6f85e8833b8eb3d89d54728d821a48dffa61cbc8",
+   "identical": true
+  },
+  "fire: dry stand + wind": {
+   "phase28": "b53295a59734ca22666e55f51eeff9921ac58f0b42b222611dc710928dc6e539",
+   "phase29": "b53295a59734ca22666e55f51eeff9921ac58f0b42b222611dc710928dc6e539",
+   "identical": true
+  },
+  "fire: heat ignition of a dry crown": {
+   "phase28": "6b82f2c94aa43a61a22e7ac6b8ed1f24e907aec1213ddfb919942cabf93fab0a",
+   "phase29": "6b82f2c94aa43a61a22e7ac6b8ed1f24e907aec1213ddfb919942cabf93fab0a",
+   "identical": true
+  },
+  "atmos: empty world": {
+   "phase28": "5d610fedbaf5b9d034af1021282807f9ab2527825f0116e1925533f6d794f8af",
+   "phase29": "5d610fedbaf5b9d034af1021282807f9ab2527825f0116e1925533f6d794f8af",
+   "identical": true
+  },
+  "atmos: meteor atmospheric entry": {
+   "phase28": "4aef1706276389aab06ab3aed279acccf58574dfdbf195ed7e004a9f28792be1",
+   "phase29": "4aef1706276389aab06ab3aed279acccf58574dfdbf195ed7e004a9f28792be1",
+   "identical": true
+  },
+  "atmos: lava": {
+   "phase28": "6dd2f905dd67bd992274772c130f4e7b580b3019b4dba7e2f0826a0fd3bda010",
+   "phase29": "6dd2f905dd67bd992274772c130f4e7b580b3019b4dba7e2f0826a0fd3bda010",
+   "identical": true
+  },
+  "atmos: ash + wind": {
+   "phase28": "47fdbbcdfe8b774f06e4543ce20c9f7c00af497560b0bdf84ee6eb57140f1782",
+   "phase29": "47fdbbcdfe8b774f06e4543ce20c9f7c00af497560b0bdf84ee6eb57140f1782",
+   "identical": true
+  },
+  "atmos: volcano + fire + rain": {
+   "phase28": "07dedbe6e43ee2ccfd50cffff0280ac0c77247c37e43ff352a94771b6bdfa92f",
+   "phase29": "07dedbe6e43ee2ccfd50cffff0280ac0c77247c37e43ff352a94771b6bdfa92f",
+   "identical": true
+  },
+  "atmos: multi-hazard town": {
+   "phase28": "738234f0622fbf3ba675f12d7731b3291bf81078bcd1ad2742964bf00392bf0d",
+   "phase29": "738234f0622fbf3ba675f12d7731b3291bf81078bcd1ad2742964bf00392bf0d",
+   "identical": true
+  }
+ },
+ "identical": 18,
+ "total": 18
+}
