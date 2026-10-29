@@ -112,3 +112,40 @@ describe('variable gravity: shallow water', { timeout: 600_000 }, () => {
     expect(sys.held).toBeGreaterThan(2.5);
   });
 });
+
+describe('shallow water under every gravity regime (Phase 31 audit §12)', { timeout: 900_000 }, () => {
+  const region = (accel: [number, number, number], falloff: 'none' | 'smooth') => ({ kind: 'region' as const, center: [-20, 0, 0] as [number, number, number], radius: 25, edge: 6, falloff, mode: 'add' as const, accel, shape: 'column' as const });
+  const cases: [string, EventSpec[]][] = [
+    ['0.5 g', [gravity({ magnitude: 0.5 * 9.81 })]],
+    ['2 g', [gravity({ magnitude: 2 * 9.81 })]],
+    ['3 g', [gravity({ magnitude: 3 * 9.81 })]],
+    ['reversed (held: no downward gravity)', [gravity({ magnitude: 9.81, direction: [0, 1, 0] })]],
+    ['local heavy column (smooth edge)', [gravity({ global: false, sources: [region([0, -2 * 9.81, 0], 'smooth')] })]],
+    ['sharp spatial step (no taper: g jumps ×3 at the edge)', [gravity({ global: false, sources: [region([0, -2 * 9.81, 0], 'none')] })]],
+    ['sideways inside a column (horizontal part only there)', [gravity({ global: false, sources: [region([0.5 * 9.81, 0, 0], 'none')] })]],
+  ];
+  for (const [name, ev] of cases) {
+    it(`${name}: a dam-break stays finite, the water volume is conserved`, async () => {
+      const d = doc();
+      const init = waterState(d, (x) => (x < 0 ? 1.5 : 0.05));
+      const c = await run(d, [nudge, ...ev], 6, init);
+      const f = c.getEnvironment().flood.field!;
+      let finite = true;
+      for (let i = 0; i < f.count; i++) if (!Number.isFinite(f.h[i]) || f.h[i] < 0 || !Number.isFinite(f.u[i]) || !Number.isFinite(f.v[i])) finite = false;
+      expect(finite).toBe(true);
+      expect(Math.abs(f.budget.error)).toBeLessThan(1e-6 * f.budget.initial + 1e-6);
+      c.unload();
+    });
+  }
+
+  it('a heavier column (3 g inside) drains its water faster than 1 g around it: deeper basin around it, never inside', async () => {
+    const d = doc();
+    const init = waterState(d, () => 1);
+    const c = await run(d, [nudge, gravity({ global: false, sources: [region([0, -2 * 9.81, 0], 'smooth')] })], 15, init);
+    const f = c.getEnvironment().flood.field!;
+    const at = (x: number, z: number) => f.h[Math.floor((z - f.cellZ(0)) / 1) * f.nx + Math.floor((x - f.cellX(0)) / 1)];
+    // Hydrostatic equilibrium of the local-inertial model: g_n·(h + b) is levelled → the surface sinks where g_n is 3×.
+    expect(at(-20, 0)).toBeLessThan(at(60, 0));
+    c.unload();
+  });
+});

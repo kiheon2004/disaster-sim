@@ -17,6 +17,7 @@
  * through the WEST face of cell (ix, iz) toward +X (m²/s, per meter of face);
  * qz[iz·nx + ix] the flow through its NORTH face toward +Z.
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import type { EntityId } from '@/core/types';
 import type { TerrainData, WaterSettings } from '@/core/model';
 import { groundMaterial } from '@/terrain/GroundMaterials';
@@ -368,7 +369,8 @@ export class WaterField {
         const h = this.h[i];
         if (h > 0) {
           m.displacedVolume += Math.abs(d) * this.cellArea;
-          m.work += 1000 * 9.81 * h * this.cellArea * d;
+          // Under the step's downward gravity (Phase 31 audit §11; the factor is exactly 1 without an experiment).
+          m.work += 1000 * 9.81 * gravityDown() * h * this.cellArea * d;
         }
         if (d > m.maxRise) m.maxRise = d;
         if (-d > m.maxDrop) m.maxDrop = -d;

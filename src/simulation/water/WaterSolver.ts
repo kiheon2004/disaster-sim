@@ -377,6 +377,9 @@ export class WaterSolver {
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - (gc === null ? slopeK : (0.5 * (gc[L] + gc[R]) * dt) / dx) * hf * (eR - eL);
+            // Spatial field (Phase 31 audit §12): the depth-integrated pressure ½·g·h² also pushes along ∇g — −½·h²·∂g/∂x
+            // (a pool under a heavier column flows out towards g·h² = const; zero under a uniform field).
+            if (gc !== null) num -= (0.5 * hf * hf * (gc[R] - gc[L]) * dt) / dx;
             if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * (gxc === null ? gX : gX - 0.5 * (gxc[L] + gxc[R]) * dt);
             if (air !== null) num -= hf * airK * (air[R] - air[L]);
             qn = (num * H) / (H + gdt0 * 0.5 * (n2[L] + n2[R]) * aq);
@@ -418,6 +421,9 @@ export class WaterSolver {
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - (gc === null ? slopeK : (0.5 * (gc[T] + gc[B]) * dt) / dx) * hf * (eB - eT);
+            // Spatial field (Phase 31 audit §12): the depth-integrated pressure ½·g·h² also pushes along ∇g — −½·h²·∂g/∂x
+            // (a pool under a heavier column flows out towards g·h² = const; zero under a uniform field).
+            if (gc !== null) num -= (0.5 * hf * hf * (gc[B] - gc[T]) * dt) / dx;
             if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * (gzc === null ? gZ : gZ - 0.5 * (gzc[T] + gzc[B]) * dt);
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
             qn = (num * H) / (H + gdt0 * 0.5 * (n2[T] + n2[B]) * aq);
@@ -511,6 +517,9 @@ export class WaterSolver {
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - (gc === null ? slopeK : (0.5 * (gc[L] + gc[R]) * dt) / dx) * hf * (eR + (frz[R] ? 0 : iceL[R]) - eL - (frz[L] ? 0 : iceL[L]));
+            // Spatial field (Phase 31 audit §12): the depth-integrated pressure ½·g·h² also pushes along ∇g — −½·h²·∂g/∂x
+            // (a pool under a heavier column flows out towards g·h² = const; zero under a uniform field).
+            if (gc !== null) num -= (0.5 * hf * hf * (gc[R] - gc[L]) * dt) / dx;
             if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * (gxc === null ? gX : gX - 0.5 * (gxc[L] + gxc[R]) * dt);
             if (air !== null) num -= hf * airK * (air[R] - air[L]);
             qn = (num * H) / (H + gdt0 * 0.5 * (n2[L] * fric[L] + n2[R] * fric[R]) * aq);
@@ -553,6 +562,9 @@ export class WaterSolver {
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - (gc === null ? slopeK : (0.5 * (gc[T] + gc[B]) * dt) / dx) * hf * (eB + (frz[B] ? 0 : iceL[B]) - eT - (frz[T] ? 0 : iceL[T]));
+            // Spatial field (Phase 31 audit §12): the depth-integrated pressure ½·g·h² also pushes along ∇g — −½·h²·∂g/∂x
+            // (a pool under a heavier column flows out towards g·h² = const; zero under a uniform field).
+            if (gc !== null) num -= (0.5 * hf * hf * (gc[B] - gc[T]) * dt) / dx;
             if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * (gzc === null ? gZ : gZ - 0.5 * (gzc[T] + gzc[B]) * dt);
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
             qn = (num * H) / (H + gdt0 * 0.5 * (n2[T] * fric[T] + n2[B] * fric[B]) * aq);
