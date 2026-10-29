@@ -222,6 +222,21 @@ describe('roads, restoration, determinism, save / load, shared designs, resource
     b.unload();
   });
 
+  it('the result does not depend on object ids: the same scene built twice (new random ids) collapses identically', async () => {
+    // Ids are random per world creation; nothing physical may follow them (the blast wall batches did).
+    const scene = () => doc([0, 1, 2, 3, 4, 5, 6, 7].map((k) => B(design('house'), Math.cos(k * 0.785) * (12 + k * 2), Math.sin(k * 0.785) * (12 + k * 2), k + 1)));
+    const summary = async (d: WorldDocument) => {
+      const c = await run(d, [{ event: 'blast', position: [0, 0], height: 1, energy: 2e9, model: 'weakShock', waveform: 'nWave', startTime: 0.2 } as EventSpec], 2);
+      const lines = buildings(c).map((e) => [e.source.transform.position.join(','), ...model(e).records.map((r) => [r.i, r.time, r.cause, r.trigger, r.u].join('|')), Array.from(model(e).dy).join(',')].join('\n')).sort();
+      lines.push(String(c.getDamageEvents().length));
+      c.unload();
+      return createHash('sha256').update(lines.join('\n')).digest('hex');
+    };
+    const a = scene(), b = scene();
+    expect(Object.keys(a.objects).some((id) => b.objects[id])).toBe(false);
+    expect(await summary(b)).toBe(await summary(a));
+  });
+
   it('the original world is untouched; a saved and reloaded world collapses identically', async () => {
     const d = street();
     const before = worldFingerprint(d);

@@ -289,8 +289,9 @@ export function respondParts(e: RuntimeEntity, ctx: SystemContext, dt: number): 
     }
     if (ended) p.done = true;
   }
-  // Each building has its own phase (deterministic, from its id) so the re-analyses do not bunch up.
-  if (walls.length && ((ctx.step + (hashString(e.id) >>> 0)) % WALL_ROUNDS === 0 || st.parts.every((p) => p.done))) {
+  // Each building has its own phase so the re-analyses do not bunch up — from its seed and placement,
+  // not its id: ids are random per world creation, and the phase decides the step a wall fails on.
+  if (walls.length && ((ctx.step + wallPhase(e)) % WALL_ROUNDS === 0 || st.parts.every((p) => p.done))) {
     const tf = simProfiler.now();
     if (!e.flags.collapsed) failWalls(e, ctx, walls.slice());
     walls.length = 0;
@@ -306,6 +307,10 @@ const LOG_STEPS = [1, 10, 40, 160];
  * reached its limit is removed at most 33 ms later (one re-analysis instead of one per wall / step).
  */
 const WALL_ROUNDS = 3;
+const wallPhase = (e: RuntimeEntity) => {
+  const p = e.source.transform.position;
+  return hashString(`walls:${e.source.seed}:${Math.round(p[0] * 100)}:${Math.round(p[2] * 100)}`) >>> 0;
+};
 
 /** Exterior walls that failed out of plane in this step: one batch through the member path. */
 function failWalls(e: RuntimeEntity, ctx: SystemContext, list: { p: PartEntry; ratio: number }[]) {
