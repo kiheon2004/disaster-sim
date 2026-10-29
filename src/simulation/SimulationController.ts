@@ -242,8 +242,12 @@ export class SimulationController {
    * and build their meshes / shaders BEFORE the clock starts. No source is added, nothing moves,
    * the collider is not touched — the simulation itself is unchanged.
    */
-  prepareGround() {
+  prepareGround(field = false) {
     this.env.deformation.ensure();
+    // Ground-failure runs (Phase 23 pre-warm): the empty field exists before the clock starts, so
+    // its overlay mounts and compiles now. It holds no model: terrain, collider and results are
+    // unchanged (the field's source publishes no change until something fails).
+    if (field) this.env.groundFailure.ensure();
   }
 
   /** Schedule an event. Without an explicit start time it begins now. */

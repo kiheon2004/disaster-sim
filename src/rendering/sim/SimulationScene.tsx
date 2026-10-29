@@ -16,7 +16,7 @@ import { EpicenterMarker } from './seismic/EpicenterMarker';
 import { CameraShake } from './seismic/CameraShake';
 import { WaterLayer } from './water/WaterLayer';
 import { DeformationOverlay } from '../deformation/DeformationOverlay';
-import { ShaderWarmup } from '../deformation/ShaderWarmup';
+import { SceneCompile, ShaderWarmup } from '../deformation/ShaderWarmup';
 import { DeformationPicker, DeformationPreview } from '../deformation/DeformationTools';
 import { GroundOverlay } from '../ground/GroundOverlay';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
@@ -79,6 +79,7 @@ export function SimulationScene() {
       <DeformationOverlay />
       <GroundOverlay />
       <ShaderWarmup />
+      <SceneCompile version={version} />
       <DeformationPreview />
       <DeformationPicker />
       <GroundPreview />

@@ -6,7 +6,7 @@
  * then removed; materials with the same shader share the compiled program.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { createTerrainMaterial } from '../terrain/TerrainSurface';
 
@@ -70,3 +70,28 @@ export function ShaderWarmup() {
     </group>
   );
 }
+
+/**
+ * Compile every material of the simulation scene once, a few frames after a runtime was built
+ * (Phase 23, Phase 22 residual 2.3): instanced damage rings, debris, particles and other layers
+ * are mounted from the start but drawn only once something breaks — their programs would
+ * otherwise compile in the middle of the run. Programs already compiled are cached (cheap).
+ */
+export function SceneCompile({ version }: { version: number }) {
+  const { gl, scene, camera } = useThree();
+  const [frames, setFrames] = useState(0);
+  useEffect(() => setFrames(0), [version]);
+  useFrame(() => {
+    if (frames > 3) return;
+    if (frames === 2) {
+      const t = performance.now();
+      gl.compile(scene, camera);
+      sceneCompileStats.ms = performance.now() - t;
+      sceneCompileStats.count++;
+    }
+    setFrames((f) => f + 1);
+  });
+  return null;
+}
+
+export const sceneCompileStats = { ms: 0, count: 0 };

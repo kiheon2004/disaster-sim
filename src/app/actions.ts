@@ -198,7 +198,9 @@ export function exitSimulation() {
 }
 
 /** Events that change the terrain at run time (prepare the runtime ground layer first). */
-const GROUND_EVENTS = new Set<string>(['terrainDeformation', 'sinkhole', 'landslide']);
+const GROUND_EVENTS = new Set<string>(['terrainDeformation', 'sinkhole', 'landslide', 'impact']);
+/** Events that write the shared ground-failure field (its overlay is prepared with the ground). */
+const FIELD_EVENTS = new Set<string>(['sinkhole', 'landslide', 'impact']);
 const nextFrames = (n: number) => new Promise<void>((resolve) => {
   if (typeof requestAnimationFrame === 'undefined') return resolve();
   let k = 0;
@@ -213,7 +215,7 @@ export async function runSimulation(specs: EventSpec[]) {
   // Ground-changing phenomena: build the runtime terrain meshes / shaders before the clock starts
   // (two rendered frames), so the first deformation does not stall a frame mid-run (Phase 22).
   if (specs.some((s) => GROUND_EVENTS.has(s.event)) && !simulationController.getEnvironment().deformation.engine) {
-    simulationController.prepareGround();
+    simulationController.prepareGround(specs.some((s) => FIELD_EVENTS.has(s.event)));
     await nextFrames(2);
   }
   for (const s of specs) simulationController.addEvent(s);
