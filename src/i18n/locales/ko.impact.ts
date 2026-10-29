@@ -1,0 +1,21 @@
+/** Korean strings of meteoroid / asteroid impacts (Phase 23). */
+export const koImpact = {
+  'impact.mat.stony': '석질(보통 콘드라이트)',
+  'impact.mat.iron': '철질',
+  'impact.mat.icy': '얼음질·혜성형',
+  'impact.issue.mass': '질량 {m} kg이 직경·밀도의 구(球) 질량 {sphere} kg과 맞지 않습니다(1 % 넘게 차이) — 하나를 고치세요',
+  'impact.issue.density': '밀도 {rho} kg/m³는 이 재질의 대표 범위({lo}–{hi})를 벗어납니다',
+  'impact.issue.strengthRange': '밀도 {rho} kg/m³는 강도–밀도 관계식(Collins et al. 2005)이 맞춰진 1000–8000 kg/m³ 밖입니다 — 파쇄 고도는 외삽',
+  'impact.warn.breakup': '고도 {z} km에서 램 압력이 강도를 넘어 파쇄 시작(팬케이크 모델)',
+  'impact.warn.direct': '대기 없음(직접 충돌) 모드 — 대기 감속·삭마·파쇄를 계산하지 않습니다',
+  'impact.warn.outside': '실제 충돌 지점이 월드 밖입니다',
+  'impact.warn.miss': '실제 충돌 지점이 조준점에서 {d} m 벗어남(지형이 궤적을 가로막음 / 중력 휨)',
+  'impact.warn.oblique': '충돌각 15° 미만 — 실제 크레이터는 길쭉해지지만 이 모델은 원형으로 계산합니다',
+  'impact.warn.swarm': '파편 무리 폭 {L} m가 크레이터보다 큼 — 실제로는 크레이터 군(群)이 생기지만 한 개의 크레이터로 계산합니다',
+  'impact.warn.large': '크레이터 지름 {D} m — 월드 크기에 비해 큼(가장자리에서 분출물이 월드 밖으로 나감)',
+  'impact.warn.rock': '암반 표적 — 강도 지배 영역, 벽 붕괴 없음(암반 사면 파괴는 모델에 없음)',
+  'impact.warn.pulse': '지반 충격 펄스 {tau} ms는 60 Hz 스텝으로 표현할 수 없어 최대 속도를 유지한 채 {app} ms로 넓혀 적용합니다',
+  'impact.warn.airburst': '고도 {z} km에서 공중 폭발 — 지면 충돌·크레이터 없음(대기 폭풍압은 Phase 24에서 다룸)',
+  'impact.warn.ablated': '대기 중에 삭마로 소멸 — 지면 충돌 없음',
+  'impact.warn.lowSpeed': '충돌 속도 {v} m/s — 초고속 충돌 자료 기반 스케일링의 범위 밖(관입에 가까움), 외삽입니다',
+};
