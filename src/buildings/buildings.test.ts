@@ -130,6 +130,11 @@ describe('connections and load path', () => {
 
   it('a floating member is unsupported (not a normal structure); a glass column carries nothing', () => {
     const d = design('house');
+    // A column on the bare ground beside the house stands on the soil (reported, not an error).
+    const onGround = newMember(d, 'column', [8, 0, 8], 'u2');
+    const g = analyzeBuilding(addMembers(d, [onGround]));
+    expect(g.unsupported).not.toContain('u2');
+    expect(g.warnings.some((w) => w.code === 'onSoil' && w.members!.includes('u2'))).toBe(true);
     const floating = { ...newMember(d, 'column', [0, 30, 0], 'u1'), position: [0, 30, 0] as Vec3 };
     expect(analyzeBuilding(addMembers(d, [floating])).unsupported).toContain('u1');
     const office = design('office');

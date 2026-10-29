@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import { ManagedTransformControls as TransformControls } from './ManagedTransformControls';
 import type * as THREE from 'three';
@@ -23,7 +23,10 @@ export function TransformGizmo() {
   const grounded = useRef(false);
   const controlsRef = useRef<{ axis: string | null } | null>(null);
 
-  useEffect(() => {
+  // Layout effect: the new node is found in the same commit that removed the old one, so the
+  // controls are never attached to a node outside the scene for a rendered frame (Phase 17 —
+  // duplicate / undo used to log "attached 3D object must be a part of the scene graph").
+  useLayoutEffect(() => {
     setTarget(selectedId && exists ? scene.getObjectByName(entityNodeName(selectedId)) ?? null : null);
   }, [selectedId, exists, scene]);
 

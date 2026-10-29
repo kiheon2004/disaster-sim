@@ -137,6 +137,7 @@ function EditBuilding({ obj }: { obj: WorldObject }) {
           <button data-testid="add-floor" onClick={() => addFloorTo(obj.id)} disabled={dirty}><Icon name="plus" size={12} /> {t('building.addFloor')}</button>
           <button data-testid="remove-floor" onClick={() => removeFloorFrom(obj.id)} disabled={dirty || d.spec.floors <= 1}>− {t('building.removeFloor')}</button>
           {tool !== 'building' && <button data-testid="edit-members" onClick={() => enterBuildingEdit(obj.id)} disabled={dirty}><Icon name="move" size={12} /> {t('building.editMembers')}</button>}
+          {tool !== 'building' && <button data-testid="new-building" onClick={() => useEditorStore.getState().select(null)} title={t('building.newBuilding.hint')}><Icon name="plus" size={12} /> {t('building.newBuilding')}</button>}
         </div>
       </div>
       <Section title={t('building.edit.params')}>

@@ -152,7 +152,7 @@ describe('locales (KO / EN) cover every dynamic key', () => {
     for (const c of issueCodes) keys.push(`building.issue.${c}`);
     const produced = new Set(validateSpec({ ...defaultSpec(), width: -1 }).map((i) => i.code));
     for (const c of produced) expect(issueCodes).toContain(c);
-    for (const c of ['unsupported', 'nonStructuralMaterial', 'overloaded', 'cantilever', 'noLateral', 'softStory', 'weakStory', 'noHost', 'noFoundation', 'periodCalibrated', 'torsion']) keys.push(`building.warn.${c}`);
+    for (const c of ['unsupported', 'nonStructuralMaterial', 'overloaded', 'cantilever', 'noLateral', 'softStory', 'weakStory', 'noHost', 'noFoundation', 'periodCalibrated', 'torsion', 'onSoil']) keys.push(`building.warn.${c}`);
     const legacy = createWorldObject({ type: 'building', params: { floors: 3 }, transform: T() }, 1);
     for (const n of convertLegacy(legacy).notes) keys.push(`building.convert.${n.field}`, `building.convert.level.${n.level}`);
     for (const f of ['durability', 'breakThreshold', 'dragCoefficient', 'friction', 'shopWindow', 'scale', 'damping', 'foundationParams', 'seismicFactors']) keys.push(`building.convert.${f}`);

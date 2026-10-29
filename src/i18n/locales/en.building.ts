@@ -3,6 +3,8 @@ import type { koBuilding } from './ko.building';
 /** English strings of the Modular Building Creator (Phase 17). */
 export const enBuilding: Record<keyof typeof koBuilding, string> = {
   'component.door': 'Door',
+  'building.warn.onSoil': '{n} member(s) stand directly on the ground without a footing (the soil carries them): {ids}',
+  'flag.partialCollapse': 'Partial collapse',
   'panel.building': "Building",
   'viewport.hint.building': "Click a member: select · Shift+click: add/remove · W/E: move/rotate · Delete · Ctrl+D duplicate · X: interior · H: load path · Esc: done",
   'struct.modularNote': "Modular building: structural system, period and strength are computed from the members (materials, sections, layout). The factors below multiply that.",
@@ -27,6 +29,8 @@ export const enBuilding: Record<keyof typeof koBuilding, string> = {
   'building.edit.regenerateWarn': "This change regenerates the members from the parameters. {n} manual member edit(s) will be replaced.",
   'building.confirm.regenerate': "Regenerating the members replaces {n} manual member edit(s). Continue? (Undo brings them back.)",
   'building.addFloor': "Add floor",
+  'building.newBuilding': 'New building',
+  'building.newBuilding.hint': 'Deselect and go back to creating a new building.',
   'building.removeFloor': "Remove floor",
   'building.editMembers': "Edit members",
   'building.foundationSection': "Foundation · ground",

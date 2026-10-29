@@ -1,6 +1,8 @@
 /** Korean strings of the Modular Building Creator (Phase 17). */
 export const koBuilding = {
   'component.door': '문',
+  'building.warn.onSoil': '기초 없이 지면에 바로 선 부재 {n}개 (흙이 직접 지지): {ids}',
+  'flag.partialCollapse': '부분 붕괴',
   'panel.building': "건물",
   'viewport.hint.building': "부재 클릭: 선택 · Shift+클릭: 추가/제외 · W/E: 이동/회전 · Delete · Ctrl+D 복제 · X: 내부 보기 · H: 하중 경로 · Esc: 종료",
   'struct.modularNote': "모듈형 건물: 구조 형식·고유주기·강도는 부재(재료·단면·배치)에서 계산됩니다. 아래 배율은 그 위에 곱해집니다.",
@@ -25,6 +27,8 @@ export const koBuilding = {
   'building.edit.regenerateWarn': "이 변경은 부재를 매개변수로 다시 생성합니다. 수동 부재 편집 {n}건이 사라집니다.",
   'building.confirm.regenerate': "부재를 다시 생성하면 수동 부재 편집 {n}건이 사라집니다. 계속할까요? (실행 취소로 되돌릴 수 있습니다)",
   'building.addFloor': "층 추가",
+  'building.newBuilding': '새 건물',
+  'building.newBuilding.hint': '선택을 해제하고 새 건물 제작으로 돌아갑니다.',
   'building.removeFloor': "층 제거",
   'building.editMembers': "부재 편집",
   'building.foundationSection': "기초 · 지반",

@@ -38,7 +38,7 @@ const NEAR_GAP = 1;
 
 export type WarningCode =
   | 'unsupported' | 'nonStructuralMaterial' | 'overloaded' | 'cantilever' | 'noLateral' | 'softStory' | 'weakStory'
-  | 'noHost' | 'noFoundation' | 'periodCalibrated' | 'torsion';
+  | 'noHost' | 'noFoundation' | 'periodCalibrated' | 'torsion' | 'onSoil';
 
 export interface AnalysisWarning {
   code: WarningCode;
@@ -254,6 +254,7 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
 
   // ── 3. Support candidates per member (type-specific) ──────────────
   const groundY = 0.02 * k[1];
+  const onSoil: string[] = [];
   for (let i = 0; i < n; i++) {
     const m = src[i];
     const a = out[i];
@@ -285,6 +286,11 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
       a.supports.push(...(vertical.length ? vertical : nearest));
       // Non-structural walls (cladding, partitions) may also hang from the frame beside them.
       if (!a.supports.length && m.role !== 'bearing') a.supports.push(...cand.filter((j) => src[j].type === 'column' || src[j].type === 'beam'));
+      // Standing on the bare ground (no footing under it): bears on the soil (reported).
+      if (!a.supports.length && a.box.min[1] <= groundY) {
+        a.ground = true;
+        onSoil.push(m.id);
+      }
       continue;
     }
     if (m.type === 'beam') {
@@ -331,6 +337,7 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   const nonStruct = src.filter((m) => isStructuralRole(m.role) && m.role !== 'foundation' && !MATERIALS[m.material].structural).map((m) => m.id);
   if (nonStruct.length) warnings.push({ code: 'nonStructuralMaterial', level: 'warning', members: nonStruct.slice(0, 50), value: nonStruct.length });
   if (!src.some((m) => m.type === 'foundation' && !failed?.has(m.id))) warnings.push({ code: 'noFoundation', level: 'warning' });
+  if (onSoil.length) warnings.push({ code: 'onSoil', level: 'info', members: onSoil.slice(0, 50), value: onSoil.length });
   const orphans = src.filter((m) => (m.type === 'window' || m.type === 'door') && (!m.host || !byId.has(m.host))).map((m) => m.id);
   if (orphans.length) warnings.push({ code: 'noHost', level: 'info', members: orphans.slice(0, 50), value: orphans.length });
 
