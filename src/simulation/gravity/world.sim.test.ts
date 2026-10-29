@@ -101,7 +101,8 @@ describe('variable gravity in whole worlds', { timeout: 900_000 }, () => {
     await a.reset();
     expect(a.getEnvironment().gravity.field).toBeNull();
     expect(a.getPhysics()!.getGravity()).toEqual([0, -9.81, 0]);
-    for (const e of sequence()) a.addEvent(e);
+    // reset() reschedules the run's own experiments (Phase 32 finding: adding them again doubled every experiment —
+    // harmless for identical global gravity, but not the rerun this test means).
     a.advance(26);
     expect(hash(a)).toBe(h1);
     expect(worldFingerprint(doc)).toBe(fp);
