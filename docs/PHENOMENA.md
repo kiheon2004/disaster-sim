@@ -217,7 +217,7 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | 현상 | 새로 필요한 시스템 | 재사용 가능한 시스템 |
 |---|---|---|
 | Sinkhole | **구현됨(Phase 22)** — 실행 중 지형 변형은 Phase 21 엔진, 공동·플러그 파괴·벽 붕괴 모델, 산사태(무한사면·Newmark·Voellmy 흐름)와 함께 [GROUND_FAILURE.md](GROUND_FAILURE.md) | — |
-| Meteor Impact | 압력파 장(과압·충격량, 거리 감쇠), 크레이터 지형 변형, 열 | ForceLedger 충격량, 지진 지반 운동장(충돌 지진), 외장재·파편, 비교 실행 |
+| Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 남은 것: 압력파 장(과압·충격량)·열 — Phase 24 | — |
 | Explosion | 압력파 장(Friedlander 파형), 열 플럭스 | 외장재 피해(압력 대 용량 — 홍수 창문과 같은 구조), ForceLedger, 파편, 사람 넘어짐 |
 | Volcano | 열·온도장, 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
 | Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |

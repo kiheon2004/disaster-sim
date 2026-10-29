@@ -1,0 +1,238 @@
+{
+  "lang": "en",
+  "url": "http://localhost:4191/",
+  "results": [
+    {
+      "name": "1 meteor phenomenon added from the menu; its fields are shown",
+      "ok": true,
+      "detail": {
+        "fields": [
+          "x",
+          "z",
+          "material",
+          "diameter",
+          "density",
+          "mass",
+          "speed",
+          "angle",
+          "azimuth",
+          "entry"
+        ]
+      }
+    },
+    {
+      "name": "2 material selected; the auto density is the material's representative value",
+      "ok": true,
+      "detail": {
+        "dens2": "3300",
+        "dens2b": "7800"
+      }
+    },
+    {
+      "name": "3 diameter set; a mass inconsistent with diameter × density is rejected with the reason",
+      "ok": true,
+      "detail": {
+        "invalid3": true
+      }
+    },
+    {
+      "name": "4 speed (km/s) and angle set in SI underneath; the spec is valid again",
+      "ok": true,
+      "detail": {
+        "event": "impact",
+        "target": [
+          0,
+          0
+        ],
+        "material": "iron",
+        "diameter": 2,
+        "speed": 12000,
+        "angle": 60,
+        "azimuth": 90,
+        "entry": "atmosphere"
+      }
+    },
+    {
+      "name": "5 aim point set by a world click (no selection, no world edit)",
+      "ok": true,
+      "detail": {
+        "target": [
+          -4,
+          2
+        ]
+      }
+    },
+    {
+      "name": "6 trajectory, impact point, crater and ejecta preview drawn; the world is unchanged",
+      "ok": true,
+      "detail": {
+        "prev6": 1
+      }
+    },
+    {
+      "name": "7 energy (J and TNT), momentum and crater shown — E = ½mv² of the plan",
+      "ok": true,
+      "detail": {
+        "sum7": "Actual impact point (0.0, -0.0) — 0.0 m from the aim point, after 12.1 sEnergy 22.98 GJ (TNT 5.49 t) · momentum 23559 t·m/s · 1951 m/s at 61°Crater diameter 19.",
+        "plan7": {
+          "E": 22976243351.186893,
+          "m": 12078.57156616829,
+          "v": 1950.5034400002673,
+          "D": 19.327621853300602
+        }
+      }
+    },
+    {
+      "name": "8 small impact: crater cut on the runtime ground, document untouched",
+      "ok": true,
+      "detail": {
+        "R": 5.34848971037253,
+        "d": 3.7819533433108896,
+        "h8": -3.7819533347941987
+      }
+    },
+    {
+      "name": "9 medium impact: entry countdown in the HUD, crater larger than the small one",
+      "ok": true,
+      "detail": {
+        "hud9": "T−9.1 s 68.4 km · 12.02 km/s",
+        "R": 9.663810926650301,
+        "small": 5.34848971037253
+      }
+    },
+    {
+      "name": "10 rendered terrain = runtime heights on the crater (paused); collider = render; ejecta launch speeds below the impact speed",
+      "ok": true,
+      "detail": {
+        "mesh10": 0,
+        "ray10": 0.00005183219909898895,
+        "vmax": 1835.6527110283723,
+        "impact": 1950.5034400002673
+      }
+    },
+    {
+      "name": "11 crater formed (centre lowered ~ transient depth); the probe names the impact and its shock",
+      "ok": true,
+      "detail": {
+        "h11": -6.833346366881451,
+        "d": 6.8333462383390815,
+        "probe": "Position6.9, 9.2Ground materialDense granular soil (c′ 0 kPa, φ′ 38°)Slope28.0°Soil thickness16.18 mWater-table ratio m0 %Factor of safetynot evaluated (outside"
+      }
+    },
+    {
+      "name": "12 ejecta parcels in flight drawn at their computed positions",
+      "ok": true,
+      "detail": {
+        "rocks12": 384
+      }
+    },
+    {
+      "name": "13 ejecta deposited on the ground; nothing left in the air; cut − uplift = ejected; terrain = ledgers",
+      "ok": true,
+      "detail": {
+        "res": 0.000002254215516912936,
+        "rel": 407.1520091536497,
+        "air": 4.116747193757905e-13,
+        "dep": 367.295466403904,
+        "err": 0.000002261353643007169,
+        "exc": 1003.8308698203745,
+        "upl": 733.2737226634642,
+        "ej": 270.55714715691477
+      }
+    },
+    {
+      "name": "14 building damage recorded with hazard impact (no wind); the inspector shows the impact section",
+      "ok": true,
+      "detail": {
+        "n": 4,
+        "hazards": [
+          "impact"
+        ]
+      }
+    },
+    {
+      "name": "15 road across the crater cut / blocked (impassable), the network itself unchanged",
+      "ok": true,
+      "detail": {
+        "blocked": 1
+      }
+    },
+    {
+      "name": "16 impact into a lake bed: the water follows the bed, water mass exact",
+      "ok": true,
+      "detail": {
+        "v16a": 9400.741501845936,
+        "v16": 9400.741501845905
+      }
+    },
+    {
+      "name": "17 impact + rain: rain collects in the crater",
+      "ok": true,
+      "detail": {
+        "c": 0.09365041560948306,
+        "o": 0.0016954323576235518
+      }
+    },
+    {
+      "name": "18 impact on a slope: actual point from the terrain (miss reported), the crater triggers the landslide",
+      "ok": true,
+      "detail": {
+        "failed": 317,
+        "miss": 1.0157918950426392e-10
+      }
+    },
+    {
+      "name": "19 timeline: entry, impact, crater formed, ejecta landing; log translated",
+      "ok": true,
+      "detail": {
+        "ms19": [
+          "start",
+          "impactEntry",
+          "impact",
+          "craterFormed",
+          "ejectaLanding",
+          "peakSediment"
+        ]
+      }
+    },
+    {
+      "name": "20 impact saved in the experiment and reloaded (schema 7)",
+      "ok": true,
+      "detail": {
+        "version": 7,
+        "ok": true,
+        "inst": [
+          [
+            "impact",
+            "iron",
+            "atmosphere"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "21 river-valley world: reset restores the original ground exactly; the document (terrain, river, buildings, roads, nature) unchanged",
+      "ok": true,
+      "detail": {
+        "restored21": true
+      }
+    },
+    {
+      "name": "22 the same conditions reproduce the same crater and deposits (bit-identical heights at the same step)",
+      "ok": true,
+      "detail": {
+        "t": [
+          21.00000000000009,
+          21.00000000000009
+        ],
+        "diff": 0
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    27.7,
+    46.8
+  ],
+  "crashed": false
+}

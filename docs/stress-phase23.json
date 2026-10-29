@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-13T13:54:00.863Z",
+  "url": "http://localhost:4191/",
+  "cycles": 12,
+  "crashed": false,
+  "errors": [],
+  "rows": [
+    {
+      "cycle": 0,
+      "label": "start",
+      "heapMB": 17.4,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 17,
+      "textures": 17,
+      "programs": 12,
+      "rapierLive": 0,
+      "rapierCreated": 0,
+      "rss": {
+        "renderer": 424,
+        "gpu": 145,
+        "browser": 192,
+        "other": 144
+      },
+      "load": 15.7
+    },
+    {
+      "cycle": 1,
+      "label": "sinkholeTown",
+      "heapMB": 25.9,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 14,
+      "textures": 7,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 2,
+      "rss": {
+        "renderer": 341,
+        "gpu": 117,
+        "browser": 139,
+        "other": 133
+      },
+      "load": 11.6
+    },
+    {
+      "cycle": 2,
+      "label": "landslideRain",
+      "heapMB": 25.9,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 9,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 4,
+      "rss": {
+        "renderer": 280,
+        "gpu": 108,
+        "browser": 105,
+        "other": 77
+      },
+      "load": 9
+    },
+    {
+      "cycle": 3,
+      "label": "impactTown",
+      "heapMB": 28.5,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 27,
+      "rapierLive": 0,
+      "rapierCreated": 6,
+      "rss": {
+        "renderer": 297,
+        "gpu": 112,
+        "browser": 138,
+        "other": 99
+      },
+      "load": 7.7
+    },
+    {
+      "cycle": 4,
+      "label": "allHazards",
+      "heapMB": 32.6,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 15,
+      "textures": 7,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 8,
+      "rss": {
+        "renderer": 178,
+        "gpu": 70,
+        "browser": 56,
+        "other": 46
+      },
+      "load": 26.2
+    },
+    {
+      "cycle": 5,
+      "label": "sinkholeTown",
+      "heapMB": 31.3,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 15,
+      "textures": 7,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 10,
+      "rss": {
+        "renderer": 207,
+        "gpu": 79,
+        "browser": 72,
+        "other": 43
+      },
+      "load": 22
+    },
+    {
+      "cycle": 6,
+      "label": "landslideRain",
+      "heapMB": 30.2,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 10,
+      "textures": 3,
+      "programs": 29,
+      "rapierLive": 0,
+      "rapierCreated": 12,
+      "rss": {
+        "renderer": 210,
+        "gpu": 82,
+        "browser": 60,
+        "other": 38
+      },
+      "load": 28.6
+    },
+    {
+      "cycle": 7,
+      "label": "impactTown",
+      "heapMB": 31.5,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 3,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 14,
+      "rss": {
+        "renderer": 216,
+        "gpu": 80,
+        "browser": 59,
+        "other": 47
+      },
+      "load": 30.5
+    },
+    {
+      "cycle": 8,
+      "label": "allHazards",
+      "heapMB": 33.1,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 15,
+      "textures": 7,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 16,
+      "rss": {
+        "renderer": 250,
+        "gpu": 90,
+        "browser": 62,
+        "other": 140
+      },
+      "load": 28.5
+    },
+    {
+      "cycle": 9,
+      "label": "sinkholeTown",
+      "heapMB": 32,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 15,
+      "textures": 7,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 18,
+      "rss": {
+        "renderer": 175,
+        "gpu": 63,
+        "browser": 53,
+        "other": 53
+      },
+      "load": 55.9
+    },
+    {
+      "cycle": 10,
+      "label": "landslideRain",
+      "heapMB": 26.7,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 10,
+      "textures": 3,
+      "programs": 29,
+      "rapierLive": 0,
+      "rapierCreated": 20,
+      "rss": {
+        "renderer": 198,
+        "gpu": 66,
+        "browser": 55,
+        "other": 54
+      },
+      "load": 51.4
+    },
+    {
+      "cycle": 11,
+      "label": "impactTown",
+      "heapMB": 28.2,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 3,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 22,
+      "rss": {
+        "renderer": 189,
+        "gpu": 73,
+        "browser": 52,
+        "other": 46
+      },
+      "load": 53.9
+    },
+    {
+      "cycle": 12,
+      "label": "allHazards",
+      "heapMB": 29.8,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 15,
+      "textures": 7,
+      "programs": 30,
+      "rapierLive": 0,
+      "rapierCreated": 24,
+      "rss": {
+        "renderer": 233,
+        "gpu": 88,
+        "browser": 53,
+        "other": 44
+      },
+      "load": 65.7
+    }
+  ]
+}
