@@ -69,6 +69,11 @@ export class StructuralModel {
   // ── per unit ───────────────────────────────────────────
   off = new Int32Array(0);
   n = new Int32Array(0);
+  /**
+   * Highest dof that still exists (n until a partial collapse truncates the unit): the wind's top-story force acts
+   * there, and the removed dofs above it take no body force (their mass is only a numerical placeholder).
+   */
+  nLive = new Int32Array(0);
   /** Highest natural frequency estimate (rad/s) → substeps per step. */
   wMax = new Float64Array(0);
   cos = new Float64Array(0);
@@ -154,7 +159,7 @@ export class StructuralModel {
     this.units = U;
     this.dofs = D;
     const f = (n: number) => new Float64Array(n);
-    this.off = new Int32Array(U); this.n = new Int32Array(U); this.wMax = f(U);
+    this.off = new Int32Array(U); this.n = new Int32Array(U); this.nLive = new Int32Array(U); this.wMax = f(U);
     this.cos = f(U); this.sin = f(U); this.driftU = f(U); this.hasF = new Uint8Array(U);
     this.fK = f(U); this.fC = f(U); this.fSlip = f(2 * U); this.fP = f(2 * U);
     this.agx = f(U); this.agz = f(U); this.fwx = f(U); this.fwz = f(U); this.fbx = f(U); this.fbz = f(U); this.top = f(2 * U); this.base = f(2 * U);
@@ -170,6 +175,7 @@ export class StructuralModel {
       const n = Math.min(MAX_DOF, Math.max(1, Math.round(init.ndof)));
       this.off[ui] = o;
       this.n[ui] = n;
+      this.nLive[ui] = n;
       this.cos[ui] = Math.cos(init.yaw);
       this.sin[ui] = Math.sin(init.yaw);
       this.driftU[ui] = init.driftU;
@@ -297,6 +303,7 @@ export class StructuralModel {
     const o = this.off[ui];
     const n = this.n[ui];
     const eps = 1e-6;
+    this.nLive[ui] = Math.min(this.nLive[ui], Math.max(0, j - 1));
     for (let q = Math.max(1, j); q <= n; q++) {
       const d = o + q;
       this.m[d] *= eps;
@@ -393,8 +400,9 @@ export class StructuralModel {
     const bz = this.fbz[ui];
     const blastL0 = bx * cs - bz * sn;
     const blastL1 = bx * sn + bz * cs;
-    const height = this.z[o + n];
+    const height = this.z[o + this.nLive[ui]];
     const hasF = this.hasF[ui] === 1;
+    const nl = this.nLive[ui];
     const F = this.force;
     const A = this.accL;
     const m = this.m, k = this.k, c = this.c, fy = this.fy, pd = this.pdel, al = this.alpha, sd = this.storyD;
@@ -446,13 +454,16 @@ export class StructuralModel {
         }
         for (let j = 1; j <= n; j++) A[j] = -ag - (F[j] - F[j + 1]) / m[o + j];
         const ext = ax === 0 ? extL0 : extL1;
-        if (ext !== 0) A[n] += ext / m[o + n];
+        // The resultant on the top story that still exists (a removed dof's placeholder mass would turn it into an
+        // unbounded acceleration).
+        if (ext !== 0 && nl >= 1) A[nl] += ext / m[o + nl];
         const blast = ax === 0 ? blastL0 : blastL1;
-        if (blast !== 0) for (let j = 1; j <= n; j++) A[j] += (blast * this.hs[o + j]) / (height * m[o + j]);
+        // Shares by story height over the stories that still exist (the whole resultant on the standing part).
+        if (blast !== 0 && nl >= 1) for (let j = 1; j <= nl; j++) A[j] += (blast * this.hs[o + j]) / (height * m[o + j]);
         // Phase 32: the field's horizontal part at each floor (world → local), the foundation mass included.
         if (this.hasG[ui]) {
           const G = this.gfx;
-          for (let j = hasF ? 0 : 1; j <= n; j++) {
+          for (let j = hasF ? 0 : 1; j <= nl; j++) {
             const d2 = 2 * (o + j);
             A[j] += ax === 0 ? G[d2] * cs - G[d2 + 1] * sn : G[d2] * sn + G[d2 + 1] * cs;
           }

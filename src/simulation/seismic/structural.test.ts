@@ -133,4 +133,27 @@ describe('foundation response', () => {
     const anchored = harmonicPeak(unit({ period: 0.4, foundation: foundation(1e9) }), 2.5, 0.5 * GRAVITY).model;
     expect(anchored.fP[0]).toBe(0);
   });
+
+  it('after a partial collapse the wind and a lateral field load only the stories that still exist (static equilibrium)', () => {
+    // 3 floors of 1e5 kg, the top one removed (truncateFrom 3). At rest under a constant load the base shear is the
+    // applied resultant: the wind force W, or Σ m_j·g_h over the two remaining floors — and the removed floor stays
+    // with the floor below (its placeholder mass took the whole wind force as an unbounded acceleration before).
+    const settle = (load: (m: StructuralModel) => void) => {
+      const m = new StructuralModel();
+      m.add(unit({ ndof: 3, mass: 3e5, height: 9.6, period: 0.6 }));
+      m.finalize();
+      m.truncateFrom(0, 3, GRAVITY);
+      load(m);
+      for (let i = 0; i < 60 / DT; i++) m.stepUnit(0, DT);
+      return m;
+    };
+    const W = 5e4;
+    const wind = settle((m) => { m.fwx[0] = W; });
+    expect(wind.baseShear[0]).toBeCloseTo(W, -1);
+    expect(Math.abs(wind.u[6] - wind.u[4])).toBeLessThan(1e-3);
+    const gh = 2;
+    const field = settle((m) => { m.hasG[0] = 1; for (let j = 0; j <= 3; j++) m.gfx[2 * j] = gh; });
+    expect(field.baseShear[0]).toBeCloseTo(2 * 1e5 * gh, -1);
+    expect(Math.abs(field.u[6] - field.u[4])).toBeLessThan(1e-3);
+  });
 });
