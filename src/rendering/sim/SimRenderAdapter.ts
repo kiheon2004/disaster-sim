@@ -859,7 +859,8 @@ export class SimRenderAdapter {
   private applyRev(v: EntityView) {
     const e = v.e;
     v.lastRev = e.rev;
-    const gone = !!e.flags.collapsed && v.type !== 'tree';
+    // Phase 32: a body captured by a celestial source is gone whatever its type.
+    const gone = (!!e.flags.collapsed && v.type !== 'tree') || !!e.flags.captured;
     if (gone !== v.hidden) {
       v.hidden = gone;
       for (const part of v.parts) part.batch.mesh.setVisibleAt(part.id, !gone && !(part.nearOnly && v.far));

@@ -13,6 +13,7 @@
  *               active-body budget (mass and footprint kept; no physics body)
  *   fines       glass shards / dust — visual-only particles; their mass lies at the facade foot
  *   left        fragments that left the world (recorded, not lost)
+ *   captured    fragments captured by a celestial source (Phase 32; recorded in its capture ledger, not lost)
  *   unresolved  anything a simplification could not place (should stay 0; reported if not)
  *
  * Energy (J): potential released by falling blocks, dissipated in collisions, absorbed by the
@@ -20,7 +21,7 @@
  * by origin — inherited from the structure's motion, impulse of an air-pressure wave — never
  * created otherwise.
  */
-export const ACCOUNTS = ['structure', 'falling', 'resting', 'bodies', 'rubble', 'fines', 'left', 'unresolved'] as const;
+export const ACCOUNTS = ['structure', 'falling', 'resting', 'bodies', 'rubble', 'fines', 'left', 'unresolved', 'captured'] as const;
 export type Account = (typeof ACCOUNTS)[number];
 
 export interface EnergyLedger {
@@ -51,7 +52,7 @@ export class MassLedger {
 
   constructor(original: number) {
     this.original = original;
-    this.mass = { structure: original, falling: 0, resting: 0, bodies: 0, rubble: 0, fines: 0, left: 0, unresolved: 0 };
+    this.mass = { structure: original, falling: 0, resting: 0, bodies: 0, rubble: 0, fines: 0, left: 0, unresolved: 0, captured: 0 };
   }
 
   move(from: Account, to: Account, kg: number) {

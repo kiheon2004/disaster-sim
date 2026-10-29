@@ -18,6 +18,7 @@ import { enVolcano } from './en.volcano';
 import { enAtmosphere } from './en.atmosphere';
 import { enClimate } from './en.climate';
 import { enGravity } from './en.gravity';
+import { enCelestial } from './en.celestial';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -612,4 +613,5 @@ export const en: Record<MessageKey, string> = {
   ...enAtmosphere,
   ...enClimate,
   ...enGravity,
+  ...enCelestial,
 };

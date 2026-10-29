@@ -113,6 +113,21 @@ export interface PhysicsEngine {
   getGravity(): Vec3;
   /** Position and linear velocity of a body into flat arrays at `o` (no Pose objects; ledgers over many bodies). */
   readMotion(h: BodyHandle, pos: Float64Array, vel: Float64Array, o: number): void;
+  /**
+   * Phase 32 (celestial orbit integrator): set a body's position and linear velocity (rotation and angular velocity
+   * kept; the body is not woken or put to sleep).
+   */
+  writeMotion(h: BodyHandle, pos: ArrayLike<number>, vel: ArrayLike<number>): void;
+  /** The body had a solver contact in the last step (any collider, ground included). */
+  touching(h: BodyHandle): boolean;
+  /** Linear damping coefficient of a body (1/s; v ← v/(1 + d·dt) per step). */
+  linearDamping(h: BodyHandle): number;
+  /**
+   * Position response of the integrator to a constant acceleration a over one step: x₁ = x₀ + v₀·dt + κ·a·dt²
+   * (κ = ½ for an exact constant-acceleration step, 1 for semi-implicit Euler; Rapier's n solver substeps give
+   * (n + 1)/(2n)). The velocity response is v₁ = (v₀ + a·dt)/(1 + d·dt).
+   */
+  freeKappa(): number;
   drainContactEvents(): ContactEvent[];
   bodyCount(): number;
   dispose(): void;

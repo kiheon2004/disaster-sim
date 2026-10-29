@@ -105,7 +105,7 @@ export interface RuntimeEntity {
   climate?: { load: number; loadKPa: number; damage: number; snow: number; ice: number; restricted: boolean; airT: number; minAirT: number; maxAirT: number; applied: boolean };
   components: RuntimeComponent[];
   visual: VisualState;
-  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean; partialCollapse?: number };
+  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean; partialCollapse?: number; /** Phase 32: captured by a celestial source (body removed, hidden). */ captured?: boolean };
   /** Consecutive calm, motionless steps on uneven terrain (see PoseSyncSystem). */
   quietSteps: number;
   /** Position where the current quiet window started (internal). */

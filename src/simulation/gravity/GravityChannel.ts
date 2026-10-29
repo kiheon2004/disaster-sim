@@ -10,6 +10,7 @@ import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
 import { GravityField } from '@/gravity/field';
 import type { GravitySpec } from '@/gravity/types';
+import type { CelestialSpec } from '@/celestial/types';
 
 export interface GravityRecord {
   id: string;
@@ -19,8 +20,18 @@ export interface GravityRecord {
   start: number;
 }
 
+/** A celestial experiment (Phase 32) registered with the channel. */
+export interface CelestialRecord {
+  id: string;
+  name: string;
+  spec: CelestialSpec;
+  start: number;
+}
+
 export class GravityChannel {
   readonly experiments: GravityRecord[] = [];
+  /** Celestial experiments (Phase 32): their point sources are part of the same field. */
+  readonly celestial: CelestialRecord[] = [];
   /** Project gravity (m/s²; the Rapier world's baseline, settings.gravity). */
   g0 = GRAVITY;
   /** The run's field, created with the first experiment (null = dormant: every system on its constant). */
@@ -38,6 +49,14 @@ export class GravityChannel {
     const name = spec.name ?? id;
     this.experiments.push({ id, name, spec, start });
     (this.field ??= new GravityField(this.g0)).add({ id: name, spec, start });
+    this.rev++;
+  }
+
+  /** Register a celestial experiment (Phase 32): its sources join the field (created here if none yet). */
+  addCelestial(spec: CelestialSpec, start: number, id: string) {
+    const name = spec.name ?? id;
+    this.celestial.push({ id, name, spec, start });
+    (this.field ??= new GravityField(this.g0)).addCelestial({ id: name, spec, start });
     this.rev++;
   }
 

@@ -322,6 +322,30 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['m/s²', 'Pa', 'W/(m²·K)'], validRange: 'downward component ≥ 0.05 g₀, tilt ≤ 0.3 (shallow-water, column and convection models)',
     limitations: ['model.lim.noZeroGFluid', 'model.lim.noMicrogravityFlame'], reference: 'docs/VARIABLE_GRAVITY.md §16–23',
   }),
+  celestialField: m({
+    id: 'celestialField', labelKey: 'model.celestialField', level: 'physics',
+    assumptions: ['model.as.celestialNewton', 'model.as.celestialPlummer', 'model.as.celestialCompose'],
+    units: ['m/s²', 'J/kg', '1/s²', 'kg'], validRange: 'speeds < 0.1 c, substeps ≤ 256 per 1/60 s down to the capture radius; up to 4 point sources (Newtonian, softened)',
+    limitations: ['model.lim.noRelativity', 'model.lim.celestialSoftening', 'model.lim.celestialExternal'], reference: 'docs/EXTREME_CELESTIAL.md §4–9',
+  }),
+  celestialOrbits: m({
+    id: 'celestialOrbits', labelKey: 'model.celestialOrbits', level: 'physics',
+    assumptions: ['model.as.celestialKdk', 'model.as.celestialSubsteps', 'model.as.celestialRapier'],
+    units: ['m', 'm/s', 'J', 'kg·m²/s'], validRange: 'free-flying bodies (no solver contact in the step); contact steps stay first order',
+    limitations: ['model.lim.celestialContact', 'model.lim.noNBody'], reference: 'docs/EXTREME_CELESTIAL.md §13–18',
+  }),
+  celestialCapture: m({
+    id: 'celestialCapture', labelKey: 'model.celestialCapture', level: 'hypothetical',
+    assumptions: ['model.as.celestialCaptureRadius', 'model.as.celestialHeld', 'model.as.celestialLedger'],
+    units: ['kg', 'kg·m/s', 'J'], validRange: 'capture radius ≥ 0 (a model parameter, not the horizon)',
+    limitations: ['model.lim.noHorizon', 'model.lim.noAccretionPhysics'], reference: 'docs/EXTREME_CELESTIAL.md §20–23',
+  }),
+  celestialStructure: m({
+    id: 'celestialStructure', labelKey: 'model.celestialStructure', level: 'empirical',
+    assumptions: ['model.as.celestialMemberRatio', 'model.as.celestialStorey', 'model.as.celestialUplift'],
+    units: ['N', 'm'], validRange: 'storey lateral loads of the field\'s horizontal part; uplift checked against connection hold-down capacities',
+    limitations: ['model.lim.noFea', 'model.lim.notEngineering', 'model.lim.celestialReduced'], reference: 'docs/EXTREME_CELESTIAL.md §11–12',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

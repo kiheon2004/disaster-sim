@@ -23,6 +23,7 @@ import { EARTH_G } from '@/gravity/types';
 import type { GravityChannel } from './GravityChannel';
 import type { ForceOwner } from '../forces/ForceLedger';
 import { GravityStructures } from './structures';
+import { CelestialRuntime } from '../celestial/runtime';
 
 /** Wake every dynamic body when the uniform gravity moved by this share of max(|G|, 0.05 g₀) since the last wake. */
 const WAKE_SHARE = 0.02;
@@ -126,6 +127,10 @@ export class GravityRuntime {
   /** Bodies moved outside the integrator since the last ledger step (scratch), time of that step. */
   private readonly movedBodies: Tracked[] = [];
   private lastTime = 0;
+  /** Phase 32: celestial point sources' runtime (probes, KDK of free bodies, captures), created with the first one. */
+  celestial: CelestialRuntime | null = null;
+  private readonly kOut = { captured: -1, x: [0, 0, 0] as Vec3, v: [0, 0, 0] as Vec3 };
+  private readonly captures: { tr: Tracked; k: number; x: Vec3; v: Vec3 }[] = [];
 
   constructor(ch: GravityChannel) {
     this.ch = ch;
@@ -161,6 +166,8 @@ export class GravityRuntime {
     let k0 = 0, u0 = 0;
     const p0: Vec3 = [0, 0, 0];
     let n = 0, inSrc = 0, forces = 0;
+    const cel = f.celestial.length ? (this.celestial ??= new CelestialRuntime(f)) : null;
+    if (cel) { cel.beginStep(); cel.pre(ctx); }
     const visit = (h: BodyHandle, owner: ForceOwner, thrMin: number, thrK: number) => {
       let tr = this.tracked.get(h);
       const fresh = !tr;
@@ -174,7 +181,8 @@ export class GravityRuntime {
       const p = this.pos, v = this.vel;
       x[0] = p[0]; x[1] = p[1]; x[2] = p[2];
       v0[0] = v[0]; v0[1] = v[1]; v0[2] = v[2];
-      if (thresholds || (fresh && thrG > this.ch.g0)) physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
+      // Probes (thrMin < 0) report no contact forces (they are test bodies, not damage sources).
+      if (thrMin >= 0 && (thresholds || (fresh && thrG > this.ch.g0))) physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
       if (thresholds) physics.wake(h);
       const phi = f.potential(x[0], x[1], x[2]);
       tr.phi0 = phi;
@@ -200,12 +208,14 @@ export class GravityRuntime {
         }
       }
       const gg = Math.hypot(g[0], g[1], g[2]);
+      if (cel) cel.sampleAt(x[0], x[1], x[2]);
       if (gg > this.stats.peak) this.stats.peak = gg;
       if (gg < this.stats.minimum) this.stats.minimum = gg;
       n++;
     };
     for (const e of ctx.runtime.entities.values()) if (e.dynamic && e.body !== null) visit(e.body, e, 800, 2.5);
     for (const d of ctx.runtime.debris) visit(d.body, d, 600, 4);
+    if (cel) for (const p of cel.probes) if (p.body !== null) visit(p.body, p, -1, 0);
     // Bodies that left the set (removed debris, bodies made fixed).
     for (const [h, tr] of this.tracked) {
       if (tr.seen === stamp) continue;
@@ -269,6 +279,15 @@ export class GravityRuntime {
         this.tracked.delete(tr.h);
         continue;
       }
+      // Phase 32: a free body near celestial sources takes the KDK increment instead of Rapier's first-order one.
+      const cel = this.celestial, ko = this.kOut;
+      if (cel && cel.integrate(ctx, tr.h, tr.m, tr.x0, tr.v0, tr.g, tr.phi0, dt, ledger, ko)) {
+        if (ko.captured >= 0) { this.captures.push({ tr, k: ko.captured, x: [...ko.x] as Vec3, v: [...ko.v] as Vec3 }); continue; }
+        tr.phi = f.potential(ko.x[0], ko.x[1], ko.x[2]);
+        tr.x1[0] = ko.x[0]; tr.x1[1] = ko.x[1]; tr.x1[2] = ko.x[2];
+        tr.v[0] = ko.v[0]; tr.v[1] = ko.v[1]; tr.v[2] = ko.v[2];
+        continue;
+      }
       physics.readMotion(tr.h, this.pos, this.vel, 0);
       const p = this.pos, v = this.vel;
       const phi = f.potential(p[0], p[1], p[2]);
@@ -277,8 +296,18 @@ export class GravityRuntime {
       tr.x1[0] = p[0]; tr.x1[1] = p[1]; tr.x1[2] = p[2];
       tr.v[0] = v[0]; tr.v[1] = v[1]; tr.v[2] = v[2];
     }
+    // Captured bodies (booked out by integrate): capture ledger, then removed from the world — after the loop.
+    for (const c of this.captures) {
+      const cel = this.celestial!;
+      const id = cel.identify(ctx, c.tr.h);
+      cel.capture(ctx, id.kind, id.id, c.tr.m, c.x, c.v, c.k);
+      cel.removeCaptured(ctx, c.tr.h);
+      this.tracked.delete(c.tr.h);
+    }
+    this.captures.length = 0;
     this.lastTime = ctx.time;
     ledger.endStep(f.potentialDefined);
+    this.celestial?.post(ctx, dt);
     if (ctx.time + dt >= this.nextSeries) {
       this.nextSeries = ctx.time + dt + SERIES_DT;
       const b = ledger.balance(), G = f.G;

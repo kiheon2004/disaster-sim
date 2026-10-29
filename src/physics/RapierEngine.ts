@@ -312,6 +312,37 @@ export class RapierEngine implements PhysicsEngine {
     vel[o] = v.x; vel[o + 1] = v.y; vel[o + 2] = v.z;
   }
 
+  writeMotion(h: BodyHandle, pos: ArrayLike<number>, vel: ArrayLike<number>) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    b.setTranslation({ x: pos[0], y: pos[1], z: pos[2] }, false);
+    b.setLinvel({ x: vel[0], y: vel[1], z: vel[2] }, false);
+  }
+
+  touching(h: BodyHandle) {
+    const b = this.bodies.get(h);
+    const world = this.world;
+    if (!b || !world) return false;
+    let hit = false;
+    for (let i = 0; i < b.numColliders() && !hit; i++) {
+      const c = b.collider(i);
+      world.contactPairsWith(c, (other) => {
+        if (hit) return;
+        world.contactPair(c, other, (m) => { if (m.numSolverContacts() > 0) hit = true; });
+      });
+    }
+    return hit;
+  }
+
+  linearDamping(h: BodyHandle) {
+    return this.bodies.get(h)?.linearDamping() ?? 0;
+  }
+
+  freeKappa() {
+    const n = this.w().integrationParameters.numSolverIterations;
+    return (n + 1) / (2 * n);
+  }
+
   step(dt: number) {
     const world = this.w();
     world.timestep = dt;

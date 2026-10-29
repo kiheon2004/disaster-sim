@@ -25,6 +25,7 @@ export type EventType =
   | 'atmosphere'
   | 'climate'
   | 'gravity'
+  | 'celestial'
   | 'explosion';
 
 /** Event types that are recognized but not simulated yet. ('flood' alone maps to rising water.) */
@@ -140,7 +141,7 @@ export interface WaterSourceEventSpec {
 
 export type WaterEventSpec = RainEventSpec | RisingWaterEventSpec | WaterSourceEventSpec;
 
-export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec | import('@/fire/types').FireSpec | import('@/volcano/types').VolcanoSpec | import('@/atmosphere/types').AtmosphereSpec | import('@/climate/types').ClimateSpec | import('@/gravity/types').GravitySpec;
+export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec | import('@/fire/types').FireSpec | import('@/volcano/types').VolcanoSpec | import('@/atmosphere/types').AtmosphereSpec | import('@/climate/types').ClimateSpec | import('@/gravity/types').GravitySpec | import('@/celestial/types').CelestialSpec;
 
 export function isWaterEvent(s: EventSpec): s is WaterEventSpec {
   return s.event === 'rain' || s.event === 'risingWater' || s.event === 'waterSource';

@@ -103,6 +103,9 @@ export interface AccretionSpec {
   outer: number;
   /** Mass of each particle (kg, booked on capture). */
   particleMass: number;
+  /** Spread of the initial speeds below circular (0–0.5: speed × (1 − spread·u), u ∈ [0, 1) deterministic) —
+   *  eccentric orbits that dive towards the source; 0 = exact circles (a ring that never accretes: no viscosity). */
+  spread?: number;
   source?: number;
 }
 
@@ -221,6 +224,7 @@ export function celestialIssues(s: CelestialSpec): string[] {
   const a = s.accretion;
   if (!(a.particles >= 0 && a.particles <= L.particles && Number.isInteger(a.particles))) out.push('celestial.invalid.particles');
   if (a.particles > 0 && !(a.inner > 0 && a.outer > a.inner && a.particleMass > 0)) out.push('celestial.invalid.accretion');
+  if (a.spread !== undefined && !(a.spread >= 0 && a.spread <= 0.5)) out.push('celestial.invalid.accretion');
   if ((a.source ?? 0) >= Math.max(1, s.sources.length)) out.push('celestial.invalid.accretion');
   return [...new Set(out)];
 }

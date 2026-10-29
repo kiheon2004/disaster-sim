@@ -62,9 +62,9 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
   },
   gravity: {
     id: 'gravity', labelKey: 'channel.gravity', status: 'active', quantity: 'gravitational acceleration g(x, t) m/s² (vector), potential J/kg',
-    owner: 'env.gravity (GravityChannel → GravityField: project gravity replaced / extended by gravity experiments; dormant = the project constant)',
-    writers: ['GravityEvent'],
-    readers: ['Rapier (uniform part)', 'gravityField forces (ForceLedger, local part)', 'structural (dead / snow loads × g/g₀)', 'collapse (falling blocks)', 'water (head, waves, CFL, buoyancy)', 'atmosphere (column weight)', 'thermal (natural convection)', 'fire (plume buoyancy)', 'climate (snow loads, compaction)', 'volcano (bombs, ash, lava)', 'impact (trajectory, crater, ejecta)', 'ground (stability, runout)', 'particles', 'inspector'],
+    owner: 'env.gravity (GravityChannel → GravityField: project gravity replaced / extended by gravity experiments, plus celestial point sources (Phase 32); dormant = the project constant)',
+    writers: ['GravityEvent', 'CelestialEvent'],
+    readers: ['Rapier (uniform part)', 'gravityField forces (ForceLedger, local part)', 'celestial KDK integrator (free bodies, probes, test particles)', 'captures', 'storey lateral loads / uplift (celestial part)', 'structural (dead / snow loads × g/g₀)', 'collapse (falling blocks)', 'water (head, waves, CFL, buoyancy)', 'atmosphere (column weight)', 'thermal (natural convection)', 'fire (plume buoyancy)', 'climate (snow loads, compaction)', 'volcano (bombs, ash, lava)', 'impact (trajectory, crater, ejecta)', 'ground (stability, runout)', 'particles', 'inspector'],
   },
   terrainDeformation: {
     id: 'terrainDeformation', labelKey: 'channel.terrainDeformation', status: 'active', quantity: 'vertical ground displacement m (+ up)',

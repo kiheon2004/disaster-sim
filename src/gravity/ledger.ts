@@ -120,6 +120,27 @@ export class GravityLedger {
     this.nStep++;
   }
 
+  /**
+   * One body over one step integrated by the celestial KDK (Phase 32): path work W (J, trapezoid along the substeps),
+   * the integrator's share ε = W − ΔK_kdk (the part of W the scheme did not turn into kinetic energy), gravity impulse
+   * J = m·Δv_kdk; K / U / p of the body at its end state v1, Φ(x₁) unless it left the set in this step (captured: the
+   * caller books its exit with `boundary`).
+   */
+  bodyPath(m: number, v1: ArrayLike<number>, phi0: number, phi1: number, W: number, eps: number, J: ArrayLike<number>, stays: boolean) {
+    this.workGravity += W;
+    this.workGravityGross += Math.abs(W);
+    this.integrator += eps;
+    this.impulse[0] += J[0]; this.impulse[1] += J[1]; this.impulse[2] += J[2];
+    const r = m * (phi1 - phi0) + W;
+    this.fStep += r;
+    this.eStep += r - eps;
+    if (!stays) return;
+    this.kStep += 0.5 * m * (v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2]);
+    this.uStep += m * phi1;
+    this.pStep[0] += m * v1[0]; this.pStep[1] += m * v1[1]; this.pStep[2] += m * v1[2];
+    this.nStep++;
+  }
+
   /** ∂Φ/∂t term of one body before a step: m·(Φ(x, t) − Φ(x, t_prev)) (skipped without a potential at either time). */
   field(m: number, phi: number, phiPrev: number) {
     const d = phi - phiPrev;

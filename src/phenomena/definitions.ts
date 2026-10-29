@@ -28,6 +28,7 @@ import { volcano } from './volcanoDefinitions';
 import { climate } from './climateDefinitions';
 import { atmosphere } from './atmosphereDefinitions';
 import { gravity } from './gravityDefinitions';
+import { celestial } from './celestialDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -214,7 +215,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate, gravity];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate, gravity, celestial];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -234,11 +235,7 @@ export const PLANNED: PlannedPhenomenon[] = [
     missing: ['missing.o2Composition', 'missing.physiology'], reuses: ['reuse.exposure', 'reuse.atmosphere'],
   }),
   // Phase 31: changing gravity is the implemented 'gravity' experiment (the planned 'gravityChange' entry was replaced);
-  // black holes (Phase 32) will reuse its field (radial sources, gradient / tidal sampling, field-work ledger).
-  planned({
-    type: 'blackHole', labelKey: 'phen.blackHole', icon: 'warning', channels: ['gravity', 'mechanicalForce'], models: [],
-    keywords: /블랙홀|black\s*hole/, missing: ['missing.tidal', 'missing.relativity'], reuses: ['reuse.gravityField', 'reuse.forceLedger', 'reuse.debris'],
-  }),
+  // Phase 32: black holes are the implemented 'celestial' experiment (the planned 'blackHole' entry was replaced).
   planned({
     type: 'tsunami', labelKey: 'phen.tsunami', icon: 'water', channels: ['water'], models: [],
     keywords: /쓰나미|지진해일|tsunami/, missing: ['missing.supercritical'], reuses: ['reuse.water', 'reuse.risingWater'],
