@@ -20,6 +20,7 @@ import { CLIMATE_SCENARIOS, climateWarnings, defaultClimateSpec, type ClimateSpe
 import { CLIMATE_PRESETS, climatePreset, scenarioDefaults } from './presets';
 import { climate as climateDefinition } from '@/phenomena/climateDefinitions';
 import type { EventSpec } from '@/events/specs';
+import { parseCommands } from '@/commands/RuleBasedParser';
 import { ClimateWorld, computeShade, STORE, type ClimateWaterLink } from './ClimateWorld';
 import { CP_AIR, L_V, RHO_ICE, SIGMA, T_MELT } from './constants';
 
@@ -323,5 +324,24 @@ describe('audit: ice in the flood model', () => {
     r.step(120);
     // −1 °C air cannot melt the ice: whatever drained to the flood is the rain passing through (the cover holds no liquid).
     expect(r.cw.totals.meltToFlood).toBeLessThan(1e-6 * Math.max(1, r.cw.totals.rain));
+  });
+});
+
+describe('audit: text commands keep their Phase 29 meaning', () => {
+  it('climate words inside a wind / earthquake / rain request no longer drop the request', () => {
+    const ev = (t: string) => parseCommands(t, { direction: 'E', duration: 60, gustStrength: 0.2 } as never).commands.map((c) => (c as { command: { spec?: { event?: string } } }).command.spec?.event);
+    // Phase 29 (a1a3e1e) results of the same inputs; Phase 30 returned nothing for all of them.
+    expect(ev('건물 모서리 쪽으로 풍속 30m/s 바람')).toEqual(['wind']);
+    expect(ev('모서리부터 규모 6.5 지진 30초')).toEqual(['earthquake']);
+    expect(ev('눈에 띄게 강한 바람 25m/s')).toEqual(['wind']);
+    expect(ev('태풍의 눈이 지나가며 풍속 45m/s')).toEqual(['wind']);
+    expect(ev('눈과 비가 섞인 시간당 50mm 비')).toEqual(['rain']);
+    expect(ev('폭우와 함께 습도 높은 바람 20m/s')).toEqual(['rain', 'wind']);
+    expect(ev('humid wind 15 m/s from the south')).toEqual(['wind']);
+    expect(ev('earthquake magnitude 7 with freezing wind 20 m/s')).toEqual(['wind']);
+    // A climate request alone is still pointed to the experiment editor.
+    const r = parseCommands('폭설', { direction: 'E', duration: 60, gustStrength: 0.2 } as never);
+    expect(r.commands).toHaveLength(0);
+    expect(r.unsupported.map((u) => u.event)).toContain('climate');
   });
 });

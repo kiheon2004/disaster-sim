@@ -180,6 +180,8 @@ export function tokenizeNumbers(s: string): NumToken[] {
 // ── Keyword sets ──────────────────────────────────────────────────────────
 
 const WIND_WORDS = /바람|풍속|태풍|강풍|돌풍|폭풍|미풍|허리케인|사이클론|wind|typhoon|hurricane|cyclone|gale|storm|gust|breeze/;
+/** Non-wind executable requests (earthquake, rain, flood / water level) — they take precedence over the climate hint. */
+const EXECUTABLE_WORDS = /지진|규모|진도|earthquake|quake|magnitude|폭우|강우|호우|시간당|mm\/h|rain|홍수|침수|수위|flood|water\s*level/;
 const RAMP_UP = /증가|강해|강하게|올려|올리|높여|높이|세져|세지|세게|키워|increase|ramp|rise|raise|strengthen|build|intensif|grow/;
 const RAMP_DOWN = /감소|약해|약하게|낮춰|낮추|줄여|줄이|잦아|decrease|reduce|weaken|drop|lower|die down|ease/;
 const STOP_WIND = /멈춰|멈추|그쳐|그치|중지|없애|꺼|끄|stop|cease|calm down|end the/;
@@ -365,7 +367,9 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
     }
     // Phase 30: a climate experiment (heatwave, cold wave, snow, icing …) is recognized but set up in the experiment
     // editor (temperature path, humidity, precipitation, sun) — text never starts one.
-    if (phenomena.implemented('climate')!.keywords.test(raw)) {
+    // Only a clause without an executable request: the climate words also occur in ordinary phrases (모서리, 태풍의 눈,
+    // humid wind) — a wind, earthquake or water command in the clause is parsed as before Phase 30.
+    if (phenomena.implemented('climate')!.keywords.test(raw) && !WIND_WORDS.test(raw) && !EXECUTABLE_WORDS.test(raw)) {
       result.unsupported.push({ event: 'climate', params: {} });
       result.warnings.push({ key: 'parse.climate.editor' });
       continue;
