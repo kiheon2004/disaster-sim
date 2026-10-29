@@ -4,7 +4,7 @@ import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { DamageState } from '../damage/DamageState';
 import { HAZARDS, type DamageEventInput, type DamageEventRecord } from './DamageEvent';
 import { hazardDamage } from '../interactions/integrity';
-import { impactGovernsShaking } from '../seismic/SeismicState';
+import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
 import { peakAcceleration } from '@/impact/shock';
 import { sourceAt } from '../ground/objects';
 import { footprint } from '../deformation/response';
@@ -121,6 +121,10 @@ export class MetricsRecorder {
    * (foundations, burial, sediment) whose source is an impact belongs to the impact.
    */
   private attribute(e: RuntimeEntity, ev: DamageEventInput): DamageEventInput {
+    // Phase 24: structural damage recorded by the seismic paths (drift, members, collapse) is the
+    // air-pressure wave's where its lateral load governed the structure's response.
+    if (ev.hazard === 'earthquake' && blastGovernsStructure(e.seismic)) return { ...ev, hazard: 'blast', cause: ev.cause === 'shaking' ? 'blast' : ev.cause, source: ev.source ?? e.blast?.source };
+    if (ev.hazard === 'blast' && !ev.source) return { ...ev, source: e.blast?.source };
     if (ev.hazard === 'earthquake' && impactGovernsShaking(e.seismic)) return { ...ev, hazard: 'impact', source: ev.source ?? this.shockSource(e) };
     if (ev.hazard === 'ground') {
       // Ground responses of the Phase 21 path carry no source: the phenomenon that owns the field

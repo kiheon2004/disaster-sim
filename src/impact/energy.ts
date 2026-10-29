@@ -30,14 +30,21 @@ export interface EnergyPartition {
   seismic: number;
   ejectaKinetic: number;
   unresolved: number;
-  /** Reserved for Phase 24 (atmospheric blast of a surface impact): 0 in Phase 23. */
+  /**
+   * Atmospheric blast of a ground impact (Phase 24): the air-coupled share, taken out of what the
+   * crater model leaves unresolved (0 when the air blast is off — Phase 23 behaviour).
+   */
   blast: number;
+  /** Part of `atmosphere` released as an airburst pressure wave (Phase 24; 0 otherwise). Not an extra share. */
+  airburstBlast: number;
 }
 
-export function partition(initial: number, impact: number, seismic: number, ejectaKinetic: number): EnergyPartition {
+export function partition(initial: number, impact: number, seismic: number, ejectaKinetic: number, airCoupling = 0, airburst = 0): EnergyPartition {
   const atmosphere = Math.max(0, initial - impact);
-  const unresolved = Math.max(0, impact - seismic - ejectaKinetic);
-  return { initial, atmosphere, impact, seismic, ejectaKinetic, unresolved, blast: 0 };
+  const left = Math.max(0, impact - seismic - ejectaKinetic);
+  // The air takes its share from the unresolved energy only (never the seismic / ejecta shares).
+  const blast = Math.min(left, Math.max(0, airCoupling) * impact);
+  return { initial, atmosphere, impact, seismic, ejectaKinetic, unresolved: left - blast, blast, airburstBlast: Math.min(atmosphere, Math.max(0, airburst)) };
 }
 
 export const tntTonnes = (E: number) => E / TNT_J_PER_TONNE;

@@ -18,6 +18,7 @@ import { DeformationSystem } from './DeformationSystem';
 import { GroundFailureSystem } from './GroundFailureSystem';
 import { SedimentForceSystem } from './SedimentForceSystem';
 import { ImpactSystem } from './ImpactSystem';
+import { BlastSystem } from './BlastSystem';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -38,6 +39,9 @@ export function createDefaultSystems(): SimulationSystem[] {
     new DeformationSystem(),
     new WindForceSystem(),
     new SeismicForceSystem(),
+    // Phase 24: air-pressure waves load structures (lateral force into the structural model),
+    // facade parts, bodies (ForceLedger 'blast') and the water (pressure gradient, next solver call).
+    new BlastSystem(),
     new WaterSolverSystem(),
     new WaterForceSystem(),
     new SedimentForceSystem(),

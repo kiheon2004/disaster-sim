@@ -91,4 +91,5 @@ export const FORCE_RESPONSES: { channel: ChannelId; categories: ObjectCategory[]
   { channel: 'airflow', categories: ['building', 'tree', 'infrastructure', 'human', 'vehicle'], kinds: ['structural', 'stability', 'transition'], via: 'DamageSystem (wind behaviors)' },
   { channel: 'groundMotion', categories: ['human', 'vehicle', 'debris'], kinds: ['motion'], via: 'SeismicForceSystem → ForceLedger' },
   { channel: 'water', categories: ['human', 'vehicle', 'debris', 'tree', 'infrastructure'], kinds: ['motion', 'stability'], via: 'WaterForceSystem → ForceLedger' },
+  { channel: 'pressure', categories: ['debris'], kinds: ['motion'], via: 'BlastSystem → ForceLedger (Phase 24)' },
 ];

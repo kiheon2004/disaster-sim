@@ -162,6 +162,21 @@ export const MODELS: Record<string, ModelInfo> = {
     assumptions: ['model.as.seismicEfficiency', 'model.as.energyFlux', 'model.as.pulseBroadened'], units: ['m/s', 'g'],
     validRange: 'near field of the world (≤ 200 m)', limitations: ['model.lim.noWaveTypes', 'model.lim.noBlast'], reference: 'docs/IMPACT.md §10',
   }),
+  blastWave: m({
+    id: 'blastWave', labelKey: 'model.blastWave', level: 'physics',
+    assumptions: ['model.as.pointRelease', 'model.as.sedov', 'model.as.weakShock', 'model.as.rankineHugoniot', 'model.as.groundImage'], units: ['Pa', 'Pa·s', 's', 'm'],
+    validRange: 'weak shock Δp ≤ 0.3 p₀ (transition / strong zones approximate); energy 1 kJ – 1 TJ', limitations: ['model.lim.noCfd', 'model.lim.notExplosive', 'model.lim.noRefraction'], reference: 'docs/BLAST.md §5–8',
+  }),
+  blastLoading: m({
+    id: 'blastLoading', labelKey: 'model.blastLoading', level: 'empirical',
+    assumptions: ['model.as.boxFaces', 'model.as.reflectionClearing', 'model.as.blastDrag', 'model.as.partSdof'], units: ['Pa', 'N', 'N·s'],
+    validRange: 'box-shaped objects; facade parts with a wind design', limitations: ['model.lim.boxShapes', 'model.lim.noPhysiology', 'model.lim.notEngineering'], reference: 'docs/BLAST.md §11–15',
+  }),
+  blastShielding: m({
+    id: 'blastShielding', labelKey: 'model.blastShielding', level: 'empirical',
+    assumptions: ['model.as.knifeEdge', 'model.as.maekawa'], units: ['dB', 's'],
+    validRange: 'single dominant edge (terrain ridge / building), ≤ 20 dB', limitations: ['model.lim.noUrbanReflection'], reference: 'docs/BLAST.md §9',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

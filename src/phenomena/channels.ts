@@ -35,7 +35,7 @@ export interface ChannelInfo {
 export const CHANNELS: Record<ChannelId, ChannelInfo> = {
   mechanicalForce: {
     id: 'mechanicalForce', labelKey: 'channel.mechanicalForce', status: 'active', quantity: 'N, N·s on rigid bodies',
-    owner: 'Rapier world (PhysicsEngine) via ForceLedger', writers: ['windForce', 'groundMotion', 'waterForce', 'damage (impulses)'], readers: ['poseSync', 'damage'],
+    owner: 'Rapier world (PhysicsEngine) via ForceLedger', writers: ['windForce', 'groundMotion', 'waterForce', 'blast', 'damage (impulses)'], readers: ['poseSync', 'damage'],
   },
   airflow: {
     id: 'airflow', labelKey: 'channel.airflow', status: 'active', quantity: 'wind velocity m/s',
@@ -51,8 +51,9 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     readers: ['waterForce', 'groundContact', 'floodDamage', 'exposure', 'renderer'],
   },
   pressure: {
-    id: 'pressure', labelKey: 'channel.pressure', status: 'interface', quantity: 'overpressure Pa (blast / shock wave)',
-    owner: '— (future PressureField; impact blast sources are recorded in env.impact.blasts, Phase 23)', writers: [], readers: [],
+    id: 'pressure', labelKey: 'channel.pressure', status: 'active', quantity: 'overpressure Pa, positive impulse Pa·s (air-pressure waves)',
+    owner: 'env.blast (BlastChannel: waves with their propagation tables, Phase 24)', writers: ['BlastEvent', 'ImpactEvent (airburst / air-coupled share)'],
+    readers: ['blast (structures, facade parts, bodies, trees, debris)', 'structural (lateral load)', 'waterSolver (pressure gradient)', 'renderer', 'inspector'],
   },
   temperature: {
     id: 'temperature', labelKey: 'channel.temperature', status: 'interface', quantity: 'air / surface temperature °C, heat flux W/m²',

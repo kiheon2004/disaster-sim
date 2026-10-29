@@ -6,6 +6,7 @@
 import { updateTreeFlood } from '../vegetation/vegetation';
 import { ResponseRegistry } from './ObjectResponse';
 import { updateBuildingQuake, updateInfraQuake, updatePersonQuake } from '../damage/behaviors/seismic';
+import { respondBody, respondParts, respondStructure, respondTree } from '../blast/responses';
 import {
   updateBuildingFlood, updateCarFlood, updateExposureOnly, updateInfraFlood, updatePersonFlood, updateRoadFlood,
 } from '../damage/behaviors/flood';
@@ -56,3 +57,19 @@ responses.register({
   // Phase 19 (opt-in): flow overturning vs root-plate capacity; otherwise exposure only.
   update: (e, ctx, dt) => (ctx.runtime.vegetation?.flood ? updateTreeFlood(e, ctx, ctx.env.flood.field!, dt) : updateExposureOnly(e, ctx.env.flood.field!, dt)),
 });
+
+// ── pressure (air-pressure waves, Phase 24) ──
+responses.register({
+  channel: 'pressure', target: { category: 'building' }, kinds: ['structural', 'transition'], model: 'blastLoading',
+  update: (e, ctx, dt) => { respondStructure(e, ctx, dt); respondParts(e, ctx, dt); },
+});
+responses.register({
+  channel: 'pressure', target: { category: 'infrastructure' }, kinds: ['structural', 'motion', 'transition'], model: 'blastLoading',
+  update: (e, ctx, dt) => {
+    if (e.dynamic) respondBody(e, ctx, dt);
+    else { respondStructure(e, ctx, dt); respondParts(e, ctx, dt); }
+  },
+});
+responses.register({ channel: 'pressure', target: { category: 'vehicle' }, kinds: ['motion', 'stability'], model: 'blastLoading', update: respondBody });
+responses.register({ channel: 'pressure', target: { category: 'human' }, kinds: ['motion', 'stability', 'transition'], model: 'blastLoading', update: respondBody });
+responses.register({ channel: 'pressure', target: { category: 'tree' }, kinds: ['structural', 'transition'], model: 'blastLoading', update: respondTree });

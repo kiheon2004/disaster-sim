@@ -86,6 +86,19 @@ export class WaterForcing {
    */
   readonly windStress: [number, number] = [0, 0];
   readonly groundDv: [number, number] = [0, 0];
+  /**
+   * Air-pressure waves (Phase 24, interactions): ∫p dt (Pa·s) at each cell since the last solver
+   * call, written by the BlastSystem with exact step integrals. The solver turns its gradient into
+   * momentum (−h·∇∫p dt / ρ_w over the call) and clears it. Null until a wave crosses water.
+   */
+  airImpulse: Float64Array | null = null;
+  /** Whether airImpulse holds anything to apply. */
+  airPending = false;
+
+  ensureAirImpulse(n: number): Float64Array {
+    this.airPending = true;
+    return (this.airImpulse ??= new Float64Array(n));
+  }
   /** Event overrides (rising water). */
   readonly override: Partial<Record<BoundarySide, ResolvedBoundary & { owner: string }>> = {};
 

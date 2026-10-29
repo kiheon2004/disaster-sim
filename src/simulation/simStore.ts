@@ -132,6 +132,35 @@ export interface ImpactLive {
   airburstAltitude: number;
 }
 
+/** Live air-pressure wave summary (Phase 24) for the HUD / inspector. */
+export interface BlastLive {
+  id: string;
+  name: string;
+  source: string;
+  kind: 'release' | 'airburst' | 'surface';
+  phase: 'pending' | 'propagating' | 'passed';
+  /** Seconds since the release (< 0 before), front radius (m), energy and pulse energy (J). */
+  local: number;
+  front: number;
+  energy: number;
+  pulseEnergy: number;
+  height: number;
+  validRadius: number;
+  /** Largest side-on overpressure (Pa) / positive impulse (Pa·s) at an object so far, objects reached. */
+  peak: number;
+  impulse: number;
+  reached: number;
+  /** Energy ledger now (J). */
+  nearSource: number;
+  dissipated: number;
+  inTransit: number;
+  leftWorld: number;
+  notApplied: number;
+  residual: number;
+  model: string;
+  waveform: string;
+}
+
 export interface SimStats {
   byState: [number, number, number, number, number];
   debris: number;
@@ -180,6 +209,7 @@ export interface SimState {
   deform: DeformLive | null;
   ground: GroundLive | null;
   impacts: ImpactLive[] | null;
+  blasts: BlastLive[] | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -213,6 +243,7 @@ export const useSimStore = create<SimState>((set) => ({
   deform: null,
   ground: null,
   impacts: null,
+  blasts: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

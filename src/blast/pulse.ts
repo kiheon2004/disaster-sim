@@ -3,7 +3,12 @@
  *
  * A wave arriving at time t_a with overpressure Δp and positive duration T is piecewise linear:
  *   'positive':  p(τ) = Δp·(1 − τ/T)       0 ≤ τ < T,   0 otherwise          (τ = t − t_a)
- *   'nWave':     p(τ) = Δp·(1 − τ/T)       0 ≤ τ < 2T  (negative phase down to −Δp, then a rear shock)
+ *   'nWave':     positive phase as above, then a negative phase −Δp₋·(τ − T)/T₋ for T ≤ τ < T + T₋
+ *                and a rear shock back to ambient. In the weak-shock zone Δp₋ = Δp, T₋ = T (the
+ *                symmetric N-wave of the theory). Closer to the source the symmetric N-wave is not
+ *                physical (it would pull objects back as hard as it pushed them): the negative phase
+ *                is limited to Δp₋ ≤ 0.3·p (the weak-shock bound — assumption) with the SAME impulse,
+ *                T₋ = Δp·T/Δp₋, so the far-field property ∫p dt = 0 is kept.
  *
  * Every load in the simulation is the integral of p (or of p times a linear factor) over the step,
  * computed in closed form — the impulse delivered in a step is exact wherever the shock falls inside
@@ -22,23 +27,32 @@ export interface Arrival {
   dp: number;
   T: number;
   waveform: BlastWaveform;
+  /** Negative-phase amplitude (Pa, ≥ 0; default Δp — symmetric N-wave). */
+  dn?: number;
 }
 
+/** Negative-phase amplitude and duration of a wave. */
+export const negAmp = (a: Arrival) => a.dn ?? a.dp;
+export const negDur = (a: Arrival) => (a.dn === undefined || a.dn >= a.dp ? a.T : (a.dp * a.T) / Math.max(1e-12, a.dn));
+
 /** Duration of the linear part (positive phase, or both phases of an N-wave). */
-export const span = (a: Arrival) => (a.waveform === 'nWave' ? 2 * a.T : a.T);
+export const span = (a: Arrival) => (a.waveform === 'nWave' ? a.T + negDur(a) : a.T);
 
 /** Overpressure at time t (Pa). At the shock (τ = 0) the value after the jump. */
 export function pressure(a: Arrival, t: number): number {
   const tau = t - a.t;
   if (tau < 0 || tau >= span(a)) return 0;
-  return a.dp * (1 - tau / a.T);
+  if (tau < a.T) return a.dp * (1 - tau / a.T);
+  return (-negAmp(a) * (tau - a.T)) / negDur(a);
 }
 
 /** ∫ p dt from the arrival to time t (Pa·s). */
 export function impulseTo(a: Arrival, t: number): number {
   const tau = Math.min(t - a.t, span(a));
   if (tau <= 0) return 0;
-  return a.dp * (tau - (tau * tau) / (2 * a.T));
+  if (tau <= a.T) return a.dp * (tau - (tau * tau) / (2 * a.T));
+  const s = tau - a.T, Tn = negDur(a);
+  return 0.5 * a.dp * a.T - (negAmp(a) * s * s) / (2 * Tn);
 }
 
 /** ∫ p dt over [t0, t1] (Pa·s), exact. */
@@ -49,9 +63,12 @@ export function impulse(a: Arrival, t0: number, t1: number): number {
 /** Positive-phase impulse I₊ = ½·Δp·T (Pa·s). */
 export const positiveImpulse = (a: Arrival) => 0.5 * a.dp * a.T;
 
-/** ∫ p·max(0, 1 − τ/tc) dt from the arrival to t (the reflected part that clears over tc). */
+/**
+ * ∫ p·max(0, 1 − τ/tc) dt from the arrival to t (the reflected part that clears over tc). The
+ * reflected excess is applied to the positive phase only (the negative phase loads side-on).
+ */
 function clearingTo(a: Arrival, tc: number, t: number): number {
-  const tau = Math.min(t - a.t, tc, span(a));
+  const tau = Math.min(t - a.t, tc, a.T);
   if (tau <= 0 || tc <= 0) return 0;
   // ∫₀^τ Δp(1 − s/T)(1 − s/tc) ds
   return a.dp * (tau - 0.5 * tau * tau * (1 / a.T + 1 / tc) + (tau * tau * tau) / (3 * a.T * tc));
@@ -71,6 +88,7 @@ export function facePressure(a: Arrival, C: number, tc: number, t: number): numb
   const p = pressure(a, t);
   if (p === 0 || C === 1) return p;
   const tau = t - a.t;
+  if (tau >= a.T) return p;
   return p * (1 + (C - 1) * Math.max(0, 1 - tau / Math.max(1e-9, tc)));
 }
 
@@ -78,7 +96,7 @@ export function facePressure(a: Arrival, C: number, tc: number, t: number): numb
 export function breakpoints(a: Arrival, tc: number, out: number[]) {
   out.push(a.t, a.t + a.T);
   if (tc > 0) out.push(a.t + tc);
-  if (a.waveform === 'nWave') out.push(a.t + 2 * a.T);
+  if (a.waveform === 'nWave') out.push(a.t + a.T + negDur(a));
 }
 
 /**

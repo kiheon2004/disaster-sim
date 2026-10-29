@@ -93,6 +93,8 @@ export interface RuntimeEntity {
   ground?: import('./deformation/response').GroundEntityState;
   /** Impact responses (Phase 23): ejecta loads / hits on the object, their damage index, source. */
   impact?: { damage: number; ejectaRatio: number; hits: number; impulse: number; source: string };
+  /** Air-blast response (Phase 24): exposure, face loads, facade-part oscillators, loads received. */
+  blast?: import('./blast/state').BlastEntityState;
   /** Member-level state of a modular building (Phase 17); absent on every other entity. */
   modular?: import('./buildings/modular').ModularRuntime;
   components: RuntimeComponent[];

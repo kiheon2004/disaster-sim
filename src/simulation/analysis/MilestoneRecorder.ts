@@ -12,7 +12,9 @@ export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firs
   // Phase 22 ground failure.
   | 'sinkholeInit' | 'sinkholeExpansion' | 'slopeInstability' | 'landslideInit' | 'peakSediment' | 'roadBlocked' | 'foundationFailure'
   // Phase 23 impacts.
-  | 'impactEntry' | 'impactBreakup' | 'airburst' | 'impact' | 'peakGroundShock' | 'craterFormed' | 'ejectaLanding';
+  | 'impactEntry' | 'impactBreakup' | 'airburst' | 'impact' | 'peakGroundShock' | 'craterFormed' | 'ejectaLanding'
+  // Phase 24 air-pressure waves.
+  | 'blastSource' | 'blastArrival' | 'blastPeak' | 'blastImpulse';
 
 export interface Milestone {
   time: number;

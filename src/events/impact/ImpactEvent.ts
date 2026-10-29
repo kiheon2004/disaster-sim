@@ -14,6 +14,32 @@ import { planImpact, type ImpactPlan } from '@/impact/plan';
 import { ImpactModel } from '@/impact/ImpactModel';
 import { resolveProjectile } from '@/impact/projectile';
 import { integrateEntry } from '@/impact/entry';
+import { BlastWave } from '@/blast/wave';
+import { makeAmbient } from '@/blast/source';
+import { planOfWave, worldBox } from '@/blast/plan';
+import { STANDARD_PRESSURE, type BlastSpec } from '@/blast/types';
+import type { BlastSource } from '@/simulation/impact/ImpactChannel';
+import type { EnvironmentState } from '@/simulation/environment/EnvironmentState';
+
+/**
+ * Pressure wave of an impact's blast source (Phase 24): weak-shock N-wave at the airburst point
+ * (altitude above the ground under it) or at the impact point, standard ambient pressure and the
+ * run's air density at the ground.
+ */
+export function addImpactWave(env: EnvironmentState, b: BlastSource, id: string, name: string): BlastWave {
+  const t = env.terrain.data;
+  const [x, , z] = b.position;
+  const g = env.terrain.sampleHeight(x, z);
+  const y = b.kind === 'airburst' ? g + b.position[1] : b.position[1] + 0.5;
+  const wave = new BlastWave({
+    id, source: b.source, name, kind: b.kind, position: [x, y, z], time: b.time, energy: b.energy, model: 'weakShock', waveform: 'nWave',
+    ambient: makeAmbient(STANDARD_PRESSURE, env.airDensity), groundY: g, world: worldBox(t),
+  });
+  const spec: BlastSpec = { event: 'blast', position: [x, z], height: y - g, energy: b.energy, model: 'weakShock', waveform: 'nWave' };
+  const plan = planOfWave(spec, wave, t);
+  env.blast.add(wave, plan, b.time + plan.worldExit + 2 * wave.sample(1e3).T + 0.1);
+  return wave;
+}
 
 /** Shown as running from entry to a few seconds after the impact (its effects persist). */
 export function impactEventDuration(spec: ImpactSpec): number {
@@ -70,7 +96,14 @@ export class ImpactEvent implements SimulationEvent<ImpactSpec> {
     } else if (plan.crater) {
       env.impact.blasts.push({ source: `impact:${name}`, position: [...plan.arc.point], time: this.startTime + plan.timeToImpact, energy: plan.partition.blast, kind: 'surface' });
     }
+    // Phase 24: the recorded blast source becomes a pressure wave — with exactly the energy recorded
+    // for it (airburst energy, or the air-coupled share of the ground impact), nothing else.
+    const b = env.impact.blasts[env.impact.blasts.length - 1];
+    if (this.spec.airBlast && b && b.source === `impact:${name}` && b.energy > 0) this.wave = addImpactWave(env, b, `${this.id}:air`, name);
   }
+
+  /** The impact's air-pressure wave (Phase 24), if simulated. */
+  wave: BlastWave | null = null;
 
   update() {}
 

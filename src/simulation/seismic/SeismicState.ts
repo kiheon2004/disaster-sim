@@ -34,6 +34,12 @@ export interface SeismicEntityState {
    */
   pgaQuake: number;
   pgaImpact: number;
+  /**
+   * Peak lateral load of air-pressure waves on the structure divided by its mass (m/s², Phase 24) —
+   * the blast's equivalent of a ground acceleration: structural damage is attributed to the blast
+   * where it governs (see blastGovernsStructure).
+   */
+  pgaBlast: number;
   /** Top / foundation displacement relative to the ground (world x, z; m). */
   top: [number, number];
   base: [number, number];
@@ -103,7 +109,7 @@ export interface SeismicRuntime {
 
 function createState(): SeismicEntityState {
   return {
-    unit: -1, ground: createGroundMotionSample(), pga: 0, pgaQuake: 0, pgaImpact: 0, top: [0, 0], base: [0, 0], drift: 0, peakDrift: 0, damage: 0,
+    unit: -1, ground: createGroundMotionSample(), pga: 0, pgaQuake: 0, pgaImpact: 0, pgaBlast: 0, top: [0, 0], base: [0, 0], drift: 0, peakDrift: 0, damage: 0,
     peakTop: 0, peakFloorAcc: 0, tilt: [0, 0], tiltMag: 0, slip: [0, 0], foundationFailed: false, bearingRatio: 0, stress: 0,
     crack: 0, crackRecorded: 0, balance: 1, shake: 0, shakeDir: [1, 0], capacity: null, partDamage: null, thresholds: null,
     bearing: 0, footprint: [1, 1], failureTilt: Infinity, plinth: 0, period: 0, soil: 1,
@@ -314,4 +320,7 @@ export function prepareSeismicRuntime(runtime: SimulationRuntime, terrain: Terra
 }
 
 /** Whether impact ground shocks, rather than an earthquake, govern an object's shaking (Phase 23). */
-export const impactGovernsShaking = (st: SeismicEntityState | undefined) => !!st && st.pgaImpact > 0 && st.pgaImpact >= st.pgaQuake;
+export const impactGovernsShaking = (st: SeismicEntityState | undefined) => !!st && st.pgaImpact > 0 && st.pgaImpact >= st.pgaQuake && !blastGovernsStructure(st);
+
+/** Whether air-pressure waves, rather than ground motion, govern a structure's response (Phase 24). */
+export const blastGovernsStructure = (st: SeismicEntityState | undefined) => !!st && st.pgaBlast > 0 && st.pgaBlast >= st.pgaQuake && st.pgaBlast >= st.pgaImpact;

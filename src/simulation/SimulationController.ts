@@ -1,4 +1,4 @@
-import type { DeformLive, GroundLive, ImpactLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive } from './simStore';
 import { runtimeStateManifest } from './runtimeState';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
@@ -229,6 +229,7 @@ export class SimulationController {
       deform: null,
       ground: null,
       impacts: null,
+      blasts: null,
       floodSeries: null,
       milestones: [],
     });
@@ -385,6 +386,13 @@ export class SimulationController {
     if (this.time >= this.endTime() && !this.scheduler.hasPendingOrActive()) {
       // Sediment still running out (Phase 22): the run is not over until it comes to rest
       // (at most RUNOUT_EXTENSION s past the planned end; the timeline grows with it).
+      // An air-pressure wave still on its way or crossing (Phase 24: an airburst kilometres up arrives
+      // long after its event) — the structures then ring down for the settling time.
+      if (this.env.blast.pending(this.time, SETTLE_TIME) && this.time < this.plannedEnd() + RUNOUT_EXTENSION) {
+        this.extendEnd = this.time + 2;
+        this.publish(true);
+        return;
+      }
       if (this.sedimentMoving() && this.time < this.plannedEnd() + RUNOUT_EXTENSION) {
         this.extendEnd = this.time + 2;
         this.publish(true);
@@ -584,6 +592,7 @@ export class SimulationController {
     patch.deform = this.deformLive();
     patch.ground = this.groundLive();
     patch.impacts = this.impactLive();
+    patch.blasts = this.blastLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -680,6 +689,23 @@ export class SimulationController {
         craterD: 2 * (p.crater?.radius ?? 0), depth: p.crater?.depth ?? 0, regime: p.crater?.regime ?? '',
         launched: st.launched, landed: st.landed, parcels: st.parcels, ejectaMass: p.ejectaMass, outflowMass: p.ejectaOut,
         airburstAltitude: e?.airburst?.altitude ?? 0,
+      };
+    });
+  }
+
+  /** Live air-pressure wave summary (Phase 24): front, peaks felt, energy ledger. */
+  private blastLive(): BlastLive[] | null {
+    const ch = this.env.blast;
+    if (!ch.waves.length) return null;
+    return ch.waves.map((r) => {
+      const w = r.wave, i = w.init, L = r.ledger.at(this.time);
+      const local = this.time - i.time;
+      return {
+        id: i.id, name: i.name, source: i.source, kind: i.kind, phase: local < 0 ? 'pending' : this.time <= r.exit ? 'propagating' : 'passed',
+        local, front: local > 0 ? w.frontRadius(this.time) : 0, energy: i.energy, pulseEnergy: w.pulseEnergy, height: w.height,
+        validRadius: r.plan?.validRadius ?? w.main.validRadius(), peak: r.peak, impulse: r.impulse, reached: r.reached,
+        nearSource: L.nearSource, dissipated: L.dissipated, inTransit: L.inTransit, leftWorld: L.leftWorld, notApplied: L.notApplied, residual: L.residual,
+        model: i.model, waveform: i.waveform,
       };
     });
   }

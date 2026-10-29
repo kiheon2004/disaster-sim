@@ -14,6 +14,7 @@ import { floodLevel } from '../floodLevels';
 import { groundLevel } from '../../deformation/response';
 import { integrityOf } from '../../interactions/integrity';
 import { modularWindStructure, processPending } from '../../buildings/modular';
+import { blastGovernsStructure } from '../../seismic/SeismicState';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -195,7 +196,7 @@ export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeColl
   ctx.env.flood?.removeObstacle(e.id);
   if (quake) {
     const hazard = quake.hazard ?? 'earthquake';
-    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : 'log.quake.collapsed' });
+    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : blastGovernsStructure(e.seismic) ? 'log.blast.collapsed' : 'log.quake.collapsed' });
     ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard, response: quake.response, damageAfter: 1, ...quake.extra });
     return;
   }

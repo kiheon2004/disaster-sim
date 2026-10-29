@@ -9,6 +9,7 @@ import { FloodEnvironment } from '../water/FloodEnvironment';
 import { DeformationChannel } from '../deformation/DeformationChannel';
 import { GroundFailureChannel } from '../ground/GroundFailureChannel';
 import { ImpactChannel } from '../impact/ImpactChannel';
+import { BlastChannel } from '../blast/BlastChannel';
 
 /**
  * Shared environmental fields. Events WRITE the global values; systems READ local values.
@@ -36,6 +37,8 @@ export interface EnvironmentState {
   groundFailure: GroundFailureChannel;
   /** Impact channel (Phase 23): impact models, stats, atmospheric-blast sources for Phase 24. */
   impact: ImpactChannel;
+  /** Pressure channel (Phase 24): air-pressure waves (virtual releases, impact airbursts / air-coupled shares). */
+  blast: BlastChannel;
   // Future: fire?: FireField;
 }
 
@@ -55,6 +58,7 @@ export function createEnvironment(
     deformation,
     groundFailure: new GroundFailureChannel(terrain.data, deformation),
     impact: new ImpactChannel(),
+    blast: new BlastChannel(),
   };
 }
 

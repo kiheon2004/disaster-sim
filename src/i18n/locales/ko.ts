@@ -13,6 +13,7 @@ import { koBlueprints } from './ko.blueprints';
 import { koDeformation } from './ko.deformation';
 import { koGround } from './ko.ground';
 import { koImpact } from './ko.impact';
+import { koBlast } from './ko.blast';
 
 export const ko = {
   // App
@@ -599,6 +600,7 @@ export const ko = {
   ...koDeformation,
   ...koGround,
   ...koImpact,
+  ...koBlast,
 } as const;
 
 export type MessageKey = keyof typeof ko;

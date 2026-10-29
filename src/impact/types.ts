@@ -36,6 +36,15 @@ export interface ImpactSpec {
   /** Direction of travel: bearing (0 = north, 90 = east), °. */
   azimuth: number;
   entry: EntryMode;
+  /**
+   * Simulate the atmospheric pressure wave of the impact (Phase 24): an airburst releases its
+   * energy into the air; a ground impact couples `airCoupling` of its kinetic energy into the air
+   * (taken out of the energy left unresolved by the crater model, never out of the seismic or ejecta
+   * shares). Absent in files written before Phase 24 → off (the run reproduces as it was saved).
+   */
+  airBlast?: boolean;
+  /** Fraction of the ground-impact kinetic energy coupled into the air (default 0.02; 0.001–0.5). */
+  airCoupling?: number;
   seed?: number;
   startTime?: number;
   name?: string;
@@ -46,4 +55,13 @@ export const IMPACT_LIMITS = {
   density: [300, 8000],
   speed: [1000, 72000],
   angle: [5, 90],
+  airCoupling: [0.001, 0.5],
 } as const;
+
+/**
+ * Default air-coupled share of a ground impact (assumption): low-speed (km/s) impacts vaporize
+ * almost nothing, so the air shock comes from the expanding crater / ejecta; Collins et al. (2005)
+ * use the FULL impact energy as the blast yield — an upper bound. 2 % is an order-of-magnitude
+ * choice, editable and labelled.
+ */
+export const DEFAULT_AIR_COUPLING = 0.02;

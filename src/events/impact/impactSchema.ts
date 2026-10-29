@@ -18,6 +18,8 @@ export const impactSchema = z.object({
   angle: range(IMPACT_LIMITS.angle),
   azimuth: finite,
   entry: z.enum(['atmosphere', 'direct']),
+  airBlast: z.boolean().optional(),
+  airCoupling: range(IMPACT_LIMITS.airCoupling).optional(),
   seed: z.number().int().nonnegative().optional(),
   startTime: z.number().min(0).optional(),
   name: z.string().max(40).optional(),

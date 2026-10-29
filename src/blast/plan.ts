@@ -72,7 +72,7 @@ export function planBlast(spec: BlastSpec, terrain: TerrainData, airDensity = AI
   return planOfWave(spec, wave, terrain);
 }
 
-export function planOfWave(spec: BlastSpec, wave: BlastWave, terrain: TerrainData): BlastPlan {
+export function planOfWave(spec: BlastSpec, wave: BlastWave, _terrain?: TerrainData): BlastPlan {
   const amb = wave.init.ambient;
   const main = wave.main;
   const warnings: BlastWarning[] = [];

@@ -17,7 +17,7 @@
  */
 import type { RuntimeEntity } from '../SimulationRuntime';
 import { HAZARDS, type Hazard } from '../analysis/DamageEvent';
-import { impactGovernsShaking } from '../seismic/SeismicState';
+import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 
 /** Strength degradation per unit damage index (same as StructuralModel: F_y·(1 − 0.3·D)). */
@@ -46,7 +46,11 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
   const groundByImpact = e.ground?.source?.startsWith('impact:') === true;
   const shakeByImpact = impactGovernsShaking(e.seismic);
   const impact = Math.max(e.impact ? Math.min(1, e.impact.damage) : 0, groundByImpact ? groundAll : 0, shakeByImpact ? earthquake : 0);
-  return { wind: Math.max(0, wind), earthquake: shakeByImpact ? 0 : earthquake, flood, ground: groundByImpact ? 0 : groundAll, impact };
+  // Phase 24: structural damage driven by air-pressure loads (when they govern the structure's
+  // response) and the blast's own channel (base-moment oscillators) are the blast's.
+  const byBlast = blastGovernsStructure(e.seismic);
+  const blast = Math.max(e.blast ? Math.min(1, e.blast.damage) : 0, byBlast ? earthquake : 0);
+  return { wind: Math.max(0, wind), earthquake: shakeByImpact || byBlast ? 0 : earthquake, flood, ground: groundByImpact ? 0 : groundAll, impact, blast };
 }
 
 /**
@@ -54,7 +58,7 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
  * other hazards caused. 1 exactly when nothing else damaged it (single-hazard runs unchanged).
  */
 export function residualStrength(e: RuntimeEntity, hazard: Hazard): number {
-  if (!e.seismic && !e.flood && !e.integrity && !e.ground && !e.impact) return 1;
+  if (!e.seismic && !e.flood && !e.integrity && !e.ground && !e.impact && !e.blast) return 1;
   const d = hazardDamage(e);
   let worst = 0;
   for (const h of HAZARDS) if (h !== hazard && d[h] > worst) worst = d[h];

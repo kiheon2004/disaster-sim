@@ -24,7 +24,7 @@
  * of the pulse shape are not modelled.
  */
 import type { Vec3 } from '@/core/types';
-import { K_SEDOV, RadialTable, ambientAt, newSample, type Ambient, type RadialSample, type Zone } from './source';
+import { K_SEDOV, WEAK_LIMIT, RadialTable, ambientAt, newSample, type Ambient, type RadialSample, type Zone } from './source';
 import type { Arrival } from './pulse';
 import type { BlastModel, BlastWaveform } from './types';
 
@@ -161,7 +161,10 @@ export class BlastWave {
       const dx = p[0] - fx, dy = p[1] - fy, dz = p[2] - fz;
       const r = Math.hypot(dx, dy, dz) || 1e-6;
       const s: RadialSample = tab.at(r, this.s);
-      out.push({ t: t0 + s.t, dp: s.dp * weight * sh.factor, T: s.T, waveform: this.init.waveform, k: [dx / r, dy / r, dz / r], path, zone: s.zone, p: s.p });
+      const dp = s.dp * weight * sh.factor;
+      // Negative phase limited near the source (pulse.ts): ≤ 0.3·p, same impulse.
+      const dn = Math.min(dp, WEAK_LIMIT * s.p);
+      out.push({ t: t0 + s.t, dp, T: s.T, waveform: this.init.waveform, dn: dn < dp ? dn : undefined, k: [dx / r, dy / r, dz / r], path, zone: s.zone, p: s.p });
     };
     if (this.hemi && this.w < 1) add(this.hemi, null, 1 - this.w, 'hemisphere');
     if (this.free && this.w > 0) {

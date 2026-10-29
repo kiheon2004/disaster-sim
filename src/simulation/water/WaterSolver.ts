@@ -36,7 +36,7 @@ import { GRAVITY } from '@/core/units';
 import type { BoundarySide } from '@/core/model';
 import type { WaterField } from './WaterField';
 import type { ResolvedBoundary, WaterForcing } from './WaterForcing';
-import { CFL, FLOOD_DEPTH, FROUDE_MAX, H_FLOW_MIN, MAX_SUBSTEPS, OPEN_EDGE_SLOPE, THETA, WET_DEPTH } from './waterParams';
+import { CFL, FLOOD_DEPTH, FROUDE_MAX, H_FLOW_MIN, MAX_SUBSTEPS, OPEN_EDGE_SLOPE, THETA, WATER_DENSITY, WET_DEPTH } from './waterParams';
 
 const G = GRAVITY;
 /** Wind stress acts only on water at least this deep (thin sheets are friction-dominated). */
@@ -151,6 +151,10 @@ export class WaterSolver {
       }
     }
     this.substeps = n;
+    if (this.forcing.airPending) {
+      this.forcing.airImpulse!.fill(0);
+      this.forcing.airPending = false;
+    }
     f.time += dt;
     f.rev++;
     f.budget.current = f.totalVolume();
@@ -285,6 +289,9 @@ export class WaterSolver {
     const gZ = gdv[1] * share;
     const extX = sX !== 0 || gX !== 0;
     const extZ = sZ !== 0 || gZ !== 0;
+    // Air-pressure waves (Phase 24): −h·∂(∫p dt)/∂x / ρ_w, the call's share of it (null otherwise).
+    const air = this.forcing.airPending ? this.forcing.airImpulse : null;
+    const airK = air !== null ? share / (WATER_DENSITY * dx) : 0;
 
     // x faces, row by row (face k lies between cells k−1 and k).
     for (let iz = za; iz <= zb; iz++) {
@@ -311,6 +318,7 @@ export class WaterSolver {
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - slopeK * hf * (eR - eL);
             if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
+            if (air !== null) num -= hf * airK * (air[R] - air[L]);
             qn = (num * H) / (H + gdt * 0.5 * (n2[L] + n2[R]) * aq);
             // Froude limiter: q² ≤ Fr²·g·hf³
             const lim = fr2 * hf * hf * hf;
@@ -351,6 +359,7 @@ export class WaterSolver {
             const H = hf * hf * cbrtFast(hf);
             let num = q0 - slopeK * hf * (eB - eT);
             if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
+            if (air !== null) num -= hf * airK * (air[B] - air[T]);
             qn = (num * H) / (H + gdt * 0.5 * (n2[T] + n2[B]) * aq);
             const lim = fr2 * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);

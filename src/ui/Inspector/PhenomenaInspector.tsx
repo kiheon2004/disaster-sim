@@ -12,7 +12,7 @@ import { fmt } from '@/ui/format';
 import styles from './Inspector.module.css';
 
 const SOURCE_KEY: Record<(typeof FORCE_SOURCES)[number], MessageKey> = {
-  wind: 'channel.airflow', groundMotion: 'channel.groundMotion', water: 'channel.water', gravityField: 'channel.gravity', sediment: 'channel.sediment', impact: 'channel.impact',
+  wind: 'channel.airflow', groundMotion: 'channel.groundMotion', water: 'channel.water', gravityField: 'channel.gravity', sediment: 'channel.sediment', impact: 'channel.impact', blast: 'channel.pressure',
 };
 
 function Grid({ rows }: { rows: [string, string][] }) {

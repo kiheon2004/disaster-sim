@@ -42,7 +42,10 @@ export type DamageCause =
   // Phase 22: moving / deposited sediment (lateral debris load or drag) and burial.
   | 'debris' | 'burial'
   // Phase 23: ground cut away by an impact crater, hit by impact ejecta.
-  | 'crater' | 'ejecta';
+  | 'crater' | 'ejecta'
+  // Phase 24: a part failed under the computed face pressure of an air-pressure wave; a body was
+  // pushed / knocked down / toppled by the wave's net load (pressure difference + blast wind).
+  | 'overpressure' | 'blast';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -57,8 +60,8 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact';
-export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact'];
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast';
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast'];
 
 export interface DamageEventRecord {
   id: number;

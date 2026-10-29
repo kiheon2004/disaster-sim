@@ -62,6 +62,16 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
       present: !!gf,
       bytes: gf ? bytesOf(gf.material, gf.thickness, gf.water0, gf.waterRise, gf.strength, gf.bed, gf.loose, gf.looseMass, gf.h, gf.mass, gf.mu, gf.qx, gf.qz, gf.hfx, gf.hfz, gf.rest, gf.fs, gf.nmV, gf.nmD, gf.owner, gf.evaluate, gf.failed) : 0,
     },
+    {
+      // Phase 24: the waves themselves are derived (tables from the spec and the terrain at the release);
+      // what the objects already received is state.
+      id: 'blastWaves', owner: 'BlastChannel', kind: 'derived', holds: 'air-pressure waves: propagation tables, ground reflection, energy ledger (functions of time)',
+      present: env.blast.active, bytes: env.blast.waves.length * 480 * 6 * 8 * 2,
+    },
+    {
+      id: 'blastObjects', owner: 'RuntimeEntity.blast + StructuralModel', kind: 'state', holds: 'per-object shielding, face loads, facade-part oscillators (x, v, peak), people velocity change, received impulse; structural model state',
+      present: env.blast.active, bytes: rt ? [...rt.entities.values()].reduce((s, e) => s + (e.blast ? 256 + (e.blast.parts?.length ?? 0) * 96 : 0), 0) : 0,
+    },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

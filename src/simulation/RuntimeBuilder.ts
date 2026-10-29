@@ -125,6 +125,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     flood: undefined,
     integrity: undefined,
     exposure: undefined,
+    blast: undefined,
     // Phase 17: member-level state of modular buildings (declared on every entity: one shape).
     modular: o.type === 'building' && o.building ? createModularRuntime(o) : undefined,
   };

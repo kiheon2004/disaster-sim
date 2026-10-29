@@ -8,7 +8,7 @@ import { floodLevel } from '../floodLevels';
 /** Load ratio at which a standing person is knocked over immediately (gust). */
 const KNOCKDOWN_RATIO = 1.0;
 
-export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood' | 'ground' | 'ejecta', impactForce?: number, dir?: [number, number, number]) {
+export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood' | 'ground' | 'ejecta' | 'blast', impactForce?: number, dir?: [number, number, number]) {
   if (e.flags.fallen || !e.dynamic || e.body === null) return;
   e.flags.fallen = true;
   e.rev++;
@@ -35,6 +35,12 @@ export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' |
   if (reason === 'ejecta') {
     ctx.log(e.id, 'danger', { key: 'log.impact.personHit' });
     ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'ejecta', hazard: 'impact', localWindSpeed: e.localWind.speed, force: impactForce, source: e.impact?.source });
+    return;
+  }
+  if (reason === 'blast') {
+    // Phase 24: the computed push of the pressure wave exceeded the rigid-block toppling threshold.
+    ctx.log(e.id, 'danger', { key: 'log.blast.personFell' });
+    ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'blast', hazard: 'blast', localWindSpeed: e.localWind.speed, force: impactForce, source: e.blast?.source });
     return;
   }
   if (reason === 'earthquake') {

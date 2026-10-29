@@ -8,7 +8,7 @@ import type { EventSpec } from '@/events/specs';
 import type { ImplementedPhenomenon, ParamField, PhenomenonContext } from './types';
 import { describeImpact, ImpactEvent, impactEventDuration } from '@/events/impact/ImpactEvent';
 import { impactSchema } from '@/events/impact/impactSchema';
-import { IMPACT_LIMITS, PROJECTILE_MATERIALS, type ImpactSpec } from '@/impact/types';
+import { DEFAULT_AIR_COUPLING, IMPACT_LIMITS, PROJECTILE_MATERIALS, type ImpactSpec } from '@/impact/types';
 import { PROJECTILES, sphereMass } from '@/impact/projectile';
 import { planImpact, shockAt, type ImpactPlan } from '@/impact/plan';
 import { tntTonnes } from '@/impact/energy';
@@ -42,7 +42,7 @@ export const impact = implemented<ImpactSpec>({
   models: ['impactEntry', 'craterScaling', 'ejectaBallistics', 'groundShock', 'granularRunout', 'bedDisplacement', 'foundationSettlement', 'roadDeformation'],
   keywords: /운석|소행성|유성체|meteor|asteroid|meteoroid|impactor/,
   schema: impactSchema,
-  defaults: () => ({ event: 'impact', target: [0, 0], material: 'iron', diameter: 2, speed: 12000, angle: 60, azimuth: 90, entry: 'atmosphere' }),
+  defaults: () => ({ event: 'impact', target: [0, 0], material: 'iron', diameter: 2, speed: 12000, angle: 60, azimuth: 90, entry: 'atmosphere', airBlast: true }),
   seeded: true,
   fields: [
     { key: 'x', labelKey: 'impact.f.targetX', unit: 'm', min: -100, max: 100, step: 1, precision: 1, ...nested<ImpactSpec>((s) => s.target[0], (s, v) => ({ ...s, target: [Number(v), s.target[1]] })) },
@@ -60,6 +60,13 @@ export const impact = implemented<ImpactSpec>({
     { key: 'angle', labelKey: 'impact.f.angle', unit: '°', min: IMPACT_LIMITS.angle[0], max: IMPACT_LIMITS.angle[1], step: 1, precision: 0 },
     { key: 'azimuth', labelKey: 'impact.f.azimuth', unit: '°', min: 0, max: 359, step: 5, precision: 0 },
     { key: 'entry', labelKey: 'impact.f.entry', unit: '', min: 0, max: 0, step: 0, precision: 0, options: [{ value: 'atmosphere', labelKey: 'impact.entry.atmosphere' }, { value: 'direct', labelKey: 'impact.entry.direct' }] },
+    // Phase 24: the impact's atmospheric pressure wave (off for files saved before Phase 24).
+    {
+      key: 'airBlast', labelKey: 'impact.f.airBlast', unit: '', min: 0, max: 0, step: 0, precision: 0,
+      options: [{ value: 'on', labelKey: 'impact.airBlast.on' }, { value: 'off', labelKey: 'impact.airBlast.off' }],
+      ...nested<ImpactSpec>((s) => (s.airBlast ? 'on' : 'off'), (s, v) => { const n = { ...s, airBlast: v === 'on' }; if (!n.airBlast) delete n.airCoupling; return n; }),
+    },
+    { visible: (s) => !!(s as ImpactSpec).airBlast, key: 'airCoupling', labelKey: 'impact.f.airCoupling', unit: '%', min: IMPACT_LIMITS.airCoupling[0] * 100, max: IMPACT_LIMITS.airCoupling[1] * 100, step: 0.5, precision: 1, scale: 100, optional: true, autoValue: () => DEFAULT_AIR_COUPLING },
   ] as ParamField[],
   createEvent: (spec, now, ctx) => new ImpactEvent(spec, now, ctx.seed),
   duration: (spec) => impactEventDuration(spec),
@@ -78,6 +85,10 @@ export const impact = implemented<ImpactSpec>({
         out.push({ key: 'impact.as.shock', params: { pgv: s50.pgv.toFixed(3), pga: (s50.pga / 9.81).toFixed(2), app: (s50.pgaApplied / 9.81).toFixed(2) } });
       }
     }
+    if (spec.airBlast) {
+      const E = p.airburst ? p.partition.airburstBlast : p.partition.blast;
+      out.push({ key: p.airburst ? 'impact.as.airBlastBurst' : 'impact.as.airBlast', params: { E: fmtE(E), pct: ((spec.airCoupling ?? DEFAULT_AIR_COUPLING) * 100).toFixed(1) } });
+    } else out.push({ key: 'impact.as.noAirBlast' });
     for (const w of p.warnings) out.push({ key: w.key as MessageKey, params: w.params });
     return out;
   },

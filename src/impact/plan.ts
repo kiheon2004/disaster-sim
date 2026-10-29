@@ -10,7 +10,7 @@ import type { TerrainData } from '@/core/model';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { soilProfile } from '@/terrain/SoilProfiles';
 import { mechanicalOf, MECHANICAL_PROFILES, type MechanicalProfile } from '@/ground/materials';
-import type { ImpactSpec } from './types';
+import { DEFAULT_AIR_COUPLING, type ImpactSpec } from './types';
 import { resolveProjectile, type ResolvedProjectile } from './projectile';
 import { HANDOVER_ALTITUDE, integrateEntry, type EntryResult } from './entry';
 import { flyArc, type ArcResult } from './trajectory';
@@ -110,7 +110,10 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
     if (shock.tau < shock.tauApplied) warnings.push({ key: 'impact.warn.pulse', params: { tau: (shock.tau * 1000).toFixed(0), app: (shock.tauApplied * 1000).toFixed(0) } });
   }
   if (airburst) warnings.push({ key: 'impact.warn.airburst', params: { z: ((entry?.airburst?.altitude ?? 0) / 1000).toFixed(1) } });
-  const part = partition(E0, energy, shock?.seismicEnergy ?? 0, ejectaKE);
+  // Phase 24: the air blast's share (only when the spec asks for it — older plans are unchanged).
+  const coupling = spec.airBlast ? spec.airCoupling ?? DEFAULT_AIR_COUPLING : 0;
+  const part = partition(E0, energy, shock?.seismicEnergy ?? 0, ejectaKE, coupling, spec.airBlast && entry?.airburst ? entry.airburst.energy : 0);
+  if (spec.airBlast && part.blast < coupling * energy - 1e-6) warnings.push({ key: 'impact.warn.airCap', params: { pct: ((100 * part.blast) / Math.max(1e-9, energy)).toFixed(1) } });
   return {
     spec, projectile, entry, timeToImpact: entryTime + arc.time, arc, airburst, mass, speed: impactSpeed, angle: arc.angle, energy, momentum,
     swarm, target, crater, parcels, shock, partition: part, ejectaMass, ejectaOut, warnings,

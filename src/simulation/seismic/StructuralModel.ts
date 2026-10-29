@@ -87,6 +87,13 @@ export class StructuralModel {
    */
   fwx = new Float64Array(0);
   fwz = new Float64Array(0);
+  /**
+   * External lateral load of air-pressure waves (world x, z; N, Phase 24): the step-average of the
+   * net facade impulse, distributed over the lumped stories in proportion to their height (a uniform
+   * facade pressure). Written by the BlastSystem each step; 0 = none (bit-identical path).
+   */
+  fbx = new Float64Array(0);
+  fbz = new Float64Array(0);
   /** Outputs (world axes): top / foundation displacement relative to the ground (2 per unit). */
   top = new Float64Array(0);
   base = new Float64Array(0);
@@ -142,7 +149,7 @@ export class StructuralModel {
     this.off = new Int32Array(U); this.n = new Int32Array(U); this.wMax = f(U);
     this.cos = f(U); this.sin = f(U); this.driftU = f(U); this.hasF = new Uint8Array(U);
     this.fK = f(U); this.fC = f(U); this.fSlip = f(2 * U); this.fP = f(2 * U);
-    this.agx = f(U); this.agz = f(U); this.fwx = f(U); this.fwz = f(U); this.top = f(2 * U); this.base = f(2 * U);
+    this.agx = f(U); this.agz = f(U); this.fwx = f(U); this.fwz = f(U); this.fbx = f(U); this.fbz = f(U); this.top = f(2 * U); this.base = f(2 * U);
     this.drift = f(U); this.peakDrift = f(U); this.damage = f(U); this.otm = f(2 * U); this.baseShear = f(U);
     this.m = f(D); this.k = f(2 * D); this.c = f(2 * D); this.fy = f(2 * D); this.pdel = f(D); this.hs = f(D); this.alpha = f(D); this.z = f(D);
     this.irregular = new Uint8Array(U);
@@ -339,6 +346,11 @@ export class StructuralModel {
     const wz = this.fwz[ui];
     const extL0 = wx * cs - wz * sn;
     const extL1 = wx * sn + wz * cs;
+    const bx = this.fbx[ui];
+    const bz = this.fbz[ui];
+    const blastL0 = bx * cs - bz * sn;
+    const blastL1 = bx * sn + bz * cs;
+    const height = this.z[o + n];
     const hasF = this.hasF[ui] === 1;
     const F = this.force;
     const A = this.accL;
@@ -390,6 +402,8 @@ export class StructuralModel {
         for (let j = 1; j <= n; j++) A[j] = -ag - (F[j] - F[j + 1]) / m[o + j];
         const ext = ax === 0 ? extL0 : extL1;
         if (ext !== 0) A[n] += ext / m[o + n];
+        const blast = ax === 0 ? blastL0 : blastL1;
+        if (blast !== 0) for (let j = 1; j <= n; j++) A[j] += (blast * this.hs[o + j]) / (height * m[o + j]);
         // Semi-implicit Euler: velocities, then positions.
         for (let j = hasF ? 0 : 1; j <= n; j++) {
           const i2 = 2 * (o + j) + ax;

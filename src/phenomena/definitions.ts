@@ -21,6 +21,7 @@ import { terrainDeformationSchema } from '@/events/deformation/deformationSchema
 import { TerrainDeformationEvent } from '@/events/deformation/TerrainDeformationEvent';
 import { landslide, sinkhole } from './groundDefinitions';
 import { impact } from './impactDefinitions';
+import { blast } from './blastDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -207,7 +208,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -217,10 +218,6 @@ export const PLANNED: PlannedPhenomenon[] = [
   planned({
     type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', channels: ['airflow', 'pressure', 'mechanicalForce'], models: [],
     keywords: /토네이도|회오리|tornado|twister/, missing: ['missing.vortexWind', 'missing.pressureDrop'], reuses: ['reuse.windForce', 'reuse.windDamage', 'reuse.debris'],
-  }),
-  planned({
-    type: 'explosion', labelKey: 'phen.explosion', icon: 'warning', channels: ['pressure', 'temperature', 'mechanicalForce'], models: [],
-    keywords: /폭발|explosion|explode|blast|detonat/, missing: ['missing.pressureWave', 'missing.thermal'], reuses: ['reuse.impulse', 'reuse.facadeDamage', 'reuse.debris'],
   }),
   planned({
     type: 'volcano', labelKey: 'phen.volcano', icon: 'warning', channels: ['temperature', 'terrainDeformation', 'atmosphere', 'groundMotion'], models: [],

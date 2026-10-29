@@ -6,13 +6,17 @@
  *    bottom rests on the ground) gets the pressure of every wave arriving AT ITS OWN CENTRE (so the
  *    front face is loaded before the back face — the diffraction phase — and the net push follows from
  *    the transit time across the object), reflected on faces turned toward the wave (factor
- *    C = 1 + (C_r − 1)·cos θ with clearing over t_c = 3S/c) and side-on elsewhere;
+ *    C = 1 + (C_r − 1)·cos θ with clearing over t_c = 3S/c), side-on on faces along the wave, and on
+ *    shadowed faces the pressure builds up from (1 − |cos θ|)·p to p over the rise time 4S/c while
+ *    the wave wraps around the object (simplified rear-face idealization of blast-load engineering;
+ *    same closed form as the clearing);
  *  - the mechanical impulse of a face over a step is J_f = −n_f·A_f·∫p_f dt (exact, pulse.ts); the
  *    object's net impulse ΣJ_f and its moment about the box centre give the force through the
  *    ForceLedger (impulse / Δt, applied at the centre of pressure — the moment is kept);
- *  - drag of the blast wind (dynamic pressure): F = ½·ρ·C_d·A·|u − v|·(u − v), with the particle
- *    velocity u = Δp/(ρc)·k scaled by the Rankine–Hugoniot factor (exact time integral between the
- *    pulse breakpoints);
+ *  - drag of the blast wind (dynamic pressure): F = ½·ρ₂·C_d·A·|u − v|·(u − v), with the Rankine–
+ *    Hugoniot particle velocity u and post-shock density ρ₂ at the peak (so ½ρ₂u² is the exact R–H
+ *    dynamic pressure 5Δp²/(2(Δp + 7p₀)) for γ = 1.4), u following the pressure history (exact time
+ *    integral between the pulse breakpoints);
  *  - porous / slender objects use the existing frontal-area ratio (areaFactor) on their side faces.
  *
  * SDOF elements (facade parts, trees): an undamped elastic oscillator x'' + ω²x = ω²·load/capacity,
@@ -70,11 +74,17 @@ export interface FaceLoad {
   tc: number;
 }
 
-/** Reflection factor of a face with outward normal n for a wave travelling along k. */
+/**
+ * Pressure factor at the arrival on a face with outward normal n for a wave travelling along k:
+ * > 1 reflected (front), 1 side-on, < 1 shadowed (rear: builds up to side-on over the rise time).
+ */
 export function faceFactor(n: Readonly<Vec3>, a: Readonly<Contribution>): number {
   const cos = -(n[0] * a.k[0] + n[1] * a.k[1] + n[2] * a.k[2]);
-  return cos > 0 ? 1 + (reflectionFactor(a.dp, a.p) - 1) * cos : 1;
+  return cos > 0 ? 1 + (reflectionFactor(a.dp, a.p) - 1) * cos : 1 + cos;
 }
+
+/** Relief time of a face (s): clearing 3S/c for reflected faces, rise 4S/c for shadowed ones. */
+export const reliefTime = (C: number, S: number, c: number) => ((C >= 1 ? 3 : 4) * S) / c;
 
 /**
  * Arrivals of all contributions at every face (contributions computed at each face centre by
@@ -90,7 +100,7 @@ export function faceLoads(faces: Faces, at: (p: Vec3, out: Contribution[]) => vo
     for (const a of tmp) {
       if (a.dp <= 0) continue;
       const C = faceFactor(faces.n[f], a);
-      const tc = (3 * faces.S[f]) / c;
+      const tc = reliefTime(C, faces.S[f], c);
       out.push({ face: f, a, C, tc });
       end = Math.max(end, a.t + span(a) + tc);
     }
@@ -141,6 +151,12 @@ export function projectedArea(dims: Readonly<Vec3>, d: Readonly<Vec3>): number {
   return Math.abs(d[0]) * dims[1] * dims[2] + Math.abs(d[1]) * dims[0] * dims[2] + Math.abs(d[2]) * dims[0] * dims[1];
 }
 
+/** Post-shock / ambient density ratio (Rankine–Hugoniot, γ = 1.4). */
+export function densityRatio(dp: number, p: number): number {
+  const x = dp / p;
+  return (1 + ((GAMMA + 1) / (2 * GAMMA)) * x) / (1 + ((GAMMA - 1) / (2 * GAMMA)) * x);
+}
+
 /** Rankine–Hugoniot particle velocity per unit overpressure at peak Δp (m/s per Pa). */
 function velocityPerPa(dp: number, p: number, rho: number): number {
   const c = Math.sqrt((GAMMA * p) / rho);
@@ -156,6 +172,9 @@ export function dragImpulse(waves: readonly Contribution[], cdA: number, rho: nu
   if (cdA <= 0 || !waves.length) return;
   const bps: number[] = [];
   const kv = waves.map((w) => velocityPerPa(w.dp, w.p, rho));
+  // Post-shock density of the strongest wave (the compressed air that blows past the body).
+  const main = waves.reduce((a, b) => (b.dp > a.dp ? b : a));
+  const r2 = rho * densityRatio(main.dp, main.p);
   for (const w of waves) breakpoints(w, 0, bps);
   for (let axis = 0; axis < 3; axis++) {
     J[axis] = integratePiecewise((t) => {
@@ -165,7 +184,7 @@ export function dragImpulse(waves: readonly Contribution[], cdA: number, rho: nu
         ux += u * waves[i].k[0]; uy += u * waves[i].k[1]; uz += u * waves[i].k[2];
       }
       const s = Math.hypot(ux, uy, uz);
-      return 0.5 * rho * cdA * s * (axis === 0 ? ux : axis === 1 ? uy : uz);
+      return 0.5 * r2 * cdA * s * (axis === 0 ? ux : axis === 1 ? uy : uz);
     }, t0, t1, bps);
   }
 }

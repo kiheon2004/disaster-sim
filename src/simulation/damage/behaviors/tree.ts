@@ -120,7 +120,9 @@ export function updateTree(e: RuntimeEntity, ctx: SystemContext, dt: number) {
     if (ctx.fxRng.chance(rate * dt)) shedLeaves(e, ctx, 1 + ctx.fxRng.int(3));
   }
 
-  if (e.flags.snapped || e.flags.uprooted) {
+  // Toppled by another hazard (impact ejecta, pressure wave — recorded there): already down, the
+  // wind fatigue path must not fail it a second time (Phase 24 fix: it was re-recorded as wind).
+  if (e.flags.snapped || e.flags.uprooted || e.flags.toppled) {
     e.state = DamageState.DESTROYED;
     return;
   }
