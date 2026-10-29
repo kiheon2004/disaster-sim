@@ -209,8 +209,11 @@ describe('celestial experiments in whole worlds', { timeout: 1_800_000 }, () => 
     expect(cs.stats.limit).toBe('stop');
     // The run stopped: the clock is far short of 2 s.
     expect(stop.getTime()).toBeLessThan(0.2);
-    // The speed was never clipped below c to imitate relativity: the limit is reported instead.
-    expect(['speed', 'substeps']).toContain(cs.stopRequest!.reason);
+    // The field at the car is checked before it moves: a Plummer source at distance r ≤ 30 m (ε = 1 m) pulls with at
+    // least μ·30/(30² + 1)^{3/2} ≈ 1.5e17 m/s² — far beyond the 10⁶ m/s² model range, so the acceleration limit is the
+    // first one reached. Nothing is clipped to imitate relativity: the limit is reported and the run stopped instead.
+    expect(cs.stopRequest!.reason).toBe('accel');
+    expect(cs.stats.maxAccel).toBeGreaterThanOrEqual((G_N * M_SUN * 30) / (30 ** 2 + 1) ** 1.5);
     const warn = await run(d, [celestialSpec({ scale: 'physical', limitPolicy: 'warn', sources: [sun] })], 0.5);
     const cw = warn.getEnvironment().gravity.rt!.celestial!;
     expect(cw.stats.limit).toBe('warn');

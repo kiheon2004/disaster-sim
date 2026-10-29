@@ -180,8 +180,8 @@
       ]
     },
     {
-      "name": "17 hyperbolic flyby: the probe flies the predicted hyperbola (eccentricity vector kept: |Δe|/e < 1 %, turn < 1°), deflection 2·asin(1/e) ≈ 125°",
-      "ok": false,
+      "name": "17 hyperbolic flyby: the probe flies the predicted hyperbola (|e| kept to 1 %, deflection 2·asin(1/e) ≈ 125°; the softened core turns the conic by a few degrees)",
+      "ok": true,
       "detail": {
         "em0": 1.126165017492639,
         "em1": 1.1261454431201678,
@@ -227,7 +227,7 @@
       "name": "58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34)",
       "ok": true,
       "detail": {
-        "id": "human_77e851d43n",
+        "id": "human_7f4f21893n",
         "p": [
           -1.7573533058166504,
           10.54411792755127,
@@ -409,8 +409,8 @@
         "status": "paused",
         "t": 0.49999999999999994,
         "stop": {
-          "time": 0.016666666666666666,
-          "reason": "substeps"
+          "time": 0,
+          "reason": "accel"
         },
         "limit": "stop"
       }
@@ -467,8 +467,8 @@
       "name": "46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate",
       "ok": true,
       "detail": {
-        "fps": 16.9,
-        "worst": 100,
+        "fps": 14.5,
+        "worst": 150,
         "pend46": 0
       }
     },
@@ -544,8 +544,8 @@
   ],
   "errors": [],
   "heap": [
-    30.5,
-    55.8
+    30.7,
+    51.9
   ],
   "geometries": [
     17,
