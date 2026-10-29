@@ -18,7 +18,7 @@ import type { BoundarySide, TerrainData, WaterSettings } from '@/core/model';
 import type { WaterSourceEventSpec } from '@/events/specs';
 import { nearest } from '@/roads/curve';
 import { landformSampler, rectOfBox } from './compose';
-import { featureBounds, polygonDistance, riverProfile } from './features';
+import { featureBounds, featureLine, polygonDistance, riverProfile } from './features';
 import type { Landscape, LakeFeature, RiverFeature } from './types';
 
 /** Duration of a river's inflow event: the whole run (s). */
@@ -146,4 +146,25 @@ export function lakeRimLow(f: LakeFeature, t: TerrainData): number {
     }
   }
   return low;
+}
+
+/**
+ * Blocking test for placement (city builder, presets): a disc of `radius` around (x, z) touches
+ * a river channel (bed + banks) or lies in a lake.
+ */
+export function waterFeatureAvoid(features: readonly import('./types').Feature[]): (x: number, z: number, radius: number) => boolean {
+  const rivers = features.filter((f): f is RiverFeature => f.kind === 'river');
+  const lakes = features.filter((f): f is LakeFeature => f.kind === 'lake');
+  return (x, z, r) => {
+    for (const f of rivers) {
+      const b = featureBounds(f);
+      if (x < b[0] - r || x > b[2] + r || z < b[1] - r || z > b[3] + r) continue;
+      if (nearest(featureLine(f), x, z).dist < f.width / 2 + f.depth * f.bankSlope + r) return true;
+    }
+    for (const f of lakes) {
+      const pd = polygonDistance(f.points, x, z);
+      if (pd.inside || pd.dist < r) return true;
+    }
+    return false;
+  };
 }

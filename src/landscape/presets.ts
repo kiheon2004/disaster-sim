@@ -20,6 +20,7 @@ import { planForest } from '@/app/natureActions';
 import { composeAll, createLandscape, landformSampler } from './compose';
 import { naturalProvider } from './apply';
 import { featureLine, polygonDistance } from './features';
+import { waterFeatureAvoid } from './hydrology';
 import { nearest } from '@/roads/curve';
 import type { Feature, Landscape, P2, RiverFeature } from './types';
 
@@ -179,7 +180,7 @@ export function buildEnvironment(kind: EnvironmentPreset, seed: number): Environ
   };
   const sampler = new TerrainSampler(sc.t);
   if (plan.streets) {
-    const ctx: CityContext = { terrain: sampler, objects, network: sc.roads };
+    const ctx: CityContext = { terrain: sampler, objects, network: sc.roads, avoid: waterFeatureAvoid(features) };
     const ids = Object.keys(sc.roads.segments);
     if (plan.streets.lights) addPlanned(infrastructureAlong(ctx, ids, { kind: 'streetLight', side: 'both', spacing: 30, seed, policy: 'follow' }).inputs);
     addPlanned(buildingsAlong({ ...ctx, objects }, ids, { side: 'both', presets: ZONE_BUILDINGS[plan.streets.zone], gap: 4, setback: plan.streets.setback, seed, slopeLimit: 18, policy: 'follow' }).inputs);

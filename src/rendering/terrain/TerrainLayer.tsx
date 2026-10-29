@@ -90,10 +90,13 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
   uniforms.uContours.value = mode === 'elevation' ? 1 : 0;
   uniforms.uGrid.value = showGrid ? 1 : 0;
 
-  // A committed change (stroke end, undo/redo, preset): full refresh incl. skirt and bounds.
+  // A committed change (stroke end, undo/redo, preset, layer edit): the changed rectangle only
+  // (whole mesh when unknown), then bounds / skirt.
   useEffect(() => {
     takeTerrainDirty();
-    surface.update(null);
+    const r = useWorldStore.getState().terrainRect;
+    surface.update(r);
+    if (r) surface.finish();
     lastRev.current = terrain.revision;
     const s = samplerFor(terrain);
     const wl = terrain.settings.waterLevel;

@@ -112,9 +112,12 @@ export class TerrainSurface {
     this.writeNormals(nr);
     this.writeColors(nr);
     const g = this.geometry.attributes;
-    (g.position as THREE.BufferAttribute).needsUpdate = true;
-    (g.normal as THREE.BufferAttribute).needsUpdate = true;
-    (g.color as THREE.BufferAttribute).needsUpdate = true;
+    for (const attr of [g.position, g.normal, g.color] as THREE.BufferAttribute[]) {
+      // Upload only the rows of the changed region (one contiguous range) — Phase 19.
+      attr.clearUpdateRanges();
+      if (rect) attr.addUpdateRange(nr.z0 * nx * 3, (nr.z1 - nr.z0 + 1) * nx * 3);
+      attr.needsUpdate = true;
+    }
     if (!rect) this.finish();
     terrainStats.meshUpdates++;
     terrainStats.meshMs += performance.now() - t0;

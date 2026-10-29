@@ -28,6 +28,11 @@ import { presetSpec, BUILDING_PRESETS } from '@/buildings/spec';
 import { analyzeBuilding } from '@/buildings/analysis';
 import { foundationContact } from '@/buildings/foundation';
 import * as roadActions from './roadActions';
+import * as natureActions from './natureActions';
+import { useNatureStore } from '@/editor/natureStore';
+import * as landscapeLib from '@/landscape/compose';
+import { buildEnvironment } from '@/landscape/presets';
+import { initialWater } from '@/landscape/hydrology';
 import { useRoadStore } from '@/editor/roadStore';
 import { getRoadBatches } from '@/rendering/roads/RoadLayer';
 import { roadStats } from '@/roads/stats';
@@ -51,6 +56,10 @@ export function installDevtools() {
     buildingLib: { createDesign, presetSpec, BUILDING_PRESETS, analyzeBuilding, foundationContact, deriveFields, withDesign },
     /** Phase 18 roads (benchmarks / browser verification). */
     roadActions,
+    /** Phase 19 nature (benchmarks / browser verification). */
+    natureActions,
+    nature: useNatureStore,
+    landscapeLib: { ...landscapeLib, buildEnvironment, initialWater },
     roads: useRoadStore,
     roadBatches: getRoadBatches,
     roadStats,

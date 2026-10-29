@@ -171,6 +171,8 @@ export interface CityContext {
   /** Objects already in the world (collision avoidance). */
   objects: Record<string, WorldObject>;
   network: RoadNetwork;
+  /** Phase 19: places to keep free (river channels, lakes): true = blocked. */
+  avoid?: (x: number, z: number, radius: number) => boolean;
 }
 
 export interface CityPlan {
@@ -218,6 +220,10 @@ function planAt(ctx: CityContext, item: PlanItem, pts: FrontagePoint[], seed: nu
     }
     const t = e.input.transform;
     const fp = collisionFootprint(item.type, e.input.params ?? {}, t.scale, t.position[0], t.position[2], p.yaw);
+    if (fp && ctx.avoid?.(fp.x, fp.z, Math.hypot(fp.hx, fp.hz))) {
+      plan.rejected.road++;
+      return;
+    }
     if (offRoad && fp && (footprintOnRoad(ctx.network, fp) || discs.some((d) => Math.hypot(d.x - fp.x, d.z - fp.z) < d.r + Math.min(fp.hx, fp.hz)))) {
       plan.rejected.road++;
       // The plan registered it as placed: keep the index honest by not counting it further

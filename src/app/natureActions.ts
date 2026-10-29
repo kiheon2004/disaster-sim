@@ -17,7 +17,7 @@ import { Rng } from '@/core/random';
 import { foundationContact } from '@/buildings/foundation';
 import { featureBounds, landformDelta, polygonDistance, riverProfile } from '@/landscape/features';
 import { landformSampler } from '@/landscape/compose';
-import { lakeRimLow } from '@/landscape/hydrology';
+import { lakeRimLow, waterFeatureAvoid } from '@/landscape/hydrology';
 import type { Feature, P2 } from '@/landscape/types';
 import { MIN_RIVER_WIDTH } from '@/landscape/types';
 import { BrushScatter, subSeed } from '@/editor/build/distribution';
@@ -254,13 +254,14 @@ export function planForest(points: readonly P2[], f: ForestSettings = N().forest
   const inputs: CreateObjectInput[] = [];
   let rejected = 0;
   const lakes = doc.features.filter((g) => g.kind === 'lake');
+  const inWater = waterFeatureAvoid(doc.features.filter((g) => g.kind === 'river'));
   points.forEach(([x, z], i) => {
     const rng = new Rng(subSeed(f.seed, `forest${strokeIndex}`, i));
     const conifer = rng.next() < f.coniferShare;
     const h = sampler.sampleHeight(x, z);
     const inLake = lakes.some((l) => l.kind === 'lake' && l.filled && h < l.surface && polygonDistance(l.points, x, z).inside);
     const sea = doc.terrain.settings.waterLevel;
-    if (h < f.minElevation || h > f.maxElevation || inLake || (sea !== null && h < sea + 0.2)) { rejected++; return; }
+    if (h < f.minElevation || h > f.maxElevation || inLake || inWater(x, z, 0.5) || (sea !== null && h < sea + 0.2)) { rejected++; return; }
     const params = conifer ? { species: 'conifer', height: 11, canopyRadius: 2.2, trunkRadius: 0.32 } : { species: 'broadleaf', height: 8, canopyRadius: 3, trunkRadius: 0.28 };
     const plan = planPlacement({ type: 'tree', params, randomize: f.variation }, [{ x, z }], { ...DEFAULT_PLACEMENT, seed: subSeed(f.seed, 'tree', i + strokeIndex * 100000), slopeLimit: f.slopeLimit, variation: f.variation }, { terrain: sampler, existing }, 0, own)[0];
     if (!plan.ok) { rejected++; return; }

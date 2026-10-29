@@ -9,6 +9,7 @@ import { useWorldStore, type WorldEdit } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { useRoadStore, EMPTY_SELECTION } from '@/editor/roadStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
+import { waterFeatureAvoid } from '@/landscape/hydrology';
 import { yawOf } from '@/terrain/groundPlacement';
 import { toast } from '@/ui/common/toast';
 import type { P2 } from '@/roads/curve';
@@ -146,7 +147,7 @@ export function assignZone(blockId: string, zone: ZoneType | null) {
 
 function cityContext(): CityContext {
   const doc = W().doc;
-  return { terrain: samplerFor(doc.terrain), objects: doc.objects, network: doc.roads };
+  return { terrain: samplerFor(doc.terrain), objects: doc.objects, network: doc.roads, avoid: waterFeatureAvoid(doc.landscape.features) };
 }
 
 function report(plan: CityPlan, key: 'road.city.placed') {

@@ -102,6 +102,8 @@ interface WorldState {
   future: HistoryEntry[];
   /** Incremented when the whole document is replaced (new/load), so views can reset. */
   docVersion: number;
+  /** Vertex rectangle of the last committed terrain change (null = unknown / everything). */
+  terrainRect: GridRect | null;
   /**
    * Object / terrain edits are refused while a simulation runs on a snapshot of this document
    * (Phase 16): the original world can never pick up simulation state or half-done edits.
@@ -249,6 +251,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     const out = followTerrain(objects, samplerOver(t, before), samplerFor(t), area);
     set({
       doc: { ...touch(doc, out), terrain: { ...t }, roads, landscape: { ...land } },
+      terrainRect: finalRect,
       past: [...past, { objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }].slice(-HISTORY_LIMIT),
       future: [],
     });
@@ -374,6 +377,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     past: [],
     future: [],
     docVersion: 0,
+    terrainRect: null,
 
     locked: false,
     setLocked: (locked) => set({ locked }),
@@ -422,6 +426,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
         const r = bakeRoads(doc, objects, edit.roads);
         const entry: HistoryEntry = { objects: doc.objects, terrain: r.patch, roads: doc.roads, landscape: landEntry(doc, null) };
         set({
+          terrainRect: r.patch?.rect ?? null,
           doc: { ...touch(doc, r.objects), terrain: r.patch ? { ...doc.terrain } : doc.terrain, roads: r.roads },
           // Always an undo step: the terrain patch and the network must travel together
           // (road tools preview drags without committing and commit once on release).
@@ -534,7 +539,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       // Layers must compose to the terrain (documents built by older code paths may not).
       const landscape = adoptTerrain(doc.terrain, doc.roads, doc.landscape);
       if (landscape !== doc.landscape) doc = { ...doc, landscape };
-      set({ doc, past: [], future: [], docVersion: get().docVersion + 1 });
+      set({ doc, past: [], future: [], docVersion: get().docVersion + 1, terrainRect: null });
     },
 
     newDocument: () => {
@@ -620,7 +625,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       const prev = past[past.length - 1];
       if (!prev || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
-      set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future] });
+      set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future], terrainRect: prev.terrain?.rect ?? null });
     },
 
     redo: () => {
@@ -628,7 +633,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       const next = future[0];
       if (!next || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
-      set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1) });
+      set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });
     },
   };
 });
