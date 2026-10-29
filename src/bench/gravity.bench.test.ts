@@ -141,6 +141,7 @@ async function run(sc: Scene, withGravity: boolean) {
     physicsMsPerSimS: per('physics'), structureMsPerSimS: per('sys.structuralCollapse'), floodMsPerSimS: per('sys.waterSolver'), thermalMsPerSimS: per('sys.thermal'),
     activeBodies: g ? g.stats.bodies : 0, gravitySamples: g ? g.stats.bodies + g.stats.inSource : 0, structuresLoaded: g ? g.structures.loaded : 0, failures: g ? g.failures : 0,
     debris: c.getRuntime()?.debris.length ?? 0, fieldResidualJ: b && Number.isFinite(b.fieldResidual) ? +b.fieldResidual.toExponential(2) : null,
+    workGravityJ: b ? +b.workGravity.toExponential(3) : null, residualRel: b && Number.isFinite(b.fieldResidual) && b.workGravity !== 0 ? +Math.abs(b.fieldResidual / b.workGravity).toExponential(2) : null,
     heapMB: heapMB(), resetMs: +resetMs.toFixed(0),
   };
   c.unload();

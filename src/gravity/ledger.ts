@@ -65,7 +65,7 @@ export class GravityLedger {
   }
 
   /** One body over one step. phi1 = Φ(x₁, t + dt), phi1Old = Φ(x₁, t) (NaN without a potential). */
-  body(m: number, x0: Readonly<Vec3>, x1: Readonly<Vec3>, v1: Readonly<Vec3>, g: Readonly<Vec3>, dt: number, phi1: number, phi1Old: number) {
+  body(m: number, x0: ArrayLike<number>, x1: ArrayLike<number>, v1: ArrayLike<number>, g: ArrayLike<number>, dt: number, phi1: number, phi1Old: number) {
     this.workGravity += m * (g[0] * (x1[0] - x0[0]) + g[1] * (x1[1] - x0[1]) + g[2] * (x1[2] - x0[2]));
     this.impulse[0] += m * g[0] * dt; this.impulse[1] += m * g[1] * dt; this.impulse[2] += m * g[2] * dt;
     if (!Number.isNaN(phi1)) this.workField += m * (phi1 - phi1Old);
@@ -76,7 +76,7 @@ export class GravityLedger {
   }
 
   /** A body enters (+1) or leaves (−1) the set with its kinetic energy, potential and momentum. */
-  boundary(sign: 1 | -1, m: number, v: Readonly<Vec3>, phi: number) {
+  boundary(sign: 1 | -1, m: number, v: ArrayLike<number>, phi: number) {
     this.boundaryK += sign * 0.5 * m * (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     this.boundaryU += sign * m * phi;
     this.boundaryP[0] += sign * m * v[0]; this.boundaryP[1] += sign * m * v[1]; this.boundaryP[2] += sign * m * v[2];

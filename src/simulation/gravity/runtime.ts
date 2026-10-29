@@ -110,6 +110,11 @@ export class GravityRuntime {
   private reverseSeen = false;
   private endSeen = new Set<string>();
   private readonly tmp: Vec3 = [0, 0, 0];
+  /** Scratch position / velocity of one body (readMotion: no Pose objects in the per-body loops). */
+  private readonly pos = new Float64Array(3);
+  private readonly vel = new Float64Array(3);
+  /** Uniform vector of the previous step (structures: a static field needs no re-sampling). */
+  private lastG: Vec3 = [NaN, NaN, NaN];
 
   constructor(ch: GravityChannel) {
     this.ch = ch;
@@ -154,7 +159,8 @@ export class GravityRuntime {
       }
       tr.seen = stamp;
       const x = tr.x0;
-      const p = physics.getPose(h).position, v = physics.getLinearVelocity(h);
+      physics.readMotion(h, this.pos, this.vel, 0);
+      const p = this.pos, v = this.vel;
       x[0] = p[0]; x[1] = p[1]; x[2] = p[2];
       if (thresholds || (fresh && thrG > this.ch.g0)) physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
       if (thresholds) physics.wake(h);
@@ -193,7 +199,9 @@ export class GravityRuntime {
     if (start) ledger.start(k0, u0, p0);
     this.fieldChanging = this.fieldSignature();
     const ts = performance.now();
-    this.structures.update(ctx, f);
+    const moved = G[0] !== this.lastG[0] || G[1] !== this.lastG[1] || G[2] !== this.lastG[2];
+    this.lastG[0] = G[0]; this.lastG[1] = G[1]; this.lastG[2] = G[2];
+    this.structures.update(ctx, f, moved || this.fieldChanging);
     this.stats.structMs = performance.now() - ts;
     const s = this.stats;
     s.G = [G[0], G[1], G[2]];
@@ -227,7 +235,8 @@ export class GravityRuntime {
     const physics = ctx.physics, f = this.field, ledger = this.ledger;
     ledger.beginStep();
     for (const tr of this.tracked.values()) {
-      const p = physics.getPose(tr.h).position, v = physics.getLinearVelocity(tr.h);
+      physics.readMotion(tr.h, this.pos, this.vel, 0);
+      const p = this.pos, v = this.vel;
       const phi = f.potential(p[0], p[1], p[2]);
       ledger.body(tr.m, tr.x0, p, v, tr.g, dt, phi, phi);
       tr.phi = phi;

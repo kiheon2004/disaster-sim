@@ -45,13 +45,15 @@ export class GravityStructures {
     return -f.sample(p[0], p[1], p[2], this.tmp)[1] / this.g0;
   }
 
-  update(ctx: SystemContext, f: GravityField) {
+  /** `changed`: the field changed since the last step (a static field only needs buildings never applied yet). */
+  update(ctx: SystemContext, f: GravityField, changed = true) {
     let budget = CREATE_BUDGET;
     const kU = -f.G[1] / this.g0;
     for (const e of ctx.runtime.entities.values()) {
       const mr = e.modular;
       if (!mr || e.flags.collapsed) continue;
       const a = this.applied.get(e);
+      if (!changed && a && !e.flags.toppled) continue;
       const local = !f.uniform && this.nearSource(f, e);
       if (!local) {
         const last = a ? (a.kM ? NaN : a.k) : 1;
