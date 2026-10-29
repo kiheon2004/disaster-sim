@@ -64,6 +64,9 @@ export function celestialDemo(s: CelestialScenario): CelestialDemo {
   if (ZERO_G_SCENARIOS.includes(s)) {
     events.unshift({ ...defaultGravitySpec(), scenario: 'zero', magnitude: 0, profile: 'constant', duration: 6 * 3600, end: 'hold', startTime: 0, name: 'zero-g' } as unknown as EventSpec);
     assumptions.push('celestial.demo.zeroG');
+    // Without weight, loose cars and people drift into the source and through the probes' orbits: the orbit
+    // laboratories keep only the fixed buildings and trees (the tidal-stretch preset is about the loose bodies).
+    if (s !== 'tidalStretch') objects = objects.filter((o) => o.type === 'building' || o.type === 'tree');
   }
   if (s === 'nearCity' || s === 'stress') { objects = town(); assumptions.push('celestial.demo.town'); }
   if (s === 'nearMountain') {

@@ -1,0 +1,443 @@
+{
+ "base": "4fdab8a",
+ "new": "Phase 32 working tree",
+ "sets": {
+  "all": [
+   {
+    "scene": "street earthquake 1.1 g",
+    "leaves": 67914,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 6
+   },
+   {
+    "scene": "blast 12 houses",
+    "leaves": 122908,
+    "commonDiff": 0,
+    "timingDiff": 5,
+    "onlyBase": 0,
+    "onlyNew": 16
+   },
+   {
+    "scene": "flood + rain",
+    "leaves": 20170,
+    "commonDiff": 0,
+    "timingDiff": 1,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "wind cladding",
+    "leaves": 66909,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "impact",
+    "leaves": 38715,
+    "commonDiff": 0,
+    "timingDiff": 23,
+    "onlyBase": 0,
+    "onlyNew": 5
+   },
+   {
+    "scene": "heat: warehouse room fire-like source",
+    "leaves": 20855,
+    "commonDiff": 0,
+    "timingDiff": 2,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "heat: house + trees, ramp",
+    "leaves": 78700,
+    "commonDiff": 0,
+    "timingDiff": 2,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "heat: apartment temperature sphere + earthquake",
+    "leaves": 49108,
+    "commonDiff": 0,
+    "timingDiff": 2,
+    "onlyBase": 0,
+    "onlyNew": 5
+   },
+   {
+    "scene": "heat: surface + rain",
+    "leaves": 12597,
+    "commonDiff": 0,
+    "timingDiff": 3,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "fire: house room fire, windows open",
+    "leaves": 18506,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "fire: dry stand + wind",
+    "leaves": 22321,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "fire: heat ignition of a dry crown",
+    "leaves": 104206,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "atmos: empty world",
+    "leaves": 11030,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "atmos: meteor atmospheric entry",
+    "leaves": 16042,
+    "commonDiff": 0,
+    "timingDiff": 12,
+    "onlyBase": 0,
+    "onlyNew": 4
+   },
+   {
+    "scene": "atmos: lava",
+    "leaves": 30373,
+    "commonDiff": 0,
+    "timingDiff": 22,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "atmos: ash + wind",
+    "leaves": 90602,
+    "commonDiff": 0,
+    "timingDiff": 33,
+    "onlyBase": 0,
+    "onlyNew": 5
+   },
+   {
+    "scene": "atmos: volcano + fire + rain",
+    "leaves": 22253,
+    "commonDiff": 0,
+    "timingDiff": 23,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "atmos: multi-hazard town",
+    "leaves": 85826,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 4
+   },
+   {
+    "scene": "climate-off: atmospheric removal + wind",
+    "leaves": 25245,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "climate-off: atmospheric restoration",
+    "leaves": 12557,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "climate-off: lava cooling (long)",
+    "leaves": 16717,
+    "commonDiff": 0,
+    "timingDiff": 31,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "climate-off: smoke (stand fire + wind)",
+    "leaves": 19037,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "new: town quake + rain + road drains + lake",
+    "leaves": 150236,
+    "commonDiff": 0,
+    "timingDiff": 1,
+    "onlyBase": 0,
+    "onlyNew": 8
+   },
+   {
+    "scene": "new: storm + fire + heat + rain on town",
+    "leaves": 209427,
+    "commonDiff": 0,
+    "timingDiff": 5,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "new: volcano + atmosphere removal + lake + wind",
+    "leaves": 83851,
+    "commonDiff": 0,
+    "timingDiff": 36,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "new: meteor entry + blast + rain on town with road",
+    "leaves": 325944,
+    "commonDiff": 0,
+    "timingDiff": 13,
+    "onlyBase": 0,
+    "onlyNew": 13
+   },
+   {
+    "scene": "random seed 101 [3,5,6,7] road=enhanced",
+    "leaves": 136958,
+    "commonDiff": 0,
+    "timingDiff": 36,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "random seed 202 [2,3,4,9] road=standard",
+    "leaves": 324111,
+    "commonDiff": 0,
+    "timingDiff": 8,
+    "onlyBase": 0,
+    "onlyNew": 12
+   },
+   {
+    "scene": "random seed 303 [1,3,4,5,6,8] road=standard",
+    "leaves": 417933,
+    "commonDiff": 0,
+    "timingDiff": 46,
+    "onlyBase": 0,
+    "onlyNew": 11
+   },
+   {
+    "scene": "random seed 404 [1,4,6,7,8] road=standard",
+    "leaves": 303848,
+    "commonDiff": 0,
+    "timingDiff": 48,
+    "onlyBase": 0,
+    "onlyNew": 9
+   },
+   {
+    "scene": "random seed 505 [1,3,5,8] road=enhanced",
+    "leaves": 368207,
+    "commonDiff": 0,
+    "timingDiff": 28,
+    "onlyBase": 0,
+    "onlyNew": 12
+   },
+   {
+    "scene": "random seed 606 [0,2,4,5,7,8] road=enhanced",
+    "leaves": 288405,
+    "commonDiff": 0,
+    "timingDiff": 30,
+    "onlyBase": 0,
+    "onlyNew": 10
+   }
+  ],
+  "p31": [
+   {
+    "scene": "01 empty world",
+    "leaves": 11030,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "02 wind",
+    "leaves": 66909,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "03 earthquake",
+    "leaves": 67914,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 6
+   },
+   {
+    "scene": "04 flood",
+    "leaves": 20170,
+    "commonDiff": 0,
+    "timingDiff": 1,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "05 thermal",
+    "leaves": 78700,
+    "commonDiff": 0,
+    "timingDiff": 2,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "06 fire",
+    "leaves": 18506,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "07 smoke",
+    "leaves": 19037,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "08 meteor",
+    "leaves": 16042,
+    "commonDiff": 0,
+    "timingDiff": 12,
+    "onlyBase": 0,
+    "onlyNew": 4
+   },
+   {
+    "scene": "09 blast",
+    "leaves": 122908,
+    "commonDiff": 0,
+    "timingDiff": 5,
+    "onlyBase": 0,
+    "onlyNew": 16
+   },
+   {
+    "scene": "10 structural collapse",
+    "leaves": 404346,
+    "commonDiff": 0,
+    "timingDiff": 0,
+    "onlyBase": 0,
+    "onlyNew": 6
+   },
+   {
+    "scene": "11 volcano",
+    "leaves": 30373,
+    "commonDiff": 0,
+    "timingDiff": 22,
+    "onlyBase": 0,
+    "onlyNew": 3
+   },
+   {
+    "scene": "12 lava cooling",
+    "leaves": 16717,
+    "commonDiff": 0,
+    "timingDiff": 33,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "13 atmosphere",
+    "leaves": 12557,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "14 atmospheric removal",
+    "leaves": 25245,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "15 heatwave",
+    "leaves": 24018,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "16 snowfall",
+    "leaves": 23990,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "17 snowmelt",
+    "leaves": 24771,
+    "commonDiff": 0,
+    "timingDiff": 5,
+    "onlyBase": 0,
+    "onlyNew": 6
+   },
+   {
+    "scene": "18 lake freezing",
+    "leaves": 13215,
+    "commonDiff": 0,
+    "timingDiff": 5,
+    "onlyBase": 0,
+    "onlyNew": 2
+   },
+   {
+    "scene": "19 roof snow load (below capacity)",
+    "leaves": 30567,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 6
+   },
+   {
+    "scene": "20 multi-hazard city",
+    "leaves": 85826,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 4
+   }
+  ],
+  "p31i": [
+   {
+    "scene": "R1 roof snow load (heavy, intended change)",
+    "leaves": 24819,
+    "commonDiff": 0,
+    "timingDiff": 4,
+    "onlyBase": 0,
+    "onlyNew": 3
+   }
+  ]
+ },
+ "newKeys": [
+  "env.gravity.celestial.length = 0",
+  "env.gravity.lateral = false",
+  "structure ledger mass.captured = 0",
+  "rt.seismic.model.gfx (all 0)",
+  "rt.seismic.model.hasG (all 0)"
+ ]
+}

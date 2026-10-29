@@ -4,6 +4,7 @@ import { presetSpec as celestialPresetSpec } from '@/celestial/presets';
 import { celestialDemo } from '@/celestial/demos';
 import { celestialOutlook } from '@/celestial/outlook';
 import { celestialCsv } from '@/ui/Results/CelestialResults';
+import { parseCommands } from '@/commands/RuleBasedParser';
 import { CLIMATE_PRESETS } from '@/climate/presets';
 import { GRAVITY_SCENARIOS, type GravityScenario, type GravitySpec } from '@/gravity/types';
 import { presetSpec as gravityPresetSpec } from '@/gravity/presets';
@@ -216,6 +217,8 @@ export function installDevtools() {
       demo: (s: CelestialScenario) => celestialDemo(s),
       outlook: (spec: CelestialSpec, zeroG = false) => celestialOutlook(spec, 9.81, zeroG),
       csv: () => { const c = simulationController.celestialLive(); return c ? celestialCsv(c) : ''; },
+      /** The text-command parser's verdict on a sentence (black holes are pointed to the editor, never executed). */
+      parse: (text: string) => parseCommands(text, { direction: 'E', duration: 60, gustStrength: 0.25 }),
     },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,

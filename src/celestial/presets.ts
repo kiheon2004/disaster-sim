@@ -26,7 +26,7 @@ export const LAB: Vec3 = [0, 60, 0];
 
 /** Spec fields a scenario sets (the editor applies them over the current spec). */
 export function scenarioDefaults(s: CelestialScenario): Partial<CelestialSpec> {
-  const base: Partial<CelestialSpec> = { scale: 'educational', probes: [], accretion: disc, end: 'restore', tidal: true, lensing: false, limitPolicy: 'warn' };
+  const base: Partial<CelestialSpec> = { scale: 'educational', probes: [], accretion: disc, end: 'restore', tidal: !ORBIT_LABS.includes(s), lensing: false, limitPolicy: 'warn' };
   const lab = (p: Partial<CelestialSourceSpec> = {}) => bh({ center: LAB, mass: M(5e4), softening: 1, capture: 1, ramp: 0, ...p });
   switch (s) {
     case 'compactWell': return { ...base, duration: 90, sources: [bh({ ramp: 4 })] };
@@ -91,6 +91,13 @@ export function scenarioDefaults(s: CelestialScenario): Partial<CelestialSpec> {
 export function presetSpec(s: CelestialScenario): CelestialSpec {
   return { ...defaultCelestialSpec(), ...scenarioDefaults(s), scenario: s } as CelestialSpec;
 }
+
+/**
+ * The orbit laboratories (zero uniform gravity, probes) switch the structural tidal response off: without weight the
+ * demo houses would be pulled apart by the source and their fragments cross the probes' orbits — the tidal presets
+ * show that on purpose.
+ */
+export const ORBIT_LABS: readonly CelestialScenario[] = ['gentleOrbit', 'circularOrbit', 'ellipticalOrbit', 'escape', 'flyby', 'binary', 'accretion', 'comparison'];
 
 /** Documentation keys of a preset (i18n: celestial.info.<scenario>.<field>). */
 export const PRESET_FIELDS = ['expect', 'initial', 'scale', 'result', 'scope', 'failure'] as const;
