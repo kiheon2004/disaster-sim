@@ -246,6 +246,8 @@ Phase 28 함수(`boundaryLayer`, 같은 Newton 균형)에 하늘 장파·태양�
 
 엔탈피법(Phase 26의 접근을 확장): 덮개는 U(0 °C 액체 기준)로 상태를 가져 상변화 중 0 °C에 머뭅니다(테스트: 녹는 동안 덮개 온도 = 0 °C). 물·토양수는 **투영 엔탈피법** — 스텝 뒤 0 °C 아래로 내려간 만큼만(E(0 °C) − E)/L_f 결빙, 위로 올라간 만큼만 해빙. 한 번에 전부 얼거나 녹지 않고, 진동하지 않습니다(투영 후 정확히 0 °C). 압력에 따른 녹는점 변화(−7.4·10⁻⁸ K/Pa)는 무시.
 
+물이 전부 얼고도 남는 부족분("extra cold")은 수심 1 mm 이상의 물이면 새 얼음이 받되 주변의 가장 찬 온도(공기·지면·하늘)까지만, 얇은 막(Phase 26에서 지면과 열적으로 합쳐진 물)이면 지면 표면층이 받습니다. 몇 그램의 새 얼음이 막 전체의 부족분을 받으면 얼음이 수천 K 아래로 내려가는 수치 폭주가 생겼습니다(도로 결빙 검증에서 발견 — 공기 칸 −1745 K, 4만 K). 같은 이유로 덮개 노드는 갱신 전에 **열을 주고받는 가장 찬 대상(공기·바닥·하늘)보다 차가울 수 없고**, 그 아래 부족분은 지면 표면층으로 정확히 옮깁니다(에너지 보존).
+
 ## 11. Snowfall
 
 외부 강수(입력, 물당량 mm/h)와 내부 강수(응결수 Kessler)를 구분해 기록합니다. 분할은 칸의 습구 온도(0–2 °C 선형) 또는 사용자 고정 형태. 신설 밀도는 그 칸 기온(Anderson). 눈은 질량(kg)으로 기록되고 깊이는 밀도로 환산 — 600 s 강설 테스트에서 질량 = 계획량.
@@ -270,9 +272,15 @@ CLM 4.5(파괴적 변태 + 과하중, Anderson 1976): 단일 층의 과하중 = 
 
 덮개 노드가 녹으면 액체가 생기고, 동결 눈의 5 %를 넘는 액체는 0 °C로 홍수 모델에 들어갑니다(`WaterField.h`, 장부 `melt`, 열 `c_w·m·(0 °C − T_ref)`). 이후 경사면 유출·도로변 흐름·침투·배수·홍수는 Phase 14가 그대로 계산. 눈 질량 감소 = 액체 증가(테스트: 홍수 장부 melt = 기후 장부 융설수). 홍수 모델이 꺼져 있으면 첫 융설수가 켭니다.
 
+**융설 홍수 프리셋**: 30 cm·400 kg/m³의 숙성된 눈(초기 알베도는 밀도로 — 100 kg/m³ 0.85, 400 kg/m³ ≈ 0.62), 15 cm 동결 지면(침투 거의 없음), 1 → 12 °C·상대습도 95 %, 비 25 mm/h(45분). 적설이 비를 보유(동결 눈의 5 %)한 뒤 배수하고, 동결 지면 위로 유출되어 골짜기에 모입니다(헤드리스: 1200 s 침수 6칸, 1800 s 170칸). 처음 프리셋(60 cm·350 kg/m³, 녹은 지면, 건조해지는 공기)은 비를 적설과 토양이 모두 흡수해 홍수가 생기지 않았습니다 — 물리적으로 맞는 결과였고 프리셋이 시연 목적에 맞지 않았습니다.
+
 ## 15. Road Icing
 
 도로 칸의 상태(눈 깊이, 얼음 두께, 수막, 덮개/지면 온도) → 상태 분류(dry / wet / snow / packed / slush / ice / wetIce / frost) → 대표 마찰 계수 → Phase 14 접촉 마찰 배율(`GroundContactSystem`, 물체 둘레 4점 평균 — 주차된 차 아래는 차가 덮음). 네트워크 도로 구간마다 `RoadSegmentState.climate`(눈·얼음·수막·노면 온도·마찰·상태), 눈 ≥ 0.25 m → 통행 불가 표시(지시값). 색은 계산 상태에서만.
+
+**포장면 수막**: Phase 14 우수 배수구는 포장 칸의 물을 용량(30 mm/h)까지 전부 가져가 노면에 얼 물이 남지 않았습니다. 기후 실험 중에만 배수구가 0.5 mm(`PAVEMENT_FILM`, 포장 함몰 저류 — SWMM 불투수면 1.3–2.5 mm의 아래쪽)를 남깁니다(`WaterField.drainKeep`, 기본 0 → Phase 14 산술 그대로). 아스팔트의 작은 투수성(Phase 14 버킷)은 그대로라 비가 그친 뒤 노면이 0 °C에 이르기 전에 수막이 스며들 수 있습니다 — 도로 결빙 프리셋은 노면이 얼 때까지 약한 비(3 mm/h, 30분)가 이어지는 조건입니다(헤드리스: 1200 s 0.3 mm, 1800 s 0.68 mm 유리 얼음, 접촉 마찰 배율 1.27 → 0.18).
+
+**접지된 얼음**: 홍수 솔버의 얼음 하중은 뜬 얼음의 흘수이고, 물이 흘수보다 얕으면(바닥에 닿은 유리 얼음) 하중은 물 깊이까지만입니다(h = 흘수에서 연속). 0.1 mm 막 위에 미터급 수두가 생겨 CFL 부분 스텝이 폭주하던 문제를 고쳤습니다.
 
 ## 16. Lake & River Ice
 
@@ -281,6 +289,8 @@ CLM 4.5(파괴적 변태 + 과하중, Anderson 1976): 단일 층의 과하중 = 
 ## 17. Ground Frost & Frozen Soil
 
 열 지면 4층(0.8 m)마다 선행 토양수(θ₀·두께)가 층 온도에 따라 결빙·해빙(투영, 잠열은 층 E). 상부 두 층의 얼음 비율 Q로 침투 용량 × 10^(−7Q)(Hansson 등 2004). 동결 깊이·동결 칸 수 보고. **강도·투수성의 일률 증가는 넣지 않았습니다**(지반 실패 모델의 점착력 변화 없음 — 해빙수 침투가 기존 경로로 수위를 올림). 홍수 모델의 사건 침투분은 동결하지 않는 별도 수분으로 취급(버킷 모델 — 층 구조 없음, 명시).
+
+**동결 판정**: 층의 물 중 25 % 이상이 얼음이면 동결층으로 셉니다(`FROZEN_ICE_FRACTION` — 침투 계수 10^(−7·0.25) ≈ 0.02, 사실상 불투수, Lundin 1990). 동결 깊이 = 동결층의 가장 깊은 바닥. 표면 두 층(8 cm, Phase 26 표면 재질)의 선행 수분은 재질 투수성에 비례합니다(아스팔트 0.11·θ₀, 암반 0.18·θ₀ — 포장·암반은 물을 거의 갖지 않음). 극한 한파 프리셋(−25 °C, 바람 4 m/s): 표층이 0 °C에 머물며 약 350 W/m²로 얼어 1시간 무렵 동결층이 됩니다(Stefan 해 ≈ 3 cm/h와 같은 크기).
 
 ## 18. Freeze–Thaw Effects
 
@@ -391,3 +401,172 @@ final = initial + 강수 + 날림 눈 유입 − 유출 + 증기 유입 − 유�
 ## 42. Save / Load
 
 스키마 v7 유지: 기후 스펙은 실험 인스턴스(zod + `climateIssues`), 런타임 상태(덮개·증기·토양 얼음·저장소·장부)는 저장하지 않습니다(실행 중간 저장 미지원 안내 그대로). 체크포인트에 필요한 목록 = 런타임 상태 목록의 `climateCovers`, `climateSoilAir`, `climateLedger` + 홍수의 얼음 배열·침투 계수 + 열 장부 계정. v1–v7 문서는 그대로 열립니다(기후 인스턴스 없음 → 비활성). 테스트: v7 저장·불러오기, v6 문서.
+
+## 43. Backward Compatibility
+
+기후 실험이 없으면 모든 연결점이 null·기본값입니다: `ThermalWorld.climate / bodyTrad / coverSink = null`(지면 스텝은 Phase 26 함수 그대로, 기후용 `fluxesClimate`는 별도 함수), `AirLayer.aboveT / ventRef = null`, 장부 계정 `climate / solar / latent / cover / waterMass`는 `hasClimate`일 때만 합산, 홍수 `infilFactor / iceLoad / iceFric / frozen = null`, `drainKeep = 0`(배수 식 `d > 0`·`a > d` → `d > keep`·`a > d − keep`, keep = 0에서 같은 비트), 홍수 장부의 상변화 항(melt / frozen / evaporated / condensed)은 0. 식별 A/B(`IDENTITY_CLIMATE=1`, Phase 29 빌드 a1a3e1e와 같은 벤치 파일, 이번 수정 뒤 0b0cfdf에서 다시 측정): **22장면 모두 비트 동일** (`docs/bench-phase30-identity.json`).
+
+| 요구 장면 | 식별 벤치 장면 |
+|---|---|
+| Empty World | atmos: empty world |
+| Wind | wind cladding · climate-off: atmospheric removal + wind |
+| Earthquake / Structural Collapse | street earthquake 1.1 g · heat: apartment temperature sphere + earthquake |
+| Flood | flood + rain · heat: surface + rain |
+| Thermal Source | heat ×4 |
+| Fire / Smoke | fire ×3 · climate-off: smoke (stand fire + wind) |
+| Meteor | impact · atmos: meteor atmospheric entry |
+| Blast | blast 12 houses |
+| Volcano / Lava Cooling | atmos: lava · atmos: ash + wind · atmos: volcano + fire + rain · climate-off: lava cooling (long) |
+| Atmospheric Removal / Restoration | climate-off: atmospheric removal + wind · climate-off: atmospheric restoration |
+| Multi-Hazard City | atmos: multi-hazard town |
+
+기존 저장 문서(v1–v7)는 기후 인스턴스가 없어 자동 활성화되지 않습니다. 기존 결과를 바꾸는 것은 기후 실험을 명시적으로 추가했을 때뿐입니다.
+
+## 44. Performance Benchmarks
+
+헤드리스 벤치(`src/bench/climate.bench.test.ts`, 렌더 없음, 고정 1/60 s 스텝, `AB=1` — 같은 장면을 기후 실험 없이 한 번 더), 데이터 `docs/bench-phase30.json`. 측정 2026-10-18, 빌드 0b0cfdf, 부하 9 / 9.5 / 15.1(1·5·15분 — 다른 세션이 끝난 뒤의 비교적 조용한 구간이지만 절대값은 여전히 흔들림, 같은 실행 안의 구간 비교가 의미 있음). 시간 열은 시뮬레이션 1 s당 ms(벽시계). 앞의 `skip` 구간은 빨리 감은 뒤 30 s 측정(9·24는 1 s 스텝으로 1 h, 비용만).
+
+| 장면 | 기후 켬 ms/s | 끔 ms/s | 기후 구간 ms/s | 열 풀이 ms/s | 최악 스텝 ms | 눈 / 얼음 / 융설수→홍수 / 증발 kg | 지붕 최대 kPa | 물 / 기후 에너지 / 열 세계 상대 잔차 | 힙 MB |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 basic climate (street, 15 °C, clear sun) | 139.5 | 4.2 | 51.65 | 57.8 | 208 | 0 / 0 / 0 / 6 | 0 | 6e-13 / 9e-16 / 8e-13 | 59.8 |
+| 2 heatwave (26 → 38 °C, sun) | 70.3 | 1.6 | 27.41 | 29.56 | 113.7 | 0 / 0 / 0 / 88 | 0 | 5e-13 / 3e-14 / 2e-13 | 60.4 |
+| 3 cold wave (2 → −20 °C, night) | 58.7 | 12.6 | 24.77 | 25.61 | 75.4 | 0 / 0 / 0 / 10 | 0 | 6e-13 / 6e-15 / 1e-13 | 60.5 |
+| 4 high humidity (95 %, 28 °C, cooling) | 81.1 | 16.2 | 23.5 | 25.2 | 72.6 | 0 / 0 / 0 / 14 | 0 | 6e-14 / 2e-14 / 1e-13 | 60.5 |
+| 5 evaporation (lake, 35 °C, 20 %) | 130.3 | 24.3 | 37.43 | 44.75 | 117.3 | 0 / 0 / 0 / 725 | 0 | 2e-14 / 1e-13 / 1e-13 | 59.7 |
+| 6 condensation (humid air over a cold lake) | 91.1 | 14.8 | 26.93 | 28.65 | 100.5 | 0 / 0 / 0 / 12 | 0 | 3e-13 / 2e-14 / 2e-13 | 59.6 |
+| 7 snowfall (10 mm/h, −3 °C) | 50.2 | 1.2 | 34.86 | 7.78 | 39.9 | 6152 / 0 / 0 / 0 | 0.001 | 6e-16 / 3e-11 / 3e-11 | 60.7 |
+| 8 large snowpack (1 m, street) | 44.2 | 1.2 | 29.58 | 7.76 | 23.9 | 11884804 / 0 / 0 / 0 | 2.943 | 2e-14 / 6e-13 / 2e-11 | 60.6 |
+| 9 snow compaction (30 cm, 1 h, coarse) | 48.4 | 0.7 | 33.87 | 9.04 | – | 1440836 / 0 / 0 / 0 | 0 | 3e-15 / 2e-10 / 7e-10 | 55.8 |
+| 10 snowmelt (20 cm, warming to 12 °C, sun) | 50.9 | 1.3 | 34.14 | 9.79 | 31.9 | 2376957 / 0 / 0 / 0 | 0.589 | 6e-15 / 3e-14 / 8e-13 | 56.7 |
+| 11 snowmelt flood (valley, rain on snow) | 43.7 | 0.5 | 30.72 | 8.15 | 28 | 8505775 / 0 / 0 / 0 | 0 | 8e-15 / 1e-14 / 0 | 56 |
+| 12 road icing (asphalt, rain then −6 °C) | 79.4 | 0.7 | 27.66 | 21.86 | 60.4 | 18 / 111 / 921 / 16 | 0 | 2e-13 / 2e-13 / 4e-13 | 56.9 |
+| 13 lake freezing (−20 °C, wind) | 89.7 | 11.6 | 27.29 | 30.8 | 76.7 | 0 / 86 / 0 / 309 | 0 | 3e-13 / 2e-12 / 3e-13 | 56.5 |
+| 14 freeze–thaw (−6 … +6 °C, 20 min cycle) | 50.1 | 0.7 | 20.95 | 22.91 | 35 | 0 / 0 / 0 / 17 | 0 | 1e-13 / 1e-10 / 1e-10 | 56.8 |
+| 15 solar radiation (solstice noon) | 51.5 | 1.5 | 20.68 | 23.38 | 38.9 | 0 / 0 / 0 / 89 | 0 | 2e-13 / 2e-14 / 3e-13 | 56.7 |
+| 16 heatwave + fire (dry stand) | 105.5 | 3.9 | 39.39 | 45.34 | 103.7 | 0 / 0 / 0 / 34 | 0 | 3e-13 / 3e-14 / 3e-13 | 57 |
+| 17 cold wave + buildings (12 houses) | 41.5 | 0.9 | 29.07 | 7.55 | 20 | 1961651 / 0 / 0 / 0 | 0.491 | 4e-15 / 8e-14 / 5e-14 | 58.1 |
+| 18 snowfall + wind (blowing snow) | 59.3 | 5.4 | 39.99 | 7.98 | 52.6 | 796017 / 0 / 0 / 0 | 0.197 | 2e-15 / 1e-11 / 1e-11 | 57.7 |
+| 19 volcano + snow | 105.4 | 18.9 | 44.46 | 15.18 | 86.9 | 5987239 / 0 / 12776 / 0 | 0 | 1e-14 / 4e-12 / 3e-11 | 58.7 |
+| 20 low pressure + evaporation (removal to 20 %, lake) | 175.8 | 55.3 | 86.77 | 35.32 | 109 | 0 / 0 / 104 / 165 | 0 | 1e-14 / 2e-13 / 1e-12 | 59.2 |
+| 21 town of 100 houses (snowfall + initial snow) | 77.1 | 4 | 49.24 | 12.33 | 156.7 | 2525230 / 0 / 0 / 0 | 0.737 | 1e-14 / 7e-12 / 3e-11 | 65.9 |
+| 22 town of 500 houses (snowfall + initial snow) | 68 | 19 | 25.86 | 14.52 | 34.4 | 615030 / 1 / 0 / 0 | 0.737 | 6e-15 / 6e-12 / 2e-11 | 96 |
+| 23 town of 1000 houses (snowfall + initial snow) | 107.9 | 58.1 | 25.16 | 23.24 | 110.2 | 242602 / 0 / 0 / 0 | 0.737 | 2e-15 / 4e-12 / 2e-11 | 132.9 |
+| 24 long climate change (cyclic 1 h, coarse) | 139.1 | 16.3 | 37.9 | 34.01 | – | 583 / 208639 / 46769 / 341 | 0.009 | 1e-13 / 6e-10 / 8e-10 | 60.4 |
+
+반복 실행(강설 ×6) 힙: 59.7 → 59.3 → 59.3 → 59.5 → 59.5 → 59.5 MB — 누수 없음.
+
+읽는 법:
+- 기후 구간 자체는 시뮬레이션 1 s당 21–50 ms(저압 + 증발 87 ms — 대기 제거가 매 스텝 수증기 기둥을 다시 맞춤). 켬/끔 차이의 나머지는 대부분 **열 풀이**입니다: 기후가 없으면 Phase 26 열 세계가 잠들어 있고(활성 소스가 없음), 기후는 전 월드 지표를 배경 공기·하늘·태양에 연결해 모든 지면 타일을 깨웁니다. 태양·증발이 있는 장면(1, 5, 16, 20, 24)이 가장 비쌉니다.
+- 최악 스텝: 1번 장면 208 ms(5.9 s — 첫 맑은 하늘 지면 스텝이 모든 타일을 한꺼번에 깨우는 시점, `thermal.solve` 175 ms), 100동 마을 157 ms(첫 지붕 하중 갱신). 그 밖에는 20–117 ms.
+- 1000동 마을: 기후 25 ms/s, 브라우저 Chrome §44에서 기후 비용 1.3 ms/프레임(KO 24 / EN 52 FPS — 같은 장면, 측정 시 부하 차이).
+- 장부: 모든 장면에서 물 상대 잔차 ≤ 6·10⁻¹³, 기후 에너지 ≤ 6·10⁻¹⁰, 열 세계 ≤ 8·10⁻¹⁰(1 h 장면이 가장 큼 — 반올림 누적).
+- 10·11번(융설): 측정 창(330 s / 630 s) 안에서는 녹은 물과 비가 아직 적설 안에 머물러(보유 용량) 홍수로 나간 융설수가 0입니다. 홍수 경로는 시뮬레이션 테스트와 Chrome §23–24(1800 s, 침수 259칸)에서 확인했습니다.
+- 끔 열은 기후 실험만 뺀 같은 문서입니다. Phase 29 빌드와의 비트 동일성은 별도 식별 A/B(§43, 22장면).
+
+## 45. Scientific Validation
+
+| 항목 | 검증 | 결과 |
+|---|---|---|
+| 포화수증기압 | IF97 = Murphy & Koop at 273.16 K(삼중점 611.657 Pa), 1 atm 끓는점 373.124 K | 테스트 |
+| 상대습도·이슬점·습구 | RH(T_d) = 1, 습구 단열 포화 에너지 식 잔차 | 테스트 |
+| 수증기 질량 보존 | 기둥 수증기 + 응결수 + 표면·저장소·토양·홍수 = 초기 + 입력 − 출력, 잔차 < 10⁻⁸(상대) | 테스트·Chrome §16 |
+| 포화 조정 | c_p·ΔT = L·Δm(에너지 보존), 끝 상태 포화 | 테스트 |
+| 증발·응결 잠열 | 물·지면에서 나간 잠열 = L_v·질량(장부 latent), 응결 시 표면으로 | 테스트·Chrome §7–8 |
+| 융해·결빙 잠열 | 덮개 엔탈피(0 °C 액체 기준), 녹는 동안 0 °C 유지, 물·토양 투영 엔탈피 정확히 0 °C | 테스트 |
+| 온도·엔탈피 일관성 | 덮개 노드는 가장 찬 대상(공기·바닥·하늘)보다 차갑지 않음 — 시뮬레이션 테스트의 안전망 작동 0회 | 테스트 |
+| 강설 질량 | 전달량 = 계획량(5 s 전달 시점까지, 반올림 이내) | 테스트 |
+| 적설 깊이·밀도 | 깊이 = 질량/밀도, Anderson 신설 밀도 | 테스트 |
+| 압밀 질량 보존 | 질량 불변, 밀도 증가, 깊이 감소 | 테스트·Chrome §14 |
+| 융설수 질량 | 홍수 장부 melt = 기후 장부 융설수 | 테스트·Chrome §23 |
+| 도로 얼음 | 0.5 mm 노면 수막·어는 비 → 유리 얼음, 마찰 배율 하락 | 헤드리스·Chrome §17–18 |
+| 호수 얼음 | 얼음 = 호수 물의 결빙분(홍수 frozen), 두께 ≤ 표면 열손실 한계(600 W/m² × t / ρ_i L_f) | 테스트·Chrome §19–20 |
+| 태양 복사 | 정오 춘분 고도 = 90° − 위도, 천정 직달 1361·0.7, 흡수 = (1 − α)·G | 테스트·Chrome §25 |
+| 지표 에너지 수지 | 열 세계 상대 잔차 < 10⁻⁸(solar / latent / cover / waterMass 계정 포함) | 테스트·Chrome HUD |
+| 상변화 에너지 | 기후 에너지 장부 잔차 < 10⁻⁸ | 테스트 |
+| 열원 중복 방지 | 기후는 배경 강제·하늘·태양만, 열원은 Phase 26 소스 스텝 그대로(같은 노드에 한 번) | 구조·테스트 |
+| 융설 홍수 | 동결 지면 위 유출, 침수 칸 | 헤드리스·Chrome §24 |
+| 폭염과 연료 함수율 | 수관 함수율 감소(생체 하한 유지), 같은 배열을 화재가 읽음 | 테스트·Chrome §27–28 |
+| 저압과 증발 | 대기 제거 중 증발 계속, 수증기가 공기와 같은 비율로 제거 | 테스트·Chrome §32 |
+| 화산과 눈 | 용암 열이 덮개로 → 융설수 | 테스트·Chrome §31 |
+| 적설 하중과 구조 | 지붕 저장소 질량 × g → 구조 모델 지붕 부재(0.4 kPa 이상, 양자화), 붕괴 시 눈은 지면으로 | 테스트·Chrome §29–30 |
+| 시간 간격 수렴 | 강수 적분 스텝 무관, 덮개 노드는 임의 간격 암시 | 테스트 |
+| 객체 ID 독립 | 다른 ID + 이벤트 역순 → 같은 해시 | 테스트 |
+| 동일 시드 재현 | 두 번 실행·초기화 후 같은 해시 | 테스트·Chrome §43 |
+| 원본 월드 복원 | fingerprint 동일 | 테스트·Chrome §42 |
+| Phase 29 비활성 동일성 | 22장면 비트 동일 | 식별 A/B |
+
+## 46–47. Regression Tests · Total
+
+**796개 통과**(+ 벤치마크 23개 건너뜀, 0 실패, `--maxWorkers=3`, 부하 ≈ 145 아래 1138 s) = 기존 770 + 순수 16(`src/climate/climate.test.ts`) + 시뮬레이션 10(`src/simulation/climate/climate.sim.test.ts`). 기존 골든 파일은 바꾸지 않음. 등록 목록 갱신만: 구현 현상 목록에 `climate`, 계획 현상 `extremeTemperature`는 기후로 대체.
+
+| 영역 | 테스트 |
+|---|---|
+| Psychrometrics | 삼중점에서 IF97 = Murphy & Koop, 1 atm 끓는점; RH·이슬점·습구 일관성; 포화 조정 c·ΔT = L·Δm·끝 상태 포화 |
+| Forcing / Precipitation | 기온 경로 6종; 강수 적분 스텝 무관; 강설 물당량 총량이 열 스텝과 무관·밀도는 기온에서 |
+| Solar | 춘분 정오 고도 = 90° − 위도, 천정 직달 1361·0.7 |
+| Snow | 신설 밀도, 전도도, 압밀 질량 보존, 엔탈피 상태; 찬 지면의 눈 유지·건조 공기로 승화(질량·에너지 장부) |
+| Validation | 물리적으로 모순된 입력 거부(사유) |
+| Melt / Evaporation / Freezing / Boiling | 융설수 → 홍수(질량 장부, 녹는 동안 0 °C); 증발 냉각; 얕은 물 결빙(잠열 장부); 토양수 결빙(층 0 °C 유지); 국소 끓는점에서 끓음(에너지 없이 물 손실 없음) |
+| Cover node regression | 0 °C 물 위 0 °C 새 얼음의 손실은 물에서 — 얼음 자체 몇 g에서 빼지 않음 |
+| Simulation: dormant | 실험 없으면 상태 없음, 홍수 장부 상변화 항 0 |
+| Simulation: snowfall / melt | 지면·지붕·수관 적설, 장부 닫힘, 두 번째 실험 거부; 융설 → 홍수, 이정표 순서 |
+| Simulation: lake ice / evaporation | 호수 물에서 얼음, 뜬 얼음 배열; 연못 증발·토양 건조·수관 수분 감소 |
+| Simulation: friction / roof load | 차량 아래 얼음 → 접촉 마찰 하락; 지붕 적설 → 구조 모델, 붕괴 시 눈 지면으로 |
+| Simulation: atmosphere / determinism / save | 공기 제거 시 수증기 같은 비율 제거; 두 번·다른 ID·초기화 같은 해시·원본 불변; v7 저장·이전 문서 로드 |
+| Dormant / Backward compatibility | 식별 A/B 22장면(벤치, §43) |
+
+## 47b. Chrome KO / EN 검증 — `scripts/verify-climate.mjs`, `docs/verify/climate`
+
+프로덕션 빌드(0b0cfdf) + 실제 Chrome(GPU), UI를 통해 45개 확인: **KO 45/45, EN 45/45**, 페이지 오류 0, 탭 유지, GPU 지오메트리 시작값 복귀(17 → 7), 힙 29–30 → 65 MB(같은 시나리오 연속 후, 반복 실행 64.8 → 65.8 MB로 평평). 시나리오: 실험 탭에서 추가 · 폭염 / 한파 시나리오 · 주기 경로와 경로 차트 · 습도 입력(70 % → 0.7, 100 % 초과 거부) · 이슬점·습구 표시 · 호수 증발 · 응결(이슬) · 습구 분할 강설·첫 눈 · 눈 입자(시각) · 지면 / 지붕 / 수관 적설 · 적설 깊이·기온·습도·얼음 오버레이(고정 범례) · 적설 질량 장부 · 압밀(새 눈 없이 밀도 증가) · 도로 결빙(계산된 얼음 두께)과 차량 접촉 마찰 하락 · 호수 결빙(홍수 frozen, 뜬 얼음)과 두께 · 동결토 · 한파 냉각 · 해빙·0 °C 융해 · 융설수 = 홍수 melt · 골짜기 융설 홍수 · 맑은 하늘 정오 일사 흡수 · 아스팔트 > 잔디 지표 온도 · 폭염 수관 건조(생체 하한)·같은 배열로 화재 · 지붕 적설 하중(구조 모델, 2.8 kPa)·구조 반응 · 화산과 눈 · 공기 제거와 증발 · 인스펙터 · HUD · 타임라인 · 결과·CSV·JSON(글자 잘림 없음) · 초기화 재실행 같은 해시 · 원본 월드 fingerprint · v7 저장·불러오기 · 1000동 마을 강설(KO 24 / EN 52 FPS — 같은 장면, 다른 세션 부하 145–200 아래 측정 차이; 기후 비용 1.3 ms/프레임) · 반복 실행 자원. 검증 중 고친 것은 0b0cfdf 커밋(덮개 노드 0 °C 고정, 증기 잠열 한도, 얼음 누름 수두, 포장면 수막 등).
+
+## 48. Scientific Limitations
+
+GUI(HUD·결과·프리셋 가정 목록)에도 같은 내용이 표시됩니다.
+
+- 국소 축약 기후 모델입니다(1 m 덮개·5 m 공기 기둥·0.8 m 열 지면). 실제 일기예보나 장기 기후 예측 모델이 아닙니다 — 강제 경로는 사용자가 정한 입력입니다.
+- 구름 미세물리는 Kessler 자동 변환(응결수 → 강수) 하나뿐입니다. 빙정 과정·구름 복사·정밀 강수 생성 없음, 강수는 떨어지는 시간 없이 지면에 도달합니다(입자는 시각 효과).
+- 정밀 대기 복사 전달 없음: 하늘 온도는 Brutsaert 경험식, 맑은 하늘 일사는 Meinel·Kasten 경험식, 구름은 Kasten–Czeplak 계수.
+- 눈은 칸당 단일 엔탈피 노드(층 구조·결정 변태·깊이 서리·눈사태 없음). 압밀은 CLM 4.5 경험식.
+- 빙하 유동 없음. 호수 얼음의 기계적 파괴·유빙·성층(4 °C 최대 밀도) 없음, 얼음 아래 흐름은 얇은 물 솔버의 단순화된 경계 조건.
+- 지반 동결융해는 4층 열 지면의 토양수 상변화와 침투 계수뿐 — 동상(frost heave)·균열·강도 변화는 계산하지 않습니다(동결융해 주기 수만 보고).
+- 도로 마찰은 노면 상태별 대표 계수(Wallman & Åström)의 배율입니다. 타이어 모델 없음 — 실제 타이어·도로 마찰 예측에 사용할 수 없습니다.
+- 포장면 수막(0.5 mm)은 고정된 함몰 저류값입니다. 아스팔트의 투수성은 Phase 14 버킷 그대로입니다.
+- 저압·극저온: 포화 표는 150–400 K, 대류·증발 상관식은 연속체 범위, 삼중점 아래에서는 물이 0 °C까지 끓고 언다는 단순화.
+- 수증기는 공기 기둥 질량·가상 온도에 더하지 않습니다(§2.1, 습윤 공기 밀도 효과 없음).
+- 사람: 기온 노출과 이동 제한만 — 체온·동상·열사병 같은 열생리는 Phase 34 범위입니다.
+- 실제 건축(적설 하중 설계)·도로 관리·기상 안전 판단에 사용할 수 없습니다.
+
+## 49. Phase 31 (Variable Gravity) 호환
+
+이번 Phase에서는 중력을 바꾸지 않습니다. 중력이 들어가는 곳을 정리해 두었습니다.
+
+| Phase 31이 쓸 것 | 현재 위치 | 메모 |
+|---|---|---|
+| Gravity-Dependent Atmospheric Pressure | Phase 29 `AtmosphereField`(정수압 척도 높이 g), 기후의 기둥 질량 `layerMass(a)` | 수증기 질량은 기둥 질량 비례 — g가 바뀌면 같은 경로로 따라감 |
+| Snow / Ice Weight | `ClimateRuntime`의 지붕 하중 `M·GRAVITY/A`, `ClimateWorld.storeLoad(k, g = 9.81)` | 하중 경로는 이미 g 인자를 받음 |
+| Structural Gravity Loads | 지붕 부재에 `addLoad`(양자화 0.4 kPa) — Phase 23 구조 모델 | 같은 함수에 g 전달 |
+| Water Hydrostatic Pressure | 홍수 솔버 `G`, 뜬 얼음 하중 = 흘수(질량/ρ_w — g와 무관한 수두) | 수두 형식이라 g 변경 시 솔버 쪽만 |
+| Particle Settling | 날림 눈 도약량 `Q = 0.68·ρ·u_t(u*² − u_t²)/(9.81·u*)`(Pomeroy & Gray), 시각 입자 | 상수 9.81을 인자로 바꾸면 됨 |
+| Snowfall / Rainfall Motion | 강수는 즉시 도달(낙하 시간 없음), 입자는 시각 효과 | 낙하 속도 모델이 필요하면 새로 추가 |
+| Ground Contact | `GroundContactSystem` 마찰 배율(기후 노면 상태) — 수직력은 Phase 15/21 | 배율은 g와 무관 |
+| Terrain / Sediment Transport | 융설수 → Phase 14 유출·침식 경로 | 기존 경로 |
+| Snow compaction overburden | CLM 과하중 P_s(kg/m², 표준 중력 내포) | g 비율 곱으로 일반화 가능 |
+
+## 50. 문서
+
+이 문서, README Phase 30 절과 제한사항, PHENOMENA(기후 구현, 계획 현상 `extremeTemperature`는 기후로 대체).
+
+## 51. 커밋 (main, push 안 함)
+
+{{COMMITS}}
+
+## 재현
+
+```
+npx vitest run src/climate src/simulation/climate                                  # 16 + 10 tests
+IDENTITY_CLIMATE=1 IDENTITY_OUT=a.json npx vitest run src/bench/identity.bench     # this build and a1a3e1e → compare
+BENCH=1 AB=1 NODE_OPTIONS=--expose-gc npx vitest run src/bench/climate.bench --silent=false
+BENCH=1 npx vitest run src/bench/phase29residual.bench --silent=false
+npm run build && npx vite preview --port 4199 --strictPort &
+LANG_UI=ko node scripts/verify-climate.mjs http://localhost:4199/ ./docs/verify/climate   # and LANG_UI=en
+```

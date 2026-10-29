@@ -254,7 +254,7 @@ check('42 leaving the simulation leaves the original world untouched (fingerprin
 
 // ══ 14: compaction of an existing pack (no new snow: fresh snow would lower the mean density) ══════
 await newWorld();
-await ev(() => window.__ds.actions.addPhenomenon('climate', { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'constant', temperature: 268.15, target: 268.15, duration: 1800, humidity: 0.85, precipitation: 0, solar: 'off', initialSnow: 0.4, initialSnowDensity: 90 }));
+await ev(() => window.__ds.actions.addPhenomenon('climate', { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'constant', temperature: 268.15, target: 268.15, duration: 1800, humidity: 0.85, precipitation: 0, solar: 'off', soilMoisture: 0.3, mixTime: 300, initialSnow: 0.4, initialSnowDensity: 90 }));
 await wait(500);
 await enterRun();
 const snap14 = () => ev(() => { const r = window.__ds.climateLib.rt(); const c = r.trt.world.terrain.index(-40, 40); return { rho: r.cw.cRho[c], kg: r.cw.cM[c], d: r.cw.snowDepth(c) }; });

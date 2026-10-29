@@ -1,0 +1,121 @@
+{
+ "date": "2026-10-18",
+ "builds": {
+  "phase30": "0b0cfdf",
+  "phase29": "a1a3e1e"
+ },
+ "env": "IDENTITY_CLIMATE=1",
+ "scenes": {
+  "street earthquake 1.1 g": {
+   "phase30": "39ea8aa39d0123cb541fcf20636ebdc4122102f9cb35bd537fdf1fb4bab9cf35",
+   "phase29": "39ea8aa39d0123cb541fcf20636ebdc4122102f9cb35bd537fdf1fb4bab9cf35",
+   "identical": true
+  },
+  "blast 12 houses": {
+   "phase30": "5a55d0952080c5ce64db77189479d9d9d9f39144355067a32bd62c70e1df2d24",
+   "phase29": "5a55d0952080c5ce64db77189479d9d9d9f39144355067a32bd62c70e1df2d24",
+   "identical": true
+  },
+  "flood + rain": {
+   "phase30": "8e960b03c68a8865827bd2507790ef97d71f6e308ef43f39004c9ac93872211d",
+   "phase29": "8e960b03c68a8865827bd2507790ef97d71f6e308ef43f39004c9ac93872211d",
+   "identical": true
+  },
+  "wind cladding": {
+   "phase30": "77d1b4884c36a445eda568a7cb93125b03e848be03ff1435e9c12e991c85ae63",
+   "phase29": "77d1b4884c36a445eda568a7cb93125b03e848be03ff1435e9c12e991c85ae63",
+   "identical": true
+  },
+  "impact": {
+   "phase30": "1614fba07f3154aa409b1f231d989f67e6ef1370600b2c8238e8993f537b8857",
+   "phase29": "1614fba07f3154aa409b1f231d989f67e6ef1370600b2c8238e8993f537b8857",
+   "identical": true
+  },
+  "heat: warehouse room fire-like source": {
+   "phase30": "64b741e891c9cf224f2962f25d0b10d9e21a04e3a44399395bc8bcafe9e49d71",
+   "phase29": "64b741e891c9cf224f2962f25d0b10d9e21a04e3a44399395bc8bcafe9e49d71",
+   "identical": true
+  },
+  "heat: house + trees, ramp": {
+   "phase30": "f41d7e08fa0bc8c9ecf01b71d43cdc48a87e60531cdf277afc43029231258c50",
+   "phase29": "f41d7e08fa0bc8c9ecf01b71d43cdc48a87e60531cdf277afc43029231258c50",
+   "identical": true
+  },
+  "heat: apartment temperature sphere + earthquake": {
+   "phase30": "8f1db5876994dbed30ac60033a682e80f00c262416a5de860e995e45a23ebc0a",
+   "phase29": "8f1db5876994dbed30ac60033a682e80f00c262416a5de860e995e45a23ebc0a",
+   "identical": true
+  },
+  "heat: surface + rain": {
+   "phase30": "83cd8269c6a1fac1de47b5fb3fb11eabc79328b4670a9ac2fe1bada2420e48c9",
+   "phase29": "83cd8269c6a1fac1de47b5fb3fb11eabc79328b4670a9ac2fe1bada2420e48c9",
+   "identical": true
+  },
+  "fire: house room fire, windows open": {
+   "phase30": "7dff34275a51ae1d92ce49670aaefbb7a4a77984f03c6144e38e4a3c531c312b",
+   "phase29": "7dff34275a51ae1d92ce49670aaefbb7a4a77984f03c6144e38e4a3c531c312b",
+   "identical": true
+  },
+  "fire: dry stand + wind": {
+   "phase30": "3121e2250b71f92328d1ab1ae827c89a2b336ae5824430a85897a17a57e73b43",
+   "phase29": "3121e2250b71f92328d1ab1ae827c89a2b336ae5824430a85897a17a57e73b43",
+   "identical": true
+  },
+  "fire: heat ignition of a dry crown": {
+   "phase30": "ab6c6762dd4ea9541993cc7870ee61167cf927239505f48f43e390db66598005",
+   "phase29": "ab6c6762dd4ea9541993cc7870ee61167cf927239505f48f43e390db66598005",
+   "identical": true
+  },
+  "atmos: empty world": {
+   "phase30": "09a1ce0a58f4f213435fbaa3a0961847f2dd84e988b5749ee9c1d0c76e6435a9",
+   "phase29": "09a1ce0a58f4f213435fbaa3a0961847f2dd84e988b5749ee9c1d0c76e6435a9",
+   "identical": true
+  },
+  "atmos: meteor atmospheric entry": {
+   "phase30": "4af7b5e8aed47671ad363082f17e52fcf2da3ce20dca2ea3ef493e0157f831e9",
+   "phase29": "4af7b5e8aed47671ad363082f17e52fcf2da3ce20dca2ea3ef493e0157f831e9",
+   "identical": true
+  },
+  "atmos: lava": {
+   "phase30": "0a6ce2e47d788d2d5b986cd85f28ffbe378ee0eb2c763babf3f888d0c3deffb3",
+   "phase29": "0a6ce2e47d788d2d5b986cd85f28ffbe378ee0eb2c763babf3f888d0c3deffb3",
+   "identical": true
+  },
+  "atmos: ash + wind": {
+   "phase30": "e879aea347f34a718ad860aa439416c9e780a891870869c0be33b78a83af1f04",
+   "phase29": "e879aea347f34a718ad860aa439416c9e780a891870869c0be33b78a83af1f04",
+   "identical": true
+  },
+  "atmos: volcano + fire + rain": {
+   "phase30": "ee15af3383693406338d5103964e1e229aa8d3bc6577198cc401487fa59030d3",
+   "phase29": "ee15af3383693406338d5103964e1e229aa8d3bc6577198cc401487fa59030d3",
+   "identical": true
+  },
+  "atmos: multi-hazard town": {
+   "phase30": "210178e55098929be4de8a772a663d1405e66c41b3e968fb038c3e4d8d7a9623",
+   "phase29": "210178e55098929be4de8a772a663d1405e66c41b3e968fb038c3e4d8d7a9623",
+   "identical": true
+  },
+  "climate-off: atmospheric removal + wind": {
+   "phase30": "618696f3f7533d4228f85afd7e6e06952b3293d1b71b1f1b7ab5423a449e687a",
+   "phase29": "618696f3f7533d4228f85afd7e6e06952b3293d1b71b1f1b7ab5423a449e687a",
+   "identical": true
+  },
+  "climate-off: atmospheric restoration": {
+   "phase30": "383437375dfb2b39f37d8e0bcd023103daa65f8dfb62868c9401ab52a53c0159",
+   "phase29": "383437375dfb2b39f37d8e0bcd023103daa65f8dfb62868c9401ab52a53c0159",
+   "identical": true
+  },
+  "climate-off: lava cooling (long)": {
+   "phase30": "968403b98362095b2093af26028c34c6712aa666cc4ab076dbf9a56ba69db8e8",
+   "phase29": "968403b98362095b2093af26028c34c6712aa666cc4ab076dbf9a56ba69db8e8",
+   "identical": true
+  },
+  "climate-off: smoke (stand fire + wind)": {
+   "phase30": "97dda5069fefe27f7bb7f093ab328e73522c83a66b02ab4091eaa084b2bc1e0e",
+   "phase29": "97dda5069fefe27f7bb7f093ab328e73522c83a66b02ab4091eaa084b2bc1e0e",
+   "identical": true
+  }
+ },
+ "identical": "22/22"
+}
