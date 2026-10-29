@@ -141,6 +141,7 @@ export function strikeBuilding(ctx: SystemContext, target: RuntimeEntity, d: Deb
       for (const rec of recs) rec.secondary = info;
       mr.failed[i] = 1;
       mr.failedSet.add(ids[i].id);
+      mr.weakStale = true;
       st.lateralDirty = true;
       st.analysisDirty = true;
     } else {

@@ -70,6 +70,7 @@ const SCENES: Scene[] = [
   { name: 'houses100 + earthquake 0.9 g', doc: () => world(houses(100)), events: () => [quake(0.9)], seconds: 12 },
   { name: 'houses500 + earthquake 0.9 g', doc: () => world(houses(500)), events: () => [quake(0.9)], seconds: 12 },
   { name: 'houses1000 + earthquake 0.9 g', doc: () => world(houses(1000)), events: () => [quake(0.9)], seconds: 12 },
+  { name: 'houses1000 + earthquake 1.3 g (collapses)', doc: () => world(houses(1000)), events: () => [quake(1.3)], seconds: 12 },
   { name: 'houses1000 + blast 1 GJ (Phase 24 scene)', doc: () => world(houses(1000)), events: () => [blast({ energy: 1e9 })], seconds: 8 },
 ];
 
@@ -92,11 +93,18 @@ async function run(sc: Scene) {
   const steps = Math.round(sc.seconds * 60);
   let worst = 0, worstAt = 0, maxMoving = 0, maxBlocks = 0;
   const t0 = performance.now();
+  const secs = () => ({ ...(simProfiler as unknown as { sections: Record<string, number> }).sections });
+  let worstSections: Record<string, number> = {};
   for (let k = 0; k < steps; k++) {
+    const before = secs();
     const a = performance.now();
     c.advance(1 / 60);
     const ms = performance.now() - a;
-    if (ms > worst) { worst = ms; worstAt = c.getTime(); }
+    if (ms > worst) {
+      worst = ms; worstAt = c.getTime();
+      const after = secs();
+      worstSections = Object.fromEntries(Object.entries(after).map(([n, v]) => [n, +(v - (before[n] ?? 0)).toFixed(1)]).filter(([, v]) => (v as number) >= 1).sort((x, y) => (y[1] as number) - (x[1] as number)));
+    }
     const St = c.getRuntime()!.structures;
     if (St) {
       let m = 0;
@@ -122,19 +130,20 @@ async function run(sc: Scene) {
     bodies += m.ledger.mass.bodies;
     rubble += m.ledger.mass.rubble;
   }
+  const events = c.getDamageEvents().length, duplicates = c.duplicateForces();
   const r0 = performance.now();
   await c.reset();
   const resetMs = performance.now() - r0;
   const out = {
     scene: sc.name, objects: Object.keys(doc.objects).length, simSeconds: sc.seconds,
-    msPerSimS: +(ms / sc.seconds).toFixed(1), worstStepMs: +worst.toFixed(1), worstAt: +worstAt.toFixed(2),
+    msPerSimS: +(ms / sc.seconds).toFixed(1), worstStepMs: +worst.toFixed(1), worstAt: +worstAt.toFixed(2), worstSections,
     structModelMsPerSimS: +((sec['struct.model'] ?? 0) / sc.seconds).toFixed(2), structEventsMsPerSimS: +((sec['struct.events'] ?? 0) / sc.seconds).toFixed(2),
     structFragmentsMsPerSimS: +((sec['struct.fragments'] ?? 0) / sc.seconds).toFixed(2), collapseSystemMsPerSimS: +((sec['sys.structuralCollapse'] ?? 0) / sc.seconds).toFixed(2),
     physicsMsPerSimS: +((sec.physics ?? 0) / sc.seconds).toFixed(1), damageSystemMsPerSimS: +((sec['sys.damage'] ?? 0) / sc.seconds).toFixed(2),
     models: St?.all.length ?? 0, ...classes, failedMembers: failed, maxFallingBlocks: maxBlocks, maxMovingFragments: maxMoving, fragments: St?.fragments.length ?? 0,
     aggregatedKg: Math.round(St?.aggregated ?? 0), bodiesT: +(bodies / 1000).toFixed(1), rubbleT: +(rubble / 1000).toFixed(1), heaps: St?.rubble.heaps.length ?? 0,
-    roadsBlocked: rt.roads?.summary().rubble ?? 0, secondary: St?.secondary ?? 0, residualKg: residual, events: c.getDamageEvents().length,
-    duplicates: c.duplicateForces(), heapMB: heapMB(), resetMs: +resetMs.toFixed(0),
+    roadsBlocked: rt.roads?.summary().rubble ?? 0, secondary: St?.secondary ?? 0, residualKg: residual, events,
+    duplicates, heapMB: heapMB(), resetMs: +resetMs.toFixed(0),
   };
   c.unload();
   simProfiler.enabled = false;

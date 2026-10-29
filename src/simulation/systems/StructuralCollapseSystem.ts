@@ -101,7 +101,7 @@ export class StructuralCollapseSystem implements SimulationSystem {
         mr.rev++;
         e.rev++;
       }
-      if (st.analysisDirty) { st.analysisDirty = false; mr.currentStale = true; }
+      if (st.analysisDirty) { st.analysisDirty = false; mr.currentStale = true; mr.weakStale = true; }
       simProfiler.add('struct.events', t1);
       if (m.active) still.push(e);
     }

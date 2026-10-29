@@ -112,6 +112,14 @@ describe('earthquake → progressive collapse → debris → secondary damage', 
     // Timeline milestones of the destruction sequence.
     const kinds = new Set(c.getMilestones().map((x) => x.kind));
     for (const k of ['memberFailure', 'loadRedistribution', 'progressiveCollapse'] as const) expect(kinds.has(k)).toBe(true);
+    // Attribution (calm air): no member damage, failure or record of this run is the wind's.
+    for (const e of buildings(c)) {
+      const mm = e.modular?.structure?.model;
+      if (!mm) continue;
+      for (let i = 0; i < mm.n; i++) expect(mm.hazardName(i)).not.toBe('wind');
+      for (const r of mm.records) expect(r.hazard).toBe('earthquake');
+    }
+    expect(c.getDamageEvents().filter((x) => x.hazard === 'wind')).toEqual([]);
     c.unload();
   });
 

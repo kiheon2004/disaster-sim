@@ -231,6 +231,66 @@ describe('member demand / capacity (closed forms)', () => {
     }
   });
 
+  it('connection failure: a steel beam on simple shear tabs (η = 0.5) loses its end connections before its own capacity; it then falls with cause "connection"', () => {
+    const steel = (id: string, type: 'column' | 'beam', level: number, position: [number, number, number], size: [number, number, number]) =>
+      ({ id, type, role: 'primary' as const, level, position, size, material: 'structuralSteel' as const });
+    const d = custom([
+      { id: 'p0', type: 'foundation', role: 'foundation', level: -1, position: [-1.5, -0.3, 0], size: [1.2, 0.6, 1.2], material: 'reinforcedConcrete' },
+      { id: 'p1', type: 'foundation', role: 'foundation', level: -1, position: [1.5, -0.3, 0], size: [1.2, 0.6, 1.2], material: 'reinforcedConcrete' },
+      steel('c0', 'column', 0, [-1.5, 1.5, 0], [0.3, 3, 0.3]),
+      steel('c1', 'column', 0, [1.5, 1.5, 0], [0.3, 3, 0.3]),
+      steel('b', 'beam', 0, [0, 2.85, 0], [3, 0.3, 0.15]),
+    ]);
+    const g = buildGraph(d);
+    const b = d.members.findIndex((m) => m.id === 'b');
+    const seats: number[] = [];
+    for (let e = 0; e < g.edges; e++) if (g.eFrom[e] === b && g.eKind[e] === CK.BEAM_SEAT) seats.push(e);
+    expect(seats.length).toBe(2);
+    const cap = beamCapacity('structuralSteel', 3, 0.3, 0.15);
+    // Seat capacity = η·V_u (η = 0.5 for a simple shear tab).
+    for (const e of seats) expect(g.eCap[e]).toBeCloseTo(0.5 * cap.V, 3);
+    const m = new CollapseModel(g);
+    m.init();
+    // Static surcharge: end shear W/2 at 1.3 × the seat capacity (≥ OVERLOAD), the beam itself below its limits.
+    const W = 2 * 1.3 * g.eCap[seats[0]];
+    m.addLoad(b, W - g.weight[b], 'test');
+    expect(m.s.util[b]).toBeLessThan(OVERLOAD);
+    const r = m.s.propagate(false);
+    expect(r.failed.find((f) => f.i === b)).toBeUndefined();
+    expect(r.edges.map((x) => x.e).sort()).toEqual([...seats].sort());
+    // Through the collapse model: connections fail, then the beam (nothing else holds it).
+    const m2 = new CollapseModel(g);
+    m2.init();
+    m2.addLoad(b, W - g.weight[b], 'test');
+    runModel(m2, 3);
+    const ev = m2.records.find((x) => x.i === b);
+    expect(ev?.cause).toBe('connection');
+    expect(m2.state[b]).toBeGreaterThanOrEqual(MS.FAILED);
+    for (const e of seats) expect(m2.s.edgeAlive[e]).toBe(0);
+    // The columns did not fail: the beam's load left them.
+    for (const id of ['c0', 'c1']) expect(m2.state[d.members.findIndex((x) => x.id === id)]).toBeLessThanOrEqual(MS.SEVERE);
+  });
+
+  it('Phase 26 extension point: a material condition factor multiplies the residual strength F·(1 − 0.3·D) and can fail a member (no thermal model yet)', () => {
+    const d = portal(6);
+    const g = buildGraph(d);
+    const m = new CollapseModel(g);
+    m.init();
+    const b = d.members.findIndex((x) => x.id === 'b');
+    const u0 = m.s.util[b];
+    m.setDamage(b, 0.5, 'earthquake');
+    expect(m.s.capFactor[b]).toBeCloseTo(1 - 0.3 * 0.5, 12);
+    m.setMaterialFactor(b, 0.5, 'test');
+    expect(m.s.capFactor[b]).toBeCloseTo((1 - 0.3 * 0.5) * 0.5, 12);
+    // The damage index is untouched by the material channel (no double counting).
+    expect(m.damage[b]).toBe(0.5);
+    // Strong enough loss → the beam fails in the next round, attributed to the channel's hazard.
+    m.setMaterialFactor(b, (u0 / OVERLOAD) * 0.5, 'test');
+    runModel(m, 2);
+    expect(m.state[b]).toBeGreaterThanOrEqual(MS.FAILED);
+    expect(m.records.find((r) => r.i === b)?.hazard).toBe('test');
+  });
+
   it('member types: beams / columns are flagged in the graph', () => {
     const g = buildGraph(portal(6));
     expect(Array.from(g.type).filter((t) => t === MT_BEAM).length).toBe(1);

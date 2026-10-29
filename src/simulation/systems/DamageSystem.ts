@@ -8,6 +8,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import { pushedByBlast, pushedByImpact, pushedBySediment } from '../forces/ForceLedger';
 import type { BodyUserData } from '@/physics/PhysicsEngine';
 import type { Hazard } from '../analysis/DamageEvent';
+import { simProfiler } from '../profiling/SimProfiler';
 import { episodePeak, markRecorded, noteBodyStrike, strikeAnchored, strikeBuilding } from '../structure/secondary';
 import { HAZARDS } from '../analysis/DamageEvent';
 import { hazardOf } from './StructuralCollapseSystem';
@@ -25,6 +26,7 @@ export class DamageSystem implements SimulationSystem {
   readonly lagged = ['structure', 'damage', 'debris'] as const;
 
   update(ctx: SystemContext, dt: number) {
+    const t0 = simProfiler.now();
     for (const e of ctx.runtime.entities.values()) {
       switch (e.source.type) {
         case 'human':
@@ -46,7 +48,10 @@ export class DamageSystem implements SimulationSystem {
           break;
       }
     }
+    simProfiler.add('damage.entities', t0);
+    const t1 = simProfiler.now();
     this.processImpacts(ctx);
+    simProfiler.add('damage.impacts', t1);
   }
 
   private processImpacts(ctx: SystemContext) {

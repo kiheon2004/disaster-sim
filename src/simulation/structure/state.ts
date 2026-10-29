@@ -90,7 +90,10 @@ export function structureOf(e: RuntimeEntity, ctx: SystemContext): StructureStat
   const tProf = simProfiler.now();
   const g = graphOf(mr.design, mr.scale);
   const model = new CollapseModel(g, mr.damage);
-  model.init(bearing0(e, ctx));
+  const tb = simProfiler.now();
+  const b0 = bearing0(e, ctx);
+  simProfiler.add('struct.create.bearing', tb);
+  model.init(b0);
   simProfiler.add('struct.create', tProf);
   // Members the Phase 17 runtime already removed (absent in the original world) stay absent.
   const st: StructureState = {

@@ -81,6 +81,13 @@ export interface ModularRuntime {
   initial: BuildingAnalysis;
   current: BuildingAnalysis;
   currentStale: boolean;
+  /**
+   * Weakest story of the building as it stands (wind / governing-health path) and whether a
+   * load-bearing member failed since it was taken from the analysis. Facade parts (windows, doors,
+   * cladding, roof coverings) never change it, so their loss does not re-run the analysis.
+   */
+  weak: number;
+  weakStale: boolean;
   /** Component index of a member (facade parts), −1 for structural members. */
   comp: Int32Array;
   /** Member damage 0 … 1 (≥ 1 = failed) and failure flags. */
@@ -158,7 +165,7 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
     if (!a.supported || (a.bearing && a.utilization > 1)) pending.push(i);
   });
   return {
-    design, floors, scale, initial, current: initial, currentStale: false, comp, damage, failed, failedSet, capacity, storyMembers,
+    design, floors, scale, initial, current: initial, currentStale: false, weak: Math.min(initial.weakStory[0], initial.weakStory[1]), weakStale: false, comp, damage, failed, failedSet, capacity, storyMembers,
     storyDrift: new Float64Array(floors), storyPeak: new Float64Array(floors), storyPeakAxis: new Float64Array(2 * floors), evalPeak: new Float64Array(floors),
     unit: null, unitIndex: -1, modelK: new Float64Array(0), modelFy: new Float64Array(0),
     collapsedFrom: Infinity, reserve: strengthReserve(initial, initial), windShare: 1, pending, rev: 0, memberOfComp,
@@ -289,6 +296,7 @@ export function failMembers(e: RuntimeEntity, ctx: SystemContext, list: number[]
   st.lateralDirty = true;
   st.analysisDirty = true;
   mr.currentStale = true;
+  mr.weakStale = true;
   mr.rev++;
   e.rev++;
   activate(e, ctx);
@@ -470,8 +478,19 @@ export function syncFailed(mr: ModularRuntime) {
       mr.failed[i] = 1;
       mr.failedSet.add(mr.design.members[i].id);
       mr.damage[i] = 1;
+      if (m.g.structural[i]) mr.weakStale = true;
     }
   }
+}
+
+/** Weakest story of the building as it stands (analysis re-run only after a load-bearing member failed). */
+export function weakStoryNow(mr: ModularRuntime): number {
+  if (mr.weakStale) {
+    mr.weakStale = false;
+    const cur = analysisNow(mr);
+    mr.weak = Math.min(cur.weakStory[0], cur.weakStory[1]);
+  }
+  return mr.weak;
 }
 
 /**
@@ -502,6 +521,7 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
   st.lateralDirty = true;
   st.analysisDirty = true;
   mr.currentStale = true;
+  mr.weakStale = true;
   mr.rev++;
   e.rev++;
   activate(e, ctx);
@@ -631,12 +651,12 @@ export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, healt
   const d = 1 - health;
   // The weakest story of the building as it stands now — only when wind damage is drawn or it fails.
   if (d <= 0.12 && health > 0) return false;
-  const cur = analysisNow(mr);
-  const weak = Math.min(cur.weakStory[0], cur.weakStory[1]);
+  const weak = weakStoryNow(mr);
   if (d > 0.12 && weak < mr.collapsedFrom) {
     for (const i of mr.storyMembers[weak] ?? []) {
       if (!mr.failed[i] && d * 0.9 > mr.damage[i] + 0.02) {
-        raiseDamage(mr, i, d * 0.9, 'wind');
+        // The damage the governing health channel draws is that hazard's (Phase 22 attribution).
+        raiseDamage(mr, i, d * 0.9, governing);
         e.rev++;
       }
     }

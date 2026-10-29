@@ -129,6 +129,8 @@ export class CollapseModel {
   /** 1 = handed to the physics engine / aggregated by the adapter (not drawn by the member layer). */
   readonly external: Uint8Array;
   readonly blockOf: Int32Array;
+  /** 1 = one of the member's own load-transfer connections failed (its loss is a connection failure). */
+  readonly connLost: Uint8Array;
   readonly blocks: FallingBlock[] = [];
   readonly records: CollapseRecord[] = [];
   events: CollapseEvent[] = [];
@@ -177,6 +179,7 @@ export class CollapseModel {
     this.restOn = new Int32Array(n).fill(-1);
     this.external = new Uint8Array(n);
     this.blockOf = new Int32Array(n).fill(-1);
+    this.connLost = new Uint8Array(n);
     let total = 0, sup = 0, x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (let i = 0; i < n; i++) {
       if (g.absent[i]) { this.state[i] = MS.ABSENT; continue; }
@@ -254,7 +257,25 @@ export class CollapseModel {
     if (st > MS.SEVERE) return;
     const want = d >= SEVERE_AT ? MS.SEVERE : d >= DAMAGED_AT ? MS.DAMAGED : MS.INTACT;
     if (want > st) this.set(i, want);
-    this.s.setCapFactor(i, 1 - STRENGTH_LOSS * Math.min(1, d));
+    this.s.setCapFactor(i, (1 - STRENGTH_LOSS * Math.min(1, d)) * (this.material?.[i] ?? 1));
+  }
+
+  /**
+   * Material condition factor per member (0–1], separate from the damage index: the extension point
+   * for Phase 26 (temperature-dependent strength / stiffness loss, material degradation). It
+   * multiplies the residual-strength factor F·(1 − 0.3·D) — a different physical effect, so the two
+   * compose as a product, not as a second damage index. Not driven by anything in Phase 25
+   * (no thermal model): allocated on first use, so it costs nothing until then. A drop below the
+   * current factor is a gradual change (no dynamic increase) and is checked in the next round.
+   */
+  material?: Float64Array;
+  setMaterialFactor(i: number, f: number, hazard?: string) {
+    const m = (this.material ??= new Float64Array(this.n).fill(1));
+    const v = Math.max(1e-3, Math.min(1, f));
+    if (v === m[i] || !this.alive(i)) return;
+    if (hazard) this.causeHazard[i] = this.hz(hazard);
+    m[i] = v;
+    this.applyDamageState(i);
   }
 
   /** Raise a member's damage index (any hazard); gravity capacity follows. Returns true when it changed. */
@@ -369,7 +390,8 @@ export class CollapseModel {
     for (const l of r.lost) {
       if (!this.alive(l.i)) continue;
       const trig = l.trigger >= 0 && l.trigger !== l.i ? l.trigger : -1;
-      this.record(l.i, time, this.g.type[l.i] === MT_FOUNDATION || this.g.ground[l.i] ? 'foundation' : 'support', this.fallbackHazard(l.i), trig, 0);
+      const cause: FailCause = this.g.type[l.i] === MT_FOUNDATION || this.g.ground[l.i] ? 'foundation' : this.connLost[l.i] ? 'connection' : 'support';
+      this.record(l.i, time, cause, this.fallbackHazard(l.i), trig, 0);
       this.set(l.i, MS.FAILED);
       this.set(l.i, MS.DETACHED);
       this.damage[l.i] = 1;
@@ -393,6 +415,7 @@ export class CollapseModel {
       const root = this.root[trig] >= 0 ? this.root[trig] : trig;
       this.events.push({ kind: 'connection', e: e.e, time, u: e.u, trigger: trig, hazard: this.hazardOf[root] >= 0 ? this.hazards[this.hazardOf[root]] : '' });
       this.s.killEdge(e.e, trig);
+      this.connLost[d] = 1;
     }
     if (failed || r.edges.length) {
       // Hazard of the round: the most recent chain root involved.
