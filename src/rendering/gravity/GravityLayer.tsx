@@ -3,7 +3,8 @@
  *  - arrows: the computed g(x, t) on a 9 m grid at 2 m and 14 m above the ground — direction of the field, length
  *    0.25 m per m/s², colour |g| on the fixed magnitude legend
  *  - overlay: |g| or its downward component on the ground (fixed m/s² legends; distinct from the pressure overlays),
- *    or the structural gravity ratio of each modular building (box tint, × g₀)
+ *    or the structural gravity ratio of each modular building (box tint, × g₀), or the normal load of each dynamic body
+ *    (m·g_down above it, log kN)
  *  - sources: wireframe sphere / column of each local source in force, its strength factor as the opacity
  */
 import { useMemo } from 'react';
@@ -70,18 +71,23 @@ function GravityScene() {
   const boxGeo = useDisposable(() => new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0));
   const boxMat = useDisposable(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35, depthWrite: false }));
   const boxes = useDisposable(() => { const m = new THREE.InstancedMesh(boxGeo, boxMat, 1024); m.count = 0; m.frustumCulled = false; m.raycast = () => null; return m; }, [boxGeo, boxMat]);
+  const dotGeo = useDisposable(() => new THREE.SphereGeometry(0.45, 12, 8));
+  const dotMat = useDisposable(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }));
+  const dots = useDisposable(() => { const m = new THREE.InstancedMesh(dotGeo, dotMat, 2048); m.count = 0; m.frustumCulled = false; m.raycast = () => null; return m; }, [dotGeo, dotMat]);
   const srcGeo = useDisposable(() => new THREE.SphereGeometry(1, 24, 12));
   const colGeo = useDisposable(() => new THREE.CylinderGeometry(1, 1, 80, 32, 1, true));
   const srcMat = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#ffb35c', wireframe: true, transparent: true, opacity: 0.35, depthWrite: false }));
-  const tmp = useMemo(() => ({ m4: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), c: new THREE.Color(), g: [0, 0, 0] as [number, number, number], last: -1 }), []);
+  const tmp = useMemo(() => ({ m4: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), c: new THREE.Color(), g: [0, 0, 0] as [number, number, number], last: -1, viz: null as unknown }), []);
   const group = useMemo(() => new THREE.Group(), []);
 
   useFrame(() => {
     const f = env.gravity.field;
     const time = simulationController.getTime();
-    if (!f || (Math.abs(time - tmp.last) < REFRESH && tmp.last >= 0)) return;
-    tmp.last = time;
     const vs = useViewStore.getState().gravityViz;
+    // Refresh every REFRESH s of simulated time, and at once when the view options change (also while paused).
+    if (!f || (Math.abs(time - tmp.last) < REFRESH && tmp.last >= 0 && tmp.viz === vs)) return;
+    tmp.last = time;
+    tmp.viz = vs;
     // Arrows.
     let n = 0;
     if (vs.arrows) {
@@ -120,6 +126,23 @@ function GravityScene() {
     }
     boxes.count = b;
     boxes.instanceMatrix.needsUpdate = true;
+    // Bodies: the normal load a resting body puts on what it stands on — m·g_down (a weight, not the contact solver's force).
+    let nd = 0;
+    if (o === 'contactLoad') {
+      const rt = simulationController.getRuntime();
+      for (const e of rt?.entities.values() ?? []) {
+        if (!e.dynamic || e.body === null || nd >= 2048) continue;
+        const p = e.pose.position;
+        f.sample(p[0], p[1], p[2], tmp.g);
+        const N = (e.source.physics.mass * Math.max(0, -tmp.g[1])) / 1000;
+        tmp.m4.compose(tmp.v.set(p[0], p[1] + e.dims[1] + 0.8, p[2]), tmp.q.identity(), tmp.s.set(1, 1, 1));
+        dots.setMatrixAt(nd, tmp.m4);
+        dots.setColorAt(nd++, gravityColor('contactLoad', Math.log10(Math.max(1e-3, N)), tmp.c));
+      }
+    }
+    dots.count = nd;
+    dots.instanceMatrix.needsUpdate = true;
+    if (dots.instanceColor) dots.instanceColor.needsUpdate = true;
     if (boxes.instanceColor) boxes.instanceColor.needsUpdate = true;
     // Sources.
     group.clear();
@@ -138,6 +161,7 @@ function GravityScene() {
       <primitive object={arrows} visible={viz.arrows} />
       <mesh geometry={geo} material={mat} visible={viz.overlay === 'magnitude' || viz.overlay === 'down'} renderOrder={2} raycast={() => null} />
       <primitive object={boxes} visible={viz.overlay === 'structLoad'} />
+      <primitive object={dots} visible={viz.overlay === 'contactLoad'} />
       <primitive object={group} visible={viz.sources} />
     </group>
   );

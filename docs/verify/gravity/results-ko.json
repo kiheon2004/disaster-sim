@@ -1,0 +1,515 @@
+{
+  "lang": "ko",
+  "url": "http://localhost:4231/",
+  "results": [
+    {
+      "name": "1 gravity tool: a gravity experiment added from the Experiment tab (scenario, global, magnitude, multiple, direction, transition, profile, duration, end, add source)",
+      "ok": true,
+      "detail": [
+        "scenario",
+        "global",
+        "magnitude",
+        "ratio",
+        "dir",
+        "d0",
+        "d1",
+        "d2",
+        "transition",
+        "profile",
+        "duration",
+        "ramp",
+        "end",
+        "addSource"
+      ]
+    },
+    {
+      "name": "2 magnitude input: 4.9 m/s² stored; 80 m/s² is held at the 50 m/s² input limit (beyond it the models are out of range)",
+      "ok": true,
+      "detail": {
+        "g": 4.9,
+        "clamp2": 50
+      }
+    },
+    {
+      "name": "3 direction input: a custom vector (x, y, z) stored as given (normalized on use); the zero vector rejected with its reason",
+      "ok": true,
+      "detail": [
+        0.5,
+        -1,
+        0
+      ]
+    },
+    {
+      "name": "4 time profile: pulse shows period / width / edge fields; the path chart from the run's functions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "5 local region: a source with centre, radius, taper, shape, mode and acceleration vector",
+      "ok": true,
+      "detail": {
+        "kind": "region",
+        "center": [
+          0,
+          0,
+          0
+        ],
+        "radius": 20,
+        "edge": 4,
+        "falloff": "smooth",
+        "shape": "sphere",
+        "mode": "add",
+        "accel": [
+          0,
+          9.81,
+          0
+        ],
+        "followProfile": true
+      }
+    },
+    {
+      "name": "6 radial field: strength, reference radius, law, softening — a core stronger than 50 m/s² rejected with its reason (soften or weaken)",
+      "ok": true,
+      "detail": {
+        "kind": "radial",
+        "center": [
+          0,
+          5,
+          0
+        ],
+        "radius": 30,
+        "edge": 8,
+        "falloff": "smooth",
+        "strength": 10,
+        "r0": 5,
+        "law": "inverseSquare",
+        "softening": 3,
+        "followProfile": true
+      }
+    },
+    {
+      "name": "7 presets: 15 gravity presets listed with their assumptions; model-support badges",
+      "ok": true,
+      "detail": {
+        "pres7": 15
+      }
+    },
+    {
+      "name": "8 preview: field arrows on the grid and the two source regions (the experiment alone, at its largest departure)",
+      "ok": true,
+      "detail": {
+        "arrows": 968,
+        "srcs": 2
+      }
+    },
+    {
+      "name": "14 free fall: from 30 m the car falls ≈ ½gt² — 2 s at Earth g ≈ 19.6 m, at Moon-like g ≈ 3.2 m",
+      "ok": true,
+      "detail": {
+        "earth": 19.02323627471924,
+        "moon": 3.1414432525634766
+      }
+    },
+    {
+      "name": "9 overlay: gravity magnitude on the ground with its fixed m/s² legend (9.81 marked), arrows of the field",
+      "ok": true,
+      "detail": {
+        "leg": "중력 오버레이끄기중력 크기 |g| (m/s²)하향 성분 (m/s²)건물 구조 중력 하중 (× g₀)물체 접촉(수직) 하중 (kN)09.8130 ",
+        "arrows9": 968
+      }
+    },
+    {
+      "name": "9b contact-load overlay: each dynamic body marked by its normal load m·g_down (kN legend)",
+      "ok": true,
+      "detail": {
+        "dots9b": 3
+      }
+    },
+    {
+      "name": "10 HUD: current gravity, × g₀, regime, bodies, structures, pressure, energy / momentum; text not cut",
+      "ok": true,
+      "detail": {
+        "hud": " 중력지구 중력 · 2.0 s중력 크기9.81 m/s² · 1.00 g₀중력 벡터(0.00, -9.81, 0.00) m/s²하향 성분9.81 m/s²중력장균일 · 물체 위치 |g| 9.81–9.81영향 물체3개 중 ",
+        "clip10": []
+      }
+    },
+    {
+      "name": "11 inspector: mass (constant) vs weight (mass × local g), local vector, sources, velocity, contact; ground probe with potential",
+      "ok": true,
+      "detail": {
+        "insp": "질량1409.0 kg (중력과 무관하게 일정)국소 중력(0.00, -9.81, 0.00) m/s² · 9.81 m/s² · 1.00 g₀무게 (질량 × 국소 중력)13.82 kN · 지구에서 13.82 kN중력원전역: p1속도(0.00, 0.00, 0",
+        "probe": "지점(20.0, 1.0, 20.0)국소 중력(0.00, -9.81, 0.00) m/s² · 9.81 m/s²중력원전역: p1퍼텐셜 Φ9.8 J/"
+      }
+    },
+    {
+      "name": "16 zero gravity: the car released at 30 m does not fall (no weight, no other force); zero-gravity milestone",
+      "ok": true,
+      "detail": {
+        "y": 30,
+        "mode": "zero"
+      }
+    },
+    {
+      "name": "12 timeline: gravity start, decrease and zero-gravity milestones",
+      "ok": true,
+      "detail": [
+        "start",
+        "zeroGravity",
+        "gravityDecrease"
+      ]
+    },
+    {
+      "name": "13 results: gravity cards, CSV (field, support, ledgers, bodies, buildings, history), JSON summary; text not cut",
+      "ok": true,
+      "detail": {
+        "res": "가변 중력 중력 CSV현재 중력0.00m/s²0.00 g₀ · 무중력 · 물체 위치 0.00–0.00 m/s²동적 물체3영향 3 · 깨우기 1회",
+        "clip13": []
+      }
+    },
+    {
+      "name": "15 high gravity: 3 g₀ acting (mode high), resting bodies pressed with 3× their weight (contact thresholds raised)",
+      "ok": true,
+      "detail": {
+        "ratio": 3
+      }
+    },
+    {
+      "name": "15b low gravity: Moon-like 1.62 m/s² (0.165 g₀), mode low",
+      "ok": true,
+      "detail": {
+        "g": 1.6199999999999992
+      }
+    },
+    {
+      "name": "17 reversed gravity: loose people and cars float upward (the house stays, fixed)",
+      "ok": true,
+      "detail": {
+        "human": 15.951379776000977,
+        "car": 15.951684951782227
+      }
+    },
+    {
+      "name": "21 people: weight follows the field — reversed, they lift off the ground (mass unchanged; no physiology in this phase)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "18 sideways gravity: the parked car slides / falls along +x; HUD vector horizontal",
+      "ok": true,
+      "detail": {
+        "x": 36.63616180419922
+      }
+    },
+    {
+      "name": "19 local gravity well: both parked cars pulled toward the centre once the pull exceeds their grip (field difference through the ForceLedger), mode local",
+      "ok": true,
+      "detail": {
+        "a": 2.3748321533203125,
+        "b": -2.398841381072998
+      }
+    },
+    {
+      "name": "20 vehicles: the friction coefficient is unchanged, the normal load is not — 0.3 g sideways holds at 1 g down, slides at Moon-like g down",
+      "ok": true,
+      "detail": {
+        "earth": 0.000050902366638183594,
+        "moon": 12.353891372680664
+      }
+    },
+    {
+      "name": "22 roof snow load: snow mass × g on the roof members; the reported pressure grows with g (same mass)",
+      "ok": true,
+      "detail": {
+        "kPa": 1.510741016585479,
+        "applied": true
+      }
+    },
+    {
+      "name": "23 roof failure (R1): roof panels fail under snow × 2 g — hazard gravity, cause gravity load; the snow falls with them",
+      "ok": true,
+      "detail": {
+        "roofs": 18,
+        "ev23": [
+          "gravity/gravityLoad",
+          "gravity/gravityLoad",
+          "gravity/gravityLoad"
+        ]
+      }
+    },
+    {
+      "name": "41 original world: leaving the run leaves the demo world untouched (fingerprint)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "24 building collapse: members fail under 4 g (hazard gravity), the load redistributes, stories collapse; failure and debris-impact milestones",
+      "ok": true,
+      "detail": {
+        "failures": 60,
+        "col24": {
+          "fragments": 0,
+          "piles": 1,
+          "collapsed": 1
+        }
+      }
+    },
+    {
+      "name": "25 debris: falling blocks land as rubble piles (and fragments) — mass ledgers of the buildings closed",
+      "ok": true,
+      "detail": {
+        "fragments": 0,
+        "piles": 1,
+        "collapsed": 1
+      }
+    },
+    {
+      "name": "26 structural gravity-load overlay: buildings tinted by their gravity ratio (× g₀ legend)",
+      "ok": true,
+      "detail": "중력 오버레이끄기중력 크기 |g| (m/s²)하향 성분 (m/s²)건물 구조 중력 하중 (× g₀)물체 접촉"
+    },
+    {
+      "name": "27 flood: the water model runs before and holds without downward gravity (no fake 3D liquid; held time reported)",
+      "ok": true,
+      "detail": {
+        "held": 6.8999999999999915,
+        "s": "unsupported"
+      }
+    },
+    {
+      "name": "28 air pressure: the column mass is kept, its weight doubles at 2 g (p ≈ 2·101 kPa, modelled)",
+      "ok": true,
+      "detail": {
+        "p": 202649.99999999593,
+        "M": 413149847.0947929,
+        "M0": 413149847.09481454
+      }
+    },
+    {
+      "name": "29 thermal convection: at zero gravity natural convection is limited (no buoyant rise) — flagged in the HUD",
+      "ok": true,
+      "detail": {
+        "rigid": "full",
+        "contact": "full",
+        "vehicles": "full",
+        "people": "full",
+        "debris": "full",
+        "structure": "scaled",
+        "roofSnow": "scaled",
+        "collapse": "limited",
+        "flood": "unsupported",
+        "buoyancy": "unsupported",
+        "atmosphere": "unsupported",
+        "convection": "limited",
+        "fire": "limited",
+        "snow": "limited",
+        "precipitation": "limited",
+        "ash": "unsupported",
+        "bombs": "full",
+        "lava": "unsupported",
+        "meteor": "scaled",
+        "blast": "full",
+        "ground": "unsupported"
+      }
+    },
+    {
+      "name": "30 fire: the room fire develops under 2 g (vent inflow ∝ √g, flame height ∝ g^−⅕)",
+      "ok": true,
+      "detail": {
+        "peak": 159999.99999999322,
+        "ignited": 1,
+        "maxFlame": 0
+      }
+    },
+    {
+      "name": "31 smoke: soot produced and carried by the room exchange / venting at √(g·h·ΔT/T) — rooms tracked under the scaled buoyancy",
+      "ok": true,
+      "detail": {
+        "rooms": 2,
+        "smokeAir": 0.0023352378136346956,
+        "minVisibility": 36.915682012508555
+      }
+    },
+    {
+      "name": "32 snow: compaction under 3× the overburden weight (density rises from 150 kg/m³ faster than the 1 g rate), water ledger closed",
+      "ok": true,
+      "detail": {
+        "rho": 150.32559204101562,
+        "res": 2.3374990690809404e-14
+      }
+    },
+    {
+      "name": "33 ice: the lake freezes at Moon-like gravity (latent heat path unchanged, ledgers closed)",
+      "ok": true,
+      "detail": {
+        "ice": 1551.9219880422415
+      }
+    },
+    {
+      "name": "34 volcano: lava drive ρ·g·sinθ, bombs fly under the field vector, ash settles at Mars-like g",
+      "ok": true,
+      "detail": [
+        "material",
+        "eruptions",
+        "supplyRate",
+        "ledger",
+        "thermalVolcanic"
+      ]
+    },
+    {
+      "name": "35 meteor: the in-world arc, crater (gravity regime R ∝ g^−μ/(2+μ)) and ejecta use the Moon-like g",
+      "ok": true,
+      "detail": {
+        "R": 14.608491552796284,
+        "v": 15000.161999125208
+      }
+    },
+    {
+      "name": "36 blast: the pressure wave is unchanged by gravity (energy not altered); bodies it knocks over need less energy at low g",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "37 multi-hazard: gravity ramp + earthquake + rain on the demo block — finite state, gravity ledger finite",
+      "ok": true,
+      "detail": {
+        "fin37": 0,
+        "W": 7.251663153633461
+      }
+    },
+    {
+      "name": "38 save: the gravity experiment (staged profile, radial source) saved in schema 7",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "version": 7,
+        "spec": {
+          "event": "gravity",
+          "scenario": "well",
+          "global": false,
+          "magnitude": 9.81,
+          "direction": [
+            0,
+            -1,
+            0
+          ],
+          "transition": "vector",
+          "profile": "staged",
+          "duration": 60,
+          "stages": [
+            [
+              10,
+              0.5
+            ],
+            [
+              20,
+              1
+            ]
+          ],
+          "end": "restore",
+          "sources": [
+            {
+              "kind": "radial",
+              "center": [
+                0,
+                2,
+                0
+              ],
+              "radius": 25,
+              "edge": 8,
+              "falloff": "smooth",
+              "strength": 15,
+              "r0": 5,
+              "law": "inverseSquare",
+              "softening": 3,
+              "followProfile": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "39 load: reloaded spec identical (stages, end mode, source)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "40 reset: the field and the Rapier gravity back to the project gravity, t = 0",
+      "ok": true,
+      "detail": {
+        "field": true,
+        "t": 0,
+        "g": [
+          0,
+          -9.81,
+          0
+        ]
+      }
+    },
+    {
+      "name": "42 same conditions again (rerun after reset): identical bodies and gravity ledger",
+      "ok": true,
+      "detail": {
+        "h40a": "591|building-22.00000,0.00000,-30.000000;building-4.00000,0.",
+        "h40b": "591|building-22.00000,0.00000,-30.000000;building-4.00000,0."
+      }
+    },
+    {
+      "name": "41b original world after the pulse run: fingerprint unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "43 large town (1000 houses) under a gravity ramp to 2.5 g: every building re-loaded, interactive frame rate",
+      "ok": true,
+      "detail": {
+        "fps": 60.1,
+        "worstFrameMs": 16.8,
+        "loaded": 1000,
+        "gl43": {
+          "calls": 11,
+          "geometries": 17,
+          "textures": 3
+        },
+        "ms": 0.10000000149011612
+      }
+    },
+    {
+      "name": "44 repeated runs: heap flat over three runs",
+      "ok": true,
+      "detail": {
+        "heaps44": [
+          57.3,
+          57.8,
+          58.1
+        ]
+      }
+    },
+    {
+      "name": "45 GPU resources released: geometries back after the gravity layer / preview were shown",
+      "ok": true,
+      "detail": {
+        "geoA": 8,
+        "geoB": 8
+      }
+    },
+    {
+      "name": "whole run: no page errors, the tab alive, GPU geometries back to the start",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "geo0": 17,
+        "geo1": 8
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    29.9,
+    56.6
+  ],
+  "geometries": [
+    17,
+    8
+  ],
+  "crashed": false
+}

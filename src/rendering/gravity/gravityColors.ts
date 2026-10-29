@@ -21,12 +21,14 @@ const DOWN: [number, string][] = [[0, '#c03a9a'], [0.25, '#8a8a8a'], [0.5, '#f2f
 /** Structural gravity ratio 0 … 4 × g₀ (1 = white). */
 const RATIO: [number, string][] = [[0, '#3a6fc4'], [0.25, '#f2f2ea'], [0.5, '#f2c14a'], [1, '#b8321a']];
 
-export type GravityOverlay = 'off' | 'magnitude' | 'down' | 'structLoad';
-export const GRAVITY_OVERLAYS: readonly GravityOverlay[] = ['off', 'magnitude', 'down', 'structLoad'];
+export type GravityOverlay = 'off' | 'magnitude' | 'down' | 'structLoad' | 'contactLoad';
+export const GRAVITY_OVERLAYS: readonly GravityOverlay[] = ['off', 'magnitude', 'down', 'structLoad', 'contactLoad'];
 const R: Record<Exclude<GravityOverlay, 'off'>, { s: Stops; css: [number, string][]; min: number; max: number; labels: string[] }> = {
   magnitude: { s: ramp(MAG), css: MAG, min: 0, max: 30, labels: ['0', '9.81', '30 m/s²'] },
   down: { s: ramp(DOWN), css: DOWN, min: -10, max: 30, labels: ['−10', '0', '9.81', '30 m/s²'] },
   structLoad: { s: ramp(RATIO), css: RATIO, min: 0, max: 4, labels: ['0', '1', '2', '4 × g₀'] },
+  /** Resting normal load of a body: its weight along the downward component, log₁₀ of kN (0.1 … 100 kN). */
+  contactLoad: { s: ramp(MAG), css: MAG, min: -1, max: 2, labels: ['0.1', '1', '10', '100 kN'] },
 };
 
 export function gravityColor(o: Exclude<GravityOverlay, 'off'>, v: number, out: THREE.Color): THREE.Color {

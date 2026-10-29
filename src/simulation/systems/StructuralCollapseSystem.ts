@@ -151,6 +151,8 @@ export class StructuralCollapseSystem implements SimulationSystem {
           break;
         case 'impact': {
           const hz = hazardOf(ev.hazard);
+          // Phase 31: the first falling-block impact of a gravity-driven collapse is a gravity milestone.
+          if (hz === 'gravity') ctx.milestone?.({ time: ev.time, kind: 'gravityDebrisImpact', hazard: hz, subject: 'gravity', label: { key: 'ms.gravity.debris', params: { id: e.id } } }, 'gravity:debris');
           const c = this.centre(e, st, ev.receivers[0]);
           if (!ev.arrested) {
             ctx.milestone?.({ time: ev.time, kind: 'progressiveCollapse', hazard: hz, subject: 'building', label: { key: 'milestone.p25.progressive', params: { hazard: hz } } }, `p25:progressive:${e.id}`);
