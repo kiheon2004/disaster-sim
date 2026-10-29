@@ -70,7 +70,7 @@ const SCENES: Scene[] = [
   { name: 'houses100 + earthquake 0.9 g', doc: () => world(houses(100)), events: () => [quake(0.9)], seconds: 12 },
   { name: 'houses500 + earthquake 0.9 g', doc: () => world(houses(500)), events: () => [quake(0.9)], seconds: 12 },
   { name: 'houses1000 + earthquake 0.9 g', doc: () => world(houses(1000)), events: () => [quake(0.9)], seconds: 12 },
-  { name: 'houses1000 + earthquake 1.3 g (collapses)', doc: () => world(houses(1000)), events: () => [quake(1.3)], seconds: 12 },
+  { name: 'houses1000 + earthquake 1.3 g (facade losses)', doc: () => world(houses(1000)), events: () => [quake(1.3)], seconds: 12 },
   { name: 'houses1000 + blast 1 GJ (Phase 24 scene)', doc: () => world(houses(1000)), events: () => [blast({ energy: 1e9 })], seconds: 8 },
 ];
 

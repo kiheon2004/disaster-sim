@@ -133,6 +133,8 @@ export class CollapseModel {
   readonly connLost: Uint8Array;
   readonly blocks: FallingBlock[] = [];
   readonly records: CollapseRecord[] = [];
+  /** Records of structural failures (cause other than 'facade'; summaries without a scan). */
+  structuralFailures = 0;
   events: CollapseEvent[] = [];
   readonly piles: RubblePile[] = [];
   readonly ledger: MassLedger;
@@ -298,6 +300,7 @@ export class CollapseModel {
     this.hazardOf[i] = h;
     const rec: CollapseRecord = { seq: this.seq++, i, time, round: trigger >= 0 ? this.round : 0, cause, hazard: this.hazards[h] ?? '', trigger, root: r, depth: this.depth[i], u };
     this.records.push(rec);
+    if (cause !== 'facade') this.structuralFailures++;
     this.events.push({ kind: 'fail', rec });
     return rec;
   }

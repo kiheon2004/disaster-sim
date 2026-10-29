@@ -109,7 +109,7 @@ async function simRun(name) {
     const gl = window.__r3f.get().gl;
     const S = ds.sim.getRuntime()?.structures;
     let failed = 0;
-    for (const e of S?.all ?? []) failed += e.modular.structure.model.records.length;
+    for (const e of S?.all ?? []) failed += e.modular.structure.model.records.filter((r) => r.cause !== 'facade').length;
     return {
       simTime: +ds.sim.getTime().toFixed(2),
       tickMs: +(prof.tickMs ?? 0).toFixed(2),

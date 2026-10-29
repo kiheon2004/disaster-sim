@@ -82,6 +82,8 @@ export class StructuralSolver {
   readonly extra: Float64Array;
   readonly share: Float64Array;
   readonly edgeAlive: Uint8Array;
+  /** Connections broken so far (summaries without a scan). */
+  edgesFailed = 0;
   /** Ground support 0–1 of ground-bearing members (contact × explicit support factor). */
   readonly groundFactor: Float32Array;
   /** Residual capacity factor (damage) per member. */
@@ -199,6 +201,7 @@ export class StructuralSolver {
   killEdge(e: number, origin = this.g.eFrom[e]) {
     if (!this.edgeAlive[e]) return;
     this.edgeAlive[e] = 0;
+    this.edgesFailed++;
     const d = this.g.eFrom[e];
     if (!this.alive[d]) return;
     this.mark(d, origin);

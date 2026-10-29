@@ -732,9 +732,11 @@ export class SimulationController {
       else if (lvl === 'local') out.local++;
       else if (lvl === 'partial') out.partial++;
       else if (lvl === 'global') out.global++;
-      for (const r of m.records) if (r.cause !== 'facade') out.failedMembers++;
-      for (let k = 0; k < m.s.edgeAlive.length; k++) if (!m.s.edgeAlive[k]) out.connectionsFailed++;
-      for (const a of Object.keys(out.mass) as (keyof StructureLive['mass'])[]) out.mass[a] += m.ledger.mass[a];
+      out.failedMembers += m.structuralFailures;
+      out.connectionsFailed += m.s.edgesFailed;
+      const M = m.ledger.mass, o = out.mass;
+      o.structure += M.structure; o.falling += M.falling; o.resting += M.resting; o.bodies += M.bodies;
+      o.rubble += M.rubble; o.fines += M.fines; o.left += M.left; o.unresolved += M.unresolved;
       out.residual += m.ledger.residual();
     }
     return out;
