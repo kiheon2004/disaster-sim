@@ -103,6 +103,12 @@ const SCENARIOS = {
     ds.world.getState().applyEdit({ add });
     ds.actions.addPhenomenon('impact', { event: 'impact', target: [6, 6], material: 'stony', diameter: 1.2, speed: 8000, angle: 70, azimuth: 45, entry: 'direct', airBlast: true });
   },
+  // Phase 32.1: celestial experiments on their demo worlds (captures, uplift fragments, a growing source with test
+  // particles, the accretion disc) — Rapier bodies removed by capture, fragment bodies, particle buffers, overlays.
+  celestialCapture: () => window.__ds.actions.loadCelestialDemo('capture'),
+  celestialTidal: () => window.__ds.actions.loadCelestialDemo('tidalFailure'),
+  celestialGrowing: () => window.__ds.actions.loadCelestialDemo('growing'),
+  celestialAccretion: () => window.__ds.actions.loadCelestialDemo('accretion'),
   allHazards: () => {
     const ds = window.__ds;
     ds.world.getState().replaceDocument(ds.blueprintLib.buildTemplate('mountainVillage', 3));
@@ -122,7 +128,7 @@ const names = process.env.STRESS_ONLY ? process.env.STRESS_ONLY.split(',') : Obj
 for (let c = 1; c <= CYCLES && !crashed; c++) {
   const name = names[(c - 1) % names.length];
   try {
-    await ev((src) => { window.__ds.actions.newProject(); (0, eval)(`(${src})`)(); }, SCENARIOS[name].toString());
+    await ev((src) => { window.__ds.actions.newProject(); return (0, eval)(`(${src})`)(); }, SCENARIOS[name].toString());
     await ev(() => window.__ds.actions.runExperiment());
     await page.waitForFunction(() => window.__ds.sim.isLoaded() && window.__ds.simStore.getState().status === 'running', { timeout: 60_000 });
     await runTo(15);
