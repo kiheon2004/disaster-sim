@@ -15,6 +15,7 @@ import { DeformationLiveSection, DeformationProbeSection } from './DeformationIn
 import { GroundObjectSection, GroundProbeSection, ImpactObjectSection } from './GroundInspector';
 import { BlastObjectSection, BlastProbeSection } from './BlastInspector';
 import { ThermalObjectSection, ThermalProbeSection } from './ThermalInspector';
+import { FireObjectSection } from './FireInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
 import { MemberInspector } from '@/ui/Building/MemberInspector';
@@ -54,6 +55,7 @@ export function InspectorPanel() {
           {inSim && <ImpactObjectSection id={obj.id} />}
           {inSim && <BlastObjectSection id={obj.id} />}
           {inSim && <ThermalObjectSection id={obj.id} />}
+          {inSim && <FireObjectSection id={obj.id} />}
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>

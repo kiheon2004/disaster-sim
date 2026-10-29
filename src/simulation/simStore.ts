@@ -161,6 +161,38 @@ export interface StructureLive {
   /** Simulation cost of the engine (ms per step, last profiled). */
 }
 
+/** Live fire summary (Phase 27) for the HUD, results and verification. Energies J, powers W, masses kg. */
+export interface FireLive {
+  hrr: number;
+  peakHrr: number;
+  peakTime: number;
+  items: number;
+  burningItems: number;
+  burningObjects: number;
+  ignitedObjects: number;
+  burnedOutObjects: number;
+  extinguishedItems: number;
+  rooms: number;
+  roomsBurning: number;
+  flashovers: number;
+  ventLimited: number;
+  maxRoomT: number;
+  maxFlame: number;
+  ledger: ReturnType<import('@/fire/ledger').FireLedger['snapshot']>;
+  smokeAir: number;
+  minVisibility: number;
+  charredMembers: number;
+  fireFailures: number;
+  windowsBroken: number;
+  treesBurned: number;
+  ignitions: { id: string; name: string; start: number; done: boolean; lit: number; reason: string | null }[];
+  roomList: { building: string; story: number; T: number; o2: number; soot: number; eps: number; Ao: number; hrr: number; hrrExt: number; flashover: number; burning: number; ventLimited: boolean; open: boolean }[];
+  history: number[];
+  settings: import('@/fire/types').FireSettings;
+  ms: number;
+  msTotal: number;
+}
+
 /** Live thermal summary (Phase 26) for the HUD, results and verification. Temperatures in K. */
 export interface ThermalLive {
   ambient: number;
@@ -177,6 +209,8 @@ export interface ThermalLive {
   boundarySupply: number;
   impactDeposit: number;
   lost: number;
+  /** Heat of combustion (Phase 27, J). */
+  combustion: number;
   losses: import('@/thermal/ledger').ThermalLosses;
   transfers: import('@/thermal/ledger').ThermalTransfers;
   internal: number;
@@ -275,6 +309,7 @@ export interface SimState {
   blasts: BlastLive[] | null;
   structure: StructureLive | null;
   thermal: ThermalLive | null;
+  fire: FireLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -311,6 +346,7 @@ export const useSimStore = create<SimState>((set) => ({
   blasts: null,
   structure: null,
   thermal: null,
+  fire: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

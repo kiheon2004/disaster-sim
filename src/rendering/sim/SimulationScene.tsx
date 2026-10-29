@@ -24,6 +24,7 @@ import { GroundOverlay } from '../ground/GroundOverlay';
 import { ImpactLayer } from '../impact/ImpactLayer';
 import { BlastLayer } from '../blast/BlastLayer';
 import { ThermalLayer } from '../thermal/ThermalLayer';
+import { FireLayer } from '../fire/FireLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
@@ -88,6 +89,7 @@ export function SimulationScene() {
       <ImpactLayer />
       <BlastLayer />
       <ThermalLayer />
+      <FireLayer />
       <ShaderWarmup />
       <SceneCompile version={version} />
       <DeformationPreview />

@@ -49,6 +49,8 @@ import { MS, OVERLOAD } from '@/structure/types';
 import { hashString } from '@/core/math';
 import { useViewStore, type StructureColorMode } from '../viewStore';
 import type { ThermalRuntime } from '@/simulation/thermal/runtime';
+import type { FireRuntime } from '@/simulation/fire/runtime';
+import { FS, isBurning } from '@/fire/FireWorld';
 import { factorColor, temperatureColor, utilColor } from '../thermal/thermalColors';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
@@ -59,6 +61,11 @@ const DEMAND_MID = new THREE.Color('#f2c94c');
 const FAILED_RED = new THREE.Color('#e0443a');
 const SEVERE_ORANGE = new THREE.Color('#f08a24');
 const DEMAND_NONE = new THREE.Color('#9aa1a8');
+/** Fire looks (Phase 27, render-only): charcoal, glowing burning surface, scorched (heated) wood. */
+const CHAR = new THREE.Color('#231d19');
+const BURNING = new THREE.Color('#ff5a1f');
+const SCORCH = new THREE.Color('#6b4a2c');
+const BURNED_CROWN = new THREE.Color('#2c2420');
 const SEQ_EARLY = new THREE.Color('#3a7bd5');
 const LOD_HYST = 6;
 /** Beyond this distance visual-only animation is refreshed every ANIM_STRIDE frames. */
@@ -121,6 +128,8 @@ interface EntityView {
   groundKey?: number;
   cracksShown?: number;
   tint?: number;
+  /** Fire: burned-crown darkening last applied (0–1, quantized). */
+  burnedLook?: number;
   /** Flood: wetness tint last applied (0 = dry; quantized). */
   wet?: number;
   /** Modular building (Phase 17): its member instances and member → component index. */
@@ -553,7 +562,40 @@ export class SimRenderAdapter {
   thermal: (() => ThermalRuntime | null) | null = null;
   private thermalScale = 300;
 
-  private static readonly THERMAL_MODES = new Set<StructureColorMode>(['temperature', 'thermalStress', 'strength']);
+  private static readonly THERMAL_MODES = new Set<StructureColorMode>(['temperature', 'thermalStress', 'strength', 'fire']);
+  /** Fire state of the run (Phase 27): charred / burning members in every view, the fire color mode. */
+  fire: (() => FireRuntime | null) | null = null;
+
+  /**
+   * Fire look of the members (render-only, from the computed fuel state): burning → glowing orange
+   * by the involved share, charred → charcoal by the charred share of the section, burned out →
+   * charcoal; `full` (the 'fire' color mode) also greys non-fuel members and shows heated ones.
+   */
+  private fireColor(v: EntityView, full: boolean): ((i: number, out: THREE.Color) => boolean) | undefined {
+    const fr = this.fire?.();
+    if (!fr) return full ? (_i, out) => { out.copy(DEMAND_NONE); return true; } : undefined;
+    const items = fr.itemsByMember(v.e.id);
+    if (!items && !full) return undefined;
+    const fw = fr.fw;
+    return (i, out) => {
+      const k = items?.get(i);
+      if (k === undefined) {
+        if (!full) return false;
+        out.copy(DEMAND_NONE);
+        return true;
+      }
+      const st = fw.state[k];
+      const thick = Math.max(1e-3, fw.volume[k] / Math.max(1e-6, fw.area[k]));
+      const charred = Math.min(1, fw.char[k] / thick);
+      if (st === FS.burnedOut) { out.copy(CHAR); return true; }
+      if (isBurning(st)) { out.copy(CHAR).lerp(BURNING, 0.25 + 0.45 * Math.min(1, fw.inv[k])); return true; }
+      if (charred > 0.002) { out.copy(SCORCH).lerp(CHAR, Math.min(1, 0.4 + charred)); return true; }
+      if (!full) return false;
+      if (st >= FS.heating) { out.copy(DEMAND_NONE).lerp(SCORCH, st === FS.pyrolysis ? 0.8 : 0.4); return true; }
+      out.copy(DEMAND_NONE).lerp(WHITE, 0.2);
+      return true;
+    };
+  }
 
   /** Member colors from the computed thermal state (render-only): temperature, thermal stress, strength. */
   private thermalColor(v: EntityView, mode: StructureColorMode): ((i: number, out: THREE.Color) => boolean) | undefined {
@@ -590,7 +632,8 @@ export class SimRenderAdapter {
    */
   private structureColor(v: EntityView): ((i: number, out: THREE.Color) => boolean) | undefined {
     const mode = this.colorMode;
-    if (mode === 'normal') return undefined;
+    if (mode === 'normal') return this.fireColor(v, false);
+    if (mode === 'fire') return this.fireColor(v, true);
     if (SimRenderAdapter.THERMAL_MODES.has(mode)) return this.thermalColor(v, mode);
     const mr = v.e.modular;
     const model = mr?.structure?.model;
@@ -645,13 +688,16 @@ export class SimRenderAdapter {
     this.frame++;
     const vs = useViewStore.getState();
     const mode = vs.structureViz.color;
-    // Thermal member colors follow the changing temperatures: refreshed every 15 frames (Phase 26).
-    const thermalRefresh = SimRenderAdapter.THERMAL_MODES.has(mode) && this.frame % 15 === 0;
+    // Thermal member colors follow the changing temperatures: refreshed every 15 frames (Phase 26);
+    // with a fire, the charred / burning look of every view too (Phase 27).
+    const fireNow = this.fire?.() ?? null;
+    const thermalRefresh = (SimRenderAdapter.THERMAL_MODES.has(mode) || fireNow !== null) && this.frame % 15 === 0;
     if (mode !== this.colorMode || thermalRefresh || vs.thermalViz.scale !== this.thermalScale) {
       this.colorMode = mode;
       this.thermalScale = vs.thermalViz.scale;
       const rt = this.thermal?.();
-      if (this.memberLayer) for (const v of this.views) if (v.members && (!thermalRefresh || rt?.entity(v.e.id)?.active)) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
+      if (this.memberLayer) for (const v of this.views) if (v.members && (!thermalRefresh || rt?.entity(v.e.id)?.active || (fireNow && fireNow.itemsByMember(v.e.id)))) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
+      if (fireNow && thermalRefresh) this.burnedCrowns();
     }
     camera.getWorldPosition(this.camPos);
     // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).
@@ -675,6 +721,18 @@ export class SimRenderAdapter {
     if (cracksDirty) {
       this.crackMesh.instanceMatrix.needsUpdate = true;
       for (const kind of FACADE_KINDS) this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /** Burned crowns (Phase 27): the canopy darkens toward charcoal by the share burned (quantized). */
+  private burnedCrowns() {
+    for (const v of this.views) {
+      if (v.type !== 'tree') continue;
+      const b = Math.round(Math.min(1, v.e.visual.burned ?? 0) * 10) / 10;
+      if (b === (v.burnedLook ?? 0)) continue;
+      v.burnedLook = b;
+      cTint.copy(WHITE).lerp(BURNED_CROWN, b);
+      for (const part of v.parts) if (part.role === 'canopy') part.batch.mesh.setColorAt(part.id, cTint);
     }
   }
 
@@ -864,7 +922,8 @@ export class SimRenderAdapter {
         // (A standing tree follows deforming ground through its pose, Phase 21; else its rest pose.)
         else this.compose(mRoot, this.shaken(e, e.ground ? e.pose.position : e.initialPose.position), this.swayed(e, e.visual.swayAngle, e.ground ? e.pose.quaternion : e.initialPose.quaternion), v.scale);
         if (animate) {
-          const s = 1 - 0.38 * e.visual.foliageLoss;
+          // A burned crown (Phase 27: share of its fine fuel consumed) shrinks to its bare branches.
+          const s = 1 - Math.max(0.38 * e.visual.foliageLoss, 0.8 * (e.visual.burned ?? 0));
           const ph = (e.source.seed % 1000) * 0.37;
           const k = v.far ? 0 : storm;
           qB.setFromEuler(euler.set(Math.sin(elapsed * 6.3 + ph) * 0.025 * k, 0, Math.sin(elapsed * 7.9 + ph * 1.3) * 0.03 * k));

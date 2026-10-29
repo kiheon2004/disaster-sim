@@ -9,6 +9,8 @@ import { ARRIVAL_GRADIENT, cssLogGradient, IMPULSE_STOPS, PRESSURE_STOPS } from 
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { FACTOR_GRADIENT, TEMPERATURE_GRADIENT, THERMAL_SCALES, UTIL_GRADIENT } from '@/rendering/thermal/thermalColors';
 import { useSimStore } from '@/simulation/simStore';
+import { FUEL_GRADIENT, HRR_GRADIENT, ROOM_COLORS, STATE_COLORS, VISIBILITY_GRADIENT } from '@/rendering/fire/fireColors';
+import { FIRE_STATES } from '@/fire/FireWorld';
 import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
 import { cssGradient, DEPTH_MAX, DEPTH_STOPS, SPEED_MAX, SPEED_STOPS } from '@/rendering/sim/water/waterColors';
@@ -279,6 +281,7 @@ export function OverlayToggles() {
         </>
       )}
       <ThermalToggles />
+      <FireToggles />
       <StructureToggles />
     </div>
   );
@@ -324,6 +327,58 @@ function StructureToggles() {
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.struct.note')}</span>
       </div>
     </>
+  );
+}
+
+/** Fire views (Phase 27): shown once the combustion model runs. Visual effects are labelled as such. */
+function FireToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.fire);
+  const hasModular = useSimStore((s) => (s.structure?.modular ?? 0) > 0);
+  const viz = useViewStore((s) => s.fireViz);
+  const color = useViewStore((s) => s.structureViz.color);
+  const set = useViewStore.getState().setFireViz;
+  if (!live) return null;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#ff8a3d', marginTop: 2 }}>{t('overlay.fire')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="fire-overlay">
+        <Toggle checked={viz.flames} onChange={(b) => set({ flames: b })} label={t('overlay.fire.flames')} />
+        <Toggle checked={viz.smoke} onChange={(b) => set({ smoke: b })} label={t('overlay.fire.smoke')} />
+        <Toggle checked={viz.glow} onChange={(b) => set({ glow: b })} label={t('overlay.fire.glow')} />
+        <Toggle checked={viz.embers} onChange={(b) => set({ embers: b })} label={t('overlay.fire.embers')} />
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.fire.overlay')}</span>
+        <Segmented size="small" value={viz.overlay} onChange={(o) => set({ overlay: o })} ariaLabel={t('overlay.fire.overlay')}
+          options={(['off', 'state', 'fuel', 'hrr', 'smoke', 'rooms'] as const).map((o) => ({ value: o, label: t(`overlay.fire.o.${o}`), title: t(`overlay.fire.ot.${o}`) }))} />
+        {viz.overlay === 'state' && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', fontSize: 10, color: 'var(--text-2)' }} data-testid="fire-legend">
+            {FIRE_STATES.map((st, k) => <span key={st}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 4, background: STATE_COLORS[k], marginRight: 3 }} />{t(`fire.state.${st}`)}</span>)}
+          </div>
+        )}
+        {viz.overlay === 'fuel' && <Legend gradient={FUEL_GRADIENT} labels={['0 %', '50 %', '100 %']} note={t('overlay.fire.ot.fuel')} />}
+        {viz.overlay === 'hrr' && <Legend gradient={HRR_GRADIENT} labels={['10 kW', '1 MW', '100 MW']} note={t('overlay.fire.ot.hrr')} />}
+        {viz.overlay === 'smoke' && <Legend gradient={VISIBILITY_GRADIENT} labels={['≤ 1 m', '5 m', '≥ 30 m']} note={t('overlay.fire.ot.smoke')} />}
+        {viz.overlay === 'rooms' && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 8px', fontSize: 10, color: 'var(--text-2)' }} data-testid="fire-legend">
+            {(Object.keys(ROOM_COLORS) as (keyof typeof ROOM_COLORS)[]).map((r) => <span key={r}><span style={{ display: 'inline-block', width: 8, height: 8, background: ROOM_COLORS[r], marginRight: 3 }} />{t(`overlay.fire.room.${r}`)}</span>)}
+          </div>
+        )}
+        {hasModular && (
+          <Toggle checked={color === 'fire'} onChange={(b) => useViewStore.getState().setStructureViz({ color: b ? 'fire' : 'normal' })} label={t('overlay.fire.members')} />
+        )}
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.fire.note')}</span>
+      </div>
+    </>
+  );
+}
+
+function Legend({ gradient, labels, note }: { gradient: string; labels: string[]; note: string }) {
+  return (
+    <div data-testid="fire-legend">
+      <div style={{ height: 6, borderRadius: 3, background: gradient }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>{labels.map((l) => <span key={l}>{l}</span>)}</div>
+      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{note}</span>
+    </div>
   );
 }
 

@@ -89,7 +89,9 @@ export const FRONT_GLOWS = [1, 3] as const;
  */
 export type StructureColorMode = 'normal' | 'demand' | 'failure' | 'sequence'
   // Phase 26: member temperature (fixed °C scale), restrained thermal-stress utilization, strength factor.
-  | 'temperature' | 'thermalStress' | 'strength';
+  | 'temperature' | 'thermalStress' | 'strength'
+  // Phase 27: fire state of the members (burning / charred share / burned out / heated, non-fuel grey).
+  | 'fire';
 export interface StructureViz {
   color: StructureColorMode;
   loadPath: boolean;
@@ -119,6 +121,24 @@ export interface ThermalViz {
   isotherms: boolean;
   objects: boolean;
   glow: boolean;
+}
+
+/**
+ * Fire views (Phase 27, render-only — never read by the simulation):
+ *  - flames: drawn at the computed flame of every burning object / room opening (Heskestad height,
+ *    tilt in the wind); their flicker is visual only; glow: a visual light pool under large flames;
+ *  - smoke: drawn from the computed soot of the air-layer columns and the rooms (density from the
+ *    extinction coefficient); embers: visual-only sparks (no firebrand ignition is computed);
+ *  - overlay: fire state of the fuel objects, remaining fuel, heat release, smoke visibility, or the
+ *    fire state of the building rooms.
+ */
+export type FireOverlay = 'off' | 'state' | 'fuel' | 'hrr' | 'smoke' | 'rooms';
+export interface FireViz {
+  flames: boolean;
+  glow: boolean;
+  smoke: boolean;
+  embers: boolean;
+  overlay: FireOverlay;
 }
 
 export interface GroundPick {
@@ -183,6 +203,8 @@ interface ViewState {
   setStructureViz: (patch: Partial<StructureViz>) => void;
   thermalViz: ThermalViz;
   setThermalViz: (patch: Partial<ThermalViz>) => void;
+  fireViz: FireViz;
+  setFireViz: (patch: Partial<FireViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -235,6 +257,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setStructureViz: (patch) => set((s) => ({ structureViz: { ...s.structureViz, ...patch } })),
   thermalViz: { field: 'surface', scale: 300, unit: 'C', vectors: false, isotherms: true, objects: true, glow: false },
   setThermalViz: (patch) => set((s) => ({ thermalViz: { ...s.thermalViz, ...patch } })),
+  fireViz: { flames: true, glow: true, smoke: true, embers: true, overlay: 'off' },
+  setFireViz: (patch) => set((s) => ({ fireViz: { ...s.fireViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

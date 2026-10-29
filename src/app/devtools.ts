@@ -1,4 +1,7 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
+import { FIRE_PRESETS } from '@/fire/presets';
+import { fireOutlook } from '@/fire/outlook';
+import { defaultFireSettings, type FireSpec } from '@/fire/types';
 import * as THREE from 'three';
 import { useWorldStore } from '@/world/worldStore';
 import { landslideOutlook, sinkholeOutlook } from '@/phenomena/groundDefinitions';
@@ -159,6 +162,12 @@ export function installDevtools() {
     thermalLib: {
       rt: () => simulationController.getEnvironment().thermal.rt,
       outlook: (spec: HeatSourceSpec) => { const d = useWorldStore.getState().doc; return thermalOutlook(spec, d.terrain, d.settings.simulation.thermal?.ambient, d.objects); },
+    },
+    /** Phase 27 fire (benchmarks / browser verification): the run's fire state, presets and the preview outlook. */
+    fireLib: {
+      rt: () => simulationController.getEnvironment().fire.rt,
+      presets: FIRE_PRESETS,
+      outlook: (spec: FireSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return fireOutlook(spec, d.objects, (x, z) => s.sampleHeight(x, z), { ...defaultFireSettings(), ...(d.settings.simulation.fire ?? {}) }); },
     },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {

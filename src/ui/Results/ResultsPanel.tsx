@@ -1,5 +1,7 @@
 import { energyText } from '@/thermal/units';
 import { THERMAL_MATERIAL_IDS } from '@/thermal/materials';
+import { FIRE_STATES } from '@/fire/FireWorld';
+import { FUEL_IDS } from '@/fire/materials';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocale, useT, type MessageKey, type TFunction } from '@/i18n/i18n';
 import type { ObjectType } from '@/core/types';
@@ -113,6 +115,7 @@ function ResultsDialog() {
     metrics, seismicSeries: series ?? undefined, floodSeries: floodSeries ?? undefined, events,
     structure: useSimStore.getState().structure ?? undefined, collapseSequences: collapseSequences(),
     thermal: useSimStore.getState().thermal ?? undefined, thermalMembers: thermalMembers(),
+    fire: useSimStore.getState().fire ?? undefined, fireItems: fireItems(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -141,6 +144,7 @@ function ResultsDialog() {
           {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
           <ThermalSummary t={t} name={name} />
+          <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
           {m ? (
             <div className={styles.cards}>
@@ -550,13 +554,69 @@ function thermalMembers() {
   return out;
 }
 
+/** Every fuel item of the run (Phase 27): owner, kind, material, state, fuel, energy, peak heat release, char, ignition. */
+function fireItems() {
+  const fr = simulationController.getEnvironment().fire.rt;
+  if (!fr) return [];
+  const fw = fr.fw;
+  const kinds = ['member', 'foliage', 'trunk', 'contents', 'heap'];
+  const out: { object: string; kind: string; member: string; material: string; state: string; fuel0_kg: number; fuel_kg: number; released_MJ: number; peakHrr_kW: number; char_mm: number; ignited_s: number | null; cause: string }[] = [];
+  for (let i = 0; i < fw.n; i++) {
+    if (fw.m0[i] <= 0) continue;
+    const bt = fw.kind[i] === 0 ? fr.trt.buildings[fw.ref[i]] : null;
+    out.push({
+      object: fr.owner[i], kind: kinds[fw.kind[i]] ?? '', member: bt ? bt.e.modular!.design.members[fw.sub[i]]?.id ?? String(fw.sub[i]) : fw.kind[i] === 3 ? `story ${fw.sub[i] + 1}` : '',
+      material: FUEL_IDS[fw.mat[i]], state: FIRE_STATES[fw.state[i]], fuel0_kg: +fw.m0[i].toFixed(3), fuel_kg: +fw.m[i].toFixed(3), released_MJ: +(fw.E[i] / 1e6).toFixed(3),
+      peakHrr_kW: +(fw.peak[i] / 1e3).toFixed(2), char_mm: +(fw.char[i] * 1000).toFixed(2), ignited_s: Number.isNaN(fw.tIgn[i]) ? null : +fw.tIgn[i].toFixed(2), cause: fr.cause[i],
+    });
+  }
+  return out;
+}
+
+function FireSummary({ t, name }: { t: TFunction; name: string }) {
+  const s = useSimStore((x) => x.fire);
+  if (!s) return null;
+  const L = s.ledger;
+  const exportCsv = () => {
+    const ledger = Object.entries(L).map(([k, v]) => `${k},${v}`);
+    const items = fireItems();
+    const head = 'object,kind,member,material,state,fuel0_kg,fuel_kg,released_MJ,peakHrr_kW,char_mm,ignited_s,cause';
+    const rows = items.map((r) => [r.object, r.kind, r.member, r.material, r.state, r.fuel0_kg, r.fuel_kg, r.released_MJ, r.peakHrr_kW, r.char_mm, r.ignited_s ?? '', r.cause].join(','));
+    const rooms = s.roomList.map((r) => [r.building, r.story + 1, (r.T - 273.15).toFixed(1), (r.o2 * 100).toFixed(2), (r.soot * 1000).toFixed(3), r.Ao.toFixed(2), (r.hrr / 1e3).toFixed(1), (r.hrrExt / 1e3).toFixed(1), Number.isNaN(r.flashover) ? '' : r.flashover.toFixed(1), r.open ? 1 : 0].join(','));
+    download(`${name || 'simulation'}-fire.csv`, [
+      '# fire ledgers (kg, J)', 'quantity,value', ...ledger, '',
+      '# fuel items', head, ...rows, '',
+      '# rooms', 'building,story,T_C,O2_mass_pct,soot_g_m3,openings_m2,hrr_inside_kW,hrr_outside_kW,flashover_s,open', ...rooms,
+    ].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="fire-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.fire.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="fire-csv"><Icon name="save" size={13} /> {t('results.fire.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.fire.objects')} value={String(s.ignitedObjects)} sub={t('results.fire.objectsSub', { b: s.burningObjects, o: s.burnedOutObjects })} />
+        <Card label={t('results.fire.consumed')} value={fmt(L.fuelConsumed, 0)} unit="kg" sub={t('results.fire.consumedSub', { pct: fmt(L.fuelRegistered > 0 ? (100 * L.fuelConsumed) / L.fuelRegistered : 0, 1) })} />
+        <Card label={t('results.fire.released')} value={energyText(L.released)} sub={t('results.fire.releasedSub', { r: energyText(L.releasedRooms), o: energyText(L.releasedOutdoor), e: energyText(L.releasedExternal) })} />
+        <Card label={t('results.fire.peak')} value={(s.peakHrr / 1e6).toFixed(2)} unit="MW" sub={t('results.fire.peakSub', { t: fmt(s.peakTime, 0) })} />
+        <Card label={t('results.fire.roomT')} value={fmt(s.maxRoomT - 273.15, 0)} unit="°C" sub={t('results.fire.roomsSub', { f: s.flashovers, v: s.ventLimited })} />
+        <Card label={t('results.fire.smoke')} value={fmt(L.smokeProduced, 1)} unit="kg" sub={Number.isFinite(s.minVisibility) ? t('results.fire.smokeSub', { S: fmt(s.minVisibility, 1) }) : t('results.fire.smokeClear')} />
+        <Card label={t('results.fire.structure')} value={String(s.fireFailures)} sub={t('results.fire.structureSub', { c: s.charredMembers, w: s.windowsBroken, tr: s.treesBurned })} />
+        <Card label={t('results.fire.residual')} value={L.chemResidual.toExponential(1)} unit="J" sub={t('results.fire.residualSub', { f: L.fuelResidual.toExponential(1), s: L.smokeResidual.toExponential(1) })} />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.fire.note')}</div>
+    </div>
+  );
+}
+
 function ThermalSummary({ t, name }: { t: TFunction; name: string }) {
   const s = useSimStore((x) => x.thermal);
   if (!s) return null;
   const C = (K: number) => fmt(K - 273.15, 1);
   const exportCsv = () => {
     const ledger = [
-      ['added_sources_J', s.added], ['boundary_supply_J', s.boundarySupply], ['impact_deposit_J', s.impactDeposit],
+      ['added_sources_J', s.added], ['boundary_supply_J', s.boundarySupply], ['impact_deposit_J', s.impactDeposit], ['combustion_J', s.combustion],
       ...Object.entries(s.losses).map(([k, v]) => [`lost_${k}_J`, v]), ['lost_total_J', s.lost], ['internal_final_J', s.internal], ['residual_J', s.residual],
       ...Object.entries(s.transfers).map(([k, v]) => [`transfer_${k}_J`, v]),
     ].map(([k, v]) => `${k},${v}`);
@@ -574,7 +634,7 @@ function ThermalSummary({ t, name }: { t: TFunction; name: string }) {
         <Card label={t('results.thermal.max')} value={C(s.maxT)} unit="°C" sub={t(`thermal.where.${s.maxWhere}` as MessageKey)} />
         <Card label={t('results.thermal.mean')} value={C(s.meanHeatedT)} unit="°C" sub={t('results.thermal.meanSub', { amb: C(s.ambient) })} />
         <Card label={t('results.thermal.area')} value={fmt(s.heatedArea, 0)} unit="m²" />
-        <Card label={t('results.thermal.added')} value={energyText(s.added + s.boundarySupply + s.impactDeposit)} sub={t('results.thermal.addedSub', { s: energyText(s.added), b: energyText(s.boundarySupply), i: energyText(s.impactDeposit) })} />
+        <Card label={t('results.thermal.added')} value={energyText(s.added + s.boundarySupply + s.impactDeposit + s.combustion)} sub={t('results.thermal.addedSub', { s: energyText(s.added), b: energyText(s.boundarySupply), i: energyText(s.impactDeposit) }) + (s.combustion > 0 ? ` · ${t('results.thermal.combustion', { c: energyText(s.combustion) })}` : '')} />
         <Card label={t('results.thermal.lost')} value={energyText(s.lost)} sub={t('results.thermal.lostSub', { r: energyText(s.losses.radiationSky + s.losses.unresolvedRadiation), a: energyText(s.losses.atmosphere + s.losses.airAdvection + s.losses.aboveLayer), g: energyText(s.losses.deepGround) })} />
         <Card label={t('results.thermal.residual')} value={s.residual.toExponential(1)} unit="J" sub={t('results.thermal.residualSub', { pct: (s.relativeResidual * 100).toExponential(1) })} />
         <Card label={t('results.thermal.damaged')} value={String(s.damagedStructures)} sub={t('results.thermal.damagedSub', { f: fmt(s.minFactor * 100, 0), n: s.failedMembers })} />

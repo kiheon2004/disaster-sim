@@ -60,6 +60,7 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
   useEffect(() => {
     const a = new SimRenderAdapter(runtime, simulationController.getEnvironment().terrain);
     a.thermal = () => simulationController.getEnvironment().thermal.rt;
+    a.fire = () => simulationController.getEnvironment().fire.rt;
     setAdapter(a);
     setActiveAdapter(a);
     return () => {

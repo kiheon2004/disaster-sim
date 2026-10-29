@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive } from './simStore';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
@@ -601,6 +601,7 @@ export class SimulationController {
     patch.blasts = this.blastLive();
     patch.structure = this.structureLive();
     patch.thermal = this.thermalLive();
+    patch.fire = this.fireLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -765,10 +766,34 @@ export class SimulationController {
         };
       }),
       maxT: s.maxT, maxWhere: s.maxWhere, meanHeatedT: s.meanHeatedT, heatedArea: s.heatedArea, maxAirT: s.maxAirT, maxWaterT: s.maxWaterT, maxRoomT: s.maxRoomT, maxFlux: s.maxFlux,
-      added: L.added, boundarySupply: L.boundarySupply, impactDeposit: L.impactDeposit, lost: L.totalLost(), losses: { ...L.lost }, transfers: { ...L.transfers },
+      added: L.added, boundarySupply: L.boundarySupply, impactDeposit: L.impactDeposit, combustion: L.combustion, lost: L.totalLost(), losses: { ...L.lost }, transfers: { ...L.transfers },
       internal: L.final, residual: L.residual(), relativeResidual: L.relativeResidual(),
       bodies: s.bodies, buildings: s.buildings, activeTiles: s.activeTiles, substeps: w.last.substeps, maxSubsteps: w.maxSubsteps, ms: rt.ms, msTotal: rt.msTotal,
       damagedStructures: s.damagedStructures, failedMembers: s.failedMembers, minFactor: s.minFactor, maxUtil: s.maxUtil, restraint: w.settings.restraint,
+    };
+  }
+
+  /** Live fire summary (Phase 27; null until the combustion model runs). */
+  fireLive(): FireLive | null {
+    const ch = this.env.fire;
+    const fr = ch.rt;
+    if (!fr) return null;
+    const fw = fr.fw, w = fr.trt.world, s = fr.stats;
+    const hist = fr.history();
+    const step = Math.max(1, Math.ceil(hist.length / 120));
+    const history: number[] = [];
+    for (let i = 0; i < hist.length; i += step) history.push(hist[i]);
+    return {
+      hrr: s.hrr, peakHrr: s.peakHrr, peakTime: s.peakHrrTime, items: s.items, burningItems: s.burningItems, burningObjects: s.burningObjects, ignitedObjects: s.ignitedObjects,
+      burnedOutObjects: s.burnedOutObjects, extinguishedItems: s.extinguishedItems, rooms: s.rooms, roomsBurning: s.roomsBurning, flashovers: s.flashovers, ventLimited: s.ventLimited,
+      maxRoomT: s.maxRoomT, maxFlame: s.maxFlame, ledger: fw.ledger.snapshot(), smokeAir: s.smokeAir, minVisibility: s.minVisibility, charredMembers: s.charredMembers,
+      fireFailures: s.fireFailures, windowsBroken: s.windowsBroken, treesBurned: s.treesBurned,
+      ignitions: ch.ignitions.map((g) => ({ id: g.id, name: g.name, start: g.start, done: g.done, lit: g.lit, reason: g.reason })),
+      roomList: fr.rooms.slice(0, 200).map((R) => {
+        const F = fw.rooms[R.r], cp = w.comps[F.tc];
+        return { building: R.bt.e.id, story: R.story, T: w.compT(F.tc), o2: F.gas > 0 ? F.o2 / F.gas : 0, soot: F.soot / F.V, eps: F.eps, Ao: F.Ao, hrr: F.hrr, hrrExt: F.hrrExt, flashover: F.flashover, burning: F.burning, ventLimited: F.ventLimited, open: !cp.alive };
+      }),
+      history, settings: { ...ch.settings }, ms: fr.ms, msTotal: fr.msTotal,
     };
   }
 

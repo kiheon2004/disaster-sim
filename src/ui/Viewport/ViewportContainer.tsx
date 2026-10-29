@@ -20,6 +20,7 @@ import { ImpactHud } from './ImpactHud';
 import { BlastHud } from './BlastHud';
 import { StructureHud } from './StructureHud';
 import { ThermalHud } from './ThermalHud';
+import { FireHud } from './FireHud';
 import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
@@ -64,6 +65,7 @@ export function ViewportContainer() {
         {!isEditor && <GroundHud />}
         {!isEditor && <ImpactHud />}
         {!isEditor && <BlastHud />}
+        {!isEditor && <FireHud />}
         {!isEditor && <ThermalHud />}
         {!isEditor && <StructureHud />}
       </div>

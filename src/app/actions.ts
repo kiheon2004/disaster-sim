@@ -29,6 +29,7 @@ import { parseWaterState, serializeWaterState } from '@/simulation/water/waterSt
 import { deleteSelection, duplicateSelection } from './buildActions';
 import { useBuildStore } from '@/editor/buildStore';
 import { worldFingerprint } from '@/world/fingerprint';
+import { firePreset, type FirePresetId } from '@/fire/presets';
 
 /** Select an object and center the camera on it (its live pose while simulating). */
 export function focusObject(id: EntityId) {
@@ -134,6 +135,22 @@ export function loadStressScene(count: number) {
   useWorldStore.getState().replaceDocument(doc);
   useWorldStore.getState().addObjects(stressScene(count));
   useWorldStore.setState({ past: [], future: [] });
+}
+
+/** Load a fire scenario preset (Phase 27): a new small world with its fire scenario and settings. */
+export function loadFirePreset(id: FirePresetId) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('fire.preset.confirm', { name: t(`fire.preset.${id}`) }))) return;
+  const p = firePreset(id);
+  const doc = createEmptyDocument(t(`fire.preset.${id}`));
+  doc.settings.simulation.fire = { ...p.settings };
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  useWorldStore.getState().addObjects(p.objects);
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'fire.preset.loaded', params: { name: t(`fire.preset.${id}`) } });
 }
 
 export function loadSampleTown() {

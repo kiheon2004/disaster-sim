@@ -155,6 +155,8 @@ export interface FlameView {
   Q: number;
   tx: number;
   tz: number;
+  /** Soot produced by this flame (kg/s) — the renderer's plume density. */
+  soot: number;
 }
 
 export class FireRuntime {
@@ -305,6 +307,7 @@ export class FireRuntime {
 
   private addMember(bt: BuildingThermal, i: number, b: number) {
     const g = bt.g;
+    this.memberItems.delete(bt.e.id);
     if (MATERIAL_KEYS[g.mat[i]] !== 'timber' || bt.tmat[i] !== TM.timber) return;
     const B = this.trt.world.bodies, o = 6 * i, t = g.type[i];
     const sx = g.box[o + 3] - g.box[o], sy = g.box[o + 4] - g.box[o + 1], sz = g.box[o + 5] - g.box[o + 2];
@@ -514,9 +517,11 @@ export class FireRuntime {
         let q = (s.energy * d.w) / (dt * THERMAL_MATERIALS[B.matS[d.index]].emissivity * d.a);
         // Heat-source deposits are by the receiver's centre distance; ignition is judged on its near face.
         if (P) {
-          const dx = B.x[d.index] - P[0], dz = B.z[d.index] - P[2], r = Math.max(0.3, Math.hypot(dx, B.y[d.index] - P[1], dz));
-          const half = (0.5 * (B.sx[d.index] * Math.abs(dx) + B.sz[d.index] * Math.abs(dz))) / r;
-          q *= (r / Math.max(0.3, r - half)) ** 2;
+          const j = d.index, crown = this.crownOf(j);
+          const dx = B.x[j] - P[0], dz = B.z[j] - P[2], r = Math.max(0.3, Math.hypot(dx, B.y[j] - P[1], dz));
+          const rc = crown >= 0 ? Math.max(0.3, Math.hypot(dx, B.y[j] + B.sy[j] / 2 - 0.5 * fw.size[crown] - P[1], dz)) : r;
+          const half = crown >= 0 ? 0.5 * fw.size[crown] : (0.5 * (B.sx[j] * Math.abs(dx) + B.sz[j] * Math.abs(dz))) / r;
+          q *= (r / Math.max(0.3, rc - half)) ** 2;
         }
         for (const i of items) { fw.qInc[i] += q; if (room) fw.qRoom[i] += q; }
       }
@@ -616,6 +621,7 @@ export class FireRuntime {
   private combustionSteps(ctx: SystemContext, dt: number): SourceStep[] {
     const fw = this.fw, w = this.trt.world, B = w.bodies;
     const steps: SourceStep[] = [];
+    this.flames.length = 0;
     // Rooms: energy of the items burning in each room.
     const Ein = new Float64Array(fw.rooms.length);
     const chiE = new Float64Array(fw.rooms.length);
@@ -664,7 +670,7 @@ export class FireRuntime {
         if (Eext > 0) {
           const Q = (Eext * sh) / dt;
           const o = R.openings.find((x) => x.side === side);
-          if (o) this.flames.push({ x: g.P[0], y: g.P[1] - 0.5 * flameHeight(Q, Math.sqrt(As)), z: g.P[2], L: Math.max(0.5, flameHeight(Q, Math.sqrt(As))), D: Math.sqrt(As), Q, tx: 0, tz: 0 });
+          if (o) this.flames.push({ x: g.P[0], y: g.P[1] - 0.5 * flameHeight(Q, Math.sqrt(As)), z: g.P[2], L: Math.max(0.5, flameHeight(Q, Math.sqrt(As))), D: Math.sqrt(As), Q, tx: 0, tz: 0, soot: (0.05 * Q) / 14e6 });
         }
       }
     }
@@ -682,12 +688,14 @@ export class FireRuntime {
     const u10 = w.u10;
     for (const gr of this.groups.values()) {
       if (gr.E <= 0) { if (gr.items.length === 0) this.groups.delete(gr.key); continue; }
-      let x = 0, y = 0, z = 0, Ab = 0, chiE2 = 0, dHcE = 0;
+      let x = 0, y = 0, z = 0, Ab = 0, chiE2 = 0, dHcE = 0, soot = 0;
       for (const i of gr.items) {
         const p = this.flamePoint(i);
         const e = fw.Estep[i];
         x += p[0] * e; y += p[1] * e; z += p[2] * e;
-        Ab += fw.kind[i] === IK.contents ? fw.area[i] : fw.area[i] * fw.inv[i];
+        soot += FUEL_MATERIALS[fw.mat[i]].ys * fw.mdot[i];
+        // Fire base area: the projected crown disk of a burning crown, the burning surface otherwise.
+        Ab += fw.kind[i] === IK.contents ? fw.area[i] : fw.kind[i] === IK.foliage ? (Math.PI * fw.size[i] * fw.size[i] * fw.inv[i]) / 4 : fw.area[i] * fw.inv[i];
         chiE2 += e * FUEL_MATERIALS[fw.mat[i]].chiR;
         dHcE += e * FUEL_MATERIALS[fw.mat[i]].dHc;
       }
@@ -700,7 +708,7 @@ export class FireRuntime {
       const P: Vec3 = [base[0] + Math.sin(tilt) * w.flowX * half, base[1] + Math.cos(tilt) * half, base[2] + Math.sin(tilt) * w.flowZ * half];
       gr.base = base; gr.P = P; gr.D = D; gr.L = L; gr.tilt = tilt;
       this.stats.maxFlame = Math.max(this.stats.maxFlame, L);
-      this.flames.push({ x: base[0], y: base[1], z: base[2], L: Math.max(0.3, L), D, Q: gr.Q, tx: Math.sin(tilt) * w.flowX, tz: Math.sin(tilt) * w.flowZ });
+      this.flames.push({ x: base[0], y: base[1], z: base[2], L: Math.max(0.3, L), D, Q: gr.Q, tx: Math.sin(tilt) * w.flowX, tz: Math.sin(tilt) * w.flowZ, soot });
       // Own-flame feedback to the burning surfaces of thick fuels (≤ half of their heat).
       const fb: Deposit[] = [];
       let Efb = 0;
@@ -748,6 +756,8 @@ export class FireRuntime {
   private flamePoint(i: number): Vec3 {
     const fw = this.fw, B = this.trt.world.bodies;
     const p = fw.pos(i);
+    // A crown burns from its bottom up: the flame stands on the crown base (top of the tree − crown diameter).
+    if (fw.kind[i] === IK.foliage && fw.body[i] >= 0) return [p[0], p[1] + B.sy[fw.body[i]] / 2 - fw.size[i], p[2]];
     if (fw.kind[i] !== IK.member) return p;
     const bt = this.trt.buildings[fw.ref[i]];
     const st = bt.e.modular!.structure?.model.state[fw.sub[i]] ?? MS.INTACT;
@@ -855,9 +865,16 @@ export class FireRuntime {
       const f = pointFraction(Ap, Math.max(0.3, r));
       if ((f * Prad) / Ap < FLAME_FLOOR) return;
       const wgt = f * THERMAL_MATERIALS[B.matS[i]].emissivity;
-      // Horizontal half-extent toward the flame (a tree's box height is mostly trunk below its crown).
-      const half = (0.5 * (B.sx[i] * Math.abs(dx) + B.sz[i] * Math.abs(dz))) / rr;
-      const rNear = Math.min(Math.max(0.3, r), Math.max(0.3, rOwn, r - half));
+      // Near face toward the flame: a tree is measured from its crown (its box centre is mostly trunk),
+      // anything else by its horizontal half-extent.
+      const crown = this.crownOf(i);
+      let rc = r, half = (0.5 * (B.sx[i] * Math.abs(dx) + B.sz[i] * Math.abs(dz))) / rr;
+      if (crown >= 0) {
+        const cy = B.y[i] + B.sy[i] / 2 - 0.5 * this.fw.size[crown];
+        rc = Math.hypot(dx, cy - P[1], dz);
+        half = 0.5 * this.fw.size[crown];
+      }
+      const rNear = Math.max(0.3, rOwn, rc - half);
       rad.push({ kind: TK.body, index: i, w: wgt, a: Ap * (rNear / Math.max(0.3, r)) ** 2 });
       sum += wgt;
       if (dy < 0) down += f;
@@ -900,6 +917,14 @@ export class FireRuntime {
       if (a >= 0) conv.push({ kind: TK.air, index: a, w: 1 }); else aboveConv = 1;
     }
     return { rad, conv, aboveConv, builtAt: ctx.time, Q: Prad, P };
+  }
+
+  /** Crown (foliage) item of a tree body, −1 otherwise. */
+  private crownOf(b: number): number {
+    const items = this.bodyItems.get(b);
+    if (!items) return -1;
+    for (const i of items) if (this.fw.kind[i] === IK.foliage) return i;
+    return -1;
   }
 
   /** Bodies whose centre lies within r of P (8 m buckets, rebuilt every geometry period). */
@@ -949,7 +974,6 @@ export class FireRuntime {
     this.trees(ctx);
     this.exposure(ctx);
     this.statistics(ctx);
-    this.flames.length = 0;
     this.ms += performance.now() - t0;
     this.msTotal += this.ms;
   }
@@ -1192,6 +1216,18 @@ export class FireRuntime {
   history(): readonly number[] {
     return this.hrrHist;
   }
+
+  /** Member index → fuel item of a modular building (renderer), null when it has none. */
+  itemsByMember(id: EntityId): Map<number, number> | null {
+    let m = this.memberItems.get(id);
+    if (m === undefined) {
+      m = null;
+      for (let i = 0; i < this.fw.n; i++) if (this.fw.kind[i] === IK.member && this.owner[i] === id) (m ??= new Map()).set(this.fw.sub[i], i);
+      if (m) this.memberItems.set(id, m);
+    }
+    return m;
+  }
+  private readonly memberItems = new Map<EntityId, Map<number, number> | null>();
 
   /** Items of an object (inspector). */
   itemsOf(id: EntityId): number[] {

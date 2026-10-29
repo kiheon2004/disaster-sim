@@ -208,7 +208,7 @@ describe('vegetation', () => {
   });
 
   it('a heat source ignites a dry crown only through its computed flux, when heat ignition is enabled', async () => {
-    const src: EventSpec = { event: 'heatSource', kind: 'point', position: [4, 0], height: 6, radius: 2, input: 'power', power: 4e6, profile: 'constant', duration: 300 } as EventSpec;
+    const src: EventSpec = { event: 'heatSource', kind: 'point', position: [4, 0], height: 8.8, radius: 2, input: 'power', power: 4e6, profile: 'constant', duration: 300 } as EventSpec;
     const c = await load(doc([tree(0, 0)], { foliageMoisture: 0.2, heatIgnition: true }), [src]);
     c.advance(200);
     const fw = frOf(c).fw;
