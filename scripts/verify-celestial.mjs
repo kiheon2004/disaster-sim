@@ -323,8 +323,14 @@ await wait(800);
 await enterRun();
 await atTime(10);
 L = await cl();
-const m24 = L.series.length ? L.series[L.series.length - 1].sourceMass[0] - L.series[0].sourceMass[0] : 0;
-check('24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included', L.ledger.grown > 0 && Math.abs(m24 - L.ledger.grown) < 1e-6 * L.ledger.grown + 1, { grown: L.ledger.grown, dM: m24 });
+// Compared at the same instants: the source mass and the captured mass of the first and last history samples (a
+// capture after the last sample is in the ledger's total but not yet in the history), and capture by capture.
+const s24a = L.series[0], s24b = L.series[L.series.length - 1];
+const m24 = s24b ? s24b.sourceMass[0] - s24a.sourceMass[0] : 0, c24 = s24b ? s24b.capturedMass - s24a.capturedMass : 0;
+const rec24 = L.ledger.records.filter((r) => r.policy === 'grow');
+const each24 = rec24.every((r) => Math.abs(r.massAfter - r.massBefore - r.mass) <= 1e-6 * r.mass + 1);
+const sum24 = rec24.reduce((a, r) => a + r.mass, 0);
+check('24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included', L.ledger.grown > 0 && c24 > 0 && Math.abs(m24 - c24) < 1e-6 * c24 + 1 && each24 && Math.abs(sum24 - L.ledger.grown) < 1e-6 * L.ledger.grown + 1, { grown: L.ledger.grown, dM: m24, dCaptured: c24, records: rec24.length, each24, afterLastSample: L.ledger.grown - c24 });
 check('27b accretion particles: placed = flying + captured + landed + left (residual 0)', Math.abs(L.ledger.particles.residual) < 1e-6 * Math.max(1, L.ledger.particles.placed), L.ledger.particles);
 await exitSim();
 await ev(() => window.__ds.actions.loadCelestialDemo('moving'));

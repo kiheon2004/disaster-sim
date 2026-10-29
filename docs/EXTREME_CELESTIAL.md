@@ -256,7 +256,17 @@ Phase 31 지정 20장면 + 의도 변경 1장면 = 53장면 모두 공통 잎 �
 
 ## 30. 테스트
 
-{{TESTS}}
+전체 스위트(`npx vitest run --maxWorkers=4`, 커밋 `0ad6fe0`): **1003 통과, 0 실패, 27 건너뜀(1030)**. 기준선 `4fdab8a`: 954 통과, 25 건너뜀.
+추가 49개: `src/celestial/celestial.test.ts` 26, `src/simulation/celestial/celestial.sim.test.ts` 8, `structures.sim.test.ts` 4,
+`world.sim.test.ts` 8(약 10분), `residuals.sim.test.ts` 2, `src/simulation/seismic/structural.test.ts` 1(부분 붕괴 후 정적 평형 회귀).
+건너뜀 +2는 벤치(`BENCH=1`일 때만 실행). `tsc --noEmit` 통과.
+
+기본 워커 수(8코어에 부하 80)로 돌린 실행에서는 시간 초과 8건이 있었습니다(화재·기후·화산·청사진·모듈 건물·귀속 등). 같은 파일을 워커 2개로
+다시 돌리면 82/82 통과했고, 위의 워커 4개 실행에서는 시간 초과가 없었습니다. 검증 중에 실제 결함 2건을 찾아 고쳤습니다:
+(1) 정지 정책 테스트가 커밋 8에서 추가된 가속도 한계(`accel`)를 몰랐음 → 닫힌 식 하한으로 정확히 검사(`865dc76`);
+(2) **부분 붕괴 후 층 모델**이 없어진 층(자리표시 질량 ≈ 1 kg)에 바람 상단 하중·폭풍 분담·천체 수평장을 계속 주어 속도가 10²⁰ m/s로 발산,
+잔해 격자가 끝나지 않음(벤치 장면 25) → 남은 층에만 하중(`0ad6fe0`). 바람·폭풍 부분은 Phase 32 이전부터 있던 결함으로, 천체 수평장 때문에
+처음 드러났습니다. 수정 후 동일성 53/53 공통 차이 0 유지.
 
 과학 테스트 50항목 대응(지시서 §52): 중력장 1–8 `celestial.test.ts`; 궤도 9–18 같은 파일 + `celestial.sim.test.ts`; 포획 19–25 `celestial.sim.test.ts`
 (반경 진입 시각, 제거, 질량·운동량·에너지, 성장, 이동 중력원 항등식); 구조 26–31 `celestial.test.ts`(균일 vs 조석), `structures.sim.test.ts`(층 하중
@@ -266,15 +276,84 @@ Phase 31 지정 20장면 + 의도 변경 1장면 = 53장면 모두 공통 잎 �
 
 ## 31. Chrome
 
-{{CHROME}}
+마지막 코드 수정(`0ad6fe0`) 뒤 `npm run build` + `vite preview`로 다시 실행했습니다.
+
+| 스크립트 | 한국어 | 영어 |
+|---|---|---|
+| `scripts/verify-celestial.mjs` (천체) | **62/62 통과** | **62/62 통과** |
+| `scripts/verify-gravity.mjs` (Phase 31 회귀) | **57/57 통과** | **57/57 통과** |
+
+페이지 오류 0, 충돌 없음. 프레임률: 1000동 2.5 g 램프(중력 검사 43) 55.9 / 59.4 FPS. **1000동 + 천체 중력원(천체 검사 46)은 14.6 / 12.7 FPS**
+— 검사의 상호작용 기준은 넘지만 60 FPS가 아닙니다(§32 활성 비용). 측정 중 시스템 부하 약 20.
+
+검사 24(성장 중력원)는 이 재실행에서 한 번 실패했습니다: 원천 질량 증가를 기록 시계열(0.25 s 간격)의 처음·끝에서, 포획 질량은 장부 누계에서
+읽어 시점이 달랐습니다(마지막 표본 뒤의 포획 385 kg). 같은 표본 시점의 원천 질량 증가 = 포획 질량 증가(18 518.25 kg), 포획 40건 각각
+massAfter − massBefore = m, 합 = grown으로 검사를 고쳤습니다(허용 오차 그대로). 로그 `docs/verify/{celestial,gravity}/chrome-{ko,en}.txt`,
+스크린샷·`results-*.json`은 `docs/verify/celestial/`.
 
 ## 32. 성능
 
-{{BENCH}}
+헤드리스 코어(렌더링 없음), 1/60 s 고정 스텝, Apple M3 8코어, `BENCH=1 AB=1`(커밋 `0ad6fe0`), 측정 중 부하 [28.2, 41.5, 45]. "켬"은 천체 실험 포함,
+"끔"은 같은 장면에서 천체 실험만 뺀 것, "Phase 31"은 `4fdab8a` 빌드(`docs/bench-phase32-p31.json`, 부하 [33, 41.2, 44.7]). 원자료 `docs/bench-phase32.json`, 번갈아 잰 3회 `docs/bench-phase32-ab/`.
+
+| 장면 | 켬 ms/시뮬s | 최악 스텝 ms | 끔 ms/시뮬s | Phase 31 ms/시뮬s | KDK ms/시뮬s | 최대 부분스텝 | 포획 | 에너지 오차 | 질량 잔차 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 Phase 31 inactive (town, no celestial) | — | — | 18.1 | 9.7 | — | — | — | — | — |
+| 2 weak gravity well (μ 2e3, town) | 122.7 | 106.6 | 17.3 | 8.9 | 8.71 | 0 | 0 | 4.7e-05 | 0 |
+| 3 strong gravity well (μ 3e5, town) | 184.6 | 103.6 | 7.4 | 6.2 | 28.77 | 128 | 93 | 8.5e-03 | 0 |
+| 4 softened source (ε 10 m) | 650.6 | 87.9 | 7.2 | 11.7 | 202.74 | 8 | 6 | 3.6e-03 | 0 |
+| 5 circular orbit | 6 | 9.6 | 2.8 | 2.4 | 0.45 | 2 | 0 | 2.9e-04 | 0 |
+| 6 elliptical orbit | 6.4 | 9.3 | 2.1 | 6.2 | 1 | 8 | 0 | 4.6e-07 | 0 |
+| 7 escape orbit | 5.8 | 11.9 | 2.1 | 2 | 1.13 | 4 | 0 | 2.6e-06 | 0 |
+| 8 hyperbolic flyby | 4.9 | 4.2 | 2 | 1.9 | 0.49 | 32 | 0 | 4.8e-06 | 0 |
+| 9 tidal field (cars, zero g) | 192 | 75.1 | 15.1 | 17.1 | 46 | 128 | 72 | 0.0105 | 0 |
+| 10 tidal building (one house, lateral) | 7.1 | 10.9 | 1.8 | 1.6 | 0 | 0 | 0 | — | 0 |
+| 11 tidal collapse (town) | 142.7 | 84.6 | 6.3 | 7.3 | 22.06 | 128 | 184 | 9.2e-03 | 0 |
+| 12 capture (block) | 39.8 | 20.7 | 5.1 | 4.3 | 1.3 | 64 | 14 | 0.0221 | 0 |
+| 13 growing source | 42.9 | 31.7 | 11.3 | 5.6 | 0.59 | 64 | 14 | 0.0221 | 0 |
+| 14 moving source | 128 | 99.9 | 5.3 | 5 | 18.14 | 128 | 79 | 3.9e-03 | 0 |
+| 15 two sources | 6.9 | 12.3 | 2.6 | 1.9 | 1.15 | 4 | 0 | 1.9e-07 | 0 |
+| 16 accretion (2000 particles) | 165.2 | 36.8 | 2.6 | 1.4 | 0 | 64 | 0 | — | 0 |
+| 17 100 objects | 123.3 | 22 | 15.9 | 15.8 | 25.08 | 64 | 29 | 8.9e-04 | 0 |
+| 18 500 objects | 1111 | 142.6 | 118.5 | 71.2 | 293.83 | 64 | 118 | 6.7e-03 | 0 |
+| 19 1000 objects | 3957.6 | 388.8 | 160.6 | 159.6 | 901.88 | 64 | 26 | 0.0146 | 0 |
+| 20 100 buildings | 366.9 | 97.8 | 10.1 | 11.1 | 23.64 | 64 | 3 | 6.0e-03 | 0 |
+| 21 500 buildings | 2499.8 | 214.2 | 58.7 | 43.5 | 73.82 | 64 | 100 | 5.0e-03 | 0 |
+| 22 1000 buildings | 5581.5 | 634.6 | 159.7 | 105.5 | 107.59 | 64 | 103 | 0.012 | 0 |
+| 23 debris (tower collapse) | 600.6 | 219.6 | 7.8 | 4.5 | 122.03 | 64 | 27 | 3.6e-03 | 0 |
+| 24 meteor + source | 347.5 | 99.1 | 352.6 | 328.5 | 53.07 | 64 | 134 | 9.3e-03 | 0 |
+| 25 multi-hazard (source + quake + rain + wind + fire) | 1424.6 | 369.5 | 314.3 | 272.1 | 127.67 | 64 | 108 | 2.8e-03 | 0 |
+
+반복 실행(포획 장면 ×6): 힙 [73.5, 72.8, 72.6, 72.8, 72.9, 72.9] MB, 남은 Rapier 월드 0 — 누수 없음.
+
+**비활성 비용(끔 vs Phase 31).** 한 번씩 순서대로 잰 표에서는 끔이 느린 장면이 있어(1: 18.1 vs 9.7, 22: 160 vs 106), 장면 1·18·22를 두 빌드
+번갈아 3회 다시 쟀습니다(부하 20–35). 같은 빌드 안에서도 회차마다 2–3배 차이가 났고 방향이 일정하지 않습니다(중앙값 1: 8.7 vs 17.9, 18: 68 vs 110,
+22: 169 vs 121 ms/시뮬s). **일관된 비활성 저하는 관측되지 않았지만, 이 부하에서는 작은 차이(수십 %)를 배제할 수 없습니다.** 동일성(§29)으로
+결과는 비트 단위로 같습니다. 비활성 시 천체 프로파일 구간(celestial.pre/struct/kdk/post)은 모두 0입니다.
+
+**활성 비용.** 큰 장면(500–1000 물체·건물)에서 천체 실험은 실시간보다 느립니다(1000 건물 약 5.6 s/시뮬s). 주된 비용은 KDK 부분스텝(최대 64–128,
+근접 통과 정확도 η = 0.02)과 층 모델 수평 하중입니다. 브라우저 1000동 2.5 g 램프(Phase 31 검사)는 60 FPS였지만(§31), 1000동 + 천체 중력원의
+실시간 성능은 보장하지 않습니다.
 
 ## 33. 장기 실행
 
-{{LONG}}
+`BENCH=1 LONG=3600`(시뮬레이션 3600 s, 장면 5·6·3·15·13·14·11·23·24·25). **10/10 장면 완료, 모두 bad 목록 비어 있음.** 처음 실행에서 장면 25는
+층 모델 발산(§30 결함 2)으로 끝나지 않았고, 그 뒤 운영체제 메모리 부족으로 프로세스가 종료되었습니다. 수정(`0ad6fe0`) 후 장면 25만 다시 돌렸습니다.
+
+| 장면 | 벽시계 s | 에너지 오차(총량 대비) 3600 s | 포획 | 질량·입자 잔차 |
+|---|---|---|---|---|
+| 3 강한 중력 우물(마을) | 358 | 4.2e-3 | 126 | 0 / 0 |
+| 5 원 궤도 | 23.9 | 3.3e-4 | 0 | 0 / 0 |
+| 6 타원 궤도 | 17.8 | 6.6e-7 | 0 | 0 / 0 |
+| 11 조석 붕괴(마을) | 226.5 | 6.4e-3 | 173 | 0 / 0 |
+| 13 성장 중력원 | 26.5 | 2.2e-2 | 16 | 0 / 0 |
+| 14 이동 중력원 | 561.2 | 2.2e-3 | 101 | 0 / 0 |
+| 15 두 중력원 | 10.3 | 1.1e-7 | 0 | 0 / 0 |
+| 23 파편(탑 붕괴) | 226.9 | 9.5e-4 | 84 | 0 / 0 |
+| 24 운석 + 중력원 | 202.1 | 7.8e-3 | 145 | 0 / 0 |
+| 25 복합 재해(중력원+지진+비+바람+화재) | 891.1 | 1.5e-03 | 178 | 0 / 0 (물 수지 상대 오차 3e-15) |
+
+성장 중력원(13)의 2.2e-2는 질량 증가가 일을 하므로 보존량이 아닙니다(장부로 추적, 잔차 0). `docs/bench-phase32-long3600.json`(로그에서 재구성).
 
 ## 34. 과학적 한계
 
@@ -308,7 +387,17 @@ Phase 31 지정 20장면 + 의도 변경 1장면 = 53장면 모두 공통 잎 �
 
 ## 커밋 (main, push 안 함)
 
-{{COMMITS}}
+- `1fa42d8` Phase 32 (1): celestial core — constants (G, c, r_s), spec + limits + validation, Plummer point sources (field, potential, analytic gradient tensor, influence taper, prescribed motion, growth) added after the Phase 31 field, KDK integrator with deterministic power-of-two substeps, orbit tools, tidal mechanics; 23 tests against closed-form references
+- `8b99d13` Phase 32 (2): celestial experiment in the simulation — event + schema + phenomenon definition (editor fields, planned blackHole replaced), channel registration into the one gravity field, KDK replacement of Rapier's first-order gravity increment for free bodies (engine: writeMotion / touching / linearDamping / freeKappa), probes, accretion test particles, gradient torque, capture (entity / debris / fragment / probe) with the capture ledger and the Phase 31 ledger's bodyPath, presets (20), demos, outlook, models, KO/EN strings; 6 simulation tests
+- `9b059cc` Phase 32 (3): celestial sources on structures — storey model body force of the field's horizontal part per floor (gravity attribution via pgaGravity), uplift check with connection tension capacities and detachment as fragments (FailCause 'uplift', DamageCause tidalLoad / captured), members pulled upward take k = 0 under point sources, celestial reach in the structure plan, collapse / storey models built before the clock (residual 2.2), text commands route black holes to the editor; 4 structure tests
+- `731012f` Phase 32 (4): GUI — celestial layer (cores, capture / softening / influence / substep-limit spheres, field slice on log legends, tidal axes, test particles, probes + trails, illustrative disc and lens), overlay toggles, HUD, inspector (object, probe), editor tools (scale label, source regime, probe predictions, support, limits, real 10 M☉ comparison, presets with documented expectations, demo loader), editor preview (predicted conics, paths), results (cards, 9 charts, CSV with units / model / scope / missing reasons, JSON), stop policy pause, devtools; KO/EN 494 strings
+- `08b928c` Phase 32 (5): whole-world tests — all 20 presets on their demo worlds, combinations (flood, air, fire, volcano, meteor, blast, earthquake, snow), restoration with captures / growth / collapse / moving source, determinism and id / order independence, save / load v7, clean-up, stop policy, gravity-gradient torque; Phase 31 restore test no longer adds the experiments twice after reset (reset reschedules them)
+- `89c540f` Phase 32 (6): residual regression tests (rubble-only roof load now switches the roof check on — addRubble; snow / mass ledgers after an uplift collapse), moving-source and fragment capture tests, ground combination, profiler sections (celestial.pre / struct / kdk / post), 25-scene benchmark + long-run mode
+- `8ec0ddf` Phase 32 (7): Chrome verification script (verify-celestial.mjs, 62 checks), devtools parse hook, orbit laboratories without loose bodies and without the structural tidal response (the zero-g world pulled the demo houses apart into the probes' orbits), identity A/B vs 4fdab8a: 53 scenes, every common leaf identical (docs/bench-phase32-identity.json)
+- `b64a3f5` Phase 32 (8): timeline events (source moves, orbit entry, celestial collapse, first debris, end), accel / gradient limits through the limit policy, speed overlay (v / v_esc), path waypoint fields, building section in the inspector, numerical-stability tests; docs EXTREME_CELESTIAL.md (draft), README, PHENOMENA
+- `865dc76` Phase 32 (9): stop-policy test expects the acceleration limit (added in (8)) with a closed-form bound; Chrome verification after (8): celestial KO/EN 62/62, gravity KO/EN 57/57
+- `0ad6fe0` Phase 32 (10): storey model loads only the stories that still exist after a partial collapse — the wind's top-story force, blast shares and the celestial lateral field no longer act on truncated dofs (their placeholder mass turned the wind force into an unbounded acceleration: multi-hazard bench scene 25 ran away to 1e20 m/s and the rubble index never finished); static-equilibrium regression test; identity vs 4fdab8a still 53/53 common-diff 0
+- (마지막) 문서 완성, 벤치·장기 실행 기록
 
 ## 재현
 

@@ -462,7 +462,7 @@
       "name": "43 large town (1000 houses) under a gravity ramp to 2.5 g: every building re-loaded, interactive frame rate",
       "ok": true,
       "detail": {
-        "fps": 60,
+        "fps": 59.4,
         "worstFrameMs": 33.3,
         "loaded": 1000,
         "gl43": {
@@ -470,7 +470,7 @@
           "geometries": 17,
           "textures": 3
         },
-        "ms": 0.3999999910593033
+        "ms": 0.20000001788139343
       }
     },
     {
@@ -478,8 +478,8 @@
       "ok": true,
       "detail": {
         "heaps44": [
-          58,
-          58.5,
+          57.9,
+          58.4,
           58.7
         ]
       }
@@ -597,8 +597,8 @@
   ],
   "errors": [],
   "heap": [
-    30.7,
-    51.4
+    30.5,
+    47.3
   ],
   "geometries": [
     17,

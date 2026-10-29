@@ -22,18 +22,18 @@ PASS 19 overlays: |g| (m/s², 9.81 marked), |Φ| (J/kg), escape speed (m/s), mod
 PASS 56 model-limit zones: the zones legend names all four regions 
 PASS 20 object inspector: distance, |g|, escape speed, tidal stretch along the long axis, bar tension (reference), energy / angular momentum 가장 가까운 중력원까지10.89 m · r_c 1.00 · ε 2.00 m국소 |g|23.88 m/s² · 2.43 g₀탈출 속도 (중력원 장)23.18 m/s조석 늘림λ₁ 4.171 s⁻² · 긴 축 방향 -2.193 s⁻²조석 인장 (균일 막대 m
 PASS 59 vehicles: a car pulled off the ground and turned by the field (rigid body; no internal model) {"p":[-2.314439535140991,10.73902702331543,5.999906539916992],"captured":true}
-PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_7f4f21893n","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
-PASS 22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone {"n":41,"hidden22":12}
-PASS 23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported {"mass":21133.895248413086}
+PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_6c12e58e3n","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
+PASS 22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone {"n":40,"hidden22":12}
+PASS 23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported {"mass":18903.298095703125}
 PASS 54 timeline: celestial start and capture milestones recorded once each kind ["capture","capture","capture","capture","capture","capture","capture","capture"]
-PASS 24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included {"grown":20687.53515625,"dM":20687.5}
+PASS 24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included {"grown":18903.298095703125,"dM":18518.25,"dCaptured":18518.248107910156,"records":40,"each24":true,"afterLastSample":385.04998779296875}
 PASS 27b accretion particles: placed = flying + captured + landed + left (residual 0) {"placed":600000,"flying":0,"captured":0,"landed":600000,"left":0,"dissipated":877141487.8268613,"residual":0}
-PASS 25 moving source: the centre follows its path (x grows), the changing field does work W_field on the bodies (booked) {"x0":-81.05000000000004,"x1":-36.04999999999956,"Wf":-27456648.041299675}
+PASS 25 moving source: the centre follows its path (x grows), the changing field does work W_field on the bodies (booked) {"x0":-81.05000000000004,"x1":-36.04999999999956,"Wf":-25855526.43339392}
 PASS 26 two external sources: both in force, probes moving in the combined field; labelled not a real binary (no N-body) [-25,25]
 PASS 27 accretion: test particles on computed orbits drawn, the visual disc drawn and labelled illustrative (no fluid / radiation) {"flying":1500,"pts27":1500,"disc27":1}
 PASS 28 lens: the illustrative lens halo is drawn only on request and labelled "Illustrative Visual Effect — Not Relativistic Ray Tracing" {"lens28":1}
-PASS 29 tidal structural failure: lateral storey loads and uplift fail members (hazard gravity), a tidal-failure milestone {"uplifted":76,"loadedUnits":1,"peakLateral":81.4715849438937,"failures":152}
-PASS 30 collapse and debris: fragments created by the pull (mass moved, not created) and fragments captured {"debris":149,"frag":{"n":19,"m":118272.9154663086}}
+PASS 29 tidal structural failure: lateral storey loads and uplift fail members (hazard gravity), a tidal-failure milestone {"uplifted":76,"loadedUnits":1,"peakLateral":81.4715849438937,"failures":165}
+PASS 30 collapse and debris: fragments created by the pull (mass moved, not created) and fragments captured {"debris":150,"frag":{"n":18,"m":101666.09664916992}}
 PASS 31 lake: the surface rises under the source (lower downward g there), water volume conserved; the water is never captured (2-D model, limited) {"under":39.05433997636285,"edge":-1.3870217659229311,"err":3.296918293926865e-11,"init":1415.9216448674244}
 PASS 32 hill: the run goes on with the ground model unchanged by the field (no tidal terrain deformation claimed) 
 PASS 33 meteor + source: the impact happens (entry model unchanged, not extrapolated), the state stays finite {"imp33":["done"]}
@@ -42,7 +42,7 @@ PASS 35 snow + uplift: the roof pulled off under its snow — climate water ledg
 PASS 36 results: celestial cards (sources, |g|, captures, impulse, unresolved energy, structures, integrator, limit) and the charts; text not cut {"charts36":4,"clip36":[]}
 PASS 37 CSV: model and scope header, sources, capture ledger and records with units, integrator, probes, bodies, history; missing values named # model: Newtonian point masses with Plummer softening (real
 PASS 38 JSON: the live celestial summary (ledger, probes, series, stats) is what the results JSON exports 
-PASS 39 stop policy: a physical-mode solar-mass hole stops the run at the model limit (speed > 0.1 c / substep cap) — never clipped below c {"status":"paused","t":0.49999999999999994,"stop":{"time":0,"reason":"accel"},"limit":"stop"}
+PASS 39 stop policy: a physical-mode solar-mass hole stops the run at the model limit (speed > 0.1 c / substep cap) — never clipped below c {"status":"paused","t":0.016666666666666666,"stop":{"time":0,"reason":"accel"},"limit":"stop"}
 PASS 40 warn policy: the limit is recorded (HUD) and the run continues {"limit":"warn"}
 PASS 41 scientific comparison: outside ε the period is Kepler's (19.6 s), inside the core it is the Plummer one (0.73 s, Kepler would give 0.22 s) [19.59999999999889,0.7272988505746909]
 PASS 55 GR not computed: the real 10 M☉ comparison is computed only (r_s ≈ 29.5 km), the editor lists the unsupported GR effects {"mass":1.98847e+31,"rs":29533.393820668785,"accel20":3317911330250000000,"tidal20":331791133024999940,"vEsc20":299792458}
@@ -50,16 +50,16 @@ PASS 42 original world: after captures the edited world is untouched (fingerprin
 PASS 43 rerun: the same run again gives the same captures, poses and probes (hash) 
 PASS 44 save / load: the celestial experiment survives serialization (schema v7) {"sl44":1}
 PASS 45 determinism: a third run identical too 
-PASS 46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate {"fps":14.5,"worst":150,"pend46":0}
+PASS 46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate {"fps":12.7,"worst":116.7,"pend46":0}
 PASS 49 KO / EN text: the HUD and overlay show translated text (no raw keys) []
 PASS 53 field arrows with a source: logarithmic length (|g| spans decades) — no 100 m arrows {"len53":3.9670597383343216}
 PASS 51 dormant: a gravity experiment alone shows no celestial HUD or runtime (Phase 31 path unchanged) 
 PASS 52 text command: "black hole" (KO / EN) is recognized and pointed to the experiment editor (never executed from text) {"cmd52":["celestial","celestial",0,"parse.celestial.editor"]}
 PASS 57 influence radius: the field tapers to exactly 0 beyond it (educational cut), unchanged well inside {"out":0,"in":79.80838328448797}
-PASS 50 stress preset (4 sources, 16 probes, 2000 particles, town): runs without page errors; capped steps (if any) recorded, never hidden {"capped":0,"captured":86}
+PASS 50 stress preset (4 sources, 16 probes, 2000 particles, town): runs without page errors; capped steps (if any) recorded, never hidden {"capped":0,"captured":83}
 PASS 60 gentle orbital field: three orbits in different planes stay circular (ΔE/E < 10⁻³ each) [0.000008203184710925025,0.000008368484288378609,0.000017472025027043438]
 PASS 48 resources: GPU geometries back to the start after all runs {"geo0":17,"geo1":8}
 PASS whole run: no page errors, the tab alive {"errors":0}
-{"heap0":30.7,"heap1":51.9,"geo0":17,"geo1":8,"crashed":false}
+{"heap0":30.7,"heap1":55.9,"geo0":17,"geo1":8,"crashed":false}
 
-62/62 passed; 0 page errors; heap 30.7 → 51.9 MB; geometries 17 → 8; crashed false
+62/62 passed; 0 page errors; heap 30.7 → 55.9 MB; geometries 17 → 8; crashed false

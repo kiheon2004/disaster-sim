@@ -227,7 +227,7 @@
       "name": "58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34)",
       "ok": true,
       "detail": {
-        "id": "human_7f4f21893n",
+        "id": "human_6c12e58e3n",
         "p": [
           -1.7573533058166504,
           10.54411792755127,
@@ -247,7 +247,7 @@
       "name": "22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone",
       "ok": true,
       "detail": {
-        "n": 41,
+        "n": 40,
         "hidden22": 12
       }
     },
@@ -255,7 +255,7 @@
       "name": "23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported",
       "ok": true,
       "detail": {
-        "mass": 21133.895248413086
+        "mass": 18903.298095703125
       }
     },
     {
@@ -276,8 +276,12 @@
       "name": "24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included",
       "ok": true,
       "detail": {
-        "grown": 20687.53515625,
-        "dM": 20687.5
+        "grown": 18903.298095703125,
+        "dM": 18518.25,
+        "dCaptured": 18518.248107910156,
+        "records": 40,
+        "each24": true,
+        "afterLastSample": 385.04998779296875
       }
     },
     {
@@ -299,7 +303,7 @@
       "detail": {
         "x0": -81.05000000000004,
         "x1": -36.04999999999956,
-        "Wf": -27456648.041299675
+        "Wf": -25855526.43339392
       }
     },
     {
@@ -333,17 +337,17 @@
         "uplifted": 76,
         "loadedUnits": 1,
         "peakLateral": 81.4715849438937,
-        "failures": 152
+        "failures": 165
       }
     },
     {
       "name": "30 collapse and debris: fragments created by the pull (mass moved, not created) and fragments captured",
       "ok": true,
       "detail": {
-        "debris": 149,
+        "debris": 150,
         "frag": {
-          "n": 19,
-          "m": 118272.9154663086
+          "n": 18,
+          "m": 101666.09664916992
         }
       }
     },
@@ -407,7 +411,7 @@
       "ok": true,
       "detail": {
         "status": "paused",
-        "t": 0.49999999999999994,
+        "t": 0.016666666666666666,
         "stop": {
           "time": 0,
           "reason": "accel"
@@ -467,8 +471,8 @@
       "name": "46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate",
       "ok": true,
       "detail": {
-        "fps": 14.5,
-        "worst": 150,
+        "fps": 12.7,
+        "worst": 116.7,
         "pend46": 0
       }
     },
@@ -514,7 +518,7 @@
       "ok": true,
       "detail": {
         "capped": 0,
-        "captured": 86
+        "captured": 83
       }
     },
     {
@@ -545,7 +549,7 @@
   "errors": [],
   "heap": [
     30.7,
-    51.9
+    55.9
   ],
   "geometries": [
     17,

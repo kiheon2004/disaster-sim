@@ -43,8 +43,8 @@ PASS 39 load: reloaded spec identical (stages, end mode, source)
 PASS 40 reset: the field and the Rapier gravity back to the project gravity, t = 0 {"field":true,"t":0,"g":[0,-9.81,0]}
 PASS 42 same conditions again (rerun after reset): identical bodies and gravity ledger {"h40a":"591|building-22.00000,0.00000,-30.000000;building-4.00000,0.","h40b":"591|building-22.00000,0.00000,-30.000000;building-4.00000,0."}
 PASS 41b original world after the pulse run: fingerprint unchanged 
-PASS 43 large town (1000 houses) under a gravity ramp to 2.5 g: every building re-loaded, interactive frame rate {"fps":60,"worstFrameMs":33.3,"loaded":1000,"gl43":{"calls":11,"geometries":17,"textures":3},"ms":0.3999999910593033}
-PASS 44 repeated runs: heap flat over three runs {"heaps44":[58,58.5,58.7]}
+PASS 43 large town (1000 houses) under a gravity ramp to 2.5 g: every building re-loaded, interactive frame rate {"fps":59.4,"worstFrameMs":33.3,"loaded":1000,"gl43":{"calls":11,"geometries":17,"textures":3},"ms":0.20000001788139343}
+PASS 44 repeated runs: heap flat over three runs {"heaps44":[57.9,58.4,58.7]}
 PASS 45 GPU resources released: geometries back after the gravity layer / preview were shown {"geoA":8,"geoB":8}
 PASS 50 gravity ramp → 4.5 g on an office: structural failures attributed to gravity, debris, ledger finite; all members of the building take the ramp in the same step {"failures":60,"debris":0}
 PASS 51 roof snow under 2 g: failed panels carry their snow as packets (falling, resting on a floor, set down on the ground) — every packet either carried by a member or landed, mass unchanged, ledgers closed {"p51a":{"n":4,"carried":23889.599999999995},"p51":{"n":4,"inTransit":23889.599999999995,"done":0,"resting":4,"out":0,"resW":2.2615883567241404e-14,"resE":4.227459777919744e-14}}
@@ -55,6 +55,6 @@ PASS 54 bodies spawned (blast debris) during a gravity ramp: they enter the ledg
 PASS 55 results: the energy terms (integrator ε, energy check R_Φ − ε against the gross work, W_moved in the CSV) R_Φ = ΔU − W_장 − W_이동 + W_g · 에너지 점검 R_Φ − ε -4.1e+2 J (총 |W_g|의 2.4e-4) · 적분기 ε 4.1e+2 J사
 PASS 56 limited models flagged: sideways gravity — structure and flood reported limited / unsupported (no fake vertical results) {"rigid":"full","contact":"full","vehicles":"full","people":"full","debris":"full","structure":"limited","roofSnow":"limited","collapse":"limited","flood":"unsupported","buoyancy":"unsupported","atmosphere":"unsupported","convection":"limited","fire":"scaled","snow":"limited","precipitation":"limited","ash":"unsupported","bombs":"full","lava":"unsupported","meteor":"scaled","blast":"full","ground":"unsupported"}
 PASS whole run: no page errors, the tab alive, GPU geometries back to the start {"errors":0,"geo0":17,"geo1":8}
-{"heap0":30.7,"heap1":51.4,"geo0":17,"geo1":8,"crashed":false}
+{"heap0":30.5,"heap1":47.3,"geo0":17,"geo1":8,"crashed":false}
 
-57/57 passed; 0 page errors; heap 30.7 → 51.4 MB; geometries 17 → 8; crashed false
+57/57 passed; 0 page errors; heap 30.5 → 47.3 MB; geometries 17 → 8; crashed false
