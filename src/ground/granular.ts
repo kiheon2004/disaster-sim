@@ -27,6 +27,7 @@
  * to round-off; open edges record what leaves. A cell whose faces are all at rest for REST_TIME
  * (or creep below U_REST) becomes static deposit (the surface does not change).
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import type { GeoField } from './GeoField';
 
 export const XI_DEFAULT = 400;
@@ -89,7 +90,7 @@ export function flowStep(f: GeoField, duration: number, opt: FlowOptions): FlowS
       if (iz < nz - 1) u = Math.max(u, Math.abs(qz[iz * nx + ix]) / Math.max(H_MIN, h[i], h[i + nx]));
       if (u > stats.maxSpeed) stats.maxSpeed = u;
       if (h[i] > H_MIN || u > 0) {
-        const v = u + Math.sqrt(G * h[i]);
+        const v = u + Math.sqrt(G * gravityDown() * h[i]);
         if (v > vmax) vmax = v;
       }
     }
@@ -208,7 +209,8 @@ function edgeOutflow(f: GeoField, ix: number, iz: number, i: number, dt: number)
   // Beyond the edge the ground continues at the edge height; the layer spreads out with its own
   // pressure gradient h/dx and Coulomb friction (no driving slope → stops when thin).
   const grad = h[i] / dx;
-  const drive = G * h[i] * grad, fric = f.mu[i] * G * h[i];
+  const gd = G * gravityDown();
+  const drive = gd * h[i] * grad, fric = f.mu[i] * gd * h[i];
   if (drive <= fric) return 0;
   return Math.min((h[i] * dx) / dt, (drive - fric) * dt);
 }
@@ -230,8 +232,11 @@ function faceFlux(q: number, hfs: Float32Array, k: number, si: number, sj: numbe
   const cos2 = 1 / (1 + bed * bed);
   // Donor μ: the side the material comes from.
   const mu = sj < si ? mui : muj;
-  let nq = q - G * hf * slope * cos2 * dt;
-  const fric = mu * G * hf * cos2 * dt;
+  // Phase 31: drive and Coulomb friction ∝ the step's downward g; Voellmy's turbulent term keeps Earth g (ξ is a
+  // calibrated roughness: ρ·g·u²/ξ with g·/ξ fitted at g₀ — the physical drag does not depend on gravity).
+  const gd = G * gravityDown();
+  let nq = q - gd * hf * slope * cos2 * dt;
+  const fric = mu * gd * hf * cos2 * dt;
   if (Math.abs(nq) <= fric) return 0;
   nq -= Math.sign(nq) * fric;
   nq /= 1 + (G * Math.abs(nq) * dt) / (xi * hf * hf);

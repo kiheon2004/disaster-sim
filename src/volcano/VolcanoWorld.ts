@@ -14,12 +14,13 @@
  * Ash heat stays in the plume (booked `plumeHeat`, released above the resolved air layer); magmatic gas
  * is a ledger quantity only (no transport, concentration, chemistry or toxicity — Phase 29 interface).
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import { LavaField, type LavaSurroundings } from './LavaField';
 import { specificEnergy, latentHeld, type LavaMaterial } from './materials';
 import { suppliedVolume, eruptionPhase, eruptionShape, type EruptionPhase } from './eruption';
 import { GAS_FRACTION, DEFAULT_PLUME_HEIGHT, type VolcanoSpec, type VentSpec } from './types';
 import { launch, LAUNCH_PERIOD, type Bomb } from './bombs';
-import { ASH_CLASSES, VS, RELEASE_PERIOD, EDDY_K, CEILING, footprint, scavenging, windAt, type Puff } from './ash';
+import { ASH_CLASSES, settlingAt, RELEASE_PERIOD, EDDY_K, CEILING, footprint, scavenging, windAt, type Puff } from './ash';
 import type { WorldBox } from '@/impact/ejecta';
 import { GRAVITY } from '@/core/units';
 
@@ -57,6 +58,8 @@ export interface Eruption {
 
 export interface VolcanoEnv {
   surroundings: LavaSurroundings;
+  /** Gravity vector at the vents (Phase 31; absent without a gravity experiment — bombs fly under Earth's vertical g). */
+  gravity?: readonly [number, number, number];
   /** 10 m wind speed (m/s) and its flow direction (unit). */
   u10: number;
   flowX: number;
@@ -183,11 +186,11 @@ export class VolcanoWorld {
           const ml = mv * (1 - fb - fa);
           for (let k = 0; k < v.verts.length; k++) {
             f.supply(v.verts[k], ml * v.w[k], e.T);
-            this.tot.potentialSupplied += ml * v.w[k] * GRAVITY * f.bed(v.verts[k]);
+            this.tot.potentialSupplied += ml * v.w[k] * GRAVITY * gravityDown() * f.bed(v.verts[k]);
           }
           e.lava += ml;
           v.bombMass += mv * fb; v.bombEnergy += mv * fb * se;
-          this.tot.potentialSupplied += mv * fb * GRAVITY * v.P[1];
+          this.tot.potentialSupplied += mv * fb * GRAVITY * gravityDown() * v.P[1];
           v.ashMass += mv * fa;
         }
       }
@@ -197,7 +200,7 @@ export class VolcanoWorld {
         const tl = e.start + Math.min(e.launches * LAUNCH_PERIOD, Math.max(b, 0));
         e.vents.forEach((v, k) => {
           if (v.bombMass <= 0) return;
-          const list = launch(k + 97 * this.eruptions.indexOf(e), e.launches, v.bombMass, v.bombEnergy, v.P, tl, env.ground, this.box, () => this.nextBomb++, env.atmos?.density(v.P[0], v.P[2], 10));
+          const list = launch(k + 97 * this.eruptions.indexOf(e), e.launches, v.bombMass, v.bombEnergy, v.P, tl, env.ground, this.box, () => this.nextBomb++, env.atmos?.density(v.P[0], v.P[2], 10), env.gravity);
           for (const bmb of list) this.bombs.push(bmb);
           this.tot.bombsLaunched += v.bombMass;
           this.tot.bombEnergyLaunched += v.bombEnergy;
@@ -269,8 +272,8 @@ export class VolcanoWorld {
         p.x += this.uv[0] * dt;
         p.z += this.uv[1] * dt;
         // Free fall bounds the fall speed shortly after release (thin air: terminal speed is large).
-        p.y -= Math.min(at.settling(p.cls, p.x, p.z, h), GRAVITY * Math.max(dt, t - p.born)) * dt;
-      } else p.y -= VS[p.cls] * dt;
+        p.y -= Math.min(at.settling(p.cls, p.x, p.z, h), GRAVITY * gravityDown() * Math.max(dt, t - p.born)) * dt;
+      } else p.y -= settlingAt(p.cls, gravityDown()) * dt;
       p.sigma = Math.sqrt(p.sigma * p.sigma + 2 * EDDY_K * dt);
       const outside = p.x < this.box.x0 || p.x > this.box.x1 || p.z < this.box.z0 || p.z > this.box.z1 || p.y > CEILING;
       if (outside) { this.tot.outAsh += p.mass; continue; }
@@ -337,7 +340,7 @@ export class VolcanoWorld {
     for (const i of f.mobile) latentHeldNow += f.M[i] * latentHeld(this.mat, f.T[i]);
     for (const i of f.hot) latentHeldNow += (f.depM[i] + f.depB[i]) * latentHeld(this.mat, f.depT[i]);
     let pe = 0;
-    for (const i of f.mobile) pe += f.M[i] * GRAVITY * (f.bed(i) + 0.5 * f.depth(i));
+    for (const i of f.mobile) pe += f.M[i] * GRAVITY * gravityDown() * (f.bed(i) + 0.5 * f.depth(i));
     return {
       mass: {
         supplied, lavaSupplied: L.suppliedMass, bombsLaunched: T.bombsLaunched + fl.pendingMass, ashReleased: T.ashReleased + this.pendingAsh(),

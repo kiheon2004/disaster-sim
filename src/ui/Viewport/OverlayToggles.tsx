@@ -1,5 +1,6 @@
 import { ATMOS_OVERLAYS, CLIMATE_OVERLAYS, type AtmosOverlay, type ClimateOverlay } from '@/rendering/viewStore';
 import { climateGradient, climateLabels } from '@/rendering/climate/climateColors';
+import { GRAVITY_OVERLAYS, gravityGradient, gravityLabels, type GravityOverlay } from '@/rendering/gravity/gravityColors';
 import { atmosGradient, atmosLabels } from '@/rendering/atmosphere/atmosColors';
 import { useT } from '@/i18n/i18n';
 import { useViewStore } from '@/rendering/viewStore';
@@ -288,6 +289,7 @@ export function OverlayToggles() {
       <ThermalToggles />
       <VolcanoToggles />
       <AtmosphereToggles />
+      <GravityToggles />
       <ClimateToggles />
       <FireToggles />
       <StructureToggles />
@@ -429,6 +431,32 @@ function AtmosphereToggles() {
         <Toggle checked={viz.arrows} onChange={(b) => set({ arrows: b })} label={t('overlay.atmos.arrows')} />
         <Toggle checked={viz.streamlines} onChange={(b) => set({ streamlines: b })} label={t('overlay.atmos.streamlines')} />
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.atmos.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Gravity views (Phase 31): shown while a gravity experiment runs. Fixed m/s² / × g₀ legends. */
+function GravityToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.gravity !== null);
+  const viz = useViewStore((s) => s.gravityViz);
+  const set = useViewStore.getState().setGravityViz;
+  if (!live) return null;
+  const o = viz.overlay;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#ffd29a', marginTop: 2 }}>{t('overlay.gravity')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="gravity-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.gravity.overlay')}</span>
+        <select value={o} onChange={(e) => set({ overlay: e.target.value as GravityOverlay })} aria-label={t('overlay.gravity.overlay')} data-testid="gravity-overlay-select"
+          style={{ fontSize: 11, background: 'var(--surface-2, #1c2128)', color: 'var(--text-1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4, padding: '2px 4px' }}>
+          {GRAVITY_OVERLAYS.map((v) => <option key={v} value={v}>{t(`overlay.gravity.o.${v}`)}</option>)}
+        </select>
+        {o !== 'off' && <Legend gradient={gravityGradient(o)} labels={gravityLabels(o)} note={t(`overlay.gravity.ot.${o}`)} />}
+        <Toggle checked={viz.arrows} onChange={(b) => set({ arrows: b })} label={t('overlay.gravity.arrows')} />
+        <Toggle checked={viz.sources} onChange={(b) => set({ sources: b })} label={t('overlay.gravity.sources')} />
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.gravity.note')}</span>
       </div>
     </>
   );

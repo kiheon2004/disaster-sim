@@ -35,14 +35,15 @@ const MU_AIR = 1.81e-5;
  * Phase 29: viscosity μ (Pa·s) and the Cunningham slip correction Cc (rarefied air: the drag of the
  * Stokes regime divided by Cc) as optional inputs — the defaults are the Phase 28 values exactly.
  */
-export function settlingVelocity(d: number, rhoP = ASH_PARTICLE_DENSITY, rhoA = 1.2, mu = MU_AIR, slip = 1): number {
+export function settlingVelocity(d: number, rhoP = ASH_PARTICLE_DENSITY, rhoA = 1.2, mu = MU_AIR, slip = 1, g = GRAVITY): number {
   const MU = mu;
   if (!(rhoA > 0)) return Infinity;
-  let v = ((rhoP - rhoA) * GRAVITY * d * d * slip) / (18 * MU); // Stokes start
+  if (!(g > 0)) return 0; // Phase 31: no settling without downward gravity
+  let v = ((rhoP - rhoA) * g * d * d * slip) / (18 * MU); // Stokes start
   for (let it = 0; it < 60; it++) {
     const Re = (rhoA * v * d) / MU;
     const Cd = (Re < 1000 ? (24 / Math.max(Re, 1e-9)) * (1 + 0.15 * Re ** 0.687) : 0.44) / slip;
-    const next = Math.sqrt((4 * (rhoP - rhoA) * GRAVITY * d) / (3 * Cd * rhoA));
+    const next = Math.sqrt((4 * (rhoP - rhoA) * g * d) / (3 * Cd * rhoA));
     if (Math.abs(next - v) < 1e-7 * v) { v = next; break; }
     v = 0.5 * (v + next);
   }
@@ -50,6 +51,15 @@ export function settlingVelocity(d: number, rhoP = ASH_PARTICLE_DENSITY, rhoA = 
 }
 
 export const VS = ASH_CLASSES.map((c) => settlingVelocity(c.d));
+
+/** Settling velocity of a class in the standard air under the downward gravity ratio gd (Phase 31; VS at gd = 1). */
+const vsCache = new Map<number, number[]>();
+export function settlingAt(cls: number, gd: number): number {
+  if (gd === 1) return VS[cls];
+  let v = vsCache.get(gd);
+  if (!v) { v = ASH_CLASSES.map((c) => settlingVelocity(c.d, ASH_PARTICLE_DENSITY, 1.2, MU_AIR, 1, GRAVITY * gd)); if (vsCache.size > 256) vsCache.clear(); vsCache.set(gd, v); }
+  return v[cls];
+}
 
 export interface Puff {
   vent: number;

@@ -10,9 +10,9 @@
  */
 import { GRAVITY } from '@/core/units';
 
-export function binghamFlux(h: number, sinT: number, rho: number, eta: number, tau: number): number {
-  if (!(h > 0) || !(sinT > 0) || !(eta < Infinity)) return 0;
-  const drive = rho * GRAVITY * sinT;
+export function binghamFlux(h: number, sinT: number, rho: number, eta: number, tau: number, g = GRAVITY): number {
+  if (!(h > 0) || !(sinT > 0) || !(eta < Infinity) || !(g > 0)) return 0;
+  const drive = rho * g * sinT;
   if (tau <= 0) return (drive * h * h * h) / (3 * eta);
   const hcr = tau / drive;
   if (h <= hcr) return 0;
@@ -21,8 +21,8 @@ export function binghamFlux(h: number, sinT: number, rho: number, eta: number, t
 }
 
 /** Critical depth (m) below which the lava does not move on the slope. */
-export function criticalDepth(sinT: number, rho: number, tau: number): number {
-  return sinT > 0 ? tau / (rho * GRAVITY * sinT) : Infinity;
+export function criticalDepth(sinT: number, rho: number, tau: number, g = GRAVITY): number {
+  return sinT > 0 && g > 0 ? tau / (rho * g * sinT) : Infinity;
 }
 
 /** Depth-averaged speed (m/s) of the plate flow. */

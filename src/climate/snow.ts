@@ -22,6 +22,7 @@
  *  interception          Hedstrom & Pomeroy (1998): I_max = S̄·(0.27 + 46/ρ_new)·LAI, S̄ = 6.6 kg/m²,
  *                        ΔI = (I_max − I)·(1 − exp(−P/I_max)) per crown projected area
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import { C_ICE, L_F, SNOW_ALBEDO_MAX, SNOW_ALBEDO_MIN, ASH_ALBEDO, RHO_SNOW_MAX, RHO_SNOW_MIN, T_MELT } from './constants';
 
 /** Density of new snow (kg/m³) falling through air at T (K). */
@@ -45,7 +46,9 @@ export function compactionRate(rho: number, T: number, W: number, liquid: boolea
   const c2 = liquid ? 2 : 1;
   const cr1 = -2.777e-6 * c1 * c2 * Math.exp(-0.04 * dT);
   const eta = 9e5 * Math.exp(0.08 * dT) * Math.exp(0.023 * rho);
-  const cr2 = -(0.5 * W) / eta;
+  // Overburden: the stress is g·W — W (kg/m²) was fitted at Earth g, so it enters as the weight ratio (Phase 31).
+  const gd = gravityDown();
+  const cr2 = -(0.5 * (gd === 1 ? W : W * gd)) / eta;
   return cr1 + cr2;
 }
 

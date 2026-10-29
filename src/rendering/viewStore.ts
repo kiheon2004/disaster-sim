@@ -192,6 +192,13 @@ export interface ClimateViz {
   shimmer: boolean;
 }
 
+/** Gravity views (Phase 31): field arrows, a ground / building overlay on fixed SI legends, the local sources. */
+export interface GravityViz {
+  overlay: import('./gravity/gravityColors').GravityOverlay;
+  arrows: boolean;
+  sources: boolean;
+}
+
 export interface AtmosViz {
   overlay: AtmosOverlay;
   arrows: boolean;
@@ -270,6 +277,8 @@ interface ViewState {
   setAtmosViz: (patch: Partial<AtmosViz>) => void;
   climateViz: ClimateViz;
   setClimateViz: (patch: Partial<ClimateViz>) => void;
+  gravityViz: GravityViz;
+  setGravityViz: (patch: Partial<GravityViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -330,6 +339,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setAtmosViz: (patch) => set((s) => ({ atmosViz: { ...s.atmosViz, ...patch } })),
   climateViz: { overlay: 'off', snow: true, ice: true, particles: true, shimmer: true },
   setClimateViz: (patch) => set((s) => ({ climateViz: { ...s.climateViz, ...patch } })),
+  gravityViz: { overlay: 'off', arrows: true, sources: true },
+  setGravityViz: (patch) => set((s) => ({ gravityViz: { ...s.gravityViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

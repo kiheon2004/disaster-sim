@@ -44,17 +44,18 @@ export function bearingDir(deg: number): [number, number] {
 }
 
 /** Integrate the arc (exact parabola, terrain met by stepping + bisection). */
-export function flyArc(a: ArcInput, ground: (x: number, z: number) => number): ArcResult {
+export function flyArc(a: ArcInput, ground: (x: number, z: number) => number, g = GRAVITY): ArcResult {
   const th = (a.angle * Math.PI) / 180;
   const [dx, dz] = bearingDir(a.azimuth);
   // Back-solve the hand-over point: the ballistic arc from it meets the aim point on LEVEL ground at
   // the aim height (h = v·sinθ·t + ½·g·t²); the terrain then decides where it really lands.
   const vs = a.speed * Math.sin(th), vh = a.speed * Math.cos(th);
-  const tLevel = (-vs + Math.sqrt(vs * vs + 2 * GRAVITY * a.handover)) / GRAVITY;
+  // Phase 31: the downward gravity of the world (exact parabola; a straight line without gravity).
+  const tLevel = g > 1e-9 ? (-vs + Math.sqrt(vs * vs + 2 * g * a.handover)) / g : a.handover / Math.max(1e-9, vs);
   const horiz = vh * tLevel;
   const start: [number, number, number] = [a.aim[0] - dx * horiz, a.aimHeight + a.handover, a.aim[1] - dz * horiz];
   const v0: [number, number, number] = [dx * vh, -vs, dz * vh];
-  const at = (t: number): [number, number, number] => [start[0] + v0[0] * t, start[1] + v0[1] * t - 0.5 * GRAVITY * t * t, start[2] + v0[2] * t];
+  const at = (t: number): [number, number, number] => [start[0] + v0[0] * t, start[1] + v0[1] * t - 0.5 * g * t * t, start[2] + v0[2] * t];
   const above = (t: number) => { const p = at(t); return p[1] - ground(p[0], p[2]); };
   // Step ≤ 0.25 m along the path, until below ground (or a generous time limit).
   const step = 0.25 / a.speed;
@@ -71,7 +72,7 @@ export function flyArc(a: ArcInput, ground: (x: number, z: number) => number): A
   }
   const t = t1;
   const p = at(t);
-  const vel: [number, number, number] = [v0[0], v0[1] - GRAVITY * t, v0[2]];
+  const vel: [number, number, number] = [v0[0], v0[1] - g * t, v0[2]];
   const vHit = Math.hypot(vel[0], vel[2]);
   return {
     start, velocity0: v0, point: p, velocity: vel, time: t,

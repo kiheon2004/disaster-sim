@@ -94,6 +94,8 @@ function boxGeom(pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number, out: Bod
 function applyWater(
   physics: PhysicsEngine, ledger: ForceLedger, owner: ForceOwner, field: WaterField, body: number, pos: Vec3, q: Quat, dims: Vec3, centerOffsetY: number,
   volume: number, cd: number, areaFactor: number, dt: number, st: FloodEntityState | null, rest: { lastEta?: number },
+  /** Downward gravity at the body (Phase 31; GRAVITY without a gravity experiment). */
+  gd = GRAVITY,
 ): number {
   const g = boxGeom(pos, q, dims, centerOffsetY, geom);
   const eta = field.sampleSurface(g.cx, g.cz);
@@ -117,11 +119,12 @@ function applyWater(
   }
   const frac = sub / height;
   const m = physics.getMass(body);
-  const buoy = WATER_DENSITY * GRAVITY * volume * frac;
+  // Phase 31: Archimedes with the local downward gravity (−ρ·V·g, vertical component; the tilted part is a documented limit).
+  const buoy = WATER_DENSITY * gd * volume * frac;
   if (st) {
     st.submerged = frac;
     st.buoyancy = buoy;
-    st.buoyancyRatio = buoy / (m * GRAVITY);
+    st.buoyancyRatio = gd === GRAVITY ? buoy / (m * GRAVITY) : Math.abs(gd) > 1e-6 ? buoy / (m * gd) : 0;
   }
   const uw = st ? st.flow : field.sampleVelocity(g.cx, g.cz, vel);
   // Still water around a resting body: keep the static load without waking it.
@@ -193,18 +196,18 @@ export class WaterForceSystem implements SimulationSystem {
         st.ingress += ((1 - st.ingress) * above * dt) / CAR_INGRESS_TAU;
       }
       // Body origin sits at the base: the box center is dims.y / 2 up the body's own axis.
-      applyWater(physics, ctx.forces, e, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? 1.2, e.areaFactor, dt, st, st);
+      applyWater(physics, ctx.forces, e, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? 1.2, e.areaFactor, dt, st, st, ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY));
       // The water dominates when its drag exceeds the wind load on the body.
       st.dominant = st.submerged > 0 && st.load > Math.max(50, e.windLoad);
     }
-    for (const d of runtime.debris) this.debris(physics, ctx.forces, field, d, dt);
+    for (const d of runtime.debris) this.debris(physics, ctx.forces, field, d, dt, ctx.env.gravity.down(d.pose.position[0], d.pose.position[1], d.pose.position[2], GRAVITY));
   }
 
-  private debris(physics: PhysicsEngine, ledger: ForceLedger, field: WaterField, d: DebrisPiece, dt: number) {
+  private debris(physics: PhysicsEngine, ledger: ForceLedger, field: WaterField, d: DebrisPiece, dt: number, gd: number) {
     // Material volume = mass / density (a box is partly hollow), at most the box itself:
     // light roof panels float, concrete chunks sink.
     const box = d.size[0] * d.size[1] * d.size[2];
     const volume = Math.min(box, d.mass / (DEBRIS_DENSITY[d.kind] ?? 2000));
-    applyWater(physics, ledger, d, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d);
+    applyWater(physics, ledger, d, field, d.body, d.pose.position, d.pose.quaternion, d.size, 0, volume, 1.15, 1, dt, null, d, gd);
   }
 }

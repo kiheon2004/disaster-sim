@@ -169,7 +169,9 @@ export function updateBuildingFlood(e: RuntimeEntity, ctx: SystemContext, field:
   const B = Math.max(e.dims[0], e.dims[2]);
   const d = st.depth;
   const di = Math.min(d, st.inside);
-  const fh = 0.5 * RHO * GRAVITY * (d * d - di * di) * B;
+  // Phase 31: hydrostatic thrust under the local downward gravity; the lateral CAPACITY below stays at Earth gravity (design).
+  const gd = ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY);
+  const fh = 0.5 * RHO * gd * (d * d - di * di) * B;
   const fd = 0.5 * RHO * BUILDING_CD * st.speed * st.speed * d * B;
   st.load = fh + fd;
   const seismic = seismicOf(e.source);
@@ -211,7 +213,7 @@ function envelopeParts(e: RuntimeEntity, ctx: SystemContext, st: FloodEntityStat
     const head = st.surface - pos[1];
     if (head <= 0) continue;
     const back = Math.max(0, insideSurface - pos[1]);
-    const p = RHO * GRAVITY * Math.max(0, head - back) + dyn;
+    const p = RHO * ctx.env.gravity.down(pos[0], pos[1], pos[2], GRAVITY) * Math.max(0, head - back) + dyn;
     const cap = 0.5 * AIR * c.spec.windResistance * c.spec.windResistance * ENVELOPE_SAFETY * (st.scatter ? st.scatter[i] : 1);
     if (p < cap) continue;
     c.health = 0;
@@ -269,11 +271,12 @@ const PERSON_MU = 0.5;
 const PERSON_CD = 1.1;
 
 /** Stability ratio of a standing person in flowing water (≥ 1 = falls). Exported for tests. */
-export function personStability(mass: number, height: number, width: number, depth: number, speed: number, buoyancy: number, gripFactor = 1): number {
+export function personStability(mass: number, height: number, width: number, depth: number, speed: number, buoyancy: number, gripFactor = 1, g = GRAVITY): number {
   if (depth <= 0.02) return 0;
   const d = Math.min(depth, height);
   const fd = 0.5 * RHO * PERSON_CD * width * d * speed * speed;
-  const net = Math.max(1, mass * GRAVITY - buoyancy);
+  // Weight under the local gravity (Phase 31): a lighter person in Moon-like gravity is swept away by weaker flow.
+  const net = Math.max(1, mass * g - buoyancy);
   const slide = fd / (PERSON_MU * gripFactor * net);
   const tip = (fd * d * 0.5) / (net * FOOT_LEVER);
   return Math.max(slide, tip);
@@ -287,7 +290,7 @@ export function updatePersonFlood(e: RuntimeEntity, ctx: SystemContext, field: W
     st.loadRatio = 0;
     return;
   }
-  const r = personStability(e.source.physics.mass, e.dims[1], e.dims[0] * e.areaFactor, st.depth, st.speed, st.buoyancy, e.groundFriction);
+  const r = personStability(e.source.physics.mass, e.dims[1], e.dims[0] * e.areaFactor, st.depth, st.speed, st.buoyancy, e.groundFriction, ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY));
   st.loadRatio = r;
   if (r >= 1) st.balance = 0;
   else if (r > 0.6) st.balance -= ((r - 0.6) / 0.4) * (dt / 6);
@@ -323,7 +326,7 @@ export function updateInfraFlood(e: RuntimeEntity, ctx: SystemContext, field: Wa
     const L = e.dims[0];
     const dHi = Math.min(H, Math.max(d1, d2));
     const dLo = Math.min(H, Math.min(d1, d2));
-    const hydro = (RHO * GRAVITY * (dHi ** 3 - dLo ** 3) * L) / 6;
+    const hydro = (RHO * ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY) * (dHi ** 3 - dLo ** 3) * L) / 6;
     // Flow component across the wall.
     const fx = d1 >= d2 ? f1[0] : st.flow[0];
     const fz = d1 >= d2 ? f1[1] : st.flow[1];

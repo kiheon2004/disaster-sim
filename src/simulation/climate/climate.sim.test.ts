@@ -180,9 +180,15 @@ describe('climate in the simulation (Phase 30)', () => {
     c.advance(30);
     const r = crt(c);
     const b = [...c.getRuntime()!.entities.values()].find((e) => e.source.type === 'building')!;
-    expect(b.climate?.loadKPa ?? 0).toBeGreaterThan(5);
     expect(b.climate?.applied).toBe(true);
     expect(b.modular?.structure).toBeDefined();
+    // Phase 31 (R1): ≈ 6.6 kPa of snow is far beyond the warehouse's roof panels (≈ 2.6 kPa): they fail in bending
+    // under the climate load and take their snow with them (R2) — the roof store is (almost) empty.
+    const fails = c.getDamageEvents().filter((d) => d.eventType === 'FAILED' && d.memberType === 'roof');
+    expect(fails.length).toBeGreaterThan(0);
+    expect(fails[0].hazard).toBe('climate');
+    const roofStore = r.stores.find((x) => x.e === b)!;
+    expect(r.cw.sGone[roofStore.k] ? 0 : r.cw.sM[roofStore.k]).toBeLessThan(0.05 * 1.5 * 450 * r.cw.stores[roofStore.k].area);
     const total0 = r.cw.waterStorage();
     c.advance(270);
     // Whatever the structure did, no snow mass is lost (dropped or still on the roof).

@@ -33,7 +33,7 @@ const D_AIR = 3.7e-10;
 
 export const density = (p: number, T: number) => p / (R_AIR * T);
 export const pressureOf = (rho: number, T: number) => rho * R_AIR * T;
-export const scaleHeight = (T: number) => (R_AIR * T) / G;
+export const scaleHeight = (T: number, g = G) => (R_AIR * T) / g;
 /** Speed of sound (m/s) of an ideal gas — depends on T only. */
 export const soundSpeed = (T: number) => Math.sqrt(GAMMA * R_AIR * T);
 
@@ -46,10 +46,10 @@ export function isa(h: number): { T: number; p: number; rho: number } {
 }
 
 /** Pressure at height dz above a surface at (p_s, T) in an isothermal column. */
-export const hydrostatic = (ps: number, T: number, dz: number) => ps * Math.exp(-dz / scaleHeight(T));
+export const hydrostatic = (ps: number, T: number, dz: number, g = G) => ps * Math.exp(-dz / scaleHeight(T, g));
 
 /** Mass of air (kg/m²) between the surface and height H of an isothermal column with surface pressure p_s. */
-export const layerMassPerArea = (ps: number, T: number, H: number) => (ps / G) * (1 - Math.exp(-H / scaleHeight(T)));
+export const layerMassPerArea = (ps: number, T: number, H: number, g = G) => (ps / g) * (1 - Math.exp(-H / scaleHeight(T, g)));
 
 /** Mean free path of air molecules (m), kinetic theory λ = k_B·T/(√2·π·d²·p). */
 export const meanFreePath = (p: number, T: number) => (p > 0 ? (K_B * T) / (Math.SQRT2 * Math.PI * D_AIR * D_AIR * p) : Infinity);

@@ -137,7 +137,7 @@ export interface WorldBox { x0: number; z0: number; x1: number; z1: number }
  * Integrate a parcel's flight (gravity + drag on its fragment size) until it meets the ground or leaves
  * the world. `rhoAir`: air density of the flight (Phase 29 atmosphere; default the sea-level value).
  */
-export function fly(p: Parcel, ground: (x: number, z: number) => number, box: WorldBox, fragmentDensity: number, rhoAir = RHO0) {
+export function fly(p: Parcel, ground: (x: number, z: number) => number, box: WorldBox, fragmentDensity: number, rhoAir = RHO0, gv?: readonly [number, number, number]) {
   let [x, y, z] = p.p0;
   let [vx, vy, vz] = p.v0;
   const kd = (3 * CD_FRAG * rhoAir) / (4 * fragmentDensity * p.size);
@@ -147,7 +147,10 @@ export function fly(p: Parcel, ground: (x: number, z: number) => number, box: Wo
     // Semi-implicit drag (stable for small fragments), explicit gravity.
     const sp = Math.hypot(vx, vy, vz);
     const damp = 1 / (1 + kd * sp * FLIGHT_DT);
-    vx *= damp; vy = (vy - GRAVITY * FLIGHT_DT) * damp; vz *= damp;
+    // Phase 31: a gravity vector of the world at launch (constant over the flight; a field changing mid-flight is not
+    // followed — documented); without one the Phase 23 vertical g exactly.
+    if (gv) { vx = (vx + gv[0] * FLIGHT_DT) * damp; vy = (vy + gv[1] * FLIGHT_DT) * damp; vz = (vz + gv[2] * FLIGHT_DT) * damp; }
+    else { vx *= damp; vy = (vy - GRAVITY * FLIGHT_DT) * damp; vz *= damp; }
     x += vx * FLIGHT_DT; y += vy * FLIGHT_DT; z += vz * FLIGHT_DT;
     t += FLIGHT_DT;
     sinceSample += FLIGHT_DT;
@@ -155,7 +158,11 @@ export function fly(p: Parcel, ground: (x: number, z: number) => number, box: Wo
     const outside = x < box.x0 || x > box.x1 || z < box.z0 || z > box.z1;
     if (outside && y <= 0) { p.outflow = true; break; }
     if (vy < 0 && y <= ground(x, z)) break;
+    // Phase 31: a parcel rising out of the world (upward / no gravity) leaves it — never lands.
+    if (gv && (y > 2000 || (outside && !(gv[1] < 0)))) { p.outflow = true; break; }
   }
+  // Phase 31: still airborne after the longest flight (no downward gravity): it never lands in the world.
+  if (gv && !p.outflow && y > ground(x, z) + 0.01) p.outflow = true;
   path.push(x, y, z);
   p.t1 = p.t0 + t;
   p.p1 = [x, y, z];

@@ -155,3 +155,15 @@ export function gravityOutlook(spec: GravitySpec, g0 = EARTH_G, n = 121): Gravit
   if ((spec.profile === 'pulse' || spec.profile === 'constant' || spec.profile === 'staged' || spec.profile === 'scheduled') && spec.global) limits.push('gravity.lim.sudden');
   return { path, maxMagnitude: maxM, minMagnitude: minM, maxDown: maxD, minDown: minD, maxHorizontal: maxH, localPeak, support, limits, issues: [] };
 }
+
+/** Display mode of a field state: the regime it is in (HUD / results). */
+export type GravityMode = 'earth' | 'low' | 'high' | 'zero' | 'reverse' | 'sideways' | 'vector' | 'local';
+export function modeOf(G: readonly [number, number, number], g0: number, uniform: boolean): GravityMode {
+  const m = Math.hypot(G[0], G[1], G[2]), h = Math.hypot(G[0], G[2]);
+  if (!uniform) return 'local';
+  if (m < DOWN_MIN * g0) return 'zero';
+  if (G[1] > 0 && h < HORIZONTAL_SHARE * g0) return 'reverse';
+  if (h > HORIZONTAL_SHARE * g0) return Math.abs(G[1]) < HORIZONTAL_SHARE * g0 ? 'sideways' : 'vector';
+  if (Math.abs(m - g0) <= 1e-9 * g0) return 'earth';
+  return m < g0 ? 'low' : 'high';
+}

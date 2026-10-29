@@ -388,6 +388,13 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       result.warnings.push({ key: 'parse.unsupported.planned' });
       continue;
     }
+    // Phase 31: a gravity experiment is recognized but set up in the experiment editor (magnitude, direction, profile,
+    // local sources) — text never changes gravity. (After the planned check: "a black hole's gravity" stays planned.)
+    if (phenomena.implemented('gravity')!.keywords.test(raw)) {
+      result.unsupported.push({ event: 'gravity', params: {} });
+      result.warnings.push({ key: 'parse.gravity.editor' });
+      continue;
+    }
     const rel = extractAfter(raw);
     const clause = rel.rest;
     const firstCommand = result.commands.length;

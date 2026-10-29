@@ -1,3 +1,4 @@
+import { gravityDown } from '@/thermal/gravityScope';
 /**
  * Reduced multi-degree-of-freedom structural response (Phase 13), all structures in one
  * structure-of-arrays model (Float64Array, no per-step allocation).
@@ -389,6 +390,8 @@ export class StructuralModel {
     const F = this.force;
     const A = this.accL;
     const m = this.m, k = this.k, c = this.c, fy = this.fy, pd = this.pdel, al = this.alpha, sd = this.storyD;
+    // Phase 31: P-Δ follows the step's downward gravity (the stored terms are at the build gravity; ratio 1 otherwise).
+    const gr = gravityDown();
     const u = this.u, v = this.v, p = this.p;
     let ot0 = 0, ot1 = 0, vb0 = 0, vb1 = 0;
     for (let ax = 0; ax < 2; ax++) {
@@ -415,7 +418,7 @@ export class StructuralModel {
             e = -ey;
             p[i2] = delta - e;
           }
-          F[j] = al[d] * ke * delta + a1 * ke * e - pd[d] * delta + c[i2] * (v[i2] - v[below]);
+          F[j] = al[d] * ke * delta + a1 * ke * e - (gr === 1 ? pd[d] : pd[d] * gr) * delta + c[i2] * (v[i2] - v[below]);
         }
         F[n + 1] = 0;
         // Foundation spring with slip.

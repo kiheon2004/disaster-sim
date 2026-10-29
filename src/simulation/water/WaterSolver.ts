@@ -79,6 +79,35 @@ export class WaterSolver {
   saturated = false;
   /** Duration of the current step() call (the ground-velocity change is spread over it). */
   private callDt = 0;
+  /**
+   * Gravity (Phase 31): the downward component of the uniform field (m/s²; G without a gravity experiment) and its
+   * horizontal components — the latter enter as a body force h·g_h (a tilted reference surface, through the same term
+   * as the earthquake's inertial load). Under a spatial field each cell has its own components (null = uniform); a
+   * face uses the mean of its two cells; the CFL bound uses the largest downward component.
+   */
+  g = G;
+  tiltX = 0;
+  tiltZ = 0;
+  gCell: Float32Array | null = null;
+  gxCell: Float32Array | null = null;
+  gzCell: Float32Array | null = null;
+  gMax = G;
+
+  /** Set the gravity for the next step() (uniform: arrays null). Downward components below 0 are not represented (held at 0). */
+  setGravity(down: number, gx: number, gz: number, cells: { down: Float32Array; x: Float32Array; z: Float32Array } | null = null) {
+    this.g = Math.max(0, down);
+    this.tiltX = gx;
+    this.tiltZ = gz;
+    if (cells) {
+      this.gCell = cells.down; this.gxCell = cells.x; this.gzCell = cells.z;
+      let m = 0;
+      for (let i = 0; i < cells.down.length; i++) if (cells.down[i] > m) m = cells.down[i];
+      this.gMax = m;
+    } else {
+      this.gCell = this.gxCell = this.gzCell = null;
+      this.gMax = this.g;
+    }
+  }
 
   constructor(readonly field: WaterField, readonly forcing: WaterForcing) {
     this.rowOld = new Float64Array(field.nx);
@@ -101,7 +130,7 @@ export class WaterSolver {
     const f = this.field;
     let hmax = 0;
     for (let i = 0; i < f.count; i++) if (f.h[i] > hmax) hmax = f.h[i];
-    return Math.sqrt(G * hmax);
+    return Math.sqrt(this.gMax * hmax);
   }
 
   /** Deepest possible ghost depth at fixed-level edges (bounds the wave speed of inflow). */
@@ -131,11 +160,11 @@ export class WaterSolver {
     let n = 0;
     this.minDt = dt;
     this.saturated = false;
-    const ghost = Math.sqrt(G * this.boundaryDepth());
+    const ghost = Math.sqrt(this.gMax * this.boundaryDepth());
     while (remaining > 1e-12) {
       // Previous substep's wave speed, the deepest water anywhere (sources may have deepened
       // still water) and the ghost depth of fixed-level edges.
-      const speed = Math.max(this.waveSpeed, Math.sqrt(G * f.stats.maxDepth), ghost);
+      const speed = Math.max(this.waveSpeed, Math.sqrt(this.gMax * f.stats.maxDepth), ghost);
       const limit = speed > 0 ? (CFL * f.cell) / speed : remaining;
       // Equal-sized substeps for what is left (avoids a sliver at the end).
       const parts = Math.ceil(remaining / limit - 1e-9);
@@ -289,11 +318,17 @@ export class WaterSolver {
     const za = Math.max(0, f.z0 - 1);
     const zb = Math.min(nz - 1, f.z1 + 1);
     const W = nx + 1;
-    const gdt = G * dt;
+    const gU = this.g;
+    const gc = this.gCell, gxc = this.gxCell, gzc = this.gzCell;
+    const gdt = gU * dt;
     const slopeK = gdt / dx;
+    const FR2 = FROUDE_MAX * FROUDE_MAX;
+    // Bed friction g·n²·|q|q/h^(7/3) keeps EARTH g (Phase 31): Manning's n is calibrated at g₀ and hides √g (n ∝ √(g₀/g)
+    // for a fixed Darcy roughness), so g·n² = g₀·n² — the shear stress ρ·f·u²/8 of the bed does not depend on gravity.
+    const gdt0 = G * dt;
     const th = THETA;
     const th2 = (1 - THETA) * 0.5;
-    const fr2 = FROUDE_MAX * FROUDE_MAX * G;
+    const fr2 = FROUDE_MAX * FROUDE_MAX * gU;
     let hfMax = 0;
     let uMax = 0;
     // Interaction terms (Phase 15), all zero in single-hazard runs → identical arithmetic path.
@@ -302,10 +337,11 @@ export class WaterSolver {
     const share = this.callDt > 0 ? dt / this.callDt : 0;
     const sX = ws[0] * dt;
     const sZ = ws[1] * dt;
-    const gX = gdv[0] * share;
-    const gZ = gdv[1] * share;
-    const extX = sX !== 0 || gX !== 0;
-    const extZ = sZ !== 0 || gZ !== 0;
+    // Horizontal gravity (Phase 31): +h·g_h — the opposite of a ground acceleration, same term.
+    const gX = this.tiltX !== 0 ? gdv[0] * share - this.tiltX * dt : gdv[0] * share;
+    const gZ = this.tiltZ !== 0 ? gdv[1] * share - this.tiltZ * dt : gdv[1] * share;
+    const extX = sX !== 0 || gX !== 0 || gxc !== null;
+    const extZ = sZ !== 0 || gZ !== 0 || gzc !== null;
     // Air-pressure waves (Phase 24): −h·∂(∫p dt)/∂x / ρ_w, the call's share of it (null otherwise).
     const air = this.forcing.airPending ? this.forcing.airImpulse : null;
     const airK = air !== null ? share / (WATER_DENSITY * dx) : 0;
@@ -333,12 +369,12 @@ export class WaterSolver {
             const q0 = th * old + th2 * (prevOld + qx[fi + 1]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eR - eL);
-            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
+            let num = q0 - (gc === null ? slopeK : (0.5 * (gc[L] + gc[R]) * dt) / dx) * hf * (eR - eL);
+            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * (gxc === null ? gX : gX - 0.5 * (gxc[L] + gxc[R]) * dt);
             if (air !== null) num -= hf * airK * (air[R] - air[L]);
-            qn = (num * H) / (H + gdt * 0.5 * (n2[L] + n2[R]) * aq);
+            qn = (num * H) / (H + gdt0 * 0.5 * (n2[L] + n2[R]) * aq);
             // Froude limiter: q² ≤ Fr²·g·hf³
-            const lim = fr2 * hf * hf * hf;
+            const lim = (gc === null ? fr2 : FR2 * 0.5 * (gc[L] + gc[R])) * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             // Gravity waves travel even through still water: hf always enters the CFL bound.
             if (hf > hfMax) hfMax = hf;
@@ -374,11 +410,11 @@ export class WaterSolver {
             const q0 = th * old + th2 * (rowOld[ix] + qz[fi + nx]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eB - eT);
-            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
+            let num = q0 - (gc === null ? slopeK : (0.5 * (gc[T] + gc[B]) * dt) / dx) * hf * (eB - eT);
+            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * (gzc === null ? gZ : gZ - 0.5 * (gzc[T] + gzc[B]) * dt);
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
-            qn = (num * H) / (H + gdt * 0.5 * (n2[T] + n2[B]) * aq);
-            const lim = fr2 * hf * hf * hf;
+            qn = (num * H) / (H + gdt0 * 0.5 * (n2[T] + n2[B]) * aq);
+            const lim = (gc === null ? fr2 : FR2 * 0.5 * (gc[T] + gc[B])) * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             if (hf > hfMax) hfMax = hf;
             const u = (qn < 0 ? -qn : qn) / hf;
@@ -389,7 +425,7 @@ export class WaterSolver {
         qz[fi] = qn;
       }
     }
-    let speed = Math.sqrt(G * hfMax) + uMax;
+    let speed = Math.sqrt((gc === null ? gU : this.gMax) * hfMax) + uMax;
 
     // Boundary faces (only the part of each edge inside the active range).
     if (xa === 0) for (let iz = za; iz <= zb; iz++) speed = Math.max(speed, this.edgeFace('W', iz * nx, iz * W, -1, iz * nx + 1, dt));
@@ -415,11 +451,17 @@ export class WaterSolver {
     const za = Math.max(0, f.z0 - 1);
     const zb = Math.min(nz - 1, f.z1 + 1);
     const W = nx + 1;
-    const gdt = G * dt;
+    const gU = this.g;
+    const gc = this.gCell, gxc = this.gxCell, gzc = this.gzCell;
+    const gdt = gU * dt;
     const slopeK = gdt / dx;
+    const FR2 = FROUDE_MAX * FROUDE_MAX;
+    // Bed friction g·n²·|q|q/h^(7/3) keeps EARTH g (Phase 31): Manning's n is calibrated at g₀ and hides √g (n ∝ √(g₀/g)
+    // for a fixed Darcy roughness), so g·n² = g₀·n² — the shear stress ρ·f·u²/8 of the bed does not depend on gravity.
+    const gdt0 = G * dt;
     const th = THETA;
     const th2 = (1 - THETA) * 0.5;
-    const fr2 = FROUDE_MAX * FROUDE_MAX * G;
+    const fr2 = FROUDE_MAX * FROUDE_MAX * gU;
     let hfMax = 0;
     let uMax = 0;
     // Interaction terms (Phase 15), all zero in single-hazard runs → identical arithmetic path.
@@ -428,10 +470,11 @@ export class WaterSolver {
     const share = this.callDt > 0 ? dt / this.callDt : 0;
     const sX = ws[0] * dt;
     const sZ = ws[1] * dt;
-    const gX = gdv[0] * share;
-    const gZ = gdv[1] * share;
-    const extX = sX !== 0 || gX !== 0;
-    const extZ = sZ !== 0 || gZ !== 0;
+    // Horizontal gravity (Phase 31): +h·g_h — the opposite of a ground acceleration, same term.
+    const gX = this.tiltX !== 0 ? gdv[0] * share - this.tiltX * dt : gdv[0] * share;
+    const gZ = this.tiltZ !== 0 ? gdv[1] * share - this.tiltZ * dt : gdv[1] * share;
+    const extX = sX !== 0 || gX !== 0 || gxc !== null;
+    const extZ = sZ !== 0 || gZ !== 0 || gzc !== null;
     // Air-pressure waves (Phase 24): −h·∂(∫p dt)/∂x / ρ_w, the call's share of it (null otherwise).
     const air = this.forcing.airPending ? this.forcing.airImpulse : null;
     const airK = air !== null ? share / (WATER_DENSITY * dx) : 0;
@@ -460,12 +503,12 @@ export class WaterSolver {
             const q0 = th * old + th2 * (prevOld + qx[fi + 1]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eR + (frz[R] ? 0 : iceL[R]) - eL - (frz[L] ? 0 : iceL[L]));
-            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
+            let num = q0 - (gc === null ? slopeK : (0.5 * (gc[L] + gc[R]) * dt) / dx) * hf * (eR + (frz[R] ? 0 : iceL[R]) - eL - (frz[L] ? 0 : iceL[L]));
+            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * (gxc === null ? gX : gX - 0.5 * (gxc[L] + gxc[R]) * dt);
             if (air !== null) num -= hf * airK * (air[R] - air[L]);
-            qn = (num * H) / (H + gdt * 0.5 * (n2[L] * fric[L] + n2[R] * fric[R]) * aq);
+            qn = (num * H) / (H + gdt0 * 0.5 * (n2[L] * fric[L] + n2[R] * fric[R]) * aq);
             // Froude limiter: q² ≤ Fr²·g·hf³
-            const lim = fr2 * hf * hf * hf;
+            const lim = (gc === null ? fr2 : FR2 * 0.5 * (gc[L] + gc[R])) * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             // Gravity waves travel even through still water: hf always enters the CFL bound.
             if (hf > hfMax) hfMax = hf;
@@ -502,11 +545,11 @@ export class WaterSolver {
             const q0 = th * old + th2 * (rowOld[ix] + qz[fi + nx]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eB + (frz[B] ? 0 : iceL[B]) - eT - (frz[T] ? 0 : iceL[T]));
-            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
+            let num = q0 - (gc === null ? slopeK : (0.5 * (gc[T] + gc[B]) * dt) / dx) * hf * (eB + (frz[B] ? 0 : iceL[B]) - eT - (frz[T] ? 0 : iceL[T]));
+            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * (gzc === null ? gZ : gZ - 0.5 * (gzc[T] + gzc[B]) * dt);
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
-            qn = (num * H) / (H + gdt * 0.5 * (n2[T] * fric[T] + n2[B] * fric[B]) * aq);
-            const lim = fr2 * hf * hf * hf;
+            qn = (num * H) / (H + gdt0 * 0.5 * (n2[T] * fric[T] + n2[B] * fric[B]) * aq);
+            const lim = (gc === null ? fr2 : FR2 * 0.5 * (gc[T] + gc[B])) * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             if (hf > hfMax) hfMax = hf;
             const u = (qn < 0 ? -qn : qn) / hf;
@@ -517,7 +560,7 @@ export class WaterSolver {
         qz[fi] = qn;
       }
     }
-    let speed = Math.sqrt(G * hfMax) + uMax;
+    let speed = Math.sqrt((gc === null ? gU : this.gMax) * hfMax) + uMax;
 
     // Boundary faces (only the part of each edge inside the active range).
     if (xa === 0) for (let iz = za; iz <= zb; iz++) speed = Math.max(speed, this.edgeFace('W', iz * nx, iz * W, -1, iz * nx + 1, dt));
@@ -543,6 +586,7 @@ export class WaterSolver {
       return 0;
     }
     const dx = f.cell;
+    const gE = this.gCell ? this.gCell[c] : this.g;
     // Phase 30: floating ice adds its underside friction at the edge too (iceFric null without a climate).
     const n2 = f.iceFric ? f.n2[c] * f.iceFric[c] : f.n2[c];
     // Discharge in the OUTWARD direction (positive = leaving the map).
@@ -559,7 +603,7 @@ export class WaterSolver {
       const inward = f.bed[inner] - zc;
       const slope = Math.max(OPEN_EDGE_SLOPE, inward / dx);
       hf = hc;
-      qOut = (qOld + G * hf * dt * slope) / (1 + (G * dt * n2 * Math.abs(qOld)) / (hf * hf * cbrtFast(hf)));
+      qOut = (qOld + gE * hf * dt * slope) / (1 + (G * dt * n2 * Math.abs(qOld)) / (hf * hf * cbrtFast(hf)));
       if (qOut < 0) qOut = 0;
     } else {
       // Fixed water level outside: ghost cell with the same bed and surface = level.
@@ -570,14 +614,14 @@ export class WaterSolver {
         arr[fi] = 0;
         return 0;
       }
-      qOut = (qOld - G * hf * dt * ((etaG - etaC) / dx)) / (1 + (G * dt * n2 * Math.abs(qOld)) / (hf * hf * cbrtFast(hf)));
+      qOut = (qOld - gE * hf * dt * ((etaG - etaC) / dx)) / (1 + (G * dt * n2 * Math.abs(qOld)) / (hf * hf * cbrtFast(hf)));
     }
-    const qmax = FROUDE_MAX * hf * Math.sqrt(G * hf);
+    const qmax = FROUDE_MAX * hf * Math.sqrt(gE * hf);
     if (qOut > qmax) qOut = qmax;
     else if (qOut < -qmax) qOut = -qmax;
     arr[fi] = qOut * out;
     if (qOut !== 0) f.touch(c % f.nx, (c / f.nx) | 0);
-    return Math.sqrt(G * hf) + Math.abs(qOut) / hf;
+    return Math.sqrt(gE * hf) + Math.abs(qOut) / hf;
   }
 
   // ── 4. Positivity (conservative outflow limiter) ─────────
@@ -736,7 +780,7 @@ export class WaterSolver {
           // wetting front a face discharge divided by a nearly dry cell's depth overshoots, so it
           // obeys the same Froude bound as the faces.
           const s2 = uu * uu + vv * vv;
-          const lim2 = FROUDE_MAX * FROUDE_MAX * G * he;
+          const lim2 = FROUDE_MAX * FROUDE_MAX * (this.gCell ? this.gCell[i] : this.g) * he;
           if (s2 > lim2) {
             const r = Math.sqrt(lim2 / s2);
             uu *= r;

@@ -3,6 +3,8 @@
  * applied inside its stated range; none is a CFD result.
  */
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from '@/thermal/gravityScope';
+import { DOWN_MIN } from '@/gravity/outlook';
 import { SIGMA } from '@/thermal/units';
 import { CD_OPENING, SOOT_DENSITY, SOOT_EXTINCTION, SOOT_KAPPA, VISIBILITY_C } from './materials';
 
@@ -15,13 +17,17 @@ import { CD_OPENING, SOOT_DENSITY, SOOT_EXTINCTION, SOOT_KAPPA, VISIBILITY_C } f
 export function ventInflow(A: number, H: number, Tg: number, Tinf: number, rhoInf: number): number {
   if (A <= 0 || H <= 0 || Tg <= Tinf) return 0;
   const r = Tg / Tinf;
-  return ((2 / 3) * CD_OPENING * rhoInf * A * Math.sqrt(H) * Math.sqrt(2 * GRAVITY * (1 - 1 / r))) / Math.pow(1 + Math.cbrt(r), 1.5);
+  return ((2 / 3) * CD_OPENING * rhoInf * A * Math.sqrt(H) * Math.sqrt(2 * GRAVITY * gravityDown() * (1 - 1 / r))) / Math.pow(1 + Math.cbrt(r), 1.5);
 }
 
 /** Mean flame height of a fire of Q (W) over a source of diameter D (m) — Heskestad (1983): L = 0.235·Q^{2/5} − 1.02·D (Q in kW). */
 export function flameHeight(Q: number, D: number): number {
   if (Q <= 0) return 0;
-  return Math.max(0, 0.235 * Math.pow(Q / 1000, 0.4) - 1.02 * D);
+  // Phase 31: the dimensional form hides g^(−1/5) (Q* = Q/(ρ·c_p·T·√g·D^{5/2})): L ∝ (g/g₀)^(−1/5) for a downward g;
+  // below DOWN_MIN of g₀ there is no buoyant flame to correlate — held at that limit (outlook: fire 'limited').
+  const gd = gravityDown();
+  const k = gd === 1 ? 1 : Math.pow(Math.max(DOWN_MIN, gd), -0.2);
+  return Math.max(0, 0.235 * Math.pow(Q / 1000, 0.4) * k - 1.02 * D);
 }
 
 /**
@@ -32,7 +38,7 @@ export function flameHeight(Q: number, D: number): number {
 export function flameTilt(u: number, Q: number, D: number, dHc: number, rhoA = 1.2): number {
   if (u <= 0 || Q <= 0 || D <= 0) return 0;
   const mpp = Q / (dHc * Math.PI * D * D / 4);
-  const uc = Math.cbrt((GRAVITY * mpp * D) / rhoA);
+  const uc = Math.cbrt((GRAVITY * Math.max(DOWN_MIN, gravityDown()) * mpp * D) / rhoA);
   const us = u / Math.max(1e-6, uc);
   return us <= 1 ? 0 : Math.acos(1 / Math.sqrt(us));
 }
@@ -59,5 +65,5 @@ export const emissive = (T: number, Tinf: number) => SIGMA * (T ** 4 - Tinf ** 4
 
 /** Buoyant exchange velocity of a hot volume over a height h (m/s, the AirLayer scale √(g·h·ΔT/T)). */
 export function buoyantVelocity(h: number, dT: number, Tinf: number): number {
-  return dT > 0 ? Math.sqrt((GRAVITY * h * dT) / Tinf) : 0;
+  return dT > 0 ? Math.sqrt((GRAVITY * gravityDown() * h * dT) / Tinf) : 0;
 }

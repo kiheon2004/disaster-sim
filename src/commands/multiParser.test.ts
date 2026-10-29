@@ -65,11 +65,18 @@ describe('multi-phenomenon commands (Phase 15)', () => {
   });
 
   it('planned phenomena (black hole, gravity …) are recognized but never executed (meteor: implemented since Phase 23)', async () => {
-    for (const [text, type] of [['Create a black hole in the center', 'blackHole'], ['중력을 절반으로 줄여', 'gravityChange'], ['산소 농도를 낮춰', 'atmosphereLoss'], ['토네이도 발생', 'tornado']]) {
+    for (const [text, type] of [['Create a black hole in the center', 'blackHole'], ['산소 농도를 낮춰', 'atmosphereLoss'], ['토네이도 발생', 'tornado']]) {
       const { r, got } = await run(text);
       expect(got).toHaveLength(0);
       expect(r.unsupported[0]?.event).toBe(type);
       expect(r.warnings[0].key).toBe('parse.unsupported.planned');
+    }
+    // Phase 31: gravity is implemented — recognized and pointed to the experiment editor, never executed from text.
+    for (const text of ['중력을 절반으로 줄여', 'Switch to zero gravity']) {
+      const { r, got } = await run(text);
+      expect(got).toHaveLength(0);
+      expect(r.unsupported[0]?.event).toBe('gravity');
+      expect(r.warnings[0].key).toBe('parse.gravity.editor');
     }
   });
 });

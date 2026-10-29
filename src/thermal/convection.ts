@@ -21,6 +21,7 @@
  */
 import { CP_AIR, R_AIR, STANDARD_PRESSURE } from './units';
 import { GRAVITY } from '@/core/units';
+import { gravityMagnitude } from './gravityScope';
 
 export interface AirProps {
   rho: number;
@@ -55,7 +56,8 @@ const CC_SPHERE = (Pr: number) => (1 + (0.469 / Pr) ** (9 / 16)) ** (4 / 9);
 /** Rayleigh number g·β·|ΔT|·L³/(ν·α), β = 1/T_film (ideal gas). */
 function rayleigh(Ts: number, Ta: number, L: number, p: AirProps): number {
   const Tf = 0.5 * (Ts + Ta);
-  return (GRAVITY * Math.abs(Ts - Ta) * L * L * L) / (Tf * p.nu * p.alpha);
+  // Phase 31: Ra ∝ |g| (the scope's ratio; 1 without a gravity experiment).
+  return (GRAVITY * gravityMagnitude() * Math.abs(Ts - Ta) * L * L * L) / (Tf * p.nu * p.alpha);
 }
 
 /** Natural convection on a vertical surface of height L (W/(m²·K)). */
@@ -133,7 +135,7 @@ export function hGround(Ts: number, Ta: number, U2: number, L = 1, pr = 1): numb
   if (dT === 0) return hF;
   const i = Math.max(0, Math.min(TABN - 1, Math.round(0.5 * (Ts + Ta)) - TAB0));
   const k = TAB_K[i];
-  const Ra = TAB_RA[i] * (dT > 0 ? dT : -dT) * L * L * L * (pr * pr);
+  const Ra = TAB_RA[i] * (dT > 0 ? dT : -dT) * L * L * L * (pr * pr) * gravityMagnitude();
   // Heated face up: 0.54·Ra^¼ / 0.15·Ra^⅓; cooled face up (stable): 0.52·Ra^⅕.
   const Nu = dT > 0 ? (Ra <= 1e7 ? 0.54 * Math.sqrt(Math.sqrt(Ra)) : 0.15 * Math.cbrt(Ra)) : 0.52 * Math.pow(Ra, 0.2);
   const hN = (Nu * k) / L;
@@ -165,5 +167,5 @@ export function hWaterSide(Tw: number, Ts: number): number {
   const dT = Math.abs(Tw - Ts);
   if (dT === 0) return 0;
   // Water near 20 °C: k 0.6, ν 1.0e-6, α 1.43e-7, β 2.1e-4 /K.
-  return 0.15 * 0.6 * Math.cbrt((GRAVITY * 2.1e-4 * dT) / (1.0e-6 * 1.43e-7));
+  return 0.15 * 0.6 * Math.cbrt((GRAVITY * gravityMagnitude() * 2.1e-4 * dT) / (1.0e-6 * 1.43e-7));
 }

@@ -1,4 +1,5 @@
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from '@/thermal/gravityScope';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { SeismicEntityState } from '../seismic/SeismicState';
 import type { StructuralModel } from '../seismic/StructuralModel';
@@ -112,7 +113,8 @@ export class StructuralResponseSystem implements SimulationSystem {
   }
 
   private foundation(mass: number, st: SeismicEntityState, model: StructuralModel, ui: number, dt: number, bearingFactor: number) {
-    const W = mass * GRAVITY;
+    // Phase 31: the weight holding the foundation down follows the step's downward gravity (its capacity terms do not).
+    const W = mass * GRAVITY * gravityDown();
     // Overturning moments are in unit-local axes; footprint is along world axes — use the
     // world-rotated moments (rotation by the unit's yaw).
     const cs = model.cos[ui];

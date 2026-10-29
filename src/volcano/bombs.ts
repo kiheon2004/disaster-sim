@@ -31,6 +31,8 @@ export interface Bomb {
 export function launch(
   vent: number, launchIndex: number, mass: number, energy: number, P: [number, number, number], t0: number,
   ground: (x: number, z: number) => number, box: WorldBox, nextId: () => number, rhoAir?: number,
+  /** Gravity vector of the world at the launch (Phase 31; undefined = Earth's vertical g, the Phase 28 flights). */
+  gv?: readonly [number, number, number],
 ): Bomb[] {
   if (!(mass > 0)) return [];
   const rng = new Rng(hashString(`bomb:${vent}:${launchIndex}`));
@@ -46,7 +48,8 @@ export function launch(
       id: nextId(), ring: 0, t0, p0: [P[0], P[1] + 0.5, P[2]], v0: [ch * Math.cos(az), Math.sin(el) * v, ch * Math.sin(az)],
       mass: m, volume: m / BOMB_DENSITY, size, speed: v, spreadR: 0.5, spreadT: 0.5, t1: t0, p1: [P[0], P[1], P[2]], v1: 0, outflow: false, path: new Float32Array(0),
     };
-    if (rhoAir === undefined) fly(p, ground, box, BOMB_DENSITY);
+    if (gv) fly(p, ground, box, BOMB_DENSITY, rhoAir, gv);
+    else if (rhoAir === undefined) fly(p, ground, box, BOMB_DENSITY);
     else fly(p, ground, box, BOMB_DENSITY, rhoAir);
     out.push({ id: p.id, vent, parcel: p, energy: e, landed: false });
   }

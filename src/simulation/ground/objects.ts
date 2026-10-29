@@ -23,6 +23,7 @@
  * object (no blockage), pressure distribution over a facade (one resultant).
  */
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from '@/thermal/gravityScope';
 import type { GeoField } from '@/ground/GeoField';
 import { DEG } from '@/ground/materials';
 import type { RuntimeEntity } from '../SimulationRuntime';
@@ -125,7 +126,7 @@ export function respondToSediment(ctx: SystemContext, ch: GroundFailureChannel, 
       const w = e.dims[0] * e.areaFactor;
       const d = Math.min(fs.h, H);
       const fd = 0.5 * fs.rho * PERSON_CD * w * d * speed * speed;
-      const W = e.source.physics.mass * GRAVITY;
+      const W = e.source.physics.mass * GRAVITY * gravityDown();
       const r = Math.max(fd / (PERSON_MU * W), (fd * d * 0.5) / (W * FOOT_LEVER));
       st.debrisRatio = r;
       if (r >= 1) knockDown(e, ctx, 'ground', fd, speed > 0 ? [fs.ux / speed, 0, fs.uz / speed] : undefined);
@@ -137,7 +138,7 @@ export function respondToSediment(ctx: SystemContext, ch: GroundFailureChannel, 
       const k0 = 1 - Math.sin(fs.phi);
       const dep = Math.min(H, fs.deposit), hf = Math.min(H, fs.h);
       // Base moments: earth pressure (resultant at d/3) + dynamic pressure (at h/2, over the deposit).
-      const earth = 0.5 * k0 * fs.rho * GRAVITY * dep * dep * w * (dep / 3);
+      const earth = 0.5 * k0 * fs.rho * GRAVITY * gravityDown() * dep * dep * w * (dep / 3);
       const dyn = DEBRIS_ALPHA * fs.rho * speed * speed * hf * w * (dep + hf / 2);
       const windDesign = e.source.physics.windResistance * e.strength;
       let design = 0.5 * AIR * e.source.physics.dragCoefficient * e.area * e.areaFactor * windDesign * windDesign * Math.max(0.5, e.copLocal[1]);
@@ -173,7 +174,7 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, ch: GroundFailure
     const x = x0 + u * hx * 1.1 * c + v * hz * 1.1 * s, z = z0 - u * hx * 1.1 * s + v * hz * 1.1 * c;
     const fs = flowAt(f, x, z, sample);
     const sp = Math.hypot(fs.ux, fs.uz);
-    const load = 0.5 * (1 - Math.sin(fs.phi)) * fs.rho * GRAVITY * fs.deposit * fs.deposit + DEBRIS_ALPHA * fs.rho * sp * sp * fs.h;
+    const load = 0.5 * (1 - Math.sin(fs.phi)) * fs.rho * GRAVITY * gravityDown() * fs.deposit * fs.deposit + DEBRIS_ALPHA * fs.rho * sp * sp * fs.h;
     if (load > best) { best = load; dep = fs.deposit; hf = fs.h; rho = fs.rho; speed = sp; phi = fs.phi; bx = x; bz = z; }
   }
   if (best <= 0) return false;

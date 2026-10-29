@@ -184,9 +184,15 @@ export class AtmosphereField implements Grid {
   readonly H: number;
   readonly p0: number;
   readonly T0: number;
-  readonly Href: number;
+  Href: number;
   /** Share of a column's mass inside the resolved layer (Boussinesq, reference temperature). */
-  readonly ell: number;
+  ell: number;
+  /**
+   * Gravity acting on the air columns (m/s², Phase 31): the downward component of the uniform field — G without a
+   * gravity experiment. The column MASS is the state: a change of g changes the weight (p_s = σ·g), the scale height
+   * R·T/g, the layer share and the datum reduction — never the mass (setGravity).
+   */
+  g = G;
   readonly boundary: BoundaryMode;
   readonly thermo: ThermoMode;
   readonly tau: number;
@@ -242,7 +248,7 @@ export class AtmosphereField implements Grid {
     this.area = this.dx * this.dx;
     this.originX = init.originX; this.originZ = init.originZ;
     this.H = init.H; this.p0 = init.p0; this.T0 = init.T0;
-    this.Href = scaleHeight(init.T0);
+    this.Href = scaleHeight(init.T0, this.g);
     this.ell = 1 - Math.exp(-this.H / this.Href);
     this.boundary = init.boundary; this.thermo = init.thermo;
     this.tau = init.tau ?? TAU;
@@ -268,7 +274,7 @@ export class AtmosphereField implements Grid {
     let M = 0;
     for (let a = 0; a < n; a++) {
       // Hydrostatic rest state: equal reduced pressure everywhere.
-      this.sigma[a] = this.p0 / G / this.red[a];
+      this.sigma[a] = this.p0 / this.g / this.red[a];
       this.sigma0[a] = this.sigma[a];
       M += this.sigma[a] * this.area;
     }
@@ -277,6 +283,19 @@ export class AtmosphereField implements Grid {
     this.oxygen = { initial: O, removed: 0, restored: 0, boundaryIn: 0, boundaryOut: 0, consumed: 0, aloft: 0, final: O };
     const E = CP_AIR * this.T0 * M;
     this.energy = { initial: E, heatIn: 0, ventedAloft: 0, advectedOut: 0, boundaryIn: 0, boundaryOut: 0, removed: 0, restored: 0, source: 0, isothermalHeat: 0, aboveLayerInfo: 0, kinetic: 0, dissipated: 0, pressureWork: 0, final: E };
+  }
+
+  /**
+   * Gravity changed (Phase 31): scale height, layer share and datum reduction follow; the column masses stay (the
+   * surface pressures change with the weight σ·g). The next step redistributes from the new state.
+   */
+  setGravity(g: number) {
+    if (g === this.g) return;
+    this.g = g;
+    this.Href = scaleHeight(this.T0, g);
+    this.ell = 1 - Math.exp(-this.H / this.Href);
+    for (let a = 0; a < this.count; a++) this.red[a] = Math.exp(this.ground[a] / this.Href);
+    this.dirty = true;
   }
 
   /** Column ground heights changed (terrain deformation): new reduction factors; the mass stays. */
@@ -299,7 +318,7 @@ export class AtmosphereField implements Grid {
   }
 
   surfacePressure(a: number): number {
-    return this.sigma[a] * G;
+    return this.sigma[a] * this.g;
   }
 
   /** Mass of the resolved layer of a column (kg). */
@@ -314,10 +333,10 @@ export class AtmosphereField implements Grid {
 
   /** Pressure at a height above a column's ground (Pa): the layer at Tl, above it the free atmosphere. */
   pressureAt(a: number, h: number, Tl = this.T0): number {
-    const ps = this.sigma[a] * G;
+    const ps = this.sigma[a] * this.g;
     const hh = Math.max(0, h);
-    if (hh <= this.H) return ps * Math.exp(-hh / scaleHeight(Tl));
-    return ps * Math.exp(-this.H / scaleHeight(Tl)) * Math.exp(-(hh - this.H) / scaleHeight(this.Tcol));
+    if (hh <= this.H) return ps * Math.exp(-hh / scaleHeight(Tl, this.g));
+    return ps * Math.exp(-this.H / scaleHeight(Tl, this.g)) * Math.exp(-(hh - this.H) / scaleHeight(this.Tcol, this.g));
   }
 
   /** Density at a height (kg/m³), p/(R·T) with the temperature there. */
@@ -341,7 +360,7 @@ export class AtmosphereField implements Grid {
   meanReducedPressure(): number {
     let s = 0;
     for (let a = 0; a < this.count; a++) s += this.sigma[a] * this.red[a];
-    return (s * G) / this.count;
+    return (s * this.g) / this.count;
   }
 
   /** Planned-path control: mass share of the initial state (reduced to the datum). */
@@ -538,7 +557,7 @@ export class AtmosphereField implements Grid {
     const { nx, nz, dx, Ux, Uz, sigma, red, s, rhs, diag, kx, kz } = this;
     const n = this.count;
     const open = this.boundary === 'open';
-    const sg = (bgShare * this.p0) / G;
+    const sg = (bgShare * this.p0) / this.g;
     // At rest? (no flux and equal reduced pressure across every face, ghosts included)
     if (!this.dirty) {
       let flux = 0;
@@ -553,8 +572,8 @@ export class AtmosphereField implements Grid {
     }
     this.dirty = false;
     const beta = 1 / (1 + dt / this.tau);
-    const Hs = scaleHeight(this.Tcol);
-    const c = (beta * dt * dt * Hs * G) / (dx * dx);
+    const Hs = scaleHeight(this.Tcol, this.g);
+    const c = (beta * dt * dt * Hs * this.g) / (dx * dx);
     const kb = open ? c : 0;
     for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix <= nx; ix++) kx[iz * (nx + 1) + ix] = ix === 0 || ix === nx ? kb : c;
     for (let iz = 0; iz <= nz; iz++) for (let ix = 0; ix < nx; ix++) kz[iz * nx + ix] = iz === 0 || iz === nz ? kb : c;
@@ -578,7 +597,7 @@ export class AtmosphereField implements Grid {
     this.lastIterations = it;
     this.solves++;
     // New fluxes from s; momentum ledger (exact split of the update into pressure and damping parts).
-    const kp = beta * dt * Hs * G / dx;
+    const kp = beta * dt * Hs * this.g / dx;
     const m = this.momentum, A = dx * dx;
     const sAt = (ix: number, iz: number) => (ix < 0 || iz < 0 || ix >= nx || iz >= nz ? sg : s[iz * nx + ix]);
     let ke = 0, diss = 0;

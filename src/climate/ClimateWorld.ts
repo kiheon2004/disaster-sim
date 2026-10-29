@@ -22,6 +22,8 @@
  *                      covers, water freezing / boiling, soil freezing, stores, shortwave for the next step);
  *                      every step: vapour transport, boundary mixing, saturation adjustment, Kessler precipitation
  */
+import { gravityDown } from '@/thermal/gravityScope';
+import { DOWN_MIN } from '@/gravity/outlook';
 import type { TerrainData } from '@/core/model';
 import { groundMaterial } from '@/terrain/GroundMaterials';
 import type { ThermalWorld } from '@/thermal/ThermalWorld';
@@ -1689,11 +1691,16 @@ export class ClimateWorld {
       const snow = M - this.cIce[c];
       if (!(snow > 0.05 * A)) continue;
       const T = Math.min(0, this.coverT(c) - T_MELT);
-      const Ut = 9.43 + 0.18 * T + 0.0033 * T * T;
+      // Phase 31: the threshold friction velocity scales ∝ √g (Bagnold: grains lifted against their weight) and the
+      // saltation load ∝ 1/g (Pomeroy & Gray) — both fitted at Earth g (outlook: snow 'scaled'). Without downward gravity
+      // the saltation model does not apply (grains are not bounced back to the surface): no blowing-snow transport.
+      const gd = gravityDown();
+      if (gd < DOWN_MIN) continue;
+      const Ut = gd === 1 ? 9.43 + 0.18 * T + 0.0033 * T * T : (9.43 + 0.18 * T + 0.0033 * T * T) * Math.sqrt(gd);
       const U = wind(c);
       if (U <= Ut) continue;
       const us = k * U, ut = k * Ut;
-      const Q = (0.68 * 1.2 * ut * (us * us - ut * ut)) / (9.81 * us); // kg/(m·s)
+      const Q = (0.68 * 1.2 * ut * (us * us - ut * ut)) / (9.81 * gd * us); // kg/(m·s)
       let m = Q * w * dt;
       if (m > 0.5 * snow) m = 0.5 * snow;
       out[c] = m;

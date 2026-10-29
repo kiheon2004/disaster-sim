@@ -31,7 +31,8 @@
  *    For β = 90° it reduces to the Rankine critical height (4c/γ)·tan(45° + φ/2). Used for the
  *    walls of collapse pits.
  */
-import { GAMMA_W, G } from './materials';
+import { gammaW, gNow } from './materials';
+import { DOWN_MIN } from '@/gravity/outlook';
 
 export interface SlopeInput {
   /** Slope angle (rad). */
@@ -52,14 +53,14 @@ export interface SlopeInput {
 export function infiniteSlopeFS(s: SlopeInput): number {
   if (s.z <= 0 || s.beta <= 1e-6) return Infinity;
   const cb = Math.cos(s.beta), sb = Math.sin(s.beta);
-  const resist = s.c + Math.max(0, s.gamma - s.m * GAMMA_W) * s.z * cb * cb * Math.tan(s.phi);
+  const resist = s.c + Math.max(0, s.gamma - s.m * gammaW()) * s.z * cb * cb * Math.tan(s.phi);
   const drive = s.gamma * s.z * sb * cb;
   return resist / drive;
 }
 
 /** Newmark critical acceleration of an infinite slope (m/s²; ≤ 0 = already failing statically). */
 export function criticalAcceleration(fs: number, beta: number): number {
-  return (fs - 1) * G * Math.sin(beta);
+  return (fs - 1) * gNow() * Math.sin(beta);
 }
 
 /**
@@ -88,7 +89,7 @@ export interface PlugInput {
 /** Shear resistance per unit plug-wall area (kPa). */
 function plugShear(p: PlugInput): number {
   const k0 = 1 - Math.sin(p.phi);
-  const sv = Math.max(0, p.gamma - p.m * GAMMA_W) * p.H / 2;
+  const sv = Math.max(0, p.gamma - p.m * gammaW()) * p.H / 2;
   return p.c + k0 * sv * Math.tan(p.phi);
 }
 
@@ -129,4 +130,5 @@ export function stableCutAngle(c: number, gamma: number, phi: number, Hw: number
 }
 
 /** Free-fall time (s) of a column dropping a height d. */
-export const fallTime = (d: number) => Math.sqrt((2 * Math.max(0, d)) / G);
+// Phase 31: under (almost) no downward gravity the fall is timed at DOWN_MIN·g₀ (outlook: ground 'unsupported' there).
+export const fallTime = (d: number) => Math.sqrt((2 * Math.max(0, d)) / Math.max(gNow(), DOWN_MIN * 9.81));

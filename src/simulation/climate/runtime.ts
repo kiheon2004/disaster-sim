@@ -13,6 +13,7 @@
  * One experiment per run (a second is rejected with a reason). Iteration orders are cell / column indices and the
  * runtime's insertion order — never object ids.
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { ThermalRuntime } from '../thermal/runtime';
 import type { RuntimeEntity } from '../SimulationRuntime';
@@ -504,7 +505,7 @@ export class ClimateRuntime {
           e.state = DamageState.DESTROYED;
           e.lastHazard = 'climate';
           e.lastCause = cw.sIce[s.k] > 0.5 * cw.sM[s.k] ? 'iceLoad' : 'snowLoad';
-          ctx.recordDamage(e, { eventType: 'SNAPPED', cause: e.lastCause, hazard: 'climate', response: load, force: cw.sM[s.k] * GRAVITY, source: 'climate' });
+          ctx.recordDamage(e, { eventType: 'SNAPPED', cause: e.lastCause, hazard: 'climate', response: load, force: cw.sM[s.k] * GRAVITY * gravityDown(), source: 'climate' });
           ctx.log(e.id, 'danger', { key: 'log.climate.treeBroken', params: { kg: load.toFixed(0) } });
           this.once(ctx, 'treeBroken', 'snowLoadDamage', { what: 'tree', kg: load.toFixed(0) });
           cw.dropStore(s.k);
@@ -770,7 +771,8 @@ export class ClimateRuntime {
     for (const r of this.stores) {
       sm += cw.sM[r.k];
       const st = cw.stores[r.k];
-      if (st.kind === STORE.roof) { const k = (cw.sM[r.k] * GRAVITY) / st.area / 1000; if (k > roofMax) roofMax = k; if (k >= ROOF_SCREEN_KPA) roofs++; }
+      // (Stats may be read between steps: the field's gravity, not the step scope — Phase 31.)
+      if (st.kind === STORE.roof) { const k = (cw.sM[r.k] * this.env.gravity.downUniform(GRAVITY)) / st.area / 1000; if (k > roofMax) roofMax = k; if (k >= ROOF_SCREEN_KPA) roofs++; }
       if (r.broken) broken++;
     }
     s.storeMass = sm; s.maxRoofLoad = roofMax; s.roofsLoaded = roofs; s.treesBroken = broken;

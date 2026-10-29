@@ -1,4 +1,5 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive, ClimateLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive, ClimateLive, GravityLive } from './simStore';
+import { modeOf, supportOf } from '@/gravity/outlook';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
@@ -30,6 +31,7 @@ import { EMPTY_STATS, useSimStore, type QuakeLive, type SimStats, type SimStatus
 import { createGroundMotionSample, sMinusP } from './seismic/GroundMotionField';
 import { EarthquakeEvent } from '@/events/earthquake/EarthquakeEvent';
 import { GRAVITY } from '@/core/units';
+import { withGravity } from '@/thermal/gravityScope';
 import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
 import { isWaterEvent } from '@/events/specs';
 import { RoadRuntime } from './roads/RoadRuntime';
@@ -241,6 +243,7 @@ export class SimulationController {
       volcano: null,
       atmosphere: null,
       climate: null,
+      gravity: null,
       floodSeries: null,
       milestones: [],
     });
@@ -426,6 +429,15 @@ export class SimulationController {
   }
 
   private step(dt: number) {
+    // Phase 31: every model of the step (events starting now included) reads this step's gravity ratios
+    // (thermal/gravityScope.ts) — prepared once here; without a gravity experiment the ratios stay 1.
+    const gf = this.env.gravity.field;
+    if (!gf) return this.stepBody(dt);
+    const G = gf.prepare(this.time).G, g0 = this.env.gravity.g0;
+    withGravity(Math.hypot(G[0], G[1], G[2]) / g0, -G[1] / g0, () => this.stepBody(dt));
+  }
+
+  private stepBody(dt: number) {
     const runtime = this.runtime!;
     const physics = this.physics!;
     this.env.time = this.time;
@@ -610,6 +622,7 @@ export class SimulationController {
     patch.volcano = this.volcanoLive();
     patch.atmosphere = this.atmosphereLive();
     patch.climate = this.climateLive(force);
+    patch.gravity = this.gravityLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -801,6 +814,33 @@ export class SimulationController {
       terrainUpdates: ar.terrainUpdates,
       series: ar.series.slice(),
       ms: ar.ms, msTotal: ar.msTotal,
+    };
+  }
+
+  /** Live gravity summary (Phase 31; null without a gravity experiment). */
+  gravityLive(): GravityLive | null {
+    const ch = this.env.gravity, f = ch.field, rt = ch.rt;
+    if (!f || !rt) return null;
+    const G = f.G, g0 = ch.g0;
+    const s = rt.stats;
+    const first = Math.min(...ch.experiments.map((r) => r.start));
+    const water = this.systems.find((x) => x.name === 'waterSolver') as unknown as { held?: number } | undefined;
+    const atm = this.env.atmosphere.rt;
+    const step = Math.max(1, Math.ceil(rt.series.length / 600));
+    return {
+      experiments: ch.experiments.map((r) => ({ name: r.name, scenario: r.spec.scenario, start: r.start, duration: r.spec.duration, end: r.spec.end, global: r.spec.global, sources: r.spec.sources.length })),
+      t: this.time - first,
+      G: [G[0], G[1], G[2]], magnitude: s.magnitude, ratio: s.ratio, down: -G[1], g0,
+      mode: modeOf(G, g0, f.uniform), uniform: f.uniform, potentialDefined: f.potentialDefined,
+      support: supportOf({ down: -G[1], horizontal: Math.hypot(G[0], G[2]), magnitude: s.magnitude, local: !f.uniform }, g0),
+      stats: { ...s, G: [...s.G] as [number, number, number] },
+      balance: rt.balance(),
+      structures: { loaded: rt.structures.loaded, applications: rt.structures.applications, created: rt.structures.created, failures: rt.failures, roofFailures: rt.roofFailures },
+      held: { water: water?.held ?? 0, atmosphere: atm?.gravityHeld ?? 0 },
+      pressure: atm ? { value: atm.field.meanReducedPressure(), modelled: true } : { value: (101325 * -G[1]) / g0, modelled: false },
+      sources: f.liveSources().map((l) => ({ kind: l.src.kind, center: [...l.src.center] as [number, number, number], radius: l.src.radius, f: l.f, owner: l.owner })),
+      series: step === 1 ? rt.series.slice() : rt.series.filter((_, i) => i % step === 0),
+      ms: s.ms, msTotal: s.msTotal,
     };
   }
 

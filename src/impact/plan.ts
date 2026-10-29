@@ -5,6 +5,7 @@
  * preview and the simulation call the same function on the same terrain, so the preview shows the
  * model's own numbers.
  */
+import { DOWN_MIN } from '@/gravity/outlook';
 import { GRAVITY } from '@/core/units';
 import type { TerrainData } from '@/core/model';
 import { samplerFor } from '@/terrain/TerrainSampler';
@@ -62,7 +63,12 @@ export function profileAtPoint(t: TerrainData, x: number, z: number): Mechanical
  */
 export interface PlanAir { rho0: number; rhoGround: number }
 
-export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number, withEjecta = true, air?: PlanAir): ImpactPlan {
+/**
+ * Phase 31: the downward gravity of the world at the impact (m/s², the uniform field's; GRAVITY without a gravity
+ * experiment) — the in-world arc, the crater's gravity regime and the ejecta flights use it; the entry ABOVE the world
+ * keeps Earth's (planetary) gravity and atmosphere.
+ */
+export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number, withEjecta = true, air?: PlanAir, g = GRAVITY): ImpactPlan {
   const s = samplerFor(terrain);
   const ground = (x: number, z: number) => s.sampleHeight(x, z);
   const projectile = resolveProjectile(spec);
@@ -77,7 +83,7 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
     if (entry.breakup) warnings.push({ key: 'impact.warn.breakup', params: { z: (entry.breakup.altitude / 1000).toFixed(1) } });
   } else warnings.push({ key: 'impact.warn.direct' });
   const aimHeight = ground(spec.target[0], spec.target[1]);
-  const arc = flyArc({ aim: spec.target, aimHeight, speed, angle, azimuth: spec.azimuth, handover: HANDOVER_ALTITUDE }, ground);
+  const arc = flyArc({ aim: spec.target, aimHeight, speed, angle, azimuth: spec.azimuth, handover: HANDOVER_ALTITUDE }, ground, g);
   const airburst = !!entry?.airburst || !!entry?.ablated || mass <= 0;
   const impactSpeed = airburst ? 0 : arc.speed;
   const energy = 0.5 * mass * impactSpeed * impactSpeed;
@@ -93,7 +99,11 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
   let shock: GroundShock | null = null;
   let ejectaKE = 0, ejectaMass = 0, ejectaOut = 0;
   if (!airburst && energy > 0) {
-    crater = computeCrater({ mass, density: projectile.density, speed: impactSpeed, angle: arc.angle, target, g: GRAVITY });
+    // π-group scaling holds across g (centrifuge data); at (almost) zero g a target without strength has no gravity
+    // limit at all (R → ∞): the crater is sized at DOWN_MIN·g₀ and the plan warns (outlook: meteor 'scaled').
+    const gc = Math.max(g, DOWN_MIN * GRAVITY);
+    if (g < DOWN_MIN * GRAVITY) warnings.push({ key: 'impact.warn.lowGravity', params: { g: g.toFixed(2) } });
+    crater = computeCrater({ mass, density: projectile.density, speed: impactSpeed, angle: arc.angle, target, g: g === GRAVITY ? GRAVITY : gc });
     if (crater.oblique) warnings.push({ key: 'impact.warn.oblique' });
     // Point-source scaling is built on hypervelocity data (impact speed ≫ the target's sound speed);
     // slower impacts (bodies at terminal speed) are an extrapolation toward penetration.
@@ -104,7 +114,8 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
     if (withEjecta) {
       parcels = generateParcels({ crater, center: [px, py, pz], delta: projectile.density, rho: target.density, rock: target.id === 'rock', angle: arc.angle, azimuth: spec.azimuth, seed: spec.seed ?? seed });
       for (const p of parcels) {
-        if (air) fly(p, ground, b, target.density, air.rhoGround);
+        if (g !== GRAVITY) fly(p, ground, b, target.density, air ? air.rhoGround : undefined, [0, -g, 0]);
+        else if (air) fly(p, ground, b, target.density, air.rhoGround);
         else fly(p, ground, b, target.density);
         ejectaKE += 0.5 * p.mass * p.speed * p.speed;
         ejectaMass += p.mass;

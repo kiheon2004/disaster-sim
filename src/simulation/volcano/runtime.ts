@@ -186,6 +186,8 @@ export class VolcanoRuntime {
       ground: (x, z) => ctx.env.terrain.sampleHeight(x, z),
       // Phase 29: the atmosphere's air for ash and bombs (absent without an atmosphere experiment).
       ...(ctx.env.atmosphere.rt ? { atmos: atmosAccess(ctx.env.atmosphere.rt) } : {}),
+      // Phase 31: bombs fly under the uniform part of a gravity experiment's field (local sources are not followed).
+      ...(ctx.env.gravity.field ? { gravity: [ctx.env.gravity.field.G[0], ctx.env.gravity.field.G[1], ctx.env.gravity.field.G[2]] as const } : {}),
     };
   }
 

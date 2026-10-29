@@ -39,7 +39,7 @@ function airRows(ar: AtmosphereRuntime, x: number, y: number, z: number, t: Retu
   const o2 = (Y_O2_AIR * f.layerMass(a) - (fire ? fire.fw.o2def[a] : 0)) / (f.H * f.area);
   const rows: [string, string][] = [
     [t('atmos.inspect.pressure'), kPa(p)],
-    [t('atmos.inspect.change'), kPa((f.sigma[a] - f.sigma0[a]) * 9.81)],
+    [t('atmos.inspect.change'), kPa(f.sigma[a] * f.g - f.sigma0[a] * 9.81)],
     [t('atmos.inspect.density'), `${fmt(rho, 4)} kg/m³ · ${fmt((rho / AIR_DENSITY) * 100, 1)} %`],
     [t('atmos.inspect.temperature'), `${C(T)}${h > f.H ? ` · ${t('atmos.inspect.aloft')}` : ''}`],
     [t('atmos.inspect.flow'), `${fmt(Math.hypot(flow[0], flow[1]), 3)} m/s`],

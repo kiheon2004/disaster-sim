@@ -2,6 +2,7 @@ import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { AIR_DENSITY } from '@/core/units';
 import { createGroundMotionSample } from '../seismic/GroundMotionField';
 import { WATER_DENSITY } from '../water/waterParams';
+import { DOWN_MIN } from '@/gravity/outlook';
 
 /**
  * Fixed steps between water solver calls: 6 → 10 Hz, each call covering 0.1 s with as many CFL
@@ -42,7 +43,7 @@ export class WaterSolverSystem implements SimulationSystem {
       const x0 = Math.min(af.nx - 2, Math.floor(gx)), z0 = Math.min(af.nz - 2, Math.floor(gz));
       if (x0 < 0 || z0 < 0) continue;
       const tx = gx - x0, tz = gz - z0;
-      const P = (a: number) => af.sigma[a] * af.red[a] * 9.81;
+      const P = (a: number) => af.sigma[a] * af.red[a] * af.g;
       const a = z0 * af.nx + x0;
       const p = (P(a) * (1 - tx) + P(a + 1) * tx) * (1 - tz) + (P(a + af.nx) * (1 - tx) + P(a + af.nx + 1) * tx) * tz;
       buf ??= ctx.env.flood.forcing!.ensureAirImpulse(wf.count);
@@ -58,7 +59,43 @@ export class WaterSolverSystem implements SimulationSystem {
     const solver = ctx.env.flood.solver;
     if (!solver) return;
     if (ctx.interactions) this.couple(ctx, dt);
+    if (ctx.env.gravity.field && !this.gravity(ctx, solver, dt)) return;
     solver.step(dt);
+  }
+
+  /** Seconds the water was held (no downward gravity — the free-surface model does not apply, Phase 31). */
+  held = 0;
+  private cells: { down: Float32Array; x: Float32Array; z: Float32Array } | null = null;
+
+  /**
+   * Phase 31: the gravity of this call for the solver — the uniform field's components, or one sample per cell (at the
+   * water surface) under a spatial field. Returns false when the water must be HELD: no downward gravity anywhere (the
+   * shallow-water model needs water pressed onto its bed; a 3D liquid is not modelled). Held water keeps its state.
+   */
+  private gravity(ctx: SystemContext, solver: NonNullable<SystemContext['env']['flood']['solver']>, dt: number): boolean {
+    const f = ctx.env.gravity.field!, g0 = ctx.env.gravity.g0;
+    const G = f.G;
+    if (f.uniform) {
+      if (-G[1] < DOWN_MIN * g0) { this.held += dt; return false; }
+      solver.setGravity(-G[1], G[0], G[2]);
+      return true;
+    }
+    const wf = solver.field;
+    const n = wf.count;
+    if (!this.cells || this.cells.down.length !== n) this.cells = { down: new Float32Array(n), x: new Float32Array(n), z: new Float32Array(n) };
+    const c = this.cells, out: [number, number, number] = [0, 0, 0];
+    let any = false;
+    for (let iz = 0; iz < wf.nz; iz++) for (let ix = 0; ix < wf.nx; ix++) {
+      const i = iz * wf.nx + ix;
+      f.sample(wf.originX + (ix + 0.5) * wf.cell, wf.bed[i] + wf.h[i], wf.originZ + (iz + 0.5) * wf.cell, out);
+      c.down[i] = Math.max(0, -out[1]);
+      c.x[i] = out[0];
+      c.z[i] = out[2];
+      if (c.down[i] >= DOWN_MIN * g0) any = true;
+    }
+    if (!any) { this.held += dt; return false; }
+    solver.setGravity(-G[1], G[0], G[2], c);
+    return true;
   }
 
   /**

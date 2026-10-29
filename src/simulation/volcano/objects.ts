@@ -23,6 +23,7 @@
  *                rubble threshold of Phase 25); ash ≥ 0.1 m → impassable (assumed indicative threshold: a few
  *                cm to 10 cm of ash are reported to stop two-wheel-drive vehicles). The network is never edited.
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import { GRAVITY } from '@/core/units';
 import { qRotate } from '@/core/math';
 import type { Vec3 } from '@/core/types';
@@ -327,7 +328,7 @@ export class VolcanoObjects {
         const rho = f.rho, u = v >= 0 ? f.speed[v] : 0;
         const w = t === 'wall' ? e.dims[0] : Math.min(e.dims[0], e.dims[2]);
         const h = Math.min(e.dims[1], s.h);
-        const M = 0.5 * rho * GRAVITY * h * h * w * (h / 3) + rho * u * u * h * w * (h / 2);
+        const M = 0.5 * rho * GRAVITY * gravityDown() * h * h * w * (h / 3) + rho * u * u * h * w * (h / 2);
         const windDesign = e.source.physics.windResistance * e.strength;
         let design = 0.5 * AIR * e.source.physics.dragCoefficient * e.area * e.areaFactor * windDesign * windDesign * Math.max(0.5, e.copLocal[1]);
         if (ctx.interactions) design *= residualStrength(e, 'volcano');
@@ -361,7 +362,7 @@ export class VolcanoObjects {
       if (v < 0) continue;
       const h = f.depth(v), d = f.dep[v];
       if (h + d > over) over = h + d;
-      const L = 0.5 * f.rho * GRAVITY * h * h + f.rho * f.speed[v] ** 2 * h;
+      const L = 0.5 * f.rho * GRAVITY * gravityDown() * h * h + f.rho * f.speed[v] ** 2 * h;
       if (L > best) { best = L; hb = h; }
     }
     const ash = this.roofAsh.get(e) ?? 0;
@@ -373,7 +374,8 @@ export class VolcanoObjects {
     // Ash on the roof.
     st.ash = ash;
     const roofA = Math.max(1, e.dims[0] * e.dims[2]);
-    st.ashLoad = (ash * GRAVITY) / roofA / 1000;
+    // Reported pressure under the acting gravity (Phase 31); the structural surcharge below stays an Earth weight (× kM).
+    st.ashLoad = (ash * GRAVITY * gravityDown()) / roofA / 1000;
     if (ash > 0 && e.modular) this.roofLoad(ctx, e, ash);
     if (over >= e.dims[1] && !st.noted.has('buried')) {
       st.noted.add('buried');

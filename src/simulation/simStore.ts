@@ -215,6 +215,34 @@ export interface ClimateLive {
   ms: number;
   msTotal: number;
 }
+/** Live gravity summary (Phase 31) for the HUD, inspector, results and verification. SI units. */
+export interface GravityLive {
+  experiments: { name: string; scenario: string; start: number; duration: number; end: string; global: boolean; sources: number }[];
+  /** Time since the first experiment started (s). */
+  t: number;
+  G: [number, number, number];
+  magnitude: number;
+  /** |G| / g₀ (Earth) and the downward component (m/s²). */
+  ratio: number;
+  down: number;
+  g0: number;
+  mode: import('@/gravity/outlook').GravityMode;
+  uniform: boolean;
+  potentialDefined: boolean;
+  support: Record<import('@/gravity/outlook').SupportedModel, import('@/gravity/outlook').Support>;
+  stats: import('./gravity/runtime').GravityStats;
+  balance: import('@/gravity/ledger').GravityBalance;
+  structures: { loaded: number; applications: number; created: number; failures: number; roofFailures: number };
+  /** Seconds the water / air-column models were held (no downward gravity). */
+  held: { water: number; atmosphere: number };
+  /** Surface pressure: the atmosphere model's mean (Pa) when one runs, else the column-weight estimate p₀·g/g₀ (not a model result). */
+  pressure: { value: number; modelled: boolean };
+  sources: { kind: string; center: [number, number, number]; radius: number; f: number; owner: number }[];
+  series: import('./gravity/runtime').GravitySeriesPoint[];
+  ms: number;
+  msTotal: number;
+}
+
 export type ClimateWorldTotals = { snowfall: number; rain: number; melt: number; meltToFlood: number; evaporated: number; condensed: number; frozenWater: number };
 
 /** Live atmosphere summary (Phase 29) for the HUD, results and verification. SI units. */
@@ -397,6 +425,7 @@ export interface SimState {
   /** Phase 29: atmosphere experiment (null without one). */
   atmosphere: AtmosphereLive | null;
   climate: ClimateLive | null;
+  gravity: GravityLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -437,6 +466,7 @@ export const useSimStore = create<SimState>((set) => ({
   volcano: null,
   atmosphere: null,
   climate: null,
+  gravity: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

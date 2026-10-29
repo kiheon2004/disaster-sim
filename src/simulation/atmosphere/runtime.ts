@@ -15,6 +15,9 @@
  * One experiment per run (a second is rejected with a reason). Iteration orders are column indices and
  * the runtime's insertion order — never object ids.
  */
+import { gravityDown } from '@/thermal/gravityScope';
+import { GRAVITY } from '@/core/units';
+import { DOWN_MIN } from '@/gravity/outlook';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { ThermalRuntime } from '../thermal/runtime';
 import type { AtmosphereRecord } from './AtmosphereChannel';
@@ -237,8 +240,22 @@ export class AtmosphereRuntime {
 
   // ── Before the thermal step ────────────────────────────
 
+  /**
+   * Seconds the air columns kept their last valid gravity because the field had (almost) no downward component
+   * (Phase 31: the hydrostatic column model needs weight; the state is held and reported as unsupported).
+   */
+  gravityHeld = 0;
+
+  /** Phase 31: the columns take the downward component of the uniform field (planetary for the air: local sources are not resolved). */
+  private gravity(ctx: SystemContext, dt: number) {
+    const gd = -ctx.env.gravity.field!.G[1];
+    if (gd < DOWN_MIN * ctx.env.gravity.g0) { this.gravityHeld += dt; return; }
+    this.field.setGravity(gd);
+  }
+
   prepare(ctx: SystemContext, dt: number) {
     const t0 = performance.now();
+    if (ctx.env.gravity.field) this.gravity(ctx, dt);
     const w = this.trt.world, air = w.air, f = this.field;
     const n = air.count;
     const local0 = ctx.time - this.rec.start, local1 = local0 + dt;
@@ -498,11 +515,14 @@ export class AtmosphereRuntime {
     const T = this.temperatureAt(a, h);
     const p = this.field.pressureAt(a, h, this.trt.world.air.T(a));
     const rho = density(p, T);
-    const key = cls * 1e6 + Math.round(Math.log(Math.max(1e-9, rho)) * 400) * 10 + Math.round(T / 10);
+    // Phase 31: the downward gravity of the step is part of the state (a separate cache entry per value).
+    const gd = gravityDown();
+    const key = cls * 1e6 + Math.round(Math.log(Math.max(1e-9, rho)) * 400) * 10 + Math.round(T / 10) + (gd === 1 ? 0 : gd * 1e9);
     let v = this.settleCache.get(key);
     if (v === undefined) {
       const d = ASH_CLASSES[cls].d;
-      v = settlingVelocity(d, ASH_PARTICLE_DENSITY, rho, viscosity(T), cunningham(p, T, d));
+      v = settlingVelocity(d, ASH_PARTICLE_DENSITY, rho, viscosity(T), cunningham(p, T, d), GRAVITY * gd);
+      if (this.settleCache.size > 20000) this.settleCache.clear();
       this.settleCache.set(key, v);
     }
     return v;
@@ -515,7 +535,7 @@ export class AtmosphereRuntime {
    */
   blastAmbient(x: number, z: number): { p: number; rho: number } | null {
     const a = this.column(x, z), f = this.field;
-    const p = f.sigma[a] * f.red[a] * 9.81, rho = density(p, this.trt.world.air.T(a));
+    const p = f.sigma[a] * f.red[a] * f.g, rho = density(p, this.trt.world.air.T(a));
     if (p < BLAST_MIN_PRESSURE || rho < 0.4 || rho > 1.5) return null;
     return { p, rho };
   }

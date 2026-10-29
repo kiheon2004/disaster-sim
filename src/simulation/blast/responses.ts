@@ -23,6 +23,7 @@
 import { blastAirDensity } from '../atmosphere/runtime';
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from '@/thermal/gravityScope';
 import { hashString, seededRandom } from '@/core/math';
 import type { ComponentKind } from '@/core/model';
 import type { SystemContext } from '../systems/SimulationSystem';
@@ -448,7 +449,7 @@ export function respondBody(e: RuntimeEntity, ctx: SystemContext, dt: number) {
     st.dv += (F[0] * kx + F[2] * kz) / kh / mass;
     if (st.dv > st.dvPeak) st.dvPeak = st.dv;
     const h = e.dims[1] / 2, b = FOOT_LEVER;
-    const crit = Math.sqrt(2 * GRAVITY * (Math.hypot(h, b) - h)) * e.strength;
+    const crit = Math.sqrt(2 * GRAVITY * gravityDown() * (Math.hypot(h, b) - h)) * e.strength;
     if (st.dvPeak >= crit) {
       e.lastHazard = 'blast';
       knockDown(e, ctx, 'blast', fm, [kx / kh, 0, kz / kh]);

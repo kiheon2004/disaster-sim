@@ -21,6 +21,7 @@
  * perched water-table ratio m of the geotechnical field), set by rain infiltration or as an
  * explicit initial condition.
  */
+import { gravityDown } from '@/thermal/gravityScope';
 import type { SoilProfileId } from '@/core/model';
 import type { MessageKey } from '@/i18n/i18n';
 
@@ -91,8 +92,19 @@ export const mechanicalOf = (soil: number): MechanicalProfile => MECHANICAL_PROF
 export const GAMMA_W = 9.81;
 export const G = 9.81;
 
+/**
+ * Phase 31: weights follow the downward gravity of the step (thermal/gravityScope.ts; ratio 1 without a gravity
+ * experiment — the products are then bitwise the Phase 22 values). Cohesion does not scale: a slope is MORE stable
+ * under lower gravity, less under higher (physical; the factor-of-safety equations are dimensionally exact).
+ */
+export const gravityRatio = () => gravityDown();
+/** Unit weight of water γ_w (kN/m³) under the step's gravity. */
+export const gammaW = () => GAMMA_W * gravityDown();
+/** Downward gravity of the step (m/s²). */
+export const gNow = () => G * gravityDown();
+
 /** Unit weight γ (kN/m³) of a profile. */
-export const unitWeight = (p: MechanicalProfile) => (p.density * G) / 1000;
+export const unitWeight = (p: MechanicalProfile) => (p.density * G * gravityDown()) / 1000;
 
 export const DEG = Math.PI / 180;
 

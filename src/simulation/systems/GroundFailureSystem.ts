@@ -21,7 +21,7 @@ import { createGroundMotionSample } from '../seismic/GroundMotionField';
 import { footprint, stateOf, CONTACT_LOST } from '../deformation/response';
 import { respondToSediment } from '../ground/objects';
 import type { GroundFailureChannel } from '../ground/GroundFailureChannel';
-import { GAMMA_W } from '@/ground/materials';
+import { gammaW, gNow } from '@/ground/materials';
 
 const gm = createGroundMotionSample();
 /** Loose material on a road thicker than this blocks ordinary vehicles (same as the Phase 21 step). */
@@ -108,6 +108,8 @@ export class GroundFailureSystem implements SimulationSystem {
   private environment(ctx: SystemContext, ch: GroundFailureChannel, H: Float32Array): GroundEnv {
     const f = ch.field!, src = ch.source!;
     const wf = ctx.env.flood.field;
+    // Phase 31: the footprint pressures follow the step's gravity (rebuilt when it changed).
+    if (this.structuresG !== gNow()) { this.structures = null; this.structuresG = gNow(); }
     const structures = (this.structures ??= this.structureLoads(ctx, ch));
     const A = f.dx * f.dx;
     const cell = (i: number) => {
@@ -117,11 +119,13 @@ export class GroundFailureSystem implements SimulationSystem {
     return {
       ground: (i) => H[i] - src.applied[i] + f.bed[i],
       infiltrated: (i) => (wf ? wf.infiltrated[cell(i)] : 0),
-      surcharge: (i) => structures[i] + (wf ? GAMMA_W * wf.h[cell(i)] : 0) + ((f.looseMass[i] + f.mass[i]) / A) * 9.81 / 1000,
+      surcharge: (i) => structures[i] + (wf ? gammaW() * wf.h[cell(i)] : 0) + ((f.looseMass[i] + f.mass[i]) / A) * gNow() / 1000,
     };
   }
 
   /** Foundation pressure of every building on its footprint vertices (kPa), once per run. */
+  private structuresG = NaN;
+
   private structureLoads(ctx: SystemContext, ch: GroundFailureChannel): Float32Array {
     const f = ch.field!;
     const q = new Float32Array(f.n);
@@ -130,7 +134,7 @@ export class GroundFailureSystem implements SimulationSystem {
       const { hx, hz, yaw } = footprint(e);
       const [x0, , z0] = e.initialPose.position;
       const c = Math.cos(yaw), s = Math.sin(yaw);
-      const p = (e.source.physics.mass * 9.81) / (4 * hx * hz) / 1000;
+      const p = (e.source.physics.mass * gNow()) / (4 * hx * hz) / 1000;
       const r = Math.hypot(hx, hz);
       for (let iz = Math.max(0, Math.floor((z0 - r - f.originZ) / f.dx)); iz <= Math.min(f.nz - 1, Math.ceil((z0 + r - f.originZ) / f.dx)); iz++) {
         for (let ix = Math.max(0, Math.floor((x0 - r - f.originX) / f.dx)); ix <= Math.min(f.nx - 1, Math.ceil((x0 + r - f.originX) / f.dx)); ix++) {

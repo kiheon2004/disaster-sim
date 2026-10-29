@@ -23,7 +23,7 @@
 import type { GeoField } from './GeoField';
 import type { GroundEnv } from './common';
 import { applyVariability, areaVertices, basalFriction, restartFriction, slopeAt, waterRiseFrom } from './common';
-import { DEG, G, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight } from './materials';
+import { DEG, gNow, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight } from './materials';
 import { criticalAcceleration, infiniteSlopeFS, newmarkStep } from './stability';
 import type { LandslideSpec } from './types';
 
@@ -183,6 +183,6 @@ export class LandslideModel {
       if (v < min) min = v;
       if (v < 1 || spec.trigger === 'user') { unstable++; volume += spec.thickness * f.dx * f.dx; }
     }
-    return { cells, fs, unstable, volume, minFS: min, g: G };
+    return { cells, fs, unstable, volume, minFS: min, g: gNow() };
   }
 }

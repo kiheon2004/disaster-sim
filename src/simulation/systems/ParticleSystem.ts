@@ -1,4 +1,5 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
+import { gravityDown } from '@/thermal/gravityScope';
 import { createLocalWind } from '../wind/SpatialWindField';
 
 const scratch = createLocalWind();
@@ -41,7 +42,9 @@ export class ParticleSystem implements SimulationSystem {
       p.velocity[0] += (wv[0] - p.velocity[0]) * Math.min(1, k * dt);
       p.velocity[2] += (wv[2] - p.velocity[2]) * Math.min(1, k * dt);
       // Dust settles slowly (fine particles, drag-dominated); visual only.
-      p.velocity[1] = dust ? p.velocity[1] + (-0.15 - p.velocity[1]) * Math.min(1, 1.5 * dt) : p.velocity[1] - (leaf ? 2.2 : 9.81) * dt;
+      // Phase 31: visual fall / settling under the step's downward gravity (reversed or zero g: they float — visual only).
+      const gd = gravityDown();
+      p.velocity[1] = dust ? p.velocity[1] + (-0.15 * gd - p.velocity[1]) * Math.min(1, 1.5 * dt) : p.velocity[1] - (leaf ? 2.2 : 9.81) * gd * dt;
       if (leaf) p.velocity[1] += Math.sin(time * 5 + i) * 1.5 * dt; // flutter
       p.position[0] += p.velocity[0] * dt;
       p.position[1] += p.velocity[1] * dt;

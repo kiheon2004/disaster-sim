@@ -8,6 +8,7 @@
  */
 import { blastBackground, meteorAir } from '@/simulation/atmosphere/runtime';
 import { createId } from '@/core/id';
+import { GRAVITY } from '@/core/units';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { EventContext, SimulationEvent } from '../SimulationEvent';
 import type { ImpactSpec } from '@/impact/types';
@@ -87,7 +88,9 @@ export class ImpactEvent implements SimulationEvent<ImpactSpec> {
     const unchanged = this.prepared !== null && (env.deformation.engine?.rev ?? 0) === 0;
     // Phase 29 (opt-in): an atmosphere experiment's column mass thins the entry atmosphere and the ejecta's air.
     const air = meteorAir(env, this.spec.target[0], this.spec.target[1]);
-    const plan = (this.plan = unchanged && !air ? this.prepared! : planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed, true, air ?? undefined));
+    // Phase 31: under a gravity experiment the in-world arc, crater and ejecta use the downward gravity at the start.
+    const gd = env.gravity.downUniform(GRAVITY);
+    const plan = (this.plan = unchanged && !air && gd === GRAVITY ? this.prepared! : planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed, true, air ?? undefined, gd));
     this.prepared = null;
     const ch = env.groundFailure;
     const f = ch.ensure();

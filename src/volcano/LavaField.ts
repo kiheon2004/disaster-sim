@@ -27,6 +27,8 @@
  * within RETIRE_DT of it (exact: nothing dropped). Lateral conduction inside the lava is neglected
  * (time scale dx²/κ ≈ 10⁶ s); lava–lava exchange = advective mixing + mobile ↔ deposit conduction.
  */
+import { gravityDown } from '@/thermal/gravityScope';
+import { GRAVITY } from '@/core/units';
 import { SIGMA } from '@/thermal/units';
 import { hGround } from '@/thermal/convection';
 import { binghamFlux } from './rheology';
@@ -351,6 +353,8 @@ export class LavaField {
    * are evaluated at the start of every sub-step from its current energy.
    */
   flow(dt: number): number {
+    // Phase 31: the downward gravity of the step drives the flow (ρ·g·sinθ; 0 without downward gravity — the lava holds).
+    const gLava = GRAVITY * gravityDown();
     const { nx, nz, area, rho, dx } = this;
     let left = dt, subs = 0;
     this.faces = 0;
@@ -396,7 +400,7 @@ export class LavaField {
           const dS = Si - Sj;
           if (dS <= 0) continue;
           const s = dS / dx, sinT = s / Math.sqrt(1 + s * s);
-          const q = binghamFlux(hf, sinT, rho, eta, tau) * dx; // m³/s across the face
+          const q = binghamFlux(hf, sinT, rho, eta, tau, gLava) * dx; // m³/s across the face
           if (q <= 0) continue;
           const cap = FACE_SHARE * dS * area;
           if (nf >= this.fFrom.length) this.grow();

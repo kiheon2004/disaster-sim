@@ -51,7 +51,7 @@ export function overlayValue(k: Exclude<AtmosOverlay, 'off'>, a: number, ash: Fl
   const f = ar.field, air = ar.trt.world.air, A = f.area, H = f.H;
   switch (k) {
     case 'pressure': return f.surfacePressure(a) / 1000;
-    case 'pressureChange': return (f.sigma[a] - f.sigma0[a]) * 9.81;
+    case 'pressureChange': return f.sigma[a] * f.g - f.sigma0[a] * 9.81; // weight now (Phase 31: under the acting g) − the start state
     case 'density': return f.densityAt(a, 0.5 * H, air.T(a));
     case 'temperature': return air.T(a) - 273.15;
     case 'speed': {

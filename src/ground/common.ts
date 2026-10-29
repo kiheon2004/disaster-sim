@@ -6,7 +6,7 @@ import { Rng } from '@/core/random';
 import { ValueNoise } from '@/terrain/TerrainPresets';
 import type { GeoField } from './GeoField';
 import type { GroundArea } from './types';
-import { DEG, GAMMA_W, REPOSE_HYSTERESIS, unitWeight, type MechanicalProfile } from './materials';
+import { DEG, gammaW, REPOSE_HYSTERESIS, unitWeight, type MechanicalProfile } from './materials';
 import { stableCutAngle } from './stability';
 
 export interface GroundEnv {
@@ -108,7 +108,7 @@ export function restartFriction(p: MechanicalProfile, m: number): number {
   return Math.tan((p.frictionCv + REPOSE_HYSTERESIS) * DEG) * (1 - poreRatio(p, m));
 }
 
-const poreRatio = (p: MechanicalProfile, m: number) => Math.min(0.9, (m * GAMMA_W) / unitWeight(p));
+const poreRatio = (p: MechanicalProfile, m: number) => Math.min(0.9, (m * gammaW()) / unitWeight(p));
 
 const NEIGHBOURS: [number, number, number][] = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
 

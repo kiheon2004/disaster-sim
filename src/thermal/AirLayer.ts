@@ -25,6 +25,7 @@
  * field stays owned here.
  */
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from './gravityScope';
 import { advectFaces, courant, substepsFor } from '@/atmosphere/grid';
 import { CP_AIR } from './units';
 
@@ -114,7 +115,7 @@ export class AirLayer {
   vent(closed: boolean): { lost: number; maxRate: number } {
     if (this.Ca) return this.ventAtmos(closed);
     let lost = 0, maxRate = 0;
-    const A = this.cellArea, k = this.rho * CP_AIR * A, gH = GRAVITY * this.H / this.Tref;
+    const A = this.cellArea, k = this.rho * CP_AIR * A, gH = GRAVITY * gravityDown() * this.H / this.Tref;
     // Phase 30: under a climate forcing the layer vents relative to the background air above it.
     const ref = this.ventRef === null ? 0 : this.ventRef - this.Tref;
     for (let a = 0; a < this.count; a++) {
@@ -136,7 +137,7 @@ export class AirLayer {
   /** Phase 29 venting: per-column density and capacity, relative to the free atmosphere above. */
   private ventAtmos(closed: boolean): { lost: number; maxRate: number } {
     let lost = 0, maxRate = 0;
-    const A = this.cellArea, gH = GRAVITY * this.H / this.Tref, Ca = this.Ca!, rho = this.rhoA!;
+    const A = this.cellArea, gH = GRAVITY * gravityDown() * this.H / this.Tref, Ca = this.Ca!, rho = this.rhoA!;
     const ref = (this.ventRef ?? this.Tref) - this.Tref;
     for (let a = 0; a < this.count; a++) {
       const dT = this.E[a] / Ca[a] - ref;
@@ -158,7 +159,7 @@ export class AirLayer {
   /** Buoyant updraft velocity of a column (m/s, 0 when not warmer than the air above) — the venting's w. */
   updraft(a: number): number {
     const dT = this.excess(a);
-    return dT > 0 ? Math.sqrt((GRAVITY * this.H * dT) / this.Tref) : 0;
+    return dT > 0 ? Math.sqrt((GRAVITY * gravityDown() * this.H * dT) / this.Tref) : 0;
   }
 
   /**

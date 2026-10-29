@@ -21,6 +21,7 @@ import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { collapseFrom } from '../buildings/modular';
 import { DEFORM_INTERVAL } from './DeformationSystem';
 import { GRAVITY } from '@/core/units';
+import { gravityDown } from '@/thermal/gravityScope';
 import { WORLD_SIZE } from '@/core/units';
 import type { Landing, ImpactModel } from '@/impact/ImpactModel';
 import type { GroundEnv } from '@/ground/common';
@@ -264,7 +265,8 @@ export class ImpactSystem implements SimulationSystem {
     if (e.source.type === 'human' && !e.flags.fallen) {
       const mass = e.source.physics.mass;
       const h = e.dims[1] / 2, b = FOOT_LEVER;
-      const dvCrit = Math.sqrt(2 * GRAVITY * (Math.hypot(h, b) - h));
+      // Energy to tip a person over its foot edge under the step's downward gravity (Phase 31; any push topples at 0 g).
+      const dvCrit = Math.sqrt(2 * GRAVITY * gravityDown() * (Math.hypot(h, b) - h));
       if ((mHit * vh) / mass >= dvCrit) knockDown(e, ctx, 'ejecta', J / dt, [l.dirX, 0, l.dirZ]);
     }
   }

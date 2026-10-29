@@ -30,7 +30,7 @@
 import type { GeoField } from './GeoField';
 import type { GroundEnv } from './common';
 import { applyVariability, wallFailure } from './common';
-import { DEG, G, GAMMA_W, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight, type MechanicalProfile } from './materials';
+import { DEG, gNow, gammaW, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight, type MechanicalProfile } from './materials';
 import { fallTime, plugFS } from './stability';
 import type { SinkholeSpec } from './types';
 
@@ -210,7 +210,7 @@ export class SinkholeModel {
   /** Predicted outcome without running (preview): critical radius, drop, choke, pit estimate. */
   static predict(spec: SinkholeSpec, profile: MechanicalProfile) {
     const gamma = unitWeight(profile), phi = profile.friction * DEG;
-    const shear = (m: number) => profile.cohesion + profile.apparentCohesion * (1 - m) + (1 - Math.sin(phi)) * Math.max(0, gamma - m * GAMMA_W) * (spec.cover / 2) * Math.tan(phi);
+    const shear = (m: number) => profile.cohesion + profile.apparentCohesion * (1 - m) + (1 - Math.sin(phi)) * Math.max(0, gamma - m * gammaW()) * (spec.cover / 2) * Math.tan(phi);
     const m = spec.initiation === 'water' ? spec.saturation ?? 1 : 0;
     const q = spec.initiation === 'load' ? spec.surcharge ?? 0 : 0;
     const criticalRadius = (2 * spec.cover * shear(m)) / (gamma * spec.cover + q);
@@ -220,6 +220,6 @@ export class SinkholeModel {
     const fsEnd = plugFS({ a, H: spec.cover, c: profile.cohesion + profile.apparentCohesion * (1 - m), phi, gamma, m, q }) * (1 - (spec.initiation === 'supportLoss' ? spec.supportLoss ?? 0 : 0));
     // Pit estimate: plug radius widened by walls at the repose angle (cohesionless) over the drop.
     const pitRadius = drop > 0 ? a + (profile.cohesion > 0 ? 0 : drop / Math.tan(phi)) : 0;
-    return { criticalRadius, drop, choked: drop <= 0, fs0, fsEnd, fails: fsEnd < 1, pitRadius, fallTime: fallTime(Math.max(0, drop)), g: G };
+    return { criticalRadius, drop, choked: drop <= 0, fs0, fsEnd, fails: fsEnd < 1, pitRadius, fallTime: fallTime(Math.max(0, drop)), g: gNow() };
   }
 }

@@ -40,6 +40,7 @@ import type { VolcanoSpec } from '@/volcano/types';
 import type { AtmosphereSpec } from '@/atmosphere/types';
 import { AtmospherePreview } from '../atmosphere/AtmospherePreview';
 import { ClimatePreview } from '../climate/ClimatePreview';
+import { GravityPreview } from '../gravity/GravityPreview';
 import type { ClimateSpec } from '@/climate/types';
 import type { FireSpec } from '@/fire/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
@@ -51,7 +52,7 @@ function groundTerrain(): TerrainData {
 }
 
 function useGroundInstance(id: string | null): PhenomenonInstance | null {
-  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire' || i.type === 'volcano' || i.type === 'atmosphere' || i.type === 'climate')) ?? null : null));
+  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire' || i.type === 'volcano' || i.type === 'atmosphere' || i.type === 'climate' || i.type === 'gravity')) ?? null : null));
 }
 
 /** Points of a closed (or open) line on the ground, lifted a little. */
@@ -306,5 +307,6 @@ export function GroundPreview() {
   if (inst.type === 'volcano') return <VolcanoPreview inst={inst} />;
   if (inst.type === 'atmosphere') return <AtmospherePreview inst={inst} />;
   if (inst.type === 'climate') return <ClimatePreview inst={inst} />;
+  if (inst.type === 'gravity') return <GravityPreview inst={inst} />;
   return inst.type === 'sinkhole' ? <SinkholePreview inst={inst} /> : <LandslidePreview inst={inst} />;
 }
