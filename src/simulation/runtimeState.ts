@@ -121,6 +121,9 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
     },
     { id: 'climateSoilAir', owner: 'ClimateWorld (soil, vapour)', kind: 'state', holds: 'antecedent soil water and soil ice per cell × layer, freeze–thaw counters; water vapour, condensate and precipitation in transit per air column; surface coupling arrays', present: !!env.climate.rt, bytes: env.climate.rt ? env.climate.rt.cw.n * (env.climate.rt.cw.nl * 16 + 40) + env.climate.rt.cw.na * 48 : 0 },
     { id: 'climateLedger', owner: 'ClimateWorld ledgers + ClimateRuntime', kind: 'state', holds: 'water mass (stores, precipitation, vapour in / out, removed, flood in / out, crown water, blowing snow), energy (stores, solar, longwave, precipitation, vapour, to thermal), crown moisture, roof loads applied, history samples, milestones', present: !!env.climate.rt, bytes: env.climate.rt ? 2048 + env.climate.rt.series.length * 72 : 0 },
+    // Phase 31: gravity state (only in runs with a gravity experiment) — separate from the document; never saved.
+    { id: 'gravityField', owner: 'GravityChannel → GravityField', kind: 'state', holds: 'experiments in canonical order with their frozen start vectors; the prepared global vector and local sources of the step', present: !!env.gravity.field, bytes: env.gravity.field ? 512 + env.gravity.experiments.length * 256 : 0 },
+    { id: 'gravityLedger', owner: 'GravityRuntime (ledger, tracked bodies, structural ratios)', kind: 'state', holds: 'per tracked body: mass, last potential / velocity, start position and field of the step; K, U, W_g, W_field, impulses; applied structural gravity ratios per building; history samples, milestones', present: !!env.gravity.rt, bytes: env.gravity.rt ? 4096 + env.gravity.rt.series.length * 144 : 0 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

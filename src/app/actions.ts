@@ -2,6 +2,8 @@
  * Application services: orchestrate several systems (world, editor, simulation, view)
  * so UI components never wire them together themselves.
  */
+import { gravityDemo } from '@/gravity/demos';
+import type { GravityScenario } from '@/gravity/types';
 import { climatePreset, type ClimatePresetId } from '@/climate/presets';
 import type { EntityId } from '@/core/types';
 import type { TerrainPresetId } from '@/core/model';
@@ -225,6 +227,22 @@ export function loadClimatePreset(id: ClimatePresetId) {
   useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'climate.preset.loaded', params: { name: t(`climate.preset.${id}`) } });
+}
+
+/** Load the demo world of a gravity preset (Phase 31): a flat block with the preset's experiment (replaces the document). */
+export function loadGravityDemo(id: GravityScenario) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('gravity.demo.confirm', { name: t(`gravity.scenario.${id}`) }))) return;
+  const p = gravityDemo(id);
+  const doc = createEmptyDocument(t(`gravity.scenario.${id}`));
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  if (p.lake) useWorldStore.getState().setFeatures([p.lake], 2);
+  useWorldStore.getState().addObjects(p.objects);
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'gravity.demo.loaded', params: { name: t(`gravity.scenario.${id}`) } });
 }
 
 export function loadSampleTown() {

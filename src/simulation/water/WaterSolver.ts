@@ -215,6 +215,8 @@ export class WaterSolver {
   private applySources(dt: number) {
     const f = this.field;
     const { h, redirect } = f;
+    const heat = f.heat;
+    const ex = heat ? f.inflowExcess : 0;
     const A = f.cellArea;
     const nx = f.nx;
     for (const r of this.forcing.rains) {
@@ -222,6 +224,7 @@ export class WaterSolver {
       if (d <= 0) continue;
       if (r.cells === null) {
         for (let i = 0; i < f.count; i++) h[redirect[i]] += d;
+        if (ex !== 0) { for (let i = 0; i < f.count; i++) heat![redirect[i]] += d * ex; f.heatOut -= d * ex * f.count; }
         f.budget.rain += d * A * f.count;
         f.touch(0, 0);
         f.touch(f.nx - 1, f.nz - 1);
@@ -230,8 +233,10 @@ export class WaterSolver {
         for (let k = 0; k < cells.length; k++) {
           const j = redirect[cells[k]];
           h[j] += d;
+          if (ex !== 0) heat![j] += d * ex;
           f.touch(j % nx, (j / nx) | 0);
         }
+        if (ex !== 0) f.heatOut -= d * ex * cells.length;
         f.budget.rain += d * A * cells.length;
       }
     }
@@ -242,8 +247,10 @@ export class WaterSolver {
       for (let k = 0; k < cells.length; k++) {
         const j = cells[k];
         h[j] += d;
+        if (ex !== 0) heat![j] += d * ex;
         f.touch(j % nx, (j / nx) | 0);
       }
+      if (ex !== 0) f.heatOut -= d * ex * cells.length;
       f.budget.sources += d * A * cells.length;
     }
   }
@@ -680,7 +687,8 @@ export class WaterSolver {
     const za = Math.max(0, f.z0 - 1);
     const zb = Math.min(nz - 1, f.z1 + 1);
     const share = (c: number, vol: number) => (h[c] > 0 && heat[c] !== 0 ? (heat[c] * vol) / h[c] : 0);
-    let moved = 0, out = 0;
+    const ex = f.inflowExcess;
+    let moved = 0, out = 0, inflow = 0;
     for (let iz = za; iz <= zb; iz++) {
       const row = iz * nx;
       for (let kx = xa; kx <= xb + 1; kx++) {
@@ -688,12 +696,15 @@ export class WaterSolver {
         if (q === 0) continue;
         const L = kx - 1, R = kx;
         if (q > 0) {
+          // Inflow through the map edge (R3, Phase 31): liquid at the melting point when the reference is colder.
+          if (L < 0 && ex !== 0) { const e = q * k * ex; d[row + R] += e; inflow += e; continue; }
           if (L < xa) continue; // inflow from the edge / outside the range: reference water
           const e = share(row + L, q * k);
           d[row + L] -= e;
           if (R <= nx - 1) d[row + R] += e; else out += e;
           moved += Math.abs(e);
         } else {
+          if (R > nx - 1 && ex !== 0) { const e = -q * k * ex; d[row + L] += e; inflow += e; continue; }
           if (R > xb) continue;
           const e = share(row + R, -q * k);
           d[row + R] -= e;
@@ -708,12 +719,14 @@ export class WaterSolver {
         if (q === 0) continue;
         const T = kz - 1, B = kz;
         if (q > 0) {
+          if (T < 0 && ex !== 0) { const e = q * k * ex; d[B * nx + ix] += e; inflow += e; continue; }
           if (T < za) continue;
           const e = share(T * nx + ix, q * k);
           d[T * nx + ix] -= e;
           if (B <= nz - 1) d[B * nx + ix] += e; else out += e;
           moved += Math.abs(e);
         } else {
+          if (B > nz - 1 && ex !== 0) { const e = -q * k * ex; d[T * nx + ix] += e; inflow += e; continue; }
           if (B > zb) continue;
           const e = share(B * nx + ix, -q * k);
           d[B * nx + ix] -= e;
@@ -723,7 +736,7 @@ export class WaterSolver {
       }
     }
     for (let iz = za; iz <= zb; iz++) for (let i = iz * nx + xa, e = iz * nx + xb; i <= e; i++) if (d[i] !== 0) { heat[i] += d[i]; d[i] = 0; }
-    f.heatOut += out;
+    f.heatOut += out - inflow;
     f.heatMoved += moved;
   }
 

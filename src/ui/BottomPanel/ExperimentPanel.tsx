@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { GravityTools } from './GravityTools';
 import { isMessageKey, translateMessage, useLocale, useT, type MessageKey } from '@/i18n/i18n';
 import { phenomena } from '@/phenomena/registry';
 import { resolveSchedule } from '@/phenomena/schedule';
@@ -204,6 +205,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         {inst.type === 'volcano' && <VolcanoTools inst={inst} />}
         {inst.type === 'atmosphere' && <AtmosphereTools inst={inst} />}
           {inst.type === 'climate' && <ClimateTools inst={inst} />}
+        {inst.type === 'gravity' && <GravityTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

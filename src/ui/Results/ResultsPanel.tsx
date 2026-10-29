@@ -1,4 +1,5 @@
 import { energyText } from '@/thermal/units';
+import { MS } from '@/structure/types';
 import { THERMAL_MATERIAL_IDS } from '@/thermal/materials';
 import { FIRE_STATES } from '@/fire/FireWorld';
 import { FUEL_IDS } from '@/fire/materials';
@@ -119,6 +120,7 @@ function ResultsDialog() {
     volcano: useSimStore.getState().volcano ?? undefined, volcanoRoads: volcanoRoads(),
     atmosphere: useSimStore.getState().atmosphere ?? undefined,
     climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(), climateRoads: climateRoads(),
+    gravity: useSimStore.getState().gravity ?? undefined, gravityObjects: gravityObjects(), gravityBuildings: gravityBuildings(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -149,6 +151,7 @@ function ResultsDialog() {
           <ThermalSummary t={t} name={name} />
           <VolcanoSummary t={t} name={name} />
           <AtmosphereSummary t={t} name={name} />
+          <GravitySummary t={t} name={name} />
           <ClimateSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
@@ -672,8 +675,80 @@ function climateObjects() {
   const kinds = ['roof', 'crown', 'vehicle'];
   return r.stores.map((s) => {
     const st = cw.stores[s.k];
-    return { object: s.e.id, type: s.e.source.type, store: kinds[st.kind], area_m2: +st.area.toFixed(2), mass_kg: +cw.sM[s.k].toFixed(3), ice_kg: +cw.sIce[s.k].toFixed(3), load_kPa: +((cw.sM[s.k] * 9.81) / st.area / 1000).toFixed(4), T_C: +(cw.sT[s.k] - 273.15).toFixed(2), dropped: cw.sGone[s.k] === 1, broken: s.broken, structural: !!s.e.climate?.applied };
+    return { object: s.e.id, type: s.e.source.type, store: kinds[st.kind], area_m2: +st.area.toFixed(2), mass_kg: +cw.sM[s.k].toFixed(3), ice_kg: +cw.sIce[s.k].toFixed(3), load_kPa: +((cw.sM[s.k] * simulationController.getEnvironment().gravity.downUniform(9.81)) / st.area / 1000).toFixed(4), T_C: +(cw.sT[s.k] - 273.15).toFixed(2), dropped: cw.sGone[s.k] === 1, broken: s.broken, structural: !!s.e.climate?.applied };
   });
+}
+
+/** Bodies under a gravity experiment (Phase 31): mass (constant), local g, weight, velocity — for the exports. */
+function gravityObjects() {
+  const env = simulationController.getEnvironment(), f = env.gravity.field, ph = simulationController.getPhysics();
+  if (!f || !ph) return undefined;
+  const g: [number, number, number] = [0, 0, 0];
+  return [...(simulationController.getRuntime()?.entities.values() ?? [])].filter((e) => e.dynamic && e.body !== null).map((e) => {
+    const p = e.pose.position;
+    f.sample(p[0], p[1], p[2], g);
+    const v = ph.getLinearVelocity(e.body!);
+    const gm = Math.hypot(g[0], g[1], g[2]);
+    return { object: e.id, type: e.source.type, mass_kg: e.source.physics.mass, gx: +g[0].toFixed(4), gy: +g[1].toFixed(4), gz: +g[2].toFixed(4), g_ms2: +gm.toFixed(4), weight_N: +(e.source.physics.mass * gm).toFixed(2), vx: +v[0].toFixed(4), vy: +v[1].toFixed(4), vz: +v[2].toFixed(4), x: +p[0].toFixed(3), y: +p[1].toFixed(3), z: +p[2].toFixed(3), cause: e.lastCause ?? '', hazard: e.lastHazard ?? '' };
+  });
+}
+
+/** Modular buildings under a gravity experiment (Phase 31): structural gravity ratio, failed members (roof panels). */
+function gravityBuildings() {
+  if (!simulationController.getEnvironment().gravity.field) return undefined;
+  const out: { building: string; ratio: number | 'unsupported'; members: number; failed: number; roofPanels: number; roofFailed: number; collapse: string }[] = [];
+  for (const e of simulationController.getRuntime()?.entities.values() ?? []) {
+    if (!e.modular) continue;
+    const m = e.modular.structure?.model;
+    if (!m) { out.push({ building: e.id, ratio: 1, members: e.modular.design.members.length, failed: 0, roofPanels: 0, roofFailed: 0, collapse: 'intact' }); continue; }
+    let k = 0, c = 0, failed = 0, rp = 0, rf = 0;
+    for (let i = 0; i < m.n; i++) {
+      if (m.state[i] === MS.ABSENT) continue;
+      k += m.s.kM[i]; c++;
+      if (m.state[i] >= MS.FAILED) failed++;
+      if (m.g.roofCap[i] > 0) { rp++; if (m.state[i] >= MS.FAILED) rf++; }
+    }
+    out.push({ building: e.id, ratio: c ? +(k / c).toFixed(4) : 1, members: c, failed, roofPanels: rp, roofFailed: rf, collapse: m.collapseLevel() });
+  }
+  return out;
+}
+
+/** Gravity experiment results (Phase 31): cards, CSV (field, ledgers, bodies, buildings, history); the JSON carries the live summary. */
+function GravitySummary({ t, name }: { t: TFunction; name: string }) {
+  const g = useSimStore((x) => x.gravity);
+  if (!g) return null;
+  const b = g.balance, s = g.stats;
+  const exportCsv = () => {
+    const num = (v: number) => (Number.isFinite(v) ? String(v) : 'unsupported');
+    download(`${name || 'simulation'}-gravity.csv`, [
+      '# gravity experiments (spec, SI units: m/s², s, m)', 'name,scenario,start_s,duration_s,end,global,sources', ...g.experiments.map((e) => [e.name, e.scenario, e.start, e.duration, e.end, e.global, e.sources].join(',')), '',
+      '# field now', 'quantity,value,unit', `gx,${g.G[0]},m/s²`, `gy,${g.G[1]},m/s²`, `gz,${g.G[2]},m/s²`, `magnitude,${g.magnitude},m/s²`, `ratio,${g.ratio},g0`, `down,${g.down},m/s²`, `mode,${g.mode},`, `uniform,${g.uniform},`, `potentialDefined,${g.potentialDefined},`, `pressure,${g.pressure.value},Pa ${g.pressure.modelled ? 'model' : 'estimate'}`, '',
+      '# model support', 'model,support', ...Object.entries(g.support).map(([k, v]) => `${k},${v}`), '',
+      '# energy / momentum ledger of gravity on the bodies', 'quantity,value,unit', `kinetic,${b.kinetic},J`, `potential,${num(b.potential)},J`, `workGravity,${b.workGravity},J`, `workField,${num(b.workField)},J`, `workOther,${b.workOther},J`, `fieldResidual,${num(b.fieldResidual)},J`, `boundaryEnergy,${b.boundaryEnergy},J`,
+      `impulse,${b.impulse.join(';')},N·s`, `momentum,${b.momentum.join(';')},kg·m/s`, `impulseOther,${b.impulseOther.join(';')},N·s`, '',
+      '# structures', 'building,ratio_g0,members,failed,roofPanels,roofFailed,collapse', ...(gravityBuildings() ?? []).map((r) => [r.building, r.ratio, r.members, r.failed, r.roofPanels, r.roofFailed, r.collapse].join(',')), '',
+      '# bodies', 'object,type,mass_kg,gx,gy,gz,g_ms2,weight_N,vx,vy,vz,x,y,z,cause,hazard', ...(gravityObjects() ?? []).map((o) => Object.values(o).join(',')), '',
+      '# history', 't_s,gx,gy,gz,magnitude,kinetic_J,potential_J,workGravity_J,workField_J,workOther_J,px,py,pz,Jx,Jy,Jz,bodies,failedMembers',
+      ...g.series.map((r) => [r.t.toFixed(2), r.gx.toFixed(4), r.gy.toFixed(4), r.gz.toFixed(4), r.magnitude.toFixed(4), r.kinetic.toFixed(2), num(r.potential), r.workGravity.toFixed(2), num(r.workField), r.workOther.toFixed(2), r.px.toFixed(2), r.py.toFixed(2), r.pz.toFixed(2), r.jx.toFixed(2), r.jy.toFixed(2), r.jz.toFixed(2), r.bodies, r.failed].join(',')),
+    ].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="gravity-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.gravity.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="gravity-csv"><Icon name="save" size={13} /> {t('results.gravity.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.gravity.field')} value={fmt(g.magnitude, 2)} unit="m/s²" sub={t('results.gravity.fieldSub', { x: fmt(g.ratio, 2), m: t(`gravity.mode.${g.mode}` as MessageKey), lo: fmt(Number.isFinite(s.minimum) ? s.minimum : 0, 2), hi: fmt(s.peak, 2) })} />
+        <Card label={t('results.gravity.bodies')} value={String(s.bodies)} sub={t('results.gravity.bodiesSub', { a: s.affected, w: s.wakes })} />
+        <Card label={t('results.gravity.structures')} value={String(g.structures.failures)} sub={t('results.gravity.structuresSub', { n: g.structures.loaded, r: g.structures.roofFailures })} />
+        <Card label={t('results.gravity.energy')} value={energyText(b.workGravity)} sub={t('results.gravity.energySub', { k: energyText(b.kinetic), f: Number.isFinite(b.workField) ? energyText(b.workField) : '—', o: energyText(b.workOther) })} />
+        <Card label={t('results.gravity.momentum')} value={fmt(Math.hypot(...b.impulse) / 1000, 1)} unit="kN·s" sub={t('results.gravity.momentumSub', { o: fmt(Math.hypot(...b.impulseOther) / 1000, 1) })} />
+        <Card label={t('results.gravity.residual')} value={Number.isFinite(b.fieldResidual) ? b.fieldResidual.toExponential(1) : '—'} unit="J" sub={t('results.gravity.residualSub')} />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.gravity.note')}</div>
+    </div>
+  );
 }
 
 /** Climate experiment results (Phase 30): cards, CSV (ledgers, stores, roads, history), the JSON carries the live summary. */

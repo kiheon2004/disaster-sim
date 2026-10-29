@@ -35,7 +35,7 @@ import { pointFraction, projectedArea, sphereViewFactor } from '@/thermal/radiat
 import { IRRADIANCE_FLOOR } from '@/thermal/types';
 import { groundReceivers, sourceReach, type GroundGrid } from '@/thermal/geometry';
 import { beamAxialCapacity, columnFactor, meanTemp, restrainedForce, restraintDegree, sectionFactors, thermalStrain, bowingCurvature, type NodeTemps, type StrengthState } from '@/thermal/structural';
-import { SIGMA, BOILING, RHO_WATER, C_WATER, toC } from '@/thermal/units';
+import { SIGMA, BOILING, RHO_WATER, C_WATER, ZERO_C, toC } from '@/thermal/units';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { DebrisPiece, RuntimeEntity } from '../SimulationRuntime';
@@ -553,6 +553,8 @@ export class ThermalRuntime {
       f.infilHeat = new Float64Array(f.count);
     }
     if (!w.water) w.water = { h: f.h, heat: f.heat, infilHeat: f.infilHeat, cellArea: f.cellArea, out: 0, moved: 0 };
+    // Phase 31 (R3): below a sub-zero reference, liquid inflow (Phase 14 rain, sources, edges) enters at the melting point.
+    f.inflowExcess = w.Tref < ZERO_C ? RHO_WATER * C_WATER * (ZERO_C - w.Tref) * f.cellArea : 0;
     w.water.out += f.heatOut;
     w.water.moved += f.heatMoved;
     f.heatOut = 0;

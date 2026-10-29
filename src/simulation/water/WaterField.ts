@@ -149,6 +149,12 @@ export class WaterField {
   heat: Float64Array | null = null;
   infilHeat: Float64Array | null = null;
   heatOut = 0;
+  /**
+   * Phase 31 (R3): heat of inflowing water above the reference (J per metre of depth over one cell) — Phase 14 rain,
+   * sources and edge inflow enter at the melting point when the reference temperature is below it (liquid inflow is not
+   * supercooled); 0 otherwise (the Phase 26–30 reference-temperature inflow). Booked as negative `heatOut`.
+   */
+  inflowExcess = 0;
   heatMoved = 0;
 
   /**
