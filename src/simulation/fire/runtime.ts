@@ -248,7 +248,7 @@ export class FireRuntime {
       if (B.kind[b] === BK.member && B.sub[b] >= 0) this.addMember(trt.buildings[B.ref[b]], B.sub[b], b);
       else if (B.kind[b] === BK.entity) {
         const te = trt.ents[B.ref[b]];
-        if (te?.kind === 'tree') this.addTree(te.e, b);
+        if (te?.kind === 'tree') this.addTree(te.e, b, ctx.env.climate.rt?.crownMoisture(te.e) ?? null);
       }
     }
   }
@@ -357,11 +357,12 @@ export class FireRuntime {
     }, bt.e.id, bi);
   }
 
-  private addTree(e: RuntimeEntity, b: number) {
+  private addTree(e: RuntimeEntity, b: number, climateMoisture: number | null = null) {
     const B = this.trt.world.bodies;
     const p = e.source.params as Record<string, number>;
     const cr = p.canopyRadius ?? 2, tr = p.trunkRadius ?? 0.3, h = p.height ?? e.dims[1];
-    const u = this.settings.foliageMoisture;
+    // Phase 30: a climate run tracks each crown's moisture (transpiration / drying) — the fire model starts from it.
+    const u = climateMoisture ?? this.settings.foliageMoisture;
     // The thermal foliage node was built for 150 % moisture: a drier crown has less water to heat.
     if (Math.abs(u - 1.5) > 1e-9 && B.ES[b] === 0) { B.cOv[b] = moistWoodC(u, ZERO_C + 15); B.refresh(b); }
     const crownV = (4 / 3) * Math.PI * cr ** 3;

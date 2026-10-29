@@ -517,6 +517,7 @@ export class ThermalWorld {
     L.transfers.conduction += acc.conduction * h;
     L.transfers.convection += acc.convection * h;
     L.transfers.radiation += acc.radiation * h;
+    if (acc.solar !== 0) { L.solar += acc.solar * h; acc.solar = 0; }
     acc.deepGround = acc.radiationSky = acc.atmosphere = acc.aboveLayer = acc.boundarySupply = acc.conduction = acc.convection = acc.radiation = 0;
   }
 

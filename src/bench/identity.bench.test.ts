@@ -10,6 +10,10 @@
  * atmosphere, lava, ash with wind, volcano + fire and a multi-hazard town, with the volcano state hashed —
  * without an atmosphere experiment they must be bit-identical to the Phase 28 build. (Uses only Phase 28
  * APIs, so the same file runs on that build.)
+ * Phase 30: IDENTITY_CLIMATE=1 adds (on top of all the above) atmospheric removal / restoration, long lava cooling and a
+ * smoke scene, with the atmosphere state hashed — without a climate experiment they must be bit-identical to the
+ * Phase 29 build. The flood budget is hashed through its Phase 14 keys (Phase 30 adds phase-change terms that stay
+ * zero without a climate — listing the keys keeps the same hash input on both builds).
  */
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -68,6 +72,21 @@ const ATMOS_SCENES: typeof SCENES = [
   { name: 'atmos: multi-hazard town', doc: () => withFire(world([...houses(8), conifer(30, 25, 9) as never])), events: [{ event: 'wind', speed: 20, direction: 'E', duration: 120 } as EventSpec, { event: 'earthquake', magnitude: 6.5, pga: 0.35, duration: 15, seed: 3, startTime: 10 } as EventSpec, { event: 'fire', position: [-30, 12], height: 1, radius: 1, duration: 300 } as EventSpec, heat({ position: [20, -30], power: 2e6, duration: 60 })], seconds: 90 },
 ];
 
+const atm = (p: Record<string, unknown>): EventSpec => ({ event: 'atmosphere', altitude: 0, boundary: 'open', thermo: 'adiabatic', removal: 'none', startTime: 0, ...p } as EventSpec);
+const CLIMATE_SCENES: typeof SCENES = [
+  { name: 'climate-off: atmospheric removal + wind', doc: () => world(houses(4)), events: [atm({ removal: 'linear', extent: 'uniform', target: 0.3, duration: 60 }), { event: 'wind', speed: 15, direction: 'W', duration: 300 } as EventSpec], seconds: 90 },
+  { name: 'climate-off: atmospheric restoration', doc: () => world([]), events: [atm({ boundary: 'closed', removal: 'linear', target: 0.4, duration: 30, restore: 'reservoir', restoreAt: 40, restoreDuration: 30, restoreTarget: 1 })], seconds: 80 },
+  { name: 'climate-off: lava cooling (long)', doc: () => world([]), events: [erupt({ duration: 60 })], seconds: 300 },
+  { name: 'climate-off: smoke (stand fire + wind)', doc: () => withFire(world(Array.from({ length: 8 }, (_, k) => conifer(-10 + (k % 4) * 6, -3 + Math.floor(k / 4) * 6, 60 + k) as never)), { foliageMoisture: 0.2 }), events: [{ event: 'wind', speed: 5, direction: 'W', duration: 300 } as EventSpec, { event: 'fire', position: [-10, -3], height: 6, radius: 2, duration: 300 } as EventSpec], seconds: 120 },
+];
+
+function atmosLines(c: SimulationController): string[] {
+  const ar = (c.getEnvironment() as unknown as { atmosphere?: { rt: { field: { sigma: Float64Array; Ux: Float64Array; gas: Float64Array; mass: object; energy: object } } | null } }).atmosphere?.rt;
+  if (!ar) return ['no-atmosphere'];
+  const f = ar.field;
+  return [Array.from(f.sigma).join(','), Array.from(f.Ux).join(','), Array.from(f.gas).join(','), JSON.stringify(f.mass), JSON.stringify(f.energy)];
+}
+
 function volcanoLines(c: SimulationController): string[] {
   const vr = c.getEnvironment().volcano.rt;
   if (!vr) return ['no-volcano'];
@@ -100,8 +119,8 @@ function thermalLines(c: SimulationController): string[] {
 describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
   it('scenes', { timeout: 3_600_000 }, async () => {
     const out: Record<string, string> = {};
-    const ATM = !!process.env.IDENTITY_ATMOS, FIRE = !!process.env.IDENTITY_FIRE || ATM, HEAT = !!process.env.IDENTITY_HEAT || FIRE;
-    for (const sc of [...SCENES, ...(HEAT ? HEAT_SCENES : []), ...(FIRE ? FIRE_SCENES : []), ...(ATM ? ATMOS_SCENES : [])]) {
+    const CLI = !!process.env.IDENTITY_CLIMATE, ATM = !!process.env.IDENTITY_ATMOS || CLI, FIRE = !!process.env.IDENTITY_FIRE || ATM, HEAT = !!process.env.IDENTITY_HEAT || FIRE;
+    for (const sc of [...SCENES, ...(HEAT ? HEAT_SCENES : []), ...(FIRE ? FIRE_SCENES : []), ...(ATM ? ATMOS_SCENES : []), ...(CLI ? CLIMATE_SCENES : [])]) {
       const c = new SimulationController({ headless: true });
       await c.load(sc.doc());
       for (const e of sc.events) c.addEvent(e);
@@ -116,10 +135,11 @@ describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
       }
       if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
       const f = c.getEnvironment().flood.field;
-      if (f) lines.push(Array.from(f.h).reduce((a, b) => a + b, 0).toString(), JSON.stringify(f.budget));
+      if (f) { const b = f.budget as unknown as Record<string, number>; lines.push(Array.from(f.h).reduce((a, x) => a + x, 0).toString(), JSON.stringify(['initial', 'rain', 'sources', 'boundaryIn', 'boundaryOut', 'infiltration', 'drainage', 'current', 'error'].map((k) => b[k]))); }
       if (HEAT) lines.push(...thermalLines(c));
       if (FIRE) lines.push(...fireLines(c));
       if (ATM) lines.push(...volcanoLines(c));
+      if (CLI) lines.push(...atmosLines(c));
       out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
       c.unload();
     }

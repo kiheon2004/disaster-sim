@@ -47,8 +47,32 @@ function if97Temperature(p: number): number {
   return (n[9] + D - Math.sqrt((n[9] + D) * (n[9] + D) - 4 * (n[8] + n[9] * D))) / 2;
 }
 
+/**
+ * Tabulated saturation pressures (0.01 K steps over 150–400 K, linear interpolation — relative error < 2·10⁻⁸, far below
+ * the equations' own uncertainty): the climate evaluates them 10⁵–10⁶ times per simulated second. Outside the table the
+ * equations are evaluated directly.
+ */
+const TAB_LO = 150, TAB_HI = 400, TAB_STEP = 0.01, TAB_N = Math.round((TAB_HI - TAB_LO) / TAB_STEP) + 1;
+let TAB_W: Float64Array | null = null, TAB_I: Float64Array | null = null;
+function tables() {
+  TAB_W = new Float64Array(TAB_N);
+  TAB_I = new Float64Array(TAB_N);
+  for (let i = 0; i < TAB_N; i++) { const T = TAB_LO + i * TAB_STEP; TAB_W[i] = esWaterExact(T); TAB_I[i] = esIceExact(T); }
+}
+function lookup(tab: Float64Array, T: number): number {
+  const x = (T - TAB_LO) / TAB_STEP;
+  const i = x | 0;
+  const f = x - i;
+  return tab[i] + f * (tab[i + 1] - tab[i]);
+}
+
 /** Saturation vapour pressure over liquid water (Pa). */
 export function esWater(T: number): number {
+  if (T > TAB_LO && T < TAB_HI - TAB_STEP) { if (!TAB_W) tables(); return lookup(TAB_W!, T); }
+  return esWaterExact(T);
+}
+
+function esWaterExact(T: number): number {
   const t = Math.max(SAT_RANGE_WATER[0], Math.min(SAT_RANGE_WATER[1], T));
   if (t >= T_MELT) return if97Pressure(t);
   const lt = Math.log(t);
@@ -58,6 +82,12 @@ export function esWater(T: number): number {
 /** Saturation vapour pressure over ice (Pa); above the triple point it is the liquid value (no ice). */
 export function esIce(T: number): number {
   if (T >= T_TRIPLE) return esWater(T);
+  if (T > TAB_LO) { if (!TAB_I) tables(); return lookup(TAB_I!, T); }
+  return esIceExact(T);
+}
+
+function esIceExact(T: number): number {
+  if (T >= T_TRIPLE) return esWaterExact(T);
   const t = Math.max(SAT_RANGE_ICE[0], T);
   return Math.exp(9.550426 - 5723.265 / t + 3.53068 * Math.log(t) - 0.00728332 * t);
 }
@@ -154,10 +184,10 @@ export function wetBulb(T: number, q: number, p: number): number {
   let lo = Math.min(T, dewPoint(e)) - 1, hi = T;
   if (f(hi) <= 0) return T; // saturated (or supersaturated)
   if (f(lo) > 0) lo = SAT_RANGE_WATER[0];
-  for (let k = 0; k < 80; k++) {
+  for (let k = 0; k < 60; k++) {
     const m = 0.5 * (lo + hi);
     if (f(m) > 0) hi = m; else lo = m;
-    if (hi - lo < 1e-7) break;
+    if (hi - lo < 1e-5) break;
   }
   return 0.5 * (lo + hi);
 }

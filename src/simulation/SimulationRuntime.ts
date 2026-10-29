@@ -101,6 +101,8 @@ export interface RuntimeEntity {
   modular?: import('./buildings/modular').ModularRuntime;
   /** Volcano response (Phase 28): lava at the object, lateral load damage, ash on the roof, bombs. */
   volcano?: import('./volcano/objects').VolcanoEntityState;
+  /** Phase 30: snow / ice load (kg/m², kPa), breakage index, surface under people, exposure air temperatures. */
+  climate?: { load: number; loadKPa: number; damage: number; snow: number; ice: number; restricted: boolean; airT: number; minAirT: number; maxAirT: number; applied: boolean };
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean; partialCollapse?: number };

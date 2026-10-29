@@ -24,7 +24,10 @@ export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firs
   // Phase 28 volcano.
   | 'eruptionStart' | 'eruptionRejected' | 'peakSupply' | 'lavaArrival' | 'lavaCrust' | 'solidification' | 'ashDeposition' | 'eruptionEnd' | 'finalSettling'
   // Phase 29 atmosphere.
-  | 'atmosStart' | 'atmosRejected' | 'removalStart' | 'pressureMilestone' | 'lowDensity' | 'airflowPeak' | 'oxygenLimitation' | 'plumeDevelopment' | 'restorationStart' | 'restorationComplete';
+  | 'atmosStart' | 'atmosRejected' | 'removalStart' | 'pressureMilestone' | 'lowDensity' | 'airflowPeak' | 'oxygenLimitation' | 'plumeDevelopment' | 'restorationStart' | 'restorationComplete'
+  // Phase 30 climate.
+  | 'climateStart' | 'climateRejected' | 'heatwaveStart' | 'coldWaveStart' | 'firstSnow' | 'peakSnowfall' | 'firstFreezing' | 'lakeIce' | 'snowLoadDamage' | 'snowFromRoof'
+  | 'thawStart' | 'peakSnowmelt' | 'snowmeltFlood' | 'roadIcing' | 'climateEnd';
 
 export interface Milestone {
   time: number;

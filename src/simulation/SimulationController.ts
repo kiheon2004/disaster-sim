@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive, ClimateLive } from './simStore';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
@@ -238,6 +238,7 @@ export class SimulationController {
       thermal: null,
       volcano: null,
       atmosphere: null,
+      climate: null,
       floodSeries: null,
       milestones: [],
     });
@@ -606,6 +607,7 @@ export class SimulationController {
     patch.fire = this.fireLive();
     patch.volcano = this.volcanoLive();
     patch.atmosphere = this.atmosphereLive();
+    patch.climate = this.climateLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -797,6 +799,23 @@ export class SimulationController {
       terrainUpdates: ar.terrainUpdates,
       series: ar.series.slice(),
       ms: ar.ms, msTotal: ar.msTotal,
+    };
+  }
+
+  /** Live climate summary (Phase 30; null without a climate experiment). */
+  climateLive(): ClimateLive | null {
+    const ch = this.env.climate;
+    const rejected = ch.experiments.filter((r) => r.reason).map((r) => ({ name: r.name, reason: r.reason! }));
+    const cr = ch.rt;
+    if (!cr) return null;
+    const cw = cr.cw, L = cr.trt.world.ledger;
+    const stats = { ...cr.stats };
+    return {
+      name: cr.rec.name, rejected, spec: cr.spec, t: this.time - cr.rec.start, stats,
+      water: { ...cw.water, transfers: { ...cw.water.transfers }, residual: cw.water.final - cw.waterExpected() },
+      energy: { ...cw.energy, transfers: { ...cw.energy.transfers }, residual: cw.energy.final - cw.energyExpected() },
+      thermal: { climate: L.climate, solar: L.solar, latent: L.latent, cover: L.cover, waterMass: L.waterMass, radiationSky: L.lost.radiationSky, atmosphere: L.lost.atmosphere, airAdvection: L.lost.airAdvection, residual: L.residual() },
+      totals: { ...cw.totals }, blowing: { ...cw.blowing }, warnings: cr.warnings.slice(), series: cr.series.slice(), ms: cr.ms, msTotal: cr.msTotal,
     };
   }
 

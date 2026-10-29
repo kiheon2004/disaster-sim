@@ -96,7 +96,7 @@ export async function runComparison(
     const wallMs = performance.now() - t0;
     const m = c.getMetrics()!;
     const events = c.getDamageEvents();
-    const byHazard: Record<Hazard, number> = { wind: 0, earthquake: 0, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0, volcano: 0 };
+    const byHazard: Record<Hazard, number> = { wind: 0, earthquake: 0, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0, volcano: 0, climate: 0 };
     const collapsed = new Set<string>();
     for (const e of events) {
       byHazard[e.hazard]++;

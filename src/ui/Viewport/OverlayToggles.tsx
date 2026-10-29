@@ -1,4 +1,5 @@
-import { ATMOS_OVERLAYS, type AtmosOverlay } from '@/rendering/viewStore';
+import { ATMOS_OVERLAYS, CLIMATE_OVERLAYS, type AtmosOverlay, type ClimateOverlay } from '@/rendering/viewStore';
+import { climateGradient, climateLabels } from '@/rendering/climate/climateColors';
 import { atmosGradient, atmosLabels } from '@/rendering/atmosphere/atmosColors';
 import { useT } from '@/i18n/i18n';
 import { useViewStore } from '@/rendering/viewStore';
@@ -287,6 +288,7 @@ export function OverlayToggles() {
       <ThermalToggles />
       <VolcanoToggles />
       <AtmosphereToggles />
+      <ClimateToggles />
       <FireToggles />
       <StructureToggles />
     </div>
@@ -427,6 +429,34 @@ function AtmosphereToggles() {
         <Toggle checked={viz.arrows} onChange={(b) => set({ arrows: b })} label={t('overlay.atmos.arrows')} />
         <Toggle checked={viz.streamlines} onChange={(b) => set({ streamlines: b })} label={t('overlay.atmos.streamlines')} />
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.atmos.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Climate views (Phase 30): shown while a climate experiment runs. Fixed SI legends; particles / shimmer are visual. */
+function ClimateToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.climate !== null);
+  const viz = useViewStore((s) => s.climateViz);
+  const set = useViewStore.getState().setClimateViz;
+  if (!live) return null;
+  const o = viz.overlay;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#bfe3ff', marginTop: 2 }}>{t('overlay.climate')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="climate-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.climate.overlay')}</span>
+        <select value={o} onChange={(e) => set({ overlay: e.target.value as ClimateOverlay })} aria-label={t('overlay.climate.overlay')} data-testid="climate-overlay-select"
+          style={{ fontSize: 11, background: 'var(--surface-2, #1c2128)', color: 'var(--text-1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4, padding: '2px 4px' }}>
+          {CLIMATE_OVERLAYS.map((v) => <option key={v} value={v} title={t(`overlay.climate.ot.${v}`)}>{t(`overlay.climate.o.${v}`)}</option>)}
+        </select>
+        {o !== 'off' && <Legend gradient={climateGradient(o)} labels={climateLabels(o)} note={t(`overlay.climate.ot.${o}`)} />}
+        <Toggle checked={viz.snow} onChange={(b) => set({ snow: b })} label={t('overlay.climate.snow')} />
+        <Toggle checked={viz.ice} onChange={(b) => set({ ice: b })} label={t('overlay.climate.ice')} />
+        <Toggle checked={viz.particles} onChange={(b) => set({ particles: b })} label={t('overlay.climate.particles')} />
+        <Toggle checked={viz.shimmer} onChange={(b) => set({ shimmer: b })} label={t('overlay.climate.shimmer')} />
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.climate.note')}</span>
       </div>
     </>
   );

@@ -196,6 +196,27 @@ export interface VolcanoLive {
   cost: { flow: number; cool: number; ash: number; bombs: number; heat: number; objects: number };
 }
 
+/** Live climate summary (Phase 30) for the HUD, results and verification. SI units. */
+export interface ClimateLive {
+  name: string;
+  rejected: { name: string; reason: string }[];
+  spec: import('@/climate/types').ClimateSpec;
+  /** Local time of the experiment (s). */
+  t: number;
+  stats: import('./climate/runtime').ClimateStats;
+  water: import('@/climate/ClimateWorld').WaterLedger & { residual: number };
+  energy: import('@/climate/ClimateWorld').EnergyLedger & { residual: number };
+  /** Thermal ledger accounts the climate books into (J). */
+  thermal: { climate: number; solar: number; latent: number; cover: number; waterMass: number; radiationSky: number; atmosphere: number; airAdvection: number; residual: number };
+  totals: ClimateWorldTotals;
+  blowing: { cells: number; moved: number; drift: number; active: boolean };
+  warnings: string[];
+  series: import('./climate/runtime').ClimateSample[];
+  ms: number;
+  msTotal: number;
+}
+export type ClimateWorldTotals = { snowfall: number; rain: number; melt: number; meltToFlood: number; evaporated: number; condensed: number; frozenWater: number };
+
 /** Live atmosphere summary (Phase 29) for the HUD, results and verification. SI units. */
 export interface AtmosphereLive {
   name: string;
@@ -375,6 +396,7 @@ export interface SimState {
   volcano: VolcanoLive | null;
   /** Phase 29: atmosphere experiment (null without one). */
   atmosphere: AtmosphereLive | null;
+  climate: ClimateLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -414,6 +436,7 @@ export const useSimStore = create<SimState>((set) => ({
   fire: null,
   volcano: null,
   atmosphere: null,
+  climate: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

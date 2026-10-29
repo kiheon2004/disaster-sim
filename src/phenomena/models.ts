@@ -280,6 +280,30 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['N', 'Pa', 'W/(m²·K)'], validRange: 'Mach < 0.3, Knudsen < 0.01 (objects)',
     limitations: ['model.lim.designSeaLevel', 'model.lim.noCompressibleAero'], reference: 'docs/ATMOSPHERE.md §19–20',
   }),
+  climateForcing: m({
+    id: 'climateForcing', labelKey: 'model.climateForcing', level: 'empirical',
+    assumptions: ['model.as.backgroundAir', 'model.as.mixTime', 'model.as.skyBrutsaert', 'model.as.clearSkySolar'],
+    units: ['K', '%', 'W/m²'], validRange: 'air −60 … +60 °C, RH ≤ 100 %, a 200 m world over minutes to two days',
+    limitations: ['model.lim.notWeatherForecast', 'model.lim.noClimate', 'model.lim.noRadiativeTransfer'], reference: 'docs/EXTREME_CLIMATE.md §3–6, §19–20',
+  }),
+  waterPhase: m({
+    id: 'waterPhase', labelKey: 'model.waterPhase', level: 'physics',
+    assumptions: ['model.as.saturationIF97', 'model.as.chiltonColburn', 'model.as.projectedEnthalpy', 'model.as.constantLatent'],
+    units: ['kg', 'J', 'kg/kg'], validRange: 'water 123–647 K; liquid equilibrium above 611.657 Pa',
+    limitations: ['model.lim.noCloudMicrophysics', 'model.lim.noBubbleBoiling'], reference: 'docs/EXTREME_CLIMATE.md §6–10',
+  }),
+  snowpack: m({
+    id: 'snowpack', labelKey: 'model.snowpack', level: 'empirical',
+    assumptions: ['model.as.coverNode', 'model.as.andersonDensity', 'model.as.clmCompaction', 'model.as.holding'],
+    units: ['kg/m²', 'm', 'kg/m³'], validRange: 'snow 50–550 kg/m³; one node per 1 m cell',
+    limitations: ['model.lim.noSnowLayers', 'model.lim.noGlacier'], reference: 'docs/EXTREME_CLIMATE.md §11–14',
+  }),
+  iceCover: m({
+    id: 'iceCover', labelKey: 'model.iceCover', level: 'empirical',
+    assumptions: ['model.as.floatingIce', 'model.as.mixedWater', 'model.as.sabaneev'],
+    units: ['m', 'kg'], validRange: 'lake / road ice up to ≈ 1 m',
+    limitations: ['model.lim.noIceMechanics', 'model.lim.noStratification'], reference: 'docs/EXTREME_CLIMATE.md §15–17',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

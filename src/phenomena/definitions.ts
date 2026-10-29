@@ -25,6 +25,7 @@ import { blast } from './blastDefinitions';
 import { heatSource } from './thermalDefinitions';
 import { fire } from './fireDefinitions';
 import { volcano } from './volcanoDefinitions';
+import { climate } from './climateDefinitions';
 import { atmosphere } from './atmosphereDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
@@ -212,7 +213,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -223,10 +224,7 @@ export const PLANNED: PlannedPhenomenon[] = [
     type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', channels: ['airflow', 'pressure', 'mechanicalForce'], models: [],
     keywords: /토네이도|회오리|tornado|twister/, missing: ['missing.vortexWind', 'missing.pressureDrop'], reuses: ['reuse.windForce', 'reuse.windDamage', 'reuse.debris'],
   }),
-  planned({
-    type: 'extremeTemperature', labelKey: 'phen.extremeTemperature', icon: 'warning', channels: ['temperature'], models: [],
-    keywords: /폭염|혹한|한파|극한\s*(?:온도|기온)|heat\s*wave|cold\s*snap|extreme\s*(?:heat|cold|temperature)/, missing: ['missing.climate'], reuses: ['reuse.thermal', 'reuse.exposure'],
-  }),
+  // Phase 30: heatwaves / cold waves are the implemented 'climate' experiment (the planned 'extremeTemperature' entry was replaced).
   // Phase 29: removing / restoring air (with its composition) is the implemented 'atmosphere' experiment;
   // changing the O₂ FRACTION of the air and its effect on people (hypoxia, Phase 34) remain planned.
   planned({

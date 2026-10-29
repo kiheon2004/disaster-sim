@@ -173,6 +173,25 @@ export interface VolcanoViz {
  */
 export type AtmosOverlay = 'off' | 'pressure' | 'pressureChange' | 'density' | 'temperature' | 'speed' | 'mass' | 'oxygen' | 'smoke' | 'gas' | 'ash' | 'updraft';
 export const ATMOS_OVERLAYS: readonly AtmosOverlay[] = ['off', 'pressure', 'pressureChange', 'density', 'temperature', 'speed', 'mass', 'oxygen', 'smoke', 'gas', 'ash', 'updraft'];
+/**
+ * Climate views (Phase 30, render-only — never read by the simulation):
+ *  - overlay: one computed field with a fixed SI legend — air temperature, surface temperature, relative humidity,
+ *    water vapour, snow depth, snow water equivalent, ice thickness, surface water, soil moisture, net surface heat
+ *    flux proxy (shortwave absorbed), roof snow load
+ *  - snow: the computed snow cover drawn at its depth (terrain, roofs, crowns, vehicles); ice: computed ice surfaces;
+ *    particles: falling snow / rain (VISUAL density from the computed precipitation rate — particles carry no mass);
+ *    shimmer: heat-haze tint over hot surfaces (visual only)
+ */
+export type ClimateOverlay = 'off' | 'airT' | 'surfaceT' | 'rh' | 'vapour' | 'snowDepth' | 'swe' | 'ice' | 'water' | 'soil' | 'solar' | 'roofLoad';
+export const CLIMATE_OVERLAYS: readonly ClimateOverlay[] = ['off', 'airT', 'surfaceT', 'rh', 'vapour', 'snowDepth', 'swe', 'ice', 'water', 'soil', 'solar', 'roofLoad'];
+export interface ClimateViz {
+  overlay: ClimateOverlay;
+  snow: boolean;
+  ice: boolean;
+  particles: boolean;
+  shimmer: boolean;
+}
+
 export interface AtmosViz {
   overlay: AtmosOverlay;
   arrows: boolean;
@@ -183,7 +202,7 @@ export interface GroundPick {
   id: string;
   mode: 'point' | 'polygon';
   /** Volcano (Phase 28): what the click places — the first vent, the fissure's second end, or an extra vent. */
-  target?: 'vent' | 'end' | 'add' | 'sink';
+  target?: 'vent' | 'end' | 'add' | 'sink' | 'area';
 }
 
 export interface DeformViz {
@@ -249,6 +268,8 @@ interface ViewState {
   setVolcanoViz: (patch: Partial<VolcanoViz>) => void;
   atmosViz: AtmosViz;
   setAtmosViz: (patch: Partial<AtmosViz>) => void;
+  climateViz: ClimateViz;
+  setClimateViz: (patch: Partial<ClimateViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -307,6 +328,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setVolcanoViz: (patch) => set((s) => ({ volcanoViz: { ...s.volcanoViz, ...patch } })),
   atmosViz: { overlay: 'off', arrows: true, streamlines: false },
   setAtmosViz: (patch) => set((s) => ({ atmosViz: { ...s.atmosViz, ...patch } })),
+  climateViz: { overlay: 'off', snow: true, ice: true, particles: true, shimmer: true },
+  setClimateViz: (patch) => set((s) => ({ climateViz: { ...s.climateViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

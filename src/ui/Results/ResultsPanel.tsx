@@ -118,6 +118,7 @@ function ResultsDialog() {
     fire: useSimStore.getState().fire ?? undefined, fireItems: fireItems(),
     volcano: useSimStore.getState().volcano ?? undefined, volcanoRoads: volcanoRoads(),
     atmosphere: useSimStore.getState().atmosphere ?? undefined,
+    climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -148,6 +149,7 @@ function ResultsDialog() {
           <ThermalSummary t={t} name={name} />
           <VolcanoSummary t={t} name={name} />
           <AtmosphereSummary t={t} name={name} />
+          <ClimateSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
           {m ? (
@@ -644,6 +646,58 @@ function AtmosphereSummary({ t, name }: { t: TFunction; name: string }) {
         <Card label={t('results.atmos.residual')} value={s.massResidual.toExponential(1)} sub={t('results.atmos.residualSub', { e: s.energyResidual.toExponential(1) })} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.atmos.note')}</div>
+    </div>
+  );
+}
+
+/** Snow / ice stores on objects and the roads' climate state (Phase 30) for the exports. */
+function climateObjects() {
+  const r = simulationController.getEnvironment().climate.rt;
+  if (!r) return [];
+  const cw = r.cw;
+  const kinds = ['roof', 'crown', 'vehicle'];
+  return r.stores.map((s) => {
+    const st = cw.stores[s.k];
+    return { object: s.e.id, type: s.e.source.type, store: kinds[st.kind], area_m2: +st.area.toFixed(2), mass_kg: +cw.sM[s.k].toFixed(3), ice_kg: +cw.sIce[s.k].toFixed(3), load_kPa: +((cw.sM[s.k] * 9.81) / st.area / 1000).toFixed(4), T_C: +(cw.sT[s.k] - 273.15).toFixed(2), dropped: cw.sGone[s.k] === 1, broken: s.broken, structural: !!s.e.climate?.applied };
+  });
+}
+
+/** Climate experiment results (Phase 30): cards, CSV (ledgers, stores, roads, history), the JSON carries the live summary. */
+function ClimateSummary({ t, name }: { t: TFunction; name: string }) {
+  const c = useSimStore((x) => x.climate);
+  if (!c) return null;
+  const s = c.stats, W = c.water, E = c.energy, Th = c.thermal;
+  const tn = (kg: number) => fmt(kg / 1000, 2);
+  const exportCsv = () => {
+    const rows = (pre: string, o: object): string[] => Object.entries(o).flatMap(([k, v]): string[] => (typeof v === 'object' && v !== null ? rows(`${pre}.${k}`, v) : [`${pre}.${k},${v}`]));
+    const roads = (simulationController.getRuntime()?.roads?.segments ?? []).filter((g) => g.climate).map((g) => [g.id, g.climate!.state, g.climate!.snow.toFixed(3), g.climate!.ice.toFixed(4), g.climate!.film.toFixed(4), (g.climate!.surfaceT - 273.15).toFixed(2), g.climate!.friction.toFixed(3), g.climate!.impassable].join(','));
+    download(`${name || 'simulation'}-climate.csv`, [
+      '# climate experiment', 'quantity,value', `scenario,${c.spec.scenario}`, `forcing,${c.spec.forcing}`, `T0_K,${c.spec.temperature}`, `T1_K,${c.spec.target}`, `profile,${c.spec.profile}`, `duration_s,${c.spec.duration}`, `RH0,${c.spec.humidity}`, `precip_mmh,${c.spec.precipitation ?? 0}`, `phase,${c.spec.precipPhase ?? 'auto'}`, `solar,${c.spec.solar}`, '',
+      '# water ledger (kg)', 'quantity,value', ...rows('water', W), '',
+      '# energy ledger (J)', 'quantity,value', ...rows('energy', E), ...rows('thermal', Th), '',
+      '# state now', 'quantity,value', ...rows('stats', s), ...rows('totals', c.totals), '',
+      '# object stores', 'object,type,store,area_m2,mass_kg,ice_kg,load_kPa,T_C,dropped,broken,structural', ...climateObjects().map((o) => [o.object, o.type, o.store, o.area_m2, o.mass_kg, o.ice_kg, o.load_kPa, o.T_C, o.dropped, o.broken, o.structural].join(',')), '',
+      '# roads', 'segment,state,snow_m,ice_m,film_m,surfaceT_C,friction,impassable', ...roads, '',
+      '# history', 't_s,meanAirT_K,meanSurfaceT_K,meanRH,snow_kg,ice_kg,meltwater_kg,evaporated_kg,precip_mmh', ...c.series.map((r) => [r.t.toFixed(1), r.T.toFixed(3), r.Ts.toFixed(3), r.rh.toFixed(4), r.snow.toFixed(2), r.ice.toFixed(2), r.melt.toFixed(2), r.evap.toFixed(3), r.P.toFixed(3)].join(',')),
+    ].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="climate-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.climate.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="climate-csv"><Icon name="save" size={13} /> {t('results.climate.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.climate.air')} value={fmt(s.meanAirT - 273.15, 1)} unit="°C" sub={t('results.climate.airSub', { lo: fmt(s.minAirT - 273.15, 1), hi: fmt(s.maxAirT - 273.15, 1), rh: fmt(s.meanRH * 100, 0) })} />
+        <Card label={t('results.climate.surface')} value={fmt(s.maxSurfaceT - 273.15, 1)} unit="°C" sub={t('results.climate.surfaceSub', { lo: fmt(s.minSurfaceT - 273.15, 1), m: fmt(s.meanSurfaceT - 273.15, 1) })} />
+        <Card label={t('results.climate.snow')} value={tn(s.snowMass + s.storeMass)} unit="t" sub={t('results.climate.snowSub', { d: fmt(s.maxSnowDepth * 100, 1), f: tn(c.totals.snowfall), o: tn(s.storeMass) })} />
+        <Card label={t('results.climate.ice')} value={tn(s.iceMass)} unit="t" sub={t('results.climate.iceSub', { h: fmt(s.maxIce * 100, 1), n: s.iceCells })} />
+        <Card label={t('results.climate.melt')} value={fmt(s.meltwater / 1000, 2)} unit="m³" sub={t('results.climate.meltSub', { m: tn(c.totals.melt), e: tn(c.totals.evaporated) })} />
+        <Card label={t('results.climate.loads')} value={fmt(s.maxRoofLoad, 2)} unit="kPa" sub={t('results.climate.loadsSub', { n: s.roofsLoaded, b: s.treesBroken, r: s.roadsIcy + s.roadsSnow })} />
+        <Card label={t('results.climate.energy')} value={energyText(Th.latent)} sub={t('results.climate.energySub', { s: energyText(Th.solar + E.solar), f: energyText(Th.climate), lw: energyText(E.longwave) })} />
+        <Card label={t('results.climate.residual')} value={s.waterResidual.toExponential(1)} sub={t('results.climate.residualSub', { e: s.energyResidual.toExponential(1), th: s.thermalResidual.toExponential(1) })} />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.climate.note')}</div>
     </div>
   );
 }

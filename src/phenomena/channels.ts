@@ -86,6 +86,12 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     writers: ['AtmosphereEvent (reference state, removal / restoration plan)', 'volcano (gas source)'],
     readers: ['thermal (layer capacity, convection, transport)', 'fire (O₂, room gas, smoke transport)', 'windForce (density, flow)', 'water (wind stress, pressure head)', 'volcano (ash, bombs)', 'blast / impact (opt-in)', 'exposure', 'inspector'],
   },
+  climate: {
+    id: 'climate', labelKey: 'channel.climate', status: 'active', quantity: 'background air T K / RH, vapour kg, snow / ice kg (SWE, depth m, density kg/m³), soil ice kg, shortwave W/m²',
+    owner: 'env.climate (ClimateWorld: covers, object stores, soil water / ice, vapour, condensate, ledgers; temperatures stay the Phase 26 thermal state\'s, liquid water the Phase 14 flood\'s)',
+    writers: ['ClimateEvent (forcing path, precipitation, sun, initial snow / ice / frost)'],
+    readers: ['thermal (air-layer forcing, surface balance, latent heat)', 'water (melt / freeze / evaporation, floating ice, frozen-soil infiltration)', 'groundContact (friction)', 'structure (roof snow loads)', 'trees (crown loads)', 'fire (crown water)', 'roads', 'exposure', 'inspector'],
+  },
 };
 
 export const CHANNEL_IDS = Object.keys(CHANNELS) as ChannelId[];

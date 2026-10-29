@@ -23,6 +23,7 @@ import { BlastTools } from './BlastTools';
 import { ThermalTools } from './ThermalTools';
 import { FireTools } from './FireTools';
 import { VolcanoTools } from './VolcanoTools';
+import { ClimateTools } from './ClimateTools';
 import { AtmosphereTools } from './AtmosphereTools';
 
 /**
@@ -202,6 +203,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         {inst.type === 'fire' && <FireTools inst={inst} />}
         {inst.type === 'volcano' && <VolcanoTools inst={inst} />}
         {inst.type === 'atmosphere' && <AtmosphereTools inst={inst} />}
+          {inst.type === 'climate' && <ClimateTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

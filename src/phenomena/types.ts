@@ -38,7 +38,8 @@ export type ChannelId =
   | 'terrainDeformation'
   | 'groundSupport'
   | 'sediment'
-  | 'atmosphere';
+  | 'atmosphere'
+  | 'climate';
 
 /**
  * Scientific level of a model (shown in the UI next to every phenomenon and result):

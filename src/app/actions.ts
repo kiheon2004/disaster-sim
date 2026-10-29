@@ -2,6 +2,7 @@
  * Application services: orchestrate several systems (world, editor, simulation, view)
  * so UI components never wire them together themselves.
  */
+import { climatePreset, type ClimatePresetId } from '@/climate/presets';
 import type { EntityId } from '@/core/types';
 import type { TerrainPresetId } from '@/core/model';
 import { getDefinition } from '@/objects/registry';
@@ -198,6 +199,32 @@ export function loadAtmosPreset(id: AtmosPresetId) {
   useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'atmos.preset.loaded', params: { name: t(`atmos.preset.${id}`) } });
+}
+
+/** Load a climate preset (Phase 30): terrain, ground, lake, objects, the climate experiment and its companions. */
+export function loadClimatePreset(id: ClimatePresetId) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('climate.preset.confirm', { name: t(`climate.preset.${id}`) }))) return;
+  const p = climatePreset(id);
+  const doc = createEmptyDocument(t(`climate.preset.${id}`));
+  if (p.fire) doc.settings.simulation.fire = { ...p.fire };
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  const t0 = useWorldStore.getState().doc.terrain;
+  const heights = new Float32Array(t0.heights.length);
+  const ground = new Uint8Array(t0.heights.length);
+  for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) {
+    const x = t0.originX + ix * t0.cellSize, z = t0.originZ + iz * t0.cellSize;
+    heights[iz * t0.nx + ix] = p.height(x, z);
+    ground[iz * t0.nx + ix] = p.ground ? p.ground(x, z) : 0;
+  }
+  useWorldStore.getState().applyEdit({ landscape: { base: { heights, ground } } });
+  if (p.lake) useWorldStore.getState().setFeatures([p.lake], 2);
+  useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'climate.preset.loaded', params: { name: t(`climate.preset.${id}`) } });
 }
 
 export function loadSampleTown() {

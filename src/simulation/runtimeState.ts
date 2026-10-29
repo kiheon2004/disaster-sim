@@ -114,6 +114,13 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
     },
     { id: 'atmosphereLayerCoupling', owner: 'AirLayer (Ca / rhoA / prA / ventRef / inflowExcess) + ThermalWorld.flow', kind: 'state', holds: 'per air column: heat capacity from the air mass, density, pressure ratio; layer face velocities; room masses (compartments / fire rooms)', present: !!env.atmosphere.rt, bytes: env.atmosphere.rt ? env.atmosphere.rt.field.count * 3 * 8 : 0 },
     { id: 'atmosphereLedger', owner: 'AtmosphereField ledgers + AtmosphereRuntime', kind: 'state', holds: 'air mass (initial, boundary in / out, sources, removed, restored, shortfall), energy (heat in, vented, advected, boundary, removed / restored, pressure work, isothermal heat), momentum, O₂, gas; plan progress (restoration start share); history samples', present: !!env.atmosphere.rt, bytes: env.atmosphere.rt ? 1024 + env.atmosphere.rt.series.length * 64 : 0 },
+    // Phase 30: climate state (only in runs with a climate experiment) — separate from the document; never saved.
+    {
+      id: 'climateCovers', owner: 'ClimateWorld (covers, object stores)', kind: 'state', holds: 'per cell: snow / ice / liquid mass, enthalpy, ice part, snow density, albedo; object stores (roofs, crowns, vehicles): mass, enthalpy, ice, density, albedo; shading / incidence',
+      present: !!env.climate.rt, bytes: env.climate.rt ? env.climate.rt.cw.n * 40 + env.climate.rt.cw.stores.length * 48 : 0,
+    },
+    { id: 'climateSoilAir', owner: 'ClimateWorld (soil, vapour)', kind: 'state', holds: 'antecedent soil water and soil ice per cell × layer, freeze–thaw counters; water vapour, condensate and precipitation in transit per air column; surface coupling arrays', present: !!env.climate.rt, bytes: env.climate.rt ? env.climate.rt.cw.n * (env.climate.rt.cw.nl * 16 + 40) + env.climate.rt.cw.na * 48 : 0 },
+    { id: 'climateLedger', owner: 'ClimateWorld ledgers + ClimateRuntime', kind: 'state', holds: 'water mass (stores, precipitation, vapour in / out, removed, flood in / out, crown water, blowing snow), energy (stores, solar, longwave, precipitation, vapour, to thermal), crown moisture, roof loads applied, history samples, milestones', present: !!env.climate.rt, bytes: env.climate.rt ? 2048 + env.climate.rt.series.length * 72 : 0 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

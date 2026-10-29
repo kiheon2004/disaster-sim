@@ -372,7 +372,7 @@ export class TerrainThermal {
     const ntx = this.ntx, tileOn = this.tileOn;
     const Tsky = cl.Tsky, Tsky4 = Tsky * Tsky * Tsky * Tsky;
     const kLe = 1 / (CP_AIR * Math.pow(LEWIS, 2 / 3));
-    let cond = 0, conv = 0, deep = 0, sky = 0;
+    let cond = 0, conv = 0, deep = 0, sky = 0, sol = 0;
     for (const t of this.tiles) {
       const tx = t % ntx, tz = (t / ntx) | 0;
       const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
@@ -445,6 +445,7 @@ export class TerrainThermal {
           const qa = air >= 0 ? cl.qAir[air] : cl.qAir[0];
           const pa = air >= 0 ? cl.pAir[air] : cl.pAir[0];
           const S = cl.solar[c] * area;
+          sol += S;
           if (wet) {
             const Cw = RHO_WATER * C_WATER * hw * area;
             const Tw = Tref + water!.heat[c] / Cw;
@@ -508,6 +509,7 @@ export class TerrainThermal {
     acc.convection += conv;
     acc.deepGround += deep;
     acc.radiationSky += sky;
+    acc.solar += sol;
     let maxRate = this.extra;
     this.extra = 0;
     for (const t of this.tiles) {
@@ -618,6 +620,8 @@ export interface ThermalRates {
   atmosphere: number;
   aboveLayer: number;
   boundarySupply: number;
+  /** Phase 30: shortwave absorbed by bare surfaces (climate only; booked `solar`). */
+  solar: number;
 }
 
-export const emptyRates = (): ThermalRates => ({ conduction: 0, convection: 0, radiation: 0, deepGround: 0, radiationSky: 0, atmosphere: 0, aboveLayer: 0, boundarySupply: 0 });
+export const emptyRates = (): ThermalRates => ({ conduction: 0, convection: 0, radiation: 0, deepGround: 0, radiationSky: 0, atmosphere: 0, aboveLayer: 0, boundarySupply: 0, solar: 0 });

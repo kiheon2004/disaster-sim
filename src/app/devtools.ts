@@ -1,4 +1,7 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
+import { CLIMATE_PRESETS } from '@/climate/presets';
+import { climateOutlook } from '@/climate/outlook';
+import type { ClimateSpec } from '@/climate/types';
 import { ATMOS_PRESETS } from '@/atmosphere/presets';
 import { atmosphereOutlook } from '@/atmosphere/outlook';
 import type { AtmosphereSpec } from '@/atmosphere/types';
@@ -180,6 +183,12 @@ export function installDevtools() {
       rt: () => simulationController.getEnvironment().atmosphere.rt,
       presets: ATMOS_PRESETS,
       outlook: (spec: AtmosphereSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return atmosphereOutlook(spec, d.terrain, (x, z) => s.sampleHeight(x, z)); },
+    },
+    /** Phase 30 climate (benchmarks / browser verification): the run's climate state, presets and the outlook. */
+    climateLib: {
+      rt: () => simulationController.getEnvironment().climate.rt,
+      presets: CLIMATE_PRESETS,
+      outlook: (spec: ClimateSpec) => climateOutlook(spec),
     },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,

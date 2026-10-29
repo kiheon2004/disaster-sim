@@ -56,7 +56,9 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
     // (temperature-dependent strength), never a second damage index (no double counting).
     thermal: 0, fire: 0,
     // Phase 28: lateral lava load (its own damage index; burial, contact and ash are separate records).
-    volcano: e.volcano ? Math.min(1, e.volcano.damage) : 0 };
+    volcano: e.volcano ? Math.min(1, e.volcano.damage) : 0,
+    // Phase 30: snow / ice load breakage of crowns (structural snow loads act through the collapse model).
+    climate: e.climate ? Math.min(1, e.climate.damage) : 0 };
 }
 
 /**
@@ -64,7 +66,7 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
  * other hazards caused. 1 exactly when nothing else damaged it (single-hazard runs unchanged).
  */
 export function residualStrength(e: RuntimeEntity, hazard: Hazard): number {
-  if (!e.seismic && !e.flood && !e.integrity && !e.ground && !e.impact && !e.blast && !e.volcano) return 1;
+  if (!e.seismic && !e.flood && !e.integrity && !e.ground && !e.impact && !e.blast && !e.volcano && !e.climate) return 1;
   const d = hazardDamage(e);
   let worst = 0;
   for (const h of HAZARDS) if (h !== hazard && d[h] > worst) worst = d[h];

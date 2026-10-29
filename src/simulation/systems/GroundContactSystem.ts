@@ -29,14 +29,15 @@ export class GroundContactSystem implements SimulationSystem {
   readonly lagged = ['poses'] as const;
 
   isActive(ctx: SystemContext) {
-    return !ctx.env.terrain.uniformGround || ctx.env.flood.field !== null;
+    return !ctx.env.terrain.uniformGround || ctx.env.flood.field !== null || ctx.env.climate.rt !== null;
   }
 
   update(ctx: SystemContext) {
     const terrain = ctx.env.terrain;
     const water = ctx.env.flood.field;
     // Uniform default ground and no water: every factor is exactly the initial one.
-    if (terrain.uniformGround && !water) return;
+    const climate = ctx.env.climate.rt;
+    if (terrain.uniformGround && !water && !climate) return;
     let k = 0;
     for (const e of ctx.runtime.entities.values()) {
       if (e.profile !== 'dynamic' && e.profile !== 'upright') continue;
@@ -44,7 +45,9 @@ export class GroundContactSystem implements SimulationSystem {
       if (!e.dynamic || e.body === null) continue;
       const p = e.pose.position;
       let f = groundFrictionFactor(terrain.sampleGroundType(p[0], p[2]));
-      if (water && (e.flood?.depth ?? 0) > WET_GROUND_DEPTH) f *= WET_GRIP;
+      // Phase 30: snow / ice / wet covers under the body (the climate's surface state); otherwise the Phase 14 rule.
+      if (climate) f = climate.frictionAt(p[0], p[2], f, water ? e.flood?.depth ?? 0 : 0);
+      else if (water && (e.flood?.depth ?? 0) > WET_GROUND_DEPTH) f *= WET_GRIP;
       if (f === e.groundFriction) continue;
       e.groundFriction = f;
       ctx.physics.setFriction(e.body, e.source.physics.friction * f);

@@ -1,6 +1,7 @@
 import { FireChannel } from '../fire/FireChannel';
 import { VolcanoChannel } from '../volcano/VolcanoChannel';
 import { AtmosphereChannel } from '../atmosphere/AtmosphereChannel';
+import { ClimateChannel } from '../climate/ClimateChannel';
 import { defaultFireSettings, type FireSettings } from '@/fire/types';
 import type { Vec3 } from '@/core/types';
 import { AIR_DENSITY } from '@/core/units';
@@ -53,6 +54,8 @@ export interface EnvironmentState {
   volcano: VolcanoChannel;
   /** Atmosphere channel (Phase 29): the air mass / pressure / flow of an atmosphere experiment (dormant otherwise). */
   atmosphere: AtmosphereChannel;
+  /** Climate channel (Phase 30): heatwaves / cold waves, humidity, snow, ice and water phase change (dormant otherwise). */
+  climate: ClimateChannel;
 }
 
 export function createEnvironment(
@@ -78,6 +81,7 @@ export function createEnvironment(
     fire: new FireChannel(fire),
     volcano: new VolcanoChannel(deformation),
     atmosphere: new AtmosphereChannel(),
+    climate: new ClimateChannel(),
   };
 }
 

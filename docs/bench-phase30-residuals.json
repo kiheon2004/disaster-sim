@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-17T02:28:46.423Z",
+  "node": "v24.21.0",
+  "load": [
+    110.8,
+    119.4,
+    79.1
+  ],
+  "crust": [
+    {
+      "id": "phase28",
+      "note": "sky = reference 15 °C, no sun (Phase 28 / 29 default)",
+      "TsC": {
+        "60s": 751.45,
+        "180s": 661.66,
+        "600s": 561.69,
+        "1800s": 472.44,
+        "3600s": 418.21
+      }
+    },
+    {
+      "id": "brutsaert",
+      "note": "clear sky (Brutsaert, 15 °C, RH 50 % → T_sky -5.0 °C), no sun",
+      "TsC": {
+        "60s": 751.23,
+        "180s": 661.33,
+        "600s": 561.2,
+        "1800s": 471.73,
+        "3600s": 417.27
+      }
+    },
+    {
+      "id": "sun800",
+      "note": "clear sky + 800 W/m² absorbed (ε = α = 0.95 · 842 W/m²)",
+      "TsC": {
+        "60s": 753.2,
+        "180s": 664.19,
+        "600s": 565.45,
+        "1800s": 477.87,
+        "3600s": 425.01
+      }
+    }
+  ],
+  "lowPressure": [
+    {
+      "p_Pa": 101325,
+      "boilingIF97_C": 99.97,
+      "boilingPhase29_C": 100,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 70000,
+      "boilingIF97_C": 89.93,
+      "boilingPhase29_C": 89.76,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 50000,
+      "boilingIF97_C": 81.32,
+      "boilingPhase29_C": 80.92,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 20000,
+      "boilingIF97_C": 60.06,
+      "boilingPhase29_C": 58.89,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 10000,
+      "boilingIF97_C": 45.81,
+      "boilingPhase29_C": 43.97,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 5000,
+      "boilingIF97_C": 32.88,
+      "boilingPhase29_C": 30.33,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 2000,
+      "boilingIF97_C": 17.5,
+      "boilingPhase29_C": 14,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 1000,
+      "boilingIF97_C": 6.97,
+      "boilingPhase29_C": 2.77,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 700,
+      "boilingIF97_C": 1.88,
+      "boilingPhase29_C": -2.67,
+      "liquidEquilibrium": true,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 611.657,
+      "boilingIF97_C": 0.01,
+      "boilingPhase29_C": -4.67,
+      "liquidEquilibrium": false,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 400,
+      "boilingIF97_C": 0.01,
+      "boilingPhase29_C": -10.79,
+      "liquidEquilibrium": false,
+      "es15C_Pa": 1705.7
+    },
+    {
+      "p_Pa": 100,
+      "boilingIF97_C": 0.01,
+      "boilingPhase29_C": -28.95,
+      "liquidEquilibrium": false,
+      "es15C_Pa": 1705.7
+    }
+  ]
+}

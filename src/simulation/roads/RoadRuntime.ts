@@ -67,6 +67,8 @@ export interface RoadSegmentState {
   rubble?: { height: number; blocked: boolean; source: string | null };
   /** Volcano (Phase 28): lava / solidified deposit / ash on the carriageway (m), surface temperature (K). */
   volcanic?: { lava: number; deposit: number; ash: number; surfaceT: number; peakLava: number; peakT: number; blocked: boolean; impassable: boolean };
+  /** Phase 30: road surface under the climate — snow depth (m), ice (m), water film (m), surface T (K), effective friction, state. */
+  climate?: { snow: number; ice: number; film: number; surfaceT: number; friction: number; state: string; impassable: boolean; peakSnow: number; peakIce: number; iced?: boolean };
 }
 
 export interface Inlet {

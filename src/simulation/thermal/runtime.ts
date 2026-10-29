@@ -256,6 +256,9 @@ export class ThermalRuntime {
   }
   /** Modular buildings refined to member bodies so far. */
   refined = 0;
+  /** Phase 30: refinement rule of a climate run (deviation from the local air, LOD_REFINE_CLIMATE). */
+  climateLOD = false;
+  static readonly LOD_REFINE_CLIMATE = 25;
 
   /** Coarse building warmer / colder than this (K) gets its members (structural effects start far above). */
   static readonly LOD_REFINE = 2;
@@ -490,7 +493,12 @@ export class ThermalRuntime {
       if (te.coarse) {
         const B = this.world.bodies, b = te.body;
         // Something happened to the building (a collapse model exists) or it warmed: member detail.
-        if (te.e.modular!.structure || Math.max(Math.abs(B.TS[b] - this.world.Tref), Math.abs(B.TC[b] - this.world.Tref)) > ThermalRuntime.LOD_REFINE) this.refine(ctx, te);
+        if (this.climateLOD) {
+          // Phase 30: under a climate the reference is the local air (uniform warming / cooling and climate loads do
+          // not need member temperatures — EN strength factors are 1 below 100 °C); strong local heat still refines.
+          const Ta = this.world.air.T(this.world.bodies.air[b]);
+          if (Math.max(Math.abs(B.TS[b] - Ta), Math.abs(B.TC[b] - Ta)) > ThermalRuntime.LOD_REFINE_CLIMATE) this.refine(ctx, te);
+        } else if (te.e.modular!.structure || Math.max(Math.abs(B.TS[b] - this.world.Tref), Math.abs(B.TC[b] - this.world.Tref)) > ThermalRuntime.LOD_REFINE) this.refine(ctx, te);
         continue;
       }
       if (te.b) this.scanBuilding(ctx, te.b);
@@ -536,7 +544,7 @@ export class ThermalRuntime {
   }
 
   /** Give the water its heat array the first time the water model and the thermal state coexist. */
-  private attachWater(ctx: SystemContext) {
+  attachWater(ctx: SystemContext) {
     const f = ctx.env.flood.field;
     const w = this.world;
     if (!f) return;

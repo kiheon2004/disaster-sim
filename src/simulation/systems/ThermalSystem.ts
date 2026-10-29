@@ -22,6 +22,7 @@ import { ThermalRuntime } from '../thermal/runtime';
 import { FireRuntime } from '../fire/runtime';
 import { VolcanoRuntime } from '../volcano/runtime';
 import { AtmosphereRuntime } from '../atmosphere/runtime';
+import { ClimateRuntime } from '../climate/runtime';
 import { datumState } from '@/events/atmosphere/AtmosphereEvent';
 import { simProfiler } from '../profiling/SimProfiler';
 
@@ -38,7 +39,7 @@ export class ThermalSystem implements SimulationSystem {
   readonly lagged = ['debris', 'structure'] as const;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.thermal.active || ctx.env.fire.active || ctx.env.volcano.active || ctx.env.atmosphere.active;
+    return ctx.env.thermal.active || ctx.env.fire.active || ctx.env.volcano.active || ctx.env.atmosphere.active || ctx.env.climate.active;
   }
 
   update(ctx: SystemContext, dt: number) {
@@ -50,6 +51,11 @@ export class ThermalSystem implements SimulationSystem {
     if (!ch.rt && !ac.rt) {
       const first = ac.experiments.find((r) => !r.done && AtmosphereRuntime.reject(r, null) === null);
       if (first) ch.settings.ambient = datumState(first.spec).T;
+      // Phase 30: likewise the climate's start temperature when the climate experiment comes first.
+      else {
+        const cl = ctx.env.climate.experiments.find((r) => !r.done && ClimateRuntime.reject(r, null) === null);
+        if (cl) ch.settings.ambient = cl.spec.temperature;
+      }
     }
     if (!ch.rt) {
       ch.rt = new ThermalRuntime(ctx);
@@ -72,6 +78,24 @@ export class ThermalSystem implements SimulationSystem {
       const ta = simProfiler.now();
       atmos.prepare(ctx, dt);
       simProfiler.add('atmosphere.prepare', ta);
+    }
+    // Phase 30: the climate (created with its experiment) — after the atmosphere (it reads the pressure / flow /
+    // removal), before the volcano and fire (they read the air and surfaces it forces).
+    const cc = ctx.env.climate;
+    for (const rec of cc.experiments) {
+      if (rec.done || rec.start >= ctx.time + dt) continue;
+      rec.done = true;
+      rec.reason = ClimateRuntime.reject(rec, cc.rt);
+      if (rec.reason) {
+        ctx.milestone?.({ time: ctx.time, kind: 'climateRejected', subject: 'climate', label: { key: 'milestone.climateRejected', params: { id: rec.name, reason: rec.reason } } }, `climate:reject:${rec.id}`);
+        ctx.log(null, 'warn', { key: 'log.climate.rejected', params: { id: rec.name, reason: rec.reason } });
+      } else cc.rt = new ClimateRuntime(ctx, rec, rt);
+    }
+    const climate = cc.rt;
+    if (climate) {
+      const tc = simProfiler.now();
+      steps.push(...climate.prepare(ctx, dt));
+      simProfiler.add('climate.prepare', tc);
     }
     // Phase 28: the volcano (created with the first eruption) — its heat joins the step's sources
     // before the fire model reads the incident fluxes, so lava heat is judged by the normal ignition rules.
@@ -106,6 +130,11 @@ export class ThermalSystem implements SimulationSystem {
       const ta = simProfiler.now();
       atmos.after(ctx, dt);
       simProfiler.add('atmosphere.after', ta);
+    }
+    if (climate) {
+      const tc = simProfiler.now();
+      climate.after(ctx, dt);
+      simProfiler.add('climate.after', tc);
     }
     if (volcano) {
       const tv = simProfiler.now();

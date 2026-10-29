@@ -363,6 +363,13 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       result.warnings.push({ key: 'parse.volcano.editor' });
       continue;
     }
+    // Phase 30: a climate experiment (heatwave, cold wave, snow, icing …) is recognized but set up in the experiment
+    // editor (temperature path, humidity, precipitation, sun) — text never starts one.
+    if (phenomena.implemented('climate')!.keywords.test(raw)) {
+      result.unsupported.push({ event: 'climate', params: {} });
+      result.warnings.push({ key: 'parse.climate.editor' });
+      continue;
+    }
     // Phase 29: an atmosphere experiment is recognized but set up in the experiment editor (reference state,
     // removal schedule, boundary) — text never removes air.
     if (phenomena.implemented('atmosphere')!.keywords.test(raw)) {

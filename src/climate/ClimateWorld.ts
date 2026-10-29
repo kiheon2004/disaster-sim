@@ -80,6 +80,9 @@ export interface StoreInit {
 export interface WaterLedger {
   initial: number;
   precipitation: number;
+  /** Blowing snow carried in / out through the world's edges (kg). */
+  blownIn: number;
+  blownOut: number;
   vaporIn: number;
   vaporOut: number;
   removed: number;
@@ -110,6 +113,8 @@ export interface EnergyLedger {
 }
 
 const KLE_AREA = 1 / (CP_AIR * Math.pow(0.85, 2 / 3));
+/** Contact conductance of an ice cover with the water under it (W/(m²K)) — the interface is held at 0 °C by the phase change. */
+export const ICE_WATER_H = 1000;
 
 export class ClimateWorld {
   readonly tw: ThermalWorld;
@@ -179,6 +184,8 @@ export class ClimateWorld {
   // ── Ledgers ──
   readonly water: WaterLedger;
   readonly energy: EnergyLedger;
+  /** Blowing snow of the last surface step: cells transporting, mass moved (kg), deposited at obstacles (kg). */
+  readonly blowing = { cells: 0, moved: 0, drift: 0, active: false };
   /** Climate rain booked in the flood budget's `rain` (m³) and the flood terms at link time. */
   private climateRain = 0;
   private floodBase: { rain: number; sources: number; boundaryIn: number; boundaryOut: number; drainage: number } | null = null;
@@ -204,6 +211,9 @@ export class ClimateWorld {
   /** Uniform mean-wind advection velocity of the layer (m/s, +x / +z). */
   windU = 0;
   windW = 0;
+  /** Optional profiler (the adapter's): section name and start time from `now()`. */
+  prof: ((name: string, t0: number) => void) | null = null;
+  now: () => number = () => 0;
   /** Volcanic ash on the ground per cell (kg/m²) — read for the snow albedo (null: none). */
   ashAt: ((c: number) => number) | null = null;
 
@@ -249,7 +259,7 @@ export class ClimateWorld {
     this.bg = this.forcing.background(0);
     // Initial vapour: the background humidity in every column.
     for (let a = 0; a < this.na; a++) this.vap[a] = this.bg.q * this.layerMass(a) / (1 - this.bg.q);
-    this.water = { initial: 0, precipitation: 0, vaporIn: 0, vaporOut: 0, removed: 0, floodIn: 0, floodOut: 0, crownIn: 0, final: 0, transfers: { evaporation: 0, condensation: 0, airCondensation: 0, airEvaporation: 0, freezing: 0, melting: 0, sublimation: 0, deposition: 0, drainage: 0, internalPrecip: 0, transpiration: 0, blowing: 0, soilFreezing: 0, soilThaw: 0, boiling: 0 } };
+    this.water = { initial: 0, precipitation: 0, blownIn: 0, blownOut: 0, vaporIn: 0, vaporOut: 0, removed: 0, floodIn: 0, floodOut: 0, crownIn: 0, final: 0, transfers: { evaporation: 0, condensation: 0, airCondensation: 0, airEvaporation: 0, freezing: 0, melting: 0, sublimation: 0, deposition: 0, drainage: 0, internalPrecip: 0, transpiration: 0, blowing: 0, soilFreezing: 0, soilThaw: 0, boiling: 0 } };
     this.energy = { initial: 0, solar: 0, longwave: 0, precip: 0, vaporIn: 0, vaporOut: 0, removed: 0, toThermal: 0, final: 0, transfers: { vaporization: 0, fusion: 0 } };
     tw.ledger.hasClimate = true;
   }
@@ -258,47 +268,15 @@ export class ClimateWorld {
 
   /** Normals, ground heights, albedo from the terrain (again after deformation). */
   updateGeometry() {
-    const t = this.terrain, vx = t.nx, hs = t.heights, cs = t.cellSize;
-    for (let iz = 0; iz < this.nz; iz++) for (let ix = 0; ix < this.nx; ix++) {
-      const c = iz * this.nx + ix, v = iz * vx + ix;
-      const h00 = hs[v], h10 = hs[v + 1], h01 = hs[v + vx], h11 = hs[v + vx + 1];
-      const dx = (h10 + h11 - h00 - h01) / (2 * cs), dz = (h01 + h11 - h00 - h10) / (2 * cs);
-      const k = 1 / Math.hypot(dx, 1, dz);
-      this.nX[c] = -dx * k; this.nY[c] = k; this.nZ[c] = -dz * k;
-      this.groundH[c] = (h00 + 2 * h10 + 2 * h01 + h11) / 6;
-      const gt = Math.min(GROUND_ALBEDO.length - 1, t.ground[(iz + 1) * vx + ix + 1]);
-      this.baseAlbedo[c] = GROUND_ALBEDO[gt];
-    }
+    const geo = cellGeometry(this.terrain);
+    this.nX.set(geo.nX); this.nY.set(geo.nY); this.nZ.set(geo.nZ); this.groundH.set(geo.groundH); this.baseAlbedo.set(geo.albedo);
     this.sunDirAt = [0, 0, 0];
   }
 
   /** Incidence and shadows of the cells for the sun direction (terrain + obstacles, ray marching). */
   private updateShade(dir: [number, number, number]) {
-    const [sx, sy, sz] = dir;
-    const n = this.n, nx = this.nx, nz = this.nz, cs = this.tw.terrain.cell;
-    let top = -Infinity;
-    for (let c = 0; c < n; c++) { const v = Math.max(this.groundH[c], this.obstacleTop[c]); if (v > top) top = v; }
-    const horiz = Math.hypot(sx, sz);
-    for (let c = 0; c < n; c++) {
-      const cosI = this.nX[c] * sx + this.nY[c] * sy + this.nZ[c] * sz;
-      this.cosN[c] = cosI > 0 ? cosI : 0;
-      if (sy <= 0 || cosI <= 0) { this.shade[c] = 1; continue; }
-      if (horiz < 1e-6) { this.shade[c] = 0; continue; }
-      const ix0 = c % nx, iz0 = (c - ix0) / nx;
-      const stepX = sx / horiz, stepZ = sz / horiz, rise = (sy / horiz) * cs;
-      let x = ix0 + 0.5, z = iz0 + 0.5, y = this.groundH[c] + 0.05;
-      let sh = 0;
-      for (let k = 0; k < 400; k++) {
-        x += stepX; z += stepZ; y += rise;
-        if (y > top) break;
-        const ix = Math.floor(x), iz = Math.floor(z);
-        if (ix < 0 || iz < 0 || ix >= nx || iz >= nz) break;
-        const d = iz * nx + ix;
-        if (this.groundH[d] > y || this.obstacleTop[d] > y) { sh = 1; break; }
-      }
-      this.shade[c] = sh;
-    }
-    this.sunDirAt = [sx, sy, sz];
+    computeShade({ nx: this.nx, nz: this.nz, cell: this.tw.terrain.cell, groundH: this.groundH, nX: this.nX, nY: this.nY, nZ: this.nZ, obstacleTop: this.obstacleTop }, dir, this.cosN, this.shade);
+    this.sunDirAt = [dir[0], dir[1], dir[2]];
   }
 
   // ── Helpers ────────────────────────────────────────────
@@ -319,12 +297,22 @@ export class ClimateWorld {
     return this.pressure && a >= 0 ? this.pressure(a) : this.p0;
   }
 
-  /** Air column above a cell. */
+  /** Air column above a cell (cached). */
   cellAir(c: number): number {
-    const g = this.tw.terrain;
-    const [x, z] = g.cellCenter(c);
-    return this.tw.air.index(x, z);
+    let m = this.airOf;
+    if (!m) {
+      const g = this.tw.terrain;
+      m = this.airOf = new Int32Array(this.n);
+      for (let i = 0; i < this.n; i++) { const [x, z] = g.cellCenter(i); m[i] = this.tw.air.index(x, z); }
+    }
+    return m[c];
   }
+  private airOf: Int32Array | null = null;
+  private cellAirs(): Int32Array { this.cellAir(0); return this.airOf!; }
+  private bufTw: Float64Array | null = null;
+  private bufShare: Float64Array | null = null;
+  private bufPS: Float64Array | null = null;
+  private bufPR: Float64Array | null = null;
 
   /** Global energy of a cover (J, water reference). */
   private coverEnergy(M: number, U: number) {
@@ -389,6 +377,13 @@ export class ClimateWorld {
   /** Liquid water into the flood at a cell (kg) carrying enthalpy J (water reference). */
   private toFlood(c: number, kg: number, J: number, kind: 'melt' | 'condensed' | 'rain') {
     if (!(kg > 0)) return;
+    // Crumbs (< 0.1 g) while the flood model sleeps soak into the surface soil water (energy into the surface layer) —
+    // they do not wake the water model. External rain is always water (its budget term).
+    if (kg < 1e-4 && kind !== 'rain' && !this.link.water()) {
+      this.sW[c * this.nl] += kg;
+      this.depositGround(c, J, 'waterMass');
+      return;
+    }
     const w = this.link.ensureWater();
     this.linkFlood(w);
     const j = w.blocked[c] ? w.redirect[c] : c;
@@ -568,7 +563,7 @@ export class ClimateWorld {
 
   waterExpected(): number {
     const L = this.water;
-    return L.initial + L.precipitation + L.vaporIn - L.vaporOut - L.removed + L.floodIn - L.floodOut + L.crownIn;
+    return L.initial + L.precipitation + L.blownIn - L.blownOut + L.vaporIn - L.vaporOut - L.removed + L.floodIn - L.floodOut + L.crownIn;
   }
 
   energyExpected(): number {
@@ -638,7 +633,9 @@ export class ClimateWorld {
       this.surfaceStep(tw.groundStepDt, t + dt);
       extra?.surface?.();
     }
+    const t0 = this.prof ? this.now() : 0;
     this.airStep(dt);
+    if (this.prof) this.prof('climate.air', t0);
   }
 
   // ── Surface step ───────────────────────────────────────
@@ -647,15 +644,25 @@ export class ClimateWorld {
     const L = this.last;
     L.evaporation = L.condensation = L.melt = L.freeze = L.sublimation = L.precipitation = L.snowfall = L.rain = L.drained = L.boiled = 0;
     this.surfaceSteps++;
+    const P = this.prof;
+    let t0 = P ? this.now() : 0;
+    const mark = (k: string) => { if (P) { P(k, t0); t0 = this.now(); } };
     this.reconcileEvaporation();
+    mark('climate.evap');
     this.precipitate(tEnd - dtg, tEnd);
+    mark('climate.precip');
     this.updateCovers(dtg);
+    mark('climate.covers');
     this.freezeWater();
     this.boilWater();
+    mark('climate.water');
     this.soilPhase();
+    mark('climate.soil');
     this.updateStoresStep(dtg);
+    mark('climate.stores');
     this.syncIce();
     this.prepareSurface(dtg, tEnd);
+    mark('climate.shortwave');
   }
 
   /** Mass of the ground step's evaporation / condensation into / out of the stores and the vapour. */
@@ -740,16 +747,17 @@ export class ClimateWorld {
     const area = this.spec.area;
     const g = this.tw.terrain, A = this.cellArea, air = this.tw.air;
     const phase = this.spec.precipPhase ?? 'auto';
-    const Tw = new Float64Array(this.na), share = new Float64Array(this.na);
+    const Tw = (this.bufTw ??= new Float64Array(this.na)), share = (this.bufShare ??= new Float64Array(this.na));
     for (let a = 0; a < this.na; a++) {
       Tw[a] = wetBulb(air.T(a), this.q(a), this.p(a));
       share[a] = phase === 'snow' ? 1 : phase === 'rain' ? 0 : snowFraction(Tw[a]);
     }
-    const pSnow = new Float64Array(this.n), pRain = new Float64Array(this.n), colOf = new Int32Array(this.n);
+    const pSnow = (this.bufPS ??= new Float64Array(this.n)), pRain = (this.bufPR ??= new Float64Array(this.n));
+    pSnow.fill(0); pRain.fill(0);
+    const colOf = this.cellAirs();
     let total = 0;
     for (let c = 0; c < this.n; c++) {
-      const a = this.cellAir(c);
-      colOf[c] = a;
+      const a = colOf[c];
       if (area) { const [x, z] = g.cellCenter(c); if (Math.hypot(x - area.center[0], z - area.center[1]) > area.radius) continue; }
       const m = P * A;
       pSnow[c] = m * share[a]; pRain[c] = m - pSnow[c];
@@ -846,9 +854,13 @@ export class ClimateWorld {
   private deliverRain(c: number, m: number, Tw: number, J: number) {
     const w = this.link.water();
     const j = w && w.blocked[c] ? w.redirect[c] : c;
-    if (this.cM[j] > 0 && !(w && w.blocked[c])) {
+    // Into a cover (rain on snow / ice) — or onto a bare surface colder than 0 °C, where it starts a glaze cover
+    // (freezing rain: the cover node freezes it against the cold ground / air, releasing its latent heat).
+    const coldBare = !(this.cM[j] > 0) && !(w && w.blocked[c]) && !(w && w.h[j] > WATER_MERGE) && !this.tw.terrain.covered[j] && this.tw.terrain.T(j, 0) < T_MELT;
+    if ((this.cM[j] > 0 && !(w && w.blocked[c])) || coldBare) {
       this.cM[j] += m;
       this.cU[j] += J - m * C_WATER * (T_MELT - this.Tref);
+      if (coldBare) this.markCover(j);
     } else this.toFlood(c, m, J, 'rain');
     void Tw;
     this.last.rain += m; this.totals.rain += m;
@@ -893,8 +905,10 @@ export class ClimateWorld {
         nd.S = (1 - alb) * Sin; nd.dt = dtg; nd.open = true;
         const wet = !!w && w.h[c] > WATER_MERGE;
         if (wet) {
+          // Ice in contact with water: the interface is at the freezing point (latent heat released / taken there),
+          // so the contact is strong (1000 W/(m²K)); without ice (snow on water) the water-side natural convection.
           const Tw = this.tw.waterT(c);
-          const hws = Math.max(5, hWaterSide(Tw, T_MELT));
+          const hws = this.cIce[c] > 0 ? ICE_WATER_H : Math.max(5, hWaterSide(Tw, T_MELT));
           nd.Tb = Tw; nd.Gb = hws * this.cellArea;
         } else if (g.covered[c]) {
           nd.Tb = g.T(c, 0); nd.Gb = 0;
@@ -1013,10 +1027,18 @@ export class ClimateWorld {
   private clearCover(c: number, wet: boolean) {
     const M = this.cM[c], U = this.cU[c];
     if (M > 0 || U !== 0) {
-      // Residual liquid / energy goes to the water or ground below (exactly).
+      // Residual liquid / energy goes below (exactly). Crumbs (< 1 g) soak into the surface soil water and their energy
+      // into the surface layer — they must not start a water film (or the flood model) of their own.
       const J = this.coverEnergy(M, U);
-      if (M > 0) this.toFlood(c, M, J, 'melt');
-      else { const w = this.link.water(); if (wet && w) this.depositWater(w, c, J, 'cover'); else this.depositGround(c, J, 'cover'); }
+      const w = this.link.water();
+      if (M > 1e-3 || (wet && w)) {
+        if (M > 0) this.toFlood(c, M, J, 'melt');
+        else if (wet && w) this.depositWater(w, c, J, 'cover');
+        else this.depositGround(c, J, 'cover');
+      } else {
+        if (M > 0) this.sW[c * this.nl] += M;
+        this.depositGround(c, J, 'cover');
+      }
     }
     this.cM[c] = 0; this.cU[c] = 0; this.cIce[c] = 0; this.cRho[c] = 100; this.cAlb[c] = SNOW_ALBEDO_MAX; this.cLiq[c] = 0; this.cT[c] = T_MELT;
     this.surf.covered[c] = 0;
@@ -1064,7 +1086,8 @@ export class ClimateWorld {
     const A = w.cellArea;
     for (let c = 0; c < this.n; c++) {
       const h = w.h[c];
-      if (!(h > 0) || w.heat[c] <= 0) continue;
+      // Films thinner than 10 µm share the ground surface temperature (Phase 26 merge) — not boiling water.
+      if (!(h > 1e-5) || w.heat[c] <= 0) continue;
       const a = this.cellAir(c);
       const p = this.p(a);
       // Below the triple point there is no liquid equilibrium: the water boils down to 0 °C (and then freezes).
@@ -1190,7 +1213,8 @@ export class ClimateWorld {
         if (this.sM[k] !== 0 || this.sU[k] !== 0) {
           // A residual: to the first cell's ground.
           const J = this.coverEnergy(this.sM[k], this.sU[k]);
-          if (this.sM[k] > 0) this.toFlood(st.cells[0], this.sM[k], J, 'melt'); else this.depositGround(st.cells[0], J, 'cover');
+          if (this.sM[k] > 1e-3) this.toFlood(st.cells[0], this.sM[k], J, 'melt');
+          else { if (this.sM[k] > 0) this.sW[st.cells[0] * this.nl] += this.sM[k]; this.depositGround(st.cells[0], J, 'cover'); }
         }
         this.sM[k] = 0; this.sU[k] = 0; this.sIce[k] = 0; this.sAlb[k] = SNOW_ALBEDO_MAX;
         continue;
@@ -1376,6 +1400,110 @@ export class ClimateWorld {
     this.energy.removed += L_V * v;
   }
 
+  /**
+   * Transpiration / crown drying: kg of water (taken by the caller from the soil / crown stores, their sensible heat
+   * left in place) evaporates from foliage body b into air column a — the latent heat comes out of the foliage node.
+   */
+  transpire(a: number, b: number, kg: number) {
+    if (!(kg > 0)) return;
+    const B = this.tw.bodies;
+    const J = L_V * kg;
+    B.ES[b] -= J;
+    B.refresh(b);
+    this.toThermal(-J, 'latent');
+    if (a >= 0) this.vap[a] += kg;
+    // Vapour carries L_v (the latent taken above) — the air node gets nothing more (hs = 0: sensible left in place).
+    this.water.transfers.transpiration += kg;
+    this.energy.transfers.vaporization += J;
+  }
+
+  /**
+   * Blowing snow (simplified): loose dry snow (density < 300 kg/m³, no liquid) moves along the wind when the local
+   * 10 m wind exceeds the Li & Pomeroy (1997) threshold U_t = 9.43 + 0.18·T + 0.0033·T² (T in °C). Saltation flux
+   * (Pomeroy & Gray 1990) Q = 0.68·ρ_a·u*_t·(u*² − u*_t²)/(g·u*) per metre of width (u* by the log law, z₀ = 1 mm),
+   * donor-cell transport on the 1 m grid along the wind; `wind(c)` is the local 10 m wind speed of the cell (the
+   * Phase 15 field with building wakes — sheltered cells collect a drift); snow blown against a building (blocked
+   * cell) settles in front of it. Snow entering at the upwind edge equals what leaves the edge cell (the snow
+   * upwind is the same) — booked as edge in / out. No suspension, no sublimation of blowing snow.
+   */
+  blowSnow(dt: number, dirX: number, dirZ: number, wind: (c: number) => number, blocked: Uint8Array | null) {
+    const b = this.blowing;
+    b.cells = 0; b.moved = 0; b.drift = 0;
+    if (!(dt > 0)) return;
+    const n = this.n, nx = this.nx, nz = this.nz, A = this.cellArea, w = Math.sqrt(A);
+    const out = (this.blowOut ??= new Float64Array(n));
+    const outU = (this.blowOutU ??= new Float64Array(n));
+    out.fill(0); outU.fill(0);
+    const k = 0.41 / Math.log(10 / 1e-3);
+    let any = false;
+    for (let c = 0; c < n; c++) {
+      const M = this.cM[c];
+      if (!(M > 0) || this.cRho[c] >= 300) continue;
+      const liq = this.cLiqOf(c);
+      if (liq > 0) continue;
+      const snow = M - this.cIce[c];
+      if (!(snow > 0.05 * A)) continue;
+      const T = Math.min(0, this.coverT(c) - T_MELT);
+      const Ut = 9.43 + 0.18 * T + 0.0033 * T * T;
+      const U = wind(c);
+      if (U <= Ut) continue;
+      const us = k * U, ut = k * Ut;
+      const Q = (0.68 * 1.2 * ut * (us * us - ut * ut)) / (9.81 * us); // kg/(m·s)
+      let m = Q * w * dt;
+      if (m > 0.5 * snow) m = 0.5 * snow;
+      out[c] = m;
+      outU[c] = this.cU[c] * (m / M);
+      any = true;
+      b.cells++;
+    }
+    b.active = any;
+    if (!any) return;
+    // Split along x / z by the wind direction components (|dirX| + |dirZ| shares), donor → downwind neighbours.
+    const sx = Math.abs(dirX), sz = Math.abs(dirZ), ssum = sx + sz || 1;
+    const fx = sx / ssum, fz = sz / ssum;
+    const stepX = dirX >= 0 ? 1 : -1, stepZ = dirZ >= 0 ? 1 : -1;
+    const add = (c: number, m: number, U: number, rho: number) => {
+      const sn = Math.max(0, this.cM[c] - this.cIce[c] - this.cLiqOf(c));
+      this.cRho[c] = sn > 0 ? (sn + m) / (sn / this.cRho[c] + m / rho) : rho;
+      this.cM[c] += m; this.cU[c] += U;
+      this.markCover(c);
+    };
+    for (let c = 0; c < n; c++) {
+      const m = out[c];
+      if (!(m > 0)) continue;
+      const U = outU[c], rho = this.cRho[c];
+      this.cM[c] -= m; this.cU[c] -= U;
+      b.moved += m;
+      const ix = c % nx, iz = (c - ix) / nx;
+      for (const [share, tx, tz] of [[fx, ix + stepX, iz], [fz, ix, iz + stepZ]] as const) {
+        if (!(share > 0)) continue;
+        const mm = m * share, UU = U * share;
+        if (tx < 0 || tz < 0 || tx >= nx || tz >= nz) { this.water.blownOut += mm; this.energy.precip -= this.coverEnergy(mm, UU); continue; }
+        const t = tz * nx + tx;
+        if (blocked && blocked[t]) { add(c, mm, UU, rho); b.drift += mm; continue; }
+        add(t, mm, UU, rho);
+      }
+    }
+    // Upwind edges: the same flux enters as leaves the edge cells (uniform snow beyond the world).
+    for (let c = 0; c < n; c++) {
+      const m = out[c];
+      if (!(m > 0)) continue;
+      const ix = c % nx, iz = (c - ix) / nx;
+      const upX = ix - stepX, upZ = iz - stepZ;
+      const rho = this.cRho[c];
+      if (fx > 0 && (upX < 0 || upX >= nx)) { const mm = m * fx, UU = outU[c] * fx; add(c, mm, UU, rho); this.water.blownIn += mm; this.energy.precip += this.coverEnergy(mm, UU); }
+      if (fz > 0 && (upZ < 0 || upZ >= nz)) { const mm = m * fz, UU = outU[c] * fz; add(c, mm, UU, rho); this.water.blownIn += mm; this.energy.precip += this.coverEnergy(mm, UU); }
+    }
+    this.water.transfers.blowing += b.moved;
+  }
+  /** Any snow cover at all (cheap check before blowing snow). */
+  stats0(): boolean {
+    for (let t = 0; t < this.coverTile.length; t++) if (this.coverTile[t]) return true;
+    return false;
+  }
+  private blowOut: Float64Array | null = null;
+  private blowOutU: Float64Array | null = null;
+
   // ── Queries ────────────────────────────────────────────
 
   /** Snow depth (m), SWE (kg/m²), ice thickness (m) of a cell. */
@@ -1446,4 +1574,53 @@ export class ClimateWorld {
 
   /** Kept for API symmetry. */
   static readonly L = { V: L_V, F: L_F, S: L_S };
+}
+
+export interface CellGeometry { nx: number; nz: number; cell: number; groundH: Float32Array; nX: Float32Array; nY: Float32Array; nZ: Float32Array; obstacleTop: Float32Array }
+
+/** Normals (two-triangle mean slope), ground heights (cell mean as the water bed) and albedo of every terrain cell. */
+export function cellGeometry(t: TerrainData): { nX: Float32Array; nY: Float32Array; nZ: Float32Array; groundH: Float32Array; albedo: Float32Array } {
+  const nx = t.nx - 1, nz = t.nz - 1, n = nx * nz, vx = t.nx, hs = t.heights, cs = t.cellSize;
+  const out = { nX: new Float32Array(n), nY: new Float32Array(n), nZ: new Float32Array(n), groundH: new Float32Array(n), albedo: new Float32Array(n) };
+  for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix < nx; ix++) {
+    const c = iz * nx + ix, v = iz * vx + ix;
+    const h00 = hs[v], h10 = hs[v + 1], h01 = hs[v + vx], h11 = hs[v + vx + 1];
+    const dx = (h10 + h11 - h00 - h01) / (2 * cs), dz = (h01 + h11 - h00 - h10) / (2 * cs);
+    const k = 1 / Math.hypot(dx, 1, dz);
+    out.nX[c] = -dx * k; out.nY[c] = k; out.nZ[c] = -dz * k;
+    out.groundH[c] = (h00 + 2 * h10 + 2 * h01 + h11) / 6;
+    out.albedo[c] = GROUND_ALBEDO[Math.min(GROUND_ALBEDO.length - 1, t.ground[(iz + 1) * vx + ix + 1])];
+  }
+  return out;
+}
+
+/**
+ * Incidence cos θ of the sun on every cell and its shadow (1 = shaded) from the terrain and obstacle tops, marching a
+ * ray toward the sun one cell at a time until it rises above everything (run and preview use this same function).
+ */
+export function computeShade(g: CellGeometry, dir: readonly number[], cosOut: Float32Array, shadeOut: Uint8Array) {
+  const [sx, sy, sz] = dir;
+  const n = g.nx * g.nz, nx = g.nx, nz = g.nz, cs = g.cell;
+  let top = -Infinity;
+  for (let c = 0; c < n; c++) { const v = Math.max(g.groundH[c], g.obstacleTop[c]); if (v > top) top = v; }
+  const horiz = Math.hypot(sx, sz);
+  for (let c = 0; c < n; c++) {
+    const cosI = g.nX[c] * sx + g.nY[c] * sy + g.nZ[c] * sz;
+    cosOut[c] = cosI > 0 ? cosI : 0;
+    if (sy <= 0 || cosI <= 0) { shadeOut[c] = 1; continue; }
+    if (horiz < 1e-6) { shadeOut[c] = 0; continue; }
+    const ix0 = c % nx, iz0 = (c - ix0) / nx;
+    const stepX = sx / horiz, stepZ = sz / horiz, rise = (sy / horiz) * cs;
+    let x = ix0 + 0.5, z = iz0 + 0.5, y = g.groundH[c] + 0.05;
+    let sh = 0;
+    for (let k = 0; k < 400; k++) {
+      x += stepX; z += stepZ; y += rise;
+      if (y > top) break;
+      const ix = Math.floor(x), iz = Math.floor(z);
+      if (ix < 0 || iz < 0 || ix >= nx || iz >= nz) break;
+      const d = iz * nx + ix;
+      if (g.groundH[d] > y || g.obstacleTop[d] > y) { sh = 1; break; }
+    }
+    shadeOut[c] = sh;
+  }
 }

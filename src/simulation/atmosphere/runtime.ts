@@ -137,6 +137,8 @@ export class AtmosphereRuntime {
   private terrainRev = 0;
   private terrainAt = -Infinity;
   terrainUpdates = 0;
+  /** Columns that lost air in the last step and their shares (Phase 30 vapour removal), null when none. */
+  lastRemoved: { list: readonly number[]; share: Float64Array } | null = null;
 
   /** Mean ground height of every air column (four samples). */
   private groundHeights(ctx: SystemContext): Float64Array {
@@ -267,6 +269,8 @@ export class AtmosphereRuntime {
     const res = f.step(dt, { ...F, layerT: this.layerT, updraft: anyUp ? this.updraft : null, Tin: this.T0 });
     P.add('atmos.field', tp);
     tp = P.now();
+    // Phase 30: the climate's vapour leaves with the removed air in the same share (read in its prepare).
+    this.lastRemoved = res.removedList.length ? { list: res.removedList, share: res.removedShare } : null;
     // Removed air takes its O₂ deficit (the fire's tracer) with it.
     const fire = ctx.env.fire.rt;
     for (const a of res.removedList) {
