@@ -491,13 +491,13 @@ export function captureBlueprint(doc: WorldDocument, sel: CaptureSelection, opts
 }
 
 function guessCategory(c: UnifiedBlueprint['preview']['counts']): BlueprintCategory {
-  const things = c.objects - c.buildings;
-  if (c.features && (c.buildings || c.roads)) return 'mixed';
-  if (c.features || (c.vegetation && !c.buildings && !c.roads)) return 'nature';
-  if (c.roads && !c.buildings) return 'roads';
-  if (c.buildings && !c.roads && !things) return 'buildings';
-  if (c.roads && c.buildings) return 'mixed';
-  return things ? 'infrastructure' : 'mixed';
+  const nature = c.features > 0 || (c.vegetation > 0 && !c.buildings && !c.roads && c.objects === 0);
+  if (nature && (c.buildings || c.roads)) return 'mixed';
+  if (nature) return 'nature';
+  if (c.buildings && c.roads) return 'mixed';
+  if (c.buildings) return 'buildings';
+  if (c.roads) return 'roads';
+  return c.objects ? 'infrastructure' : 'mixed';
 }
 
 /** Local bounds of everything (area, objects, road nodes / controls, features). */
