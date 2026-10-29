@@ -61,6 +61,8 @@ export interface LandscapeEdit {
   next?: number;
   /** Replace the base terrain (environment presets); sculpt and paint are cleared. */
   base?: { heights: Float32Array; ground: Uint8Array; soil?: Uint8Array; settings?: TerrainData['settings'] };
+  /** Sculpt to ADD and paint to SET in a rectangle (nature regions, Phase 20 blueprints). */
+  layers?: { rect: GridRect; sculpt: Float32Array | null; paint: Uint8Array | null };
 }
 
 /** Live brush stroke (terrain arrays are edited in place; one history entry at the end). */
@@ -322,6 +324,16 @@ export const useWorldStore = create<WorldState>((set, get) => {
         if (e.base.soil) t.soil.set(e.base.soil);
         if (e.base.settings) t.settings = { ...e.base.settings };
         rect = fullGridRect(t);
+      }
+      if (e.layers) {
+        const { rect: r, sculpt, paint } = e.layers;
+        const w = r.x1 - r.x0 + 1;
+        for (let iz = r.z0; iz <= r.z1; iz++) for (let ix = r.x0; ix <= r.x1; ix++) {
+          const i = iz * t.nx + ix, k = (iz - r.z0) * w + (ix - r.x0);
+          if (sculpt && sculpt[k] !== 0) land.sculpt[i] = Math.round((land.sculpt[i] + sculpt[k]) * 100) / 100;
+          if (paint && paint[k] !== NO_PAINT) land.paint[i] = paint[k];
+        }
+        rect = unionRects(rect, r);
       }
       if (e.features) {
         rect = unionRects(rect, featureChangeRect(land, t, land.features, e.features));

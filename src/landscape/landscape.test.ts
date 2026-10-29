@@ -188,3 +188,23 @@ describe('landscape save / load (schema v7)', () => {
 });
 
 void fullRect;
+
+describe('nature regions (Phase 20 blueprint extension point)', () => {
+  it('capture → JSON → place elsewhere: same shapes shifted, fresh ids, sculpt added, one undo step', async () => {
+    const { captureRegion, placeRegion, parseRegion } = await import('./region');
+    S().setFeatures([mountain('f1', -50, -50, 15, 25), { ...river('f2'), points: [[-75, -30], [-25, -35]] } as RiverFeature], 3);
+    sculpt(-40, -70);
+    const t = S().doc.terrain;
+    const region = parseRegion(JSON.parse(JSON.stringify(captureRegion(S().doc.landscape, t, [-90, -90, -10, -10]))))!;
+    expect(region.features.map((f) => f.kind)).toEqual(['mountain', 'river']);
+    const placed = placeRegion(S().doc.landscape, t, region, 50, 50);
+    const past = S().past.length;
+    S().applyEdit({ landscape: { features: placed.features, next: placed.next, layers: placed.layers ?? undefined } });
+    expect(S().past.length).toBe(past + 1);
+    const ids = S().doc.landscape.features.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    // The copy reproduces the original heights 100 m east / south (same layers, same base).
+    expect(H(50 + 0, 50 + 0)).toBeCloseTo(H(-50, -50), 1);
+    expect(H(60, 30)).toBeCloseTo(H(-40, -70), 1);
+  });
+});
