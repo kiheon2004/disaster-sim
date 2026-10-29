@@ -28,8 +28,28 @@ export function rotateEuler(v: Vec3, r: Vec3): Vec3 {
   return [x, y, z];
 }
 
+/**
+ * Unscaled bounds per member object. Members are immutable values (design edits create new
+ * ones), so the result can be shared — designs used by hundreds of buildings (copies of a
+ * preset, placed blueprints) compute each member's rotated box once (Phase 21: the first frame
+ * after placing a 1000-building blueprint spent ~0.2 s re-rotating the same corners).
+ * Callers must treat the returned box as read-only.
+ */
+const unitBounds = new WeakMap<BuildingMember, Box3>();
+
 /** Axis-aligned bounds of a member (rotated box), scaled by the object scale. */
-export function memberBounds(m: BuildingMember, k: Vec3 = [1, 1, 1]): Box3 {
+export function memberBounds(m: BuildingMember, k: Vec3 = UNIT): Box3 {
+  if (k === UNIT || (k[0] === 1 && k[1] === 1 && k[2] === 1)) {
+    let b = unitBounds.get(m);
+    if (!b) { b = computeBounds(m, UNIT); unitBounds.set(m, b); }
+    return b;
+  }
+  return computeBounds(m, k);
+}
+
+const UNIT: Vec3 = [1, 1, 1];
+
+function computeBounds(m: BuildingMember, k: Vec3): Box3 {
   const hx = m.size[0] / 2, hy = m.size[1] / 2, hz = m.size[2] / 2;
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];

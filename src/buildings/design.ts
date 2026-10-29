@@ -67,7 +67,15 @@ const DRAG = 1.3;
 const BREAK = 1.5;
 
 /** Above-ground bounding box of the members (symmetric about the origin like legacy buildings). */
+const extentCache = new WeakMap<BuildingDesign, ReturnType<typeof computeExtent>>();
+/** Extent of a design (cached per immutable design object). */
 export function designExtent(design: BuildingDesign): { width: number; depth: number; height: number; roofHeight: number } {
+  let e = extentCache.get(design);
+  if (!e) { e = computeExtent(design); extentCache.set(design, e); }
+  return e;
+}
+
+function computeExtent(design: BuildingDesign): { width: number; depth: number; height: number; roofHeight: number } {
   let hx = 0, hz = 0, top = 0, struct = 0;
   for (const m of design.members) {
     if (m.level < 0) continue;
