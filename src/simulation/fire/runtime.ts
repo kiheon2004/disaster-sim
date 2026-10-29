@@ -28,7 +28,6 @@
  * Iteration orders are item / body / room insertion order — never object ids.
  */
 import type { EntityId, Vec3 } from '@/core/types';
-import { qRotate } from '@/core/math';
 import { MATERIALS } from '@/buildings/materials';
 import { MT_BEAM, MT_COLUMN, MT_DOOR, MT_ROOF, MT_SLAB, MT_WALL, MT_WINDOW } from '@/structure/graph';
 import { MS } from '@/structure/types';
@@ -815,7 +814,6 @@ export class FireRuntime {
     const B = this.trt.world.bodies, tc = this.fw.rooms[R.r].tc;
     const out: Deposit[] = [];
     let sum = 0, area = 0;
-    for (let s = 0; s < 2; s++) void s;
     for (let i = 0; i < R.bt.g.n; i++) {
       const b = R.bt.body[i];
       if (b < 0 || !B.alive[b]) continue;
@@ -1280,21 +1278,4 @@ export class FireRuntime {
     for (let i = 0; i < this.fw.n; i++) if (this.owner[i] === id) out.push(i);
     return out;
   }
-
-  /** The fire room of a member body's story / of a point (inspector). */
-  roomAt(P: Vec3): number {
-    const inside = this.trt.buildingContaining(P);
-    if (!inside) return -1;
-    return this.roomOfComp.get(inside.comp) ?? -1;
-  }
-
-  roomInfo(r: number) {
-    return this.rooms[r];
-  }
-}
-
-/** World point of a local building point (exported for tests). */
-export function localToWorld(e: RuntimeEntity, l: Vec3): Vec3 {
-  const p = qRotate(e.pose.quaternion, l);
-  return [e.pose.position[0] + p[0], e.pose.position[1] + p[1], e.pose.position[2] + p[2]];
 }

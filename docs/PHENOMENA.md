@@ -25,7 +25,7 @@
 |---|---|---|
 | `PhenomenonDefinition` | `src/phenomena/types.ts`, `definitions.ts` | 현상 유형별 **고유 타입의 파라미터**(zod 스키마), 편집 필드(단위·범위·배율), 기본값, 가정, 효과 채널, 사용 모델, 이벤트 생성, 지속시간, 설명 |
 | `PhenomenonInstance` | `types.ts` | 실험 속 한 번의 발생: id, type, spec, enabled, start(절대 시각 또는 다른 현상의 시작/종료 + 간격), seed, visualize |
-| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종 |
+| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종; Phase 27 현재: 구현 12종(+ 열원·화재) + 계획 8종 |
 | Lifecycle | 기존 `SimulationEvent` | onStart → update(고정 스텝) → onEnd(finished / superseded), 채널별 대체 규칙 유지 |
 | `PhenomenonContext` | `types.ts` | 시드, 고정 지형, 물 설정(기본값 해석용) |
 | Output | 효과 채널(§3) | 현상은 채널만 쓰고, 시스템이 힘·피해·노출로 바꿈 |
@@ -99,7 +99,7 @@ Rapier·지형 데이터는 복제하지 않습니다(힘 기록은 오브젝트
 
 검증 결과(테스트): 서풍 40 m/s, 닫힌 1 m 호수 → 60초 후 동·서 수위차 0.5–50 cm 범위(ON) / 0(OFF). M7 · 0.5 g → 정지 수면 최대 유속 > 1 cm/s(ON) / 0(OFF). 바람 38 m/s + 지진 0.45 g → 모든 건물 최대 층간변위 증가(예: 1.14 → 1.22 %, 1.25 → 1.61 %).
 
-**구현하지 않은 것**: 액상화, 지진에 의한 물 공급(관 파열), 파랑·해일, 파편에 의한 물길 막힘, 화재·온도 결합 — 근사 모델이 준비되지 않아 후속 Phase로 남겼습니다.
+**구현하지 않은 것**: 액상화, 지진에 의한 물 공급(관 파열), 파랑·해일, 파편에 의한 물길 막힘 — 근사 모델이 준비되지 않아 후속 Phase로 남겼습니다. (화재·온도 결합은 Phase 26–27에서 구현: 비·물의 소화·냉각, 붕괴에 따른 개구부·잔해 연소, 바람에 의한 화염 기울기·연기 이류.)
 
 ## 7. 통합 피해 상태
 
@@ -224,9 +224,9 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 대기 압력파는 Phase 24(공중 폭발·대기 결합 몫 → 압력 채널). 남은 것: 열 | — |
 | Explosion | **대기 압력파 구현됨(Phase 24)** — 가상 에너지 방출, Sedov–Taylor + 약충격 N파, 지면 반사·차폐, 압력 채널(`pressure` active), ForceLedger `blast`, 구조 외부 횡하중·외장 SDOF·외벽 면외·사람 전도 기준, `blast` 해저드, [BLAST.md](BLAST.md). 남은 것: 열·연소(Phase 26–27) | — |
 | Structural Destruction (교차 해저드) | **구현됨(Phase 25)** — 구조 그래프·증분 하중 재분배·접합부·연쇄/부분 붕괴·낙하 블록 충돌·잔해(질량 장부)·2차 피해·기초 지지 상실, 모든 해저드 공통, [STRUCTURAL_DESTRUCTION.md](STRUCTURAL_DESTRUCTION.md). 남은 것: 부재 온도·열팽창·온도 의존 강도(Phase 26 — `setMaterialFactor` 확장 지점) | 해저드별 손상 모델, Phase 17 해석·층 모델, Rapier, ForceLedger |
-| Heat / Thermal (교차) | **구현됨(Phase 26)** — 열원 5종(점·원판·표면·체적·지정 온도), 전도·대류·복사, 물 열 운반, 공기층, 부재 온도 → EN 강도·열팽창 → 구조 엔진, 잔해 열, 운석 열 몫, `thermal` 해저드, [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md). 남은 것: 연소·화재 확산(Phase 27), 극한 기후·결빙(Phase 30) | 구조 파괴 엔진(`setMaterialFactor`·`addLoad`), 물 솔버 유량, 바람장, 실험·장부 패턴 |
-| Fire | 연소·발화·연기·산소(Phase 27) | **열물리 엔진(Phase 26)**: 노드 온도·질량·재료, 구획 노드, 열원 = HRR 자리, 복사 기하 |
-| Volcano | 열·온도장(Phase 26 재사용), 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
+| Heat / Thermal (교차) | **구현됨(Phase 26)** — 열원 5종(점·원판·표면·체적·지정 온도), 전도·대류·복사, 물 열 운반, 공기층, 부재 온도 → EN 강도·열팽창 → 구조 엔진, 잔해 열, 운석 열 몫, `thermal` 해저드, [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md). 연소·화재 확산은 Phase 27(구현됨). 남은 것: 극한 기후·결빙(Phase 30) | 구조 파괴 엔진(`setMaterialFactor`·`addLoad`), 물 솔버 유량, 바람장, 실험·장부 패턴 |
+| Fire | **구현됨(Phase 27)** — 연료 항목(목조 부재·수관·줄기·실내 가연물·잔해), 열유속-시간 착화, 연소율·화학에너지 장부(= 열 장부 연소 계정), 방 화재(개구부·Rockett 환기·산소 한계·외부 화염·플래시오버), 연기·가시거리, 화염 복사·기울기 확산, 탄화 단면 → 구조 엔진, `fire` 해저드·원인, [FIRE_COMBUSTION.md](FIRE_COMBUSTION.md). 남은 것: 불티 착화·지표 연료·2구역·화학종 | **열물리 엔진(Phase 26)**: 노드 온도·질량·재료, 구획 노드, 점원 복사 기하, 물 열 추적자, 구조 계수 경로 |
+| Volcano | 열·온도장(Phase 26 재사용), 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태, **화재(Phase 27)**: 용암 접촉 착화(`FireRuntime.contact`), 외부 입사 열유속(`incidentProviders`), 식생 착화·탄화 단면 |
 | Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |
 | Gravity Change | 공간 중력장(오브젝트별 힘, Rapier 전역 중력은 기준 유지) | `GravityField` 인터페이스, ForceLedger(`gravityField` 출처 예약), 구조 모델 gravity 입력 |
 | Black Hole | 공간 중력장 + 조석력(크기 있는 물체의 차등 가속) | ForceLedger, 파편, 비교 실행, "실험적·가상" 모델 수준 |

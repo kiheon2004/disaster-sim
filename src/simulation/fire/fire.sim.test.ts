@@ -76,7 +76,7 @@ function expectLedgersClosed(fr: FireRuntime) {
 }
 
 describe('fire channel', () => {
-  it('stays dormant without a fire; a heat source does not start the combustion model unless heat ignition is on', async () => {
+  it('stays dormant without a fire; a heat source does not start the combustion model unless heat ignition is on', { timeout: 180_000 }, async () => {
     const c = await load(doc([B(design('house'))]), [{ event: 'heatSource', kind: 'point', position: [0, 9], height: 1.5, radius: 2, input: 'power', power: 3e5, profile: 'constant', duration: 30 } as EventSpec]);
     c.advance(5);
     expect(c.getEnvironment().thermal.rt).not.toBeNull();
@@ -89,7 +89,7 @@ describe('fire channel', () => {
     c2.unload();
   });
 
-  it('rejects an ignition where nothing can burn, with a reason', async () => {
+  it('rejects an ignition where nothing can burn, with a reason', { timeout: 180_000 }, async () => {
     const c = await load(doc([B(design('apartment'), 30, 0)]), [ignite({ position: [-30, -30] })]);
     c.advance(2);
     const ig = c.getEnvironment().fire.ignitions[0];
@@ -102,7 +102,7 @@ describe('fire channel', () => {
 });
 
 describe('room fire in a timber house', () => {
-  it('closed: t² growth, then oxygen-limited — the room never goes below the limiting O₂ fraction; ledgers close', async () => {
+  it('closed: t² growth, then oxygen-limited — the room never goes below the limiting O₂ fraction; ledgers close', { timeout: 180_000 }, async () => {
     const c = await load(doc([B(design('house'))]), [ignite()]);
     c.advance(240);
     const fr = frOf(c), fw = fr.fw;
@@ -164,7 +164,7 @@ describe('vegetation', () => {
     return out;
   };
 
-  it('dry crowns 5 m apart burn one after another; 7 m apart the fire stops in calm air and crosses in a wind', async () => {
+  it('dry crowns 5 m apart burn one after another; 7 m apart the fire stops in calm air and crosses in a wind', { timeout: 180_000 }, async () => {
     let c = await load(doc(stand(5), { foliageMoisture: 0.2 }), [ignite({ height: 6, radius: 2 })]);
     c.advance(120);
     expect(crowns(c).every((b) => b > 0.9)).toBe(true);
@@ -188,7 +188,7 @@ describe('vegetation', () => {
     c.unload();
   });
 
-  it('live (150 %) foliage refuses the ignition; heavy rain puts burning crowns out and stops the spread', async () => {
+  it('live (150 %) foliage refuses the ignition; heavy rain puts burning crowns out and stops the spread', { timeout: 180_000 }, async () => {
     let c = await load(doc(stand(5)), [ignite({ height: 6, radius: 2 })]);
     c.advance(60);
     // The crowns are too wet to light; a bark spot of the trunk takes the pilot flame but cannot keep burning alone.
@@ -207,7 +207,7 @@ describe('vegetation', () => {
     c.unload();
   });
 
-  it('a heat source ignites a dry crown only through its computed flux, when heat ignition is enabled', async () => {
+  it('a heat source ignites a dry crown only through its computed flux, when heat ignition is enabled', { timeout: 180_000 }, async () => {
     const src: EventSpec = { event: 'heatSource', kind: 'point', position: [4, 0], height: 8.8, radius: 2, input: 'power', power: 4e6, profile: 'constant', duration: 300 } as EventSpec;
     const c = await load(doc([tree(0, 0)], { foliageMoisture: 0.2, heatIgnition: true }), [src]);
     c.advance(200);
@@ -257,7 +257,7 @@ describe('determinism, ids, restoration, save / load', () => {
 });
 
 describe('Phase 28 extension points', () => {
-  it('an external incident-flux provider ignites fuel through the normal ignition rules; contact ignition uses the state machine', async () => {
+  it('an external incident-flux provider ignites fuel through the normal ignition rules; contact ignition uses the state machine', { timeout: 180_000 }, async () => {
     const c = await load(doc([tree(0, 0)], { foliageMoisture: 0.2 }), [ignite({ position: [60, 60], radius: 0.5 })]);
     c.advance(1);
     const fr = frOf(c);

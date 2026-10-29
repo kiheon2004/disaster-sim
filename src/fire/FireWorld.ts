@@ -23,7 +23,7 @@ import { ThermalWorld } from '@/thermal/ThermalWorld';
 import { CP_AIR, SIGMA, BOILING } from '@/thermal/units';
 import { FireLedger } from './ledger';
 import {
-  CROWN_SPREAD, thinFtpCritical, CHAR_INSULATION, CONTENTS_FIRE, DECAY_AT, E_O2, FLASHOVER_FLUX, FLASHOVER_T, FM, FUEL_MATERIALS, L_WATER, MOISTURE_EXTINCTION, MOISTURE_MAX, SPREAD_SPEED, Y_O2_AIR, Y_O2_LIMIT,
+  CROWN_SPREAD, thinFtpCritical, CHAR_INSULATION, DECAY_AT, E_O2, FLASHOVER_FLUX, FUEL_MATERIALS, L_WATER, MOISTURE_EXTINCTION, MOISTURE_MAX, SPREAD_SPEED, Y_O2_AIR, Y_O2_LIMIT,
   ftpCritical, type ContentsFire,
 } from './materials';
 import { buoyantVelocity, gasEmissivity, ventInflow } from './relations';
@@ -120,11 +120,6 @@ const GROW = <T extends Float64Array | Float32Array | Int32Array | Uint8Array>(a
   b.set(a as never);
   return b;
 };
-
-export interface FireStepInput {
-  /** Wind speed at 10 m (m/s) — outdoor items only use it through the adapter's geometry. */
-  time: number;
-}
 
 export class FireWorld {
   readonly tw: ThermalWorld;
@@ -767,8 +762,4 @@ export class FireWorld {
     R.flashover = this.time;
     this.roomEvents.push([r, 'flashover']);
   }
-
-  static readonly flashoverT = FLASHOVER_T;
-  static readonly contentsFire = CONTENTS_FIRE;
-  static readonly FM = FM;
 }
