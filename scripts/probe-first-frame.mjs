@@ -5,7 +5,8 @@
 //   compiled, and the remainder (render submit, GPU upload).
 //
 //   npm run build && npx vite preview --port 4191 --strictPort &
-//   node scripts/probe-first-frame.mjs http://localhost:4191/ [empty|town] [runs]
+//   node scripts/probe-first-frame.mjs http://localhost:4191/ [empty|town|sinkhole|landslide] [runs]
+//   (sinkhole: town + a collapsing sinkhole; landslide: a 30° slope + a released slide, Phase 22)
 import puppeteer from 'puppeteer-core';
 import os from 'node:os';
 
@@ -27,7 +28,12 @@ for (let r = 0; r < runs; r++) {
   await ev((scene) => {
     const ds = window.__ds;
     ds.actions.newProject();
-    if (scene === 'town') {
+    if (scene === 'landslide') {
+      const S = ds.world.getState(), t0 = S.doc.terrain, heights = new Float32Array(t0.heights.length), tb = Math.tan((30 * Math.PI) / 180);
+      for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) { const x = t0.originX + ix * t0.cellSize; heights[iz * t0.nx + ix] = x < 0 ? Math.min(90, -x) * tb : 0; }
+      S.applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+    }
+    if (scene === 'town' || scene === 'sinkhole') {
       const L = ds.roadLib, d = L.presetDesign('house', 1), inputs = [];
       for (let z = -60; z <= 60; z += 12) for (let x = -60; x <= 60; x += 12) inputs.push({ type: 'building', building: d, seed: inputs.length + 1, transform: { position: [x, 0, z], rotation: [0, 0, 0], scale: [1, 1, 1] } });
       ds.world.getState().applyEdit({ add: inputs });
@@ -37,6 +43,13 @@ for (let r = 0; r < runs; r++) {
   await new Promise((res) => setTimeout(res, 1500));
   if (process.env.NODEFORM) await ev(() => { window.__NODEFORM = true; });
   await page.tracing.start({ categories: ['devtools.timeline', 'v8', 'disabled-by-default-v8.gc', 'blink.user_timing'] });
+  await ev((scene) => {
+    window.__EVENTS = scene === 'sinkhole'
+      ? [{ event: 'sinkhole', center: [6, 6], cavityRadius: 5, cavityHeight: 8, cover: 5, initiation: 'supportLoss', supportLoss: 0.9, duration: 1 }]
+      : scene === 'landslide'
+        ? [{ event: 'landslide', area: { kind: 'circle', center: [-25, 0], radius: 12 }, thickness: 1.5, saturation: 1, trigger: 'user', duration: 0 }]
+        : [{ event: 'terrainDeformation', kind: 'subsidence', center: [0, 0], radius: 20, amount: 2, duration: 4, profile: 'smooth', falloff: 'smooth' }];
+  }, scene);
   await ev(() => {
     const ds = window.__ds, P = ds.profiler, gl = window.__r3f.get().gl;
     P.enabled = true; P.snapshot();
@@ -47,13 +60,13 @@ for (let r = 0; r < runs; r++) {
     const f = () => {
       const now = performance.now();
       const s = P.snapshot();
-      window.__frames.push({ t0: last, t1: now, ms: now - last, tick: s.tickMs, physics: s.physicsMs, deform: s.systems.deformation ?? 0, programs: gl.info.programs.length, mesh: ds.deformLib.terrainStats.surfaceBuildMs });
+      window.__frames.push({ t0: last, t1: now, ms: now - last, tick: s.tickMs, physics: s.physicsMs, deform: (s.systems.deformation ?? 0) + (s.systems.groundFailure ?? 0), programs: gl.info.programs.length, mesh: ds.deformLib.terrainStats.surfaceBuildMs });
       last = performance.now();
       if (window.__frames.length < 240) requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
     performance.mark('deform-start');
-    ds.actions.runSimulation(window.__NODEFORM ? [] : [{ event: 'terrainDeformation', kind: 'subsidence', center: [0, 0], radius: 20, amount: 2, duration: 4, profile: 'smooth', falloff: 'smooth' }]);
+    ds.actions.runSimulation(window.__NODEFORM ? [] : window.__EVENTS);
   });
   await page.waitForFunction(() => window.__frames.length >= 240, { timeout: 120_000 });
   const trace = JSON.parse(Buffer.from(await page.tracing.stop()).toString('utf8'));
