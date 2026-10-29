@@ -170,4 +170,26 @@ describe('celestial sources in the simulation', () => {
     expect([...ph.getPose(e.body!).position]).toEqual(p0);
     expect(ph.getLinearVelocity(e.body!)).toEqual([0, 0, 0]);
   });
+
+  it('contact-force thresholds follow the local field: resting under a strong source is no impact, a real strike still is', async () => {
+    // Two cars stacked and settled; then a source 12 m below the ground (μ = 5·10⁴ m³/s², ε 2 m) presses them down with
+    // ≈ 350 m/s² (36 g₀). The contact force between them is the upper car's weight in that field — resting, not a strike
+    // (Phase 31 rule: threshold = factor × resting weight). Before Phase 32.1 the threshold used the uniform field only:
+    // both cars were destroyed by ≈ 360 "impacts" within 3 s. In a second world a car released 6 m above a parked car
+    // strikes it: still an impact (a car landing on the bare ground is never one — terrain contacts carry no striker).
+    const src = { ...labSource({ center: [0, -12, 0], softening: 2, capture: 0 }), kind: 'compact' as const };
+    const impacts = (c: SimulationController) => c.getDamageEvents().filter((d) => (d as { cause?: string }).cause === 'impact');
+    const rest = await controller(world([{ type: 'car', seed: 1, transform: tf(0, 0) }, { type: 'car', seed: 2, transform: tf(0, 0, 1.45) }]), []);
+    const stack = [...rest.getRuntime()!.entities.values()].filter((e) => e.source.type === 'car');
+    rest.advance(2);
+    expect(stack.map((e) => e.health)).toEqual([1, 1]);
+    rest.addEvent(celestialSpec({ sources: [src] }));
+    rest.advance(3);
+    expect(stack.map((e) => e.health)).toEqual([1, 1]);
+    expect(impacts(rest)).toHaveLength(0);
+    const drop = await controller(world([{ type: 'car', seed: 2, transform: tf(0, 0) }, { type: 'car', seed: 3, transform: tf(0, 0, 7.5) }]), [celestialSpec({ sources: [src] })]);
+    const struck = [...drop.getRuntime()!.entities.values()].find((e) => e.source.type === 'car' && e.pose.position[1] < 1)!;
+    drop.advance(3);
+    expect(impacts(drop).filter((d) => (d as { objectId?: string }).objectId === struck.id).length).toBeGreaterThan(0);
+  });
 });

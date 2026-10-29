@@ -28,6 +28,8 @@ import { simProfiler as P } from '../profiling/SimProfiler';
 
 /** Wake every dynamic body when the uniform gravity moved by this share of max(|G|, 0.05 g₀) since the last wake. */
 const WAKE_SHARE = 0.02;
+/** Relative change of the local field at a body that re-sets its contact threshold under celestial sources (Phase 32.1). */
+const THR_SHARE = 0.1;
 /** Seconds between history samples. */
 const SERIES_DT = 0.5;
 const SERIES_MAX = 4000;
@@ -49,6 +51,8 @@ interface Tracked {
   phi: number;
   seen: number;
   g: Vec3;
+  /** Phase 32.1: field magnitude the contact threshold was last set for under celestial sources (NaN = not set). */
+  thrL: number;
 }
 
 export interface GravityStats {
@@ -168,12 +172,13 @@ export class GravityRuntime {
     const p0: Vec3 = [0, 0, 0];
     let n = 0, inSrc = 0, forces = 0;
     const cel = f.celestial.length ? (this.celestial ??= new CelestialRuntime(f)) : null;
+    const pointsLive = f.points.live.length > 0;
     if (cel) { const tc = P.now(); cel.beginStep(); cel.pre(ctx); P.add('celestial.pre', tc); }
     const visit = (h: BodyHandle, owner: ForceOwner, thrMin: number, thrK: number) => {
       let tr = this.tracked.get(h);
       const fresh = !tr;
       if (!tr) {
-        tr = { h, m: physics.getMass(h), owner, thrMin, thrK, x0: [0, 0, 0], v0: [0, 0, 0], phi0: NaN, x1: [0, 0, 0], v: [0, 0, 0], phi: NaN, seen: 0, g: [0, 0, 0] };
+        tr = { h, m: physics.getMass(h), owner, thrMin, thrK, x0: [0, 0, 0], v0: [0, 0, 0], phi0: NaN, x1: [0, 0, 0], v: [0, 0, 0], phi: NaN, seen: 0, g: [0, 0, 0], thrL: NaN };
         this.tracked.set(h, tr);
       }
       tr.seen = stamp;
@@ -209,6 +214,22 @@ export class GravityRuntime {
         }
       }
       const gg = Math.hypot(g[0], g[1], g[2]);
+      // Phase 32.1: under celestial sources the contact threshold follows the field AT the body (the Phase 31 rule —
+      // threshold = factor × resting weight — with the local field: a body pressed into the ground or a pile by a
+      // strong source is resting, not striking). Re-set when that field moved by > THR_SHARE; the uniform rule again
+      // once the sources are gone. Without celestial sources nothing here runs (Phase 31 thresholds unchanged).
+      if (thrMin >= 0) {
+        if (pointsLive) {
+          const gl = Math.max(gg, thrG);
+          if (!(Math.abs(gl - tr.thrL) <= THR_SHARE * tr.thrL)) {
+            physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * gl * thrK));
+            tr.thrL = gl;
+          }
+        } else if (tr.thrL === tr.thrL) {
+          physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
+          tr.thrL = NaN;
+        }
+      }
       if (cel) { const tsa = P.now(); cel.sampleAt(ctx, x[0], x[1], x[2]); P.add('celestial.sample', tsa); }
       if (gg > this.stats.peak) this.stats.peak = gg;
       if (gg < this.stats.minimum) this.stats.minimum = gg;
