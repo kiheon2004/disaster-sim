@@ -14,6 +14,7 @@ import { analysisOf, createDesign, regenerate, withDesign } from '@/buildings/de
 import { addFloor, addMembers, duplicateMembers, moveMembers, newMember, nextUserIds, removeFloor, removeMembers, rotateMembers, setInitialDamage, setMaterial, setRole, setSize } from '@/buildings/edit';
 import { convertLegacy, type ConversionNote } from '@/buildings/convert';
 import { hasErrors, validateSpec } from '@/buildings/spec';
+import { assertValidDesign } from '@/buildings/schema';
 import type { BuildingDesign, BuildingSpec, FoundationPolicy, MemberType, StructuralRole } from '@/buildings/types';
 import type { MaterialId } from '@/buildings/materials';
 import { samplerFor } from '@/terrain/TerrainSampler';
@@ -37,6 +38,12 @@ export function commitDesign(id: EntityId, design: BuildingDesign, opts: { confi
   if (!editable()) return false;
   const obj = modularBuilding(id);
   if (!obj) return false;
+  try {
+    assertValidDesign(design);
+  } catch (err) {
+    toast('error', { key: 'building.toast.failed' }, String(err));
+    return false;
+  }
   const before = analysisOf(obj.building!).unsupported.length;
   const after = analysisOf(design).unsupported.length;
   if (after > before && !design.options.allowUnsupported) {

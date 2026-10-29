@@ -46,6 +46,18 @@ export const designSchema = z.object({
   convertedFrom: z.literal('legacy').optional().catch(undefined),
 });
 
+/** Throw when a design cannot be committed (non-finite / non-positive geometry, duplicate ids). */
+export function assertValidDesign(d: BuildingDesign) {
+  const ids = new Set<string>();
+  for (const m of d.members) {
+    if (ids.has(m.id)) throw new Error(`Duplicate member id ${m.id}`);
+    ids.add(m.id);
+    if (!m.position.every(Number.isFinite) || !m.rotation.every(Number.isFinite)) throw new Error(`Invalid placement of member ${m.id}`);
+    if (!m.size.every((v) => Number.isFinite(v) && v > 0.005 && v < 500)) throw new Error(`Invalid size of member ${m.id}`);
+  }
+  if (!d.members.length) throw new Error('A building needs at least one member');
+}
+
 export interface DesignParseResult {
   design: BuildingDesign | null;
   /** Members dropped as invalid. */

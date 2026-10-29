@@ -86,7 +86,7 @@ export function columnSize(spec: BuildingSpec, floorsAbove: number, trib: number
     case 'structuralSteel': return clamp(round05(Math.max(clear / 16, Math.sqrt(N / (0.45 * m.compressive) / m.fill.column))), 0.25, 1);
     case 'timber': return clamp(round05(Math.max(clear / 15, Math.sqrt(N / (0.35 * m.compressive)))), 0.2, 0.8);
     case 'masonry': return clamp(round05(Math.max(clear / 10, Math.sqrt(N / (0.3 * m.compressive)))), 0.4, 1.2);
-    default: return clamp(round05(Math.max(clear / 12, Math.sqrt(N / (0.35 * m.compressive)))), 0.3, 1.2);
+    default: return clamp(round05(Math.max(clear / 12, Math.sqrt(N / (0.35 * m.compressive)))), 0.3, 1.6);
   }
 }
 
@@ -223,14 +223,15 @@ export function generateMembers(spec: BuildingSpec): Generated {
       for (let iz = 0; iz <= g.nz; iz++) {
         for (let ix = 0; ix < g.nx; ix++) {
           const x = g.xs[ix] + g.bx / 2;
-          if (insideCore(x, g.zs[iz])) continue;
+          // Beams span between columns: none from a grid point inside the core.
+          if (insideCore(x, g.zs[iz]) || insideCore(g.xs[ix], g.zs[iz]) || insideCore(g.xs[ix + 1], g.zs[iz])) continue;
           push({ id: `bx${s}-${ix}-${iz}`, type: 'beam', role: 'primary', level: s, position: [x, yTop - tSlab - bdX / 2, g.zs[iz]], size: [g.bx, bdX, bwX], material: sMat });
         }
       }
       for (let ix = 0; ix <= g.nx; ix++) {
         for (let iz = 0; iz < g.nz; iz++) {
           const z = g.zs[iz] + g.bz / 2;
-          if (insideCore(g.xs[ix], z)) continue;
+          if (insideCore(g.xs[ix], z) || insideCore(g.xs[ix], g.zs[iz]) || insideCore(g.xs[ix], g.zs[iz + 1])) continue;
           push({ id: `bz${s}-${ix}-${iz}`, type: 'beam', role: 'primary', level: s, position: [g.xs[ix], yTop - tSlab - bdZ / 2, z], size: [g.bz, bdZ, bwZ], material: sMat, rotation: [0, YAW_Z, 0] });
         }
       }

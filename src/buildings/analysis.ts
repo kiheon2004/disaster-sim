@@ -14,8 +14,9 @@
  *       stiffness ratio k̄ (a = k̄/(2+k̄); ground story a = (0.5+k̄)/(2+k̄));
  *       shear strength (M_top + M_bottom)/h with joint moments limited by the beams (weak beams
  *       → beam mechanism);
- *     - walls (in-plane): cantilever flexibility of the continuous wall stack shared by its
- *       stories in series + shear flexibility 1.2h/(G·t·L); openings reduce stiffness
+ *     - walls (in-plane): flexibility of the continuous wall stack as a cantilever under a
+ *       uniform lateral load (each story: its deflection increment / its shear) + shear
+ *       flexibility 1.2h/(G·t·L); openings reduce stiffness
  *       (1−r)^1.5 and strength (1−r); strength = min(shear, flexure + gravity rocking);
  *     - cladding, partitions, windows: mass only.
  *  5. Periods — lumped-mass shear chain, inverse iteration; bounded to ×0.6–1.6 of the code-style
@@ -290,7 +291,9 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
       a.supports.push(...cand.filter((j) => {
         const t = src[j].type;
         if (t === 'column' || t === 'wall') return out[j].box.min[1] < a.box.min[1] + TOL;
-        if (t === 'beam') return src[j].role === 'primary' && out[j].box.min[1] <= a.box.min[1] + TOL && j !== i;
+        // Girder hierarchy: a secondary beam may frame into a primary one, never the other way
+        // round (beams crossing at a joint do not carry each other — no support cycles).
+        if (t === 'beam') return m.role === 'secondary' && src[j].role === 'primary' && out[j].box.min[1] <= a.box.min[1] + TOL && j !== i;
         return false;
       }));
       continue;
@@ -672,10 +675,17 @@ function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: num
       const L = sx;
       const t = sz;
       const open = a.openingRatio;
-      const st = stackOf.get(i) ?? { height: h, stories: 1 };
+      const st = stackOf.get(i) ?? { base: a.box.min[1], height: h, stories: 1 };
       const E = mat.E * mat.stiffnessFactor;
       const I = (t * L ** 3) / 12 * mat.fill.wall;
-      const fFlex = st.height ** 3 / (3 * E * I * st.stories);
+      // Flexure of the whole wall stack as a cantilever under a uniform lateral load: this
+      // story's share is its deflection increment over the shear it carries (lower stories of a
+      // tall wall are stiff, upper ones soft — flexural behavior in a shear chain).
+      const H = st.height;
+      const zLo = Math.max(0, a.box.min[1] - st.base);
+      const zHi = Math.min(H, a.box.max[1] - st.base);
+      const defl = (z: number) => z * z * (6 * H * H - 4 * H * z + z * z);
+      const fFlex = (defl(zHi) - defl(zLo)) / (24 * E * I * Math.max(0.05 * H, H - zLo));
       const fShear = (1.2 * h) / Math.max(1, mat.wallG * t * L);
       const kk = ((1 / (fFlex + fShear)) * (1 - open) ** 1.5);
       const vShear = mat.shear * t * L * (1 - open);
@@ -745,10 +755,10 @@ function wallStacks(src: readonly BuildingMember[], out: MemberAnalysis[], faile
     g.n++;
     groups.set(r, g);
   }
-  const res = new Map<number, { height: number; stories: number }>();
+  const res = new Map<number, { base: number; height: number; stories: number }>();
   for (const i of walls) {
     const g = groups.get(find(i))!;
-    res.set(i, { height: Math.max(0.5, g.hi - g.lo), stories: g.n });
+    res.set(i, { base: g.lo, height: Math.max(0.5, g.hi - g.lo), stories: g.n });
   }
   return res;
 }
