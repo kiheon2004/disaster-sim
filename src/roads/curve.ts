@@ -146,3 +146,53 @@ export function minRadius(c: Centerline): number {
   }
   return r;
 }
+
+/** Coarse index of long centerlines (every COARSE-th sample), cached per centerline. */
+const COARSE = 8;
+const coarseCache = new WeakMap<Centerline, Float64Array>();
+
+/**
+ * Same result as `nearest` (exact), faster on long lines: candidate windows come from the
+ * distance to every COARSE-th sample — the true nearest point lies within COARSE/2 m of arc of a
+ * coarse sample, so only windows whose coarse sample is within (best + COARSE) can hold it.
+ */
+export function nearestFast(c: Centerline, x: number, z: number): { s: number; dist: number; side: number } {
+  const S = c.samples;
+  if (S.length < 64) return nearest(c, x, z);
+  let co = coarseCache.get(c);
+  if (!co) {
+    co = new Float64Array(Math.ceil(S.length / COARSE) * 2);
+    for (let k = 0, i = 0; i < S.length; i += COARSE, k++) { co[k * 2] = S[i].x; co[k * 2 + 1] = S[i].z; }
+    coarseCache.set(c, co);
+  }
+  const n = co.length / 2;
+  let best = Infinity;
+  const d = new Float64Array(n);
+  for (let k = 0; k < n; k++) {
+    const dx = co[k * 2] - x, dz = co[k * 2 + 1] - z;
+    d[k] = Math.sqrt(dx * dx + dz * dz);
+    if (d[k] < best) best = d[k];
+  }
+  // (sample spacing ≈ 1 m: COARSE samples ≈ COARSE m of arc)
+  const reach = best + COARSE;
+  let bestD2 = Infinity, bestS = 0, bestSide = 1;
+  for (let k = 0; k < n; k++) {
+    if (d[k] > reach) continue;
+    const i0 = Math.max(0, k * COARSE - COARSE), i1 = Math.min(S.length - 1, k * COARSE + COARSE);
+    for (let i = i0; i < i1; i++) {
+      const a = S[i], b = S[i + 1];
+      const dx = b.x - a.x, dz = b.z - a.z;
+      const L2 = dx * dx + dz * dz || 1e-12;
+      let w = ((x - a.x) * dx + (z - a.z) * dz) / L2;
+      w = w < 0 ? 0 : w > 1 ? 1 : w;
+      const ex = x - (a.x + dx * w), ez = z - (a.z + dz * w);
+      const d2 = ex * ex + ez * ez;
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        bestS = a.s + (b.s - a.s) * w;
+        bestSide = dx * ez - dz * ex >= 0 ? 1 : -1;
+      }
+    }
+  }
+  return { s: bestS, dist: Math.sqrt(bestD2), side: bestSide };
+}

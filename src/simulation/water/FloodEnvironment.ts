@@ -33,6 +33,8 @@ export class FloodEnvironment {
   landscapeWater: Float64Array | null = null;
   /** Optional initial water state (mid-simulation snapshot) applied at activation. */
   initialState: WaterStateSnapshot | null = null;
+  /** Time to build the water grid (bed, surface layers, obstacles) at activation (ms). */
+  buildMs = 0;
   /** Simulation time of activation (s). */
   activatedAt = 0;
 
@@ -55,6 +57,7 @@ export class FloodEnvironment {
   /** Build the water grid (idempotent). */
   activate(time: number): WaterField {
     if (this.field) return this.field;
+    const tBuild = performance.now();
     const t: TerrainData = this.terrain.data;
     const field = new WaterField(this.terrain, this.settings, this.obstacles, this.roads, this.inlets);
     const forcing = new WaterForcing(this.settings, t);
@@ -75,6 +78,7 @@ export class FloodEnvironment {
     this.forcing = forcing;
     this.solver = new WaterSolver(field, forcing);
     this.activatedAt = time;
+    this.buildMs = performance.now() - tBuild;
     return field;
   }
 

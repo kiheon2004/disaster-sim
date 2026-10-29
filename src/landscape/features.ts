@@ -18,7 +18,7 @@
 import { smoothstep } from '@/core/math';
 import { Rng } from '@/core/random';
 import { ValueNoise } from '@/terrain/TerrainPresets';
-import { centerlineOf, nearest, pointAt, resample, type Centerline } from '@/roads/curve';
+import { centerlineOf, nearestFast as nearest, pointAt, resample, type Centerline } from '@/roads/curve';
 import type { CoastFeature, Feature, LakeFeature, LineLandformFeature, P2, PeakFeature, RiverFeature } from './types';
 
 export type Box = [number, number, number, number];

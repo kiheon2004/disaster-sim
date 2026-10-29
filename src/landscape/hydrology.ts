@@ -16,7 +16,7 @@
  */
 import type { BoundarySide, TerrainData, WaterSettings } from '@/core/model';
 import type { WaterSourceEventSpec } from '@/events/specs';
-import { nearest } from '@/roads/curve';
+import { nearestFast as nearest } from '@/roads/curve';
 import { landformSampler, rectOfBox } from './compose';
 import { featureBounds, featureLine, polygonDistance, riverProfile } from './features';
 import type { Landscape, LakeFeature, RiverFeature } from './types';

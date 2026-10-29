@@ -6,7 +6,7 @@
 import type { TerrainData } from '@/core/model';
 import type { RoadNetwork } from '@/roads/types';
 import { segmentLine } from '@/roads/network';
-import { nearest } from '@/roads/curve';
+import { nearestFast as nearest } from '@/roads/curve';
 import { coastCarve, coastDistance, featureBounds, featureLine, lakeCarve, landformDelta, polygonDistance, riverCarve, riverProfile } from './features';
 import { landformSampler } from './compose';
 import { isLandform, type Landscape, type LandformFeature } from './types';
