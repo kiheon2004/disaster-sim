@@ -12,7 +12,7 @@ import { overlayValue } from '@/rendering/atmosphere/AtmosphereLayer';
 import type { AtmosphereRuntime } from '@/simulation/atmosphere/runtime';
 import styles from './Inspector.module.css';
 
-const kPa = (p: number) => (p >= 1000 ? `${fmt(p / 1000, 3)} kPa` : `${fmt(p, 2)} Pa`);
+const kPa = (p: number) => (Math.abs(p) >= 1000 ? `${fmt(p / 1000, 3)} kPa` : `${fmt(p, 2)} Pa`);
 const C = (K: number) => (Number.isFinite(K) ? `${fmt(K - 273.15, 1)} °C` : '—');
 
 function Rows({ rows, testId }: { rows: [string, string][]; testId: string }) {
@@ -29,7 +29,7 @@ function Rows({ rows, testId }: { rows: [string, string][]; testId: string }) {
 }
 
 /** Air at a world point: pressure, density, temperature, the computed flow, O₂, smoke, gas, ash, and what changes it. */
-function airRows(ar: AtmosphereRuntime, x: number, y: number, z: number, t: ReturnType<typeof useT>): [string, string][] {
+function airRows(ar: AtmosphereRuntime, x: number, y: number, z: number, t: ReturnType<typeof useT>): { rows: [string, string][]; sources: string } {
   const a = ar.column(x, z), f = ar.field;
   const h = y - f.ground[a];
   const p = ar.pressureAt(x, y, z), rho = ar.densityAt(x, y, z), T = ar.temperatureAt(a, h);
@@ -38,10 +38,11 @@ function airRows(ar: AtmosphereRuntime, x: number, y: number, z: number, t: Retu
   const fire = simulationController.getEnvironment().fire.rt;
   const o2 = (Y_O2_AIR * f.layerMass(a) - (fire ? fire.fw.o2def[a] : 0)) / (f.H * f.area);
   const rows: [string, string][] = [
-    [t('atmos.inspect.pressure'), `${kPa(p)} (${t('atmos.inspect.change')} ${kPa((f.sigma[a] - f.sigma0[a]) * 9.81)})`],
-    [t('atmos.inspect.density'), `${fmt(rho, 4)} kg/m³ (${fmt((rho / AIR_DENSITY) * 100, 1)} % ${t('atmos.inspect.ofSea')})`],
+    [t('atmos.inspect.pressure'), kPa(p)],
+    [t('atmos.inspect.change'), kPa((f.sigma[a] - f.sigma0[a]) * 9.81)],
+    [t('atmos.inspect.density'), `${fmt(rho, 4)} kg/m³ · ${fmt((rho / AIR_DENSITY) * 100, 1)} %`],
     [t('atmos.inspect.temperature'), `${C(T)}${h > f.H ? ` · ${t('atmos.inspect.aloft')}` : ''}`],
-    [t('atmos.inspect.flow'), `${fmt(Math.hypot(flow[0], flow[1]), 3)} m/s (${fmt(flow[0], 3)}, ${fmt(flow[1], 3)})`],
+    [t('atmos.inspect.flow'), `${fmt(Math.hypot(flow[0], flow[1]), 3)} m/s`],
     [t('atmos.inspect.o2'), `${fmt(o2, 4)} kg/m³ · ${fmt((o2 / Math.max(1e-12, f.layerDensity(a))) * 100, 1)} %`],
   ];
   const smoke = overlayValue('smoke', a, null), gas = overlayValue('gas', a, null);
@@ -57,8 +58,7 @@ function airRows(ar: AtmosphereRuntime, x: number, y: number, z: number, t: Retu
   if (gas > 0) src.push(t('atmos.inspect.src.volcano'));
   if (smoke > 0) src.push(t('atmos.inspect.src.fire'));
   if (up > 0) src.push(t('atmos.inspect.src.heat'));
-  rows.push([t('atmos.inspect.sources'), src.length ? src.join(' · ') : t('atmos.inspect.src.none')]);
-  return rows;
+  return { rows, sources: `${t('atmos.inspect.sources')}: ${src.length ? src.join(' · ') : t('atmos.inspect.src.none')}` };
 }
 
 /**
@@ -74,12 +74,13 @@ export function AtmosphereObjectSection({ id }: { id: EntityId }) {
   if (!e) return null;
   const p = e.pose.position;
   const y = p[1] + (e.copLocal?.[1] ?? 0);
-  const rows = airRows(ar, p[0], y, p[2], t);
+  const { rows, sources } = airRows(ar, p[0], y, p[2], t);
   const rho = ar.densityAt(p[0], y, p[2]);
-  rows.push([t('atmos.inspect.q'), `${fmt(0.5 * rho * e.windAtCop * e.windAtCop, 1)} Pa · ρ/ρ₀ ${fmt(rho / AIR_DENSITY, 3)}`]);
+  rows.push([t('atmos.inspect.q'), `${fmt(0.5 * rho * e.windAtCop * e.windAtCop, 1)} Pa`]);
   return (
     <Section title={t('atmos.inspect.title')}>
       <Rows testId="atmos-object" rows={rows} />
+      <div className={styles.note}>{sources}</div>
       {e.source.type === 'human' && <div className={styles.note}>{t('atmos.inspect.noPhysiology')}</div>}
     </Section>
   );
@@ -95,14 +96,14 @@ export function AtmosphereProbeSection() {
   const ar = simulationController.getEnvironment().atmosphere.rt;
   if (!ar) return null;
   const a = ar.column(probe.x, probe.z), g = ar.field.ground[a];
-  const rows = airRows(ar, probe.x, g + 1, probe.z, t);
-  const prof = [0, 10, 100, 1000].map((h) => `${h} m: ${kPa(ar.pressureAt(probe.x, g + h, probe.z))} / ${fmt(ar.densityAt(probe.x, g + h, probe.z), 3)}`);
-  rows.unshift([t('atmos.probe.at'), `(${fmt(probe.x, 1)}, ${fmt(probe.z, 1)}) · ${t('atmos.probe.ground')} ${fmt(g, 1)} m`]);
-  rows.push([t('atmos.probe.profile'), prof.join(' · ')]);
+  const { rows, sources } = airRows(ar, probe.x, g + 1, probe.z, t);
+  rows.unshift([t('atmos.probe.at'), `(${fmt(probe.x, 1)}, ${fmt(probe.z, 1)})`], [t('atmos.probe.ground'), `${fmt(g, 1)} m`]);
+  for (const h of [0, 10, 100, 1000]) rows.push([`${t('atmos.probe.profile')} ${h} m`, `${kPa(ar.pressureAt(probe.x, g + h, probe.z))} · ${fmt(ar.densityAt(probe.x, g + h, probe.z), 3)}`]);
   rows.push([t('atmos.probe.boiling'), C(boilingPoint(ar.field.surfacePressure(a)))]);
   return (
     <Section title={t('atmos.probe.title')}>
       <Rows testId="atmos-probe" rows={rows} />
+      <div className={styles.note}>{sources}</div>
       <div className={styles.note}>{t('atmos.probe.note')}</div>
     </Section>
   );

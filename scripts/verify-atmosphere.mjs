@@ -83,7 +83,8 @@ const setSelect = (id, field, value) => ev(([id, field, value]) => {
   setter.call(s, value);
   s.dispatchEvent(new Event('change', { bubbles: true }));
 }, [id, field, value]);
-const setSpec = (id, patch) => ev(([id, patch]) => { const a = window.__ds.actions; const i = window.__ds.world.getState().doc.scenario.experiment.instances.find((x) => x.id === id); a.updatePhenomenon(id, { spec: { ...i.spec, ...patch } }); }, [id, patch]);
+// (null removes a key: undefined does not survive the trip into the page.)
+const setSpec = (id, patch) => ev(([id, patch]) => { const a = window.__ds.actions; const i = window.__ds.world.getState().doc.scenario.experiment.instances.find((x) => x.id === id); const s = { ...i.spec, ...patch }; for (const k of Object.keys(patch)) if (patch[k] === null) delete s[k]; a.updatePhenomenon(id, { spec: s }); }, [id, patch]);
 async function enterRun() {
   await clickText(/^\s*실험 실행|Run experiment/);
   await page.waitForFunction(() => window.__ds.sim.isLoaded() && window.__ds.simStore.getState().status === 'running', { timeout: 60_000 });
@@ -92,8 +93,11 @@ const atTime = (T) => ev((T) => { const s = window.__ds.sim; s.pause(); const r 
 const exitSim = async () => { await ev(() => window.__ds.actions.exitSimulation()); await wait(500); };
 const al = () => ev(() => window.__ds.simStore.getState().atmosphere);
 const ms = () => ev(() => window.__ds.simStore.getState().milestones.map((m) => m.kind));
-const ents = () => ev(() => [...window.__ds.sim.getRuntime().entities.values()].map((e) => ({ type: e.source.type, load: e.windLoad, ratio: e.loadRatio })));
-const loads = async () => { const E = await ents(); const by = (t) => E.filter((e) => e.type === t); const sum = (a, k) => a.reduce((s, e) => s + e[k], 0); return { car: sum(by('car'), 'load'), tree: sum(by('tree'), 'load'), building: sum(by('building'), 'ratio') }; };
+// Per object: load / (ρ·v²) at its centre of pressure — constant if the loads follow the local density (q = ½ρv²).
+const ents = () => ev(() => { const a = window.__ds.atmosLib.rt(); return [...window.__ds.sim.getRuntime().entities.values()].map((e) => { const p = e.pose.position; const rho = a.densityAt(p[0], p[1] + (e.copLocal?.[1] ?? 0), p[2]); const v2 = e.windAtCop * e.windAtCop; return { type: e.source.type, burned: e.visual?.burned ?? 0, load: e.windLoad, ratio: e.loadRatio, kLoad: v2 > 1 ? e.windLoad / (rho * v2) : null, kRatio: v2 > 1 ? e.loadRatio / (rho * v2) : null, rho, v: e.windAtCop }; }); });
+const loads = async () => { const E = await ents(); const by = (t) => E.filter((e) => e.type === t); const sum = (a, k) => a.reduce((s, e) => s + e[k], 0); return { car: sum(by('car'), 'load'), tree: sum(by('tree'), 'load'), building: sum(by('building'), 'ratio'), E }; };
+// (A crown burned in between has less area: excluded — the fire, not the air, changed it.)
+const sameK = (A, B, type, key) => { const out = []; for (let i = 0; i < A.length; i++) if (A[i].type === type && A[i][key] && B[i][key] && B[i].burned < 0.05) out.push(B[i][key] / A[i][key]); return out; };
 const aHash = () => ev(() => {
   const r = window.__ds.atmosLib.rt(); if (!r) return null;
   const f = r.field; let s = 0, k = 1;
@@ -140,15 +144,17 @@ await expand(id);
 await shot('01-editor');
 const fields1 = await ev((id) => [...document.querySelectorAll(`[data-instance="${id}"] [data-field]`)].map((e) => e.getAttribute('data-field')), id);
 check('1 atmosphere experiment added from the Experiment tab (reference state, boundary, removal, air left behind, restoration, opt-in couplings) — density is not an input', !!id && ['altitude', 'pressure', 'temperature', 'boundary', 'removal', 'thermo', 'restore', 'coupleBlast', 'coupleMeteor'].every((f) => fields1.includes(f)) && !fields1.includes('density'), fields1);
+await setSpec(id, { temperature: 288.15 });
+await wait(200);
 await setNumber(id, 'temperature', 20);
 const sum2 = await ev(() => document.querySelector('[data-testid="atmos-summary"]')?.textContent ?? '');
 I = await inst();
 await setSpec(id, { pressure: -5000 });
 await wait(300);
 const invalid2 = await ev(() => document.querySelector('[data-testid="exp-invalid"]')?.textContent ?? '');
-await setSpec(id, { pressure: undefined });
+await setSpec(id, { pressure: null });
 check('2 reference state: temperature entered in °C (stored in K), the density derived ρ = p/RT; a negative pressure is rejected with its reason', Math.abs(I[0].spec.temperature - 293.15) < 1e-6 && sum2.includes('kg/m³') && invalid2.includes((await tr('atmos.invalid.pressureSign')).slice(0, 6)), { T: I[0].spec.temperature, sum: sum2.slice(0, 120), invalid2: invalid2.slice(0, 60) });
-await setNumber(id, 'temperature', 15);
+await setSpec(id, { temperature: null });
 await setSelect(id, 'removal', 'linear');
 await wait(300);
 await setNumber(id, 'target', 20);
@@ -180,14 +186,18 @@ await atTime(2);
 let A = await al();
 const L0 = await loads();
 const o2a = A.stats.o2Layer;
-check('3b pressure shown: mean surface pressure ≈ 101 kPa at the start (HUD)', A && Math.abs(A.stats.meanPressure - 101325) < 600 && (await ev(() => document.querySelector('[data-testid="atmos-hud-pressure"]')?.textContent ?? '')).includes('kPa'), { p: A?.stats.meanPressure });
+const plan2 = 1 - 0.8 * (2 / 120);
+check('3b pressure shown: mean surface pressure follows the planned path from 101.3 kPa (HUD)', A && Math.abs(A.stats.datumPressure - 101325 * plan2) < 60 && (await ev(() => document.querySelector('[data-testid="atmos-hud-pressure"]')?.textContent ?? '')).includes('kPa'), { p: A?.stats.meanPressure });
 check('4b density shown: ρ = p/RT ≈ 1.22 kg/m³', Math.abs(A.stats.meanDensity - 1.224) < 0.02, { rho: A.stats.meanDensity });
-check('5b temperature shown: the layer at the datum temperature', Math.abs(A.stats.meanLayerT - 288.15) < 0.5, { T: A.stats.meanLayerT });
+check('5b temperature shown: the layer at the datum temperature, cooled adiabatically by the removal so far', Math.abs(A.stats.meanLayerT - 288.15 * Math.pow(plan2, 0.2856)) < 0.3, { T: A.stats.meanLayerT, expected: 288.15 * Math.pow(plan2, 0.2856) });
 const alt6 = await ev(() => { const r = window.__ds.atmosLib.rt(); const g = (x, z) => r.field.ground[r.column(x, z)]; return { valley: r.pressureAt(-60, g(-60, -60) + 1, -60), summit: r.pressureAt(60, g(60, 0) + 1, 0), hs: g(60, 0) - g(-60, -60) }; });
 await ev(() => window.__ds.view.getState().setWaterProbe({ x: 60, z: 0 }));
 await wait(500);
 const probe6 = await ev(() => document.querySelector('[data-testid="atmos-probe"]')?.textContent ?? '');
-check('6 pressure falls with altitude: the mound summit has a lower pressure (hydrostatic, ≈ 12 Pa/m); the probe shows the vertical profile', alt6.summit < alt6.valley && Math.abs((alt6.valley - alt6.summit) / alt6.hs - 11.9) < 1.5 && probe6.includes('1000 m'), alt6);
+const narrow6 = await ev(() => [...document.querySelectorAll('[data-testid="atmos-probe"] > span:nth-child(odd)')].filter((e) => e.clientWidth < 40).map((e) => e.textContent));
+await shot('06-probe');
+check('6b probe rows readable (labels not squeezed by long values)', narrow6.length === 0, narrow6);
+check('6 pressure falls with altitude: the mound summit has a lower pressure (hydrostatic, ≈ 12 Pa/m); the probe shows the vertical profile', alt6.summit < alt6.valley && Math.abs((alt6.valley - alt6.summit) / alt6.hs - 11.9) < 1.5 && probe6.includes('1000'), alt6);
 await atTime(60);
 A = await al();
 let M = await ms();
@@ -201,13 +211,15 @@ await ev(() => window.__ds.view.getState().setAtmosViz({ streamlines: false }));
 check('11 removal started at its start time (milestone)', M.includes('removalStart') && M.includes('atmosStart'), M.filter((k) => k !== 'start'));
 check('12 air mass falls: real mass removed (ledger), share ≈ 60 % at 60 s', A.mass.removed > 0 && Math.abs(A.stats.share - 0.6) < 0.01, { share: A.stats.share, removed: A.mass.removed });
 check('13 pressure falls with the mass (p = σ·g)', A.stats.meanPressure < 0.62 * 101325 && A.stats.meanPressure > 0.58 * 101325, { p: A.stats.meanPressure });
-check('14 density falls (and the air left behind cooled adiabatically)', A.stats.meanDensity < 0.8 && A.stats.Tcol < 288.15 - 10, { rho: A.stats.meanDensity, Tcol: A.stats.Tcol });
+check('14 density falls — with the adiabatic cooling ρ/ρ₀ ≈ (p/p₀)^(1/γ) (0.85 kg/m³ at 60 %); the air aloft cooled', A.stats.meanDensity < 1.225 * Math.pow(0.6, 1 / 1.4) + 0.01 && A.stats.Tcol < 288.15 - 10, { rho: A.stats.meanDensity, Tcol: A.stats.Tcol });
 await atTime(115);
 A = await al();
 const L1 = await loads();
-check('15 vehicles in thin air: the same wind loads the cars less (½ρv²)', L1.car < 0.45 * L0.car, { before: L0.car, now: L1.car });
-check('16 trees in thin air: lower wind load', L1.tree < 0.45 * L0.tree || L0.tree === 0, { before: L0.tree, now: L1.tree });
-check('17 buildings in thin air: lower load ratio against their sea-level design capacity', L1.building < 0.45 * L0.building, { before: L0.building, now: L1.building });
+const k15 = sameK(L0.E, L1.E, 'car', 'kLoad'), k16 = sameK(L0.E, L1.E, 'tree', 'kLoad'), k17 = sameK(L0.E, L1.E, 'building', 'kRatio');
+const near1 = (a) => a.length > 0 && a.every((r) => Math.abs(r - 1) < 0.08);
+check('15 vehicles in thin air: wind load ∝ local ρ·v² (load / ρv² unchanged), lower total load', near1(k15) && L1.car < L0.car, { kRatio: k15, before: L0.car, now: L1.car });
+check('16 trees in thin air: wind load ∝ local ρ·v², lower total', near1(k16) && L1.tree < L0.tree, { kRatio: k16, before: L0.tree, now: L1.tree });
+check('17 buildings in thin air: load ratio ∝ ρ·v² against the sea-level design capacity, lower', near1(k17) && L1.building < L0.building, { kRatio: k17, before: L0.building, now: L1.building });
 check('18 O₂ supply: the O₂ mass in the layer fell with the air (fraction kept)', A.stats.o2Layer < 0.35 * o2a && Math.abs(A.stats.o2Fraction - 0.232) < 0.02, { o2: A.stats.o2Layer, o2a, frac: A.stats.o2Fraction });
 const f19 = await ev(() => { const r = window.__ds.fireLib.rt(); return r ? { burning: Array.from(r.fw.state.slice(0, r.fw.n)).filter((s) => s >= 3 && s <= 5).length, o2Limit: r.fw.o2Limit, ever: r.fw.o2LimitedEver, consumed: r.fw.ledger.fuelConsumed } : null; });
 check('19 fire responds to the air: the fire model runs with the O₂ supply limit of the thinned air', f19 && f19.o2Limit && f19.consumed > 0, f19);
@@ -233,7 +245,9 @@ await wait(600);
 const insp33 = await ev(() => document.querySelector('[data-testid="atmos-object"]')?.textContent ?? '');
 await shot('33-inspector');
 await ev(() => window.__ds.editor.getState().select(null));
-check('33 inspector: local pressure, density, temperature, computed flow, O₂, dynamic pressure, what changes the air', insp33.includes('kPa') && insp33.includes('kg/m³') && insp33.includes('Pa'), insp33.slice(0, 120));
+const narrow = () => ev(() => [...document.querySelectorAll('[data-testid="atmos-object"] > span:nth-child(odd), [data-testid="atmos-probe"] > span:nth-child(odd)')].filter((e) => e.clientWidth < 40).map((e) => e.textContent));
+const narrow33 = await narrow();
+check('33 inspector: local pressure, density, temperature, computed flow, O₂, dynamic pressure, what changes the air; labels not squeezed', insp33.includes('kPa') && insp33.includes('kg/m³') && insp33.includes('Pa') && narrow33.length === 0, { text: insp33.slice(0, 120), narrow33 });
 await atTime(290);
 A = await al();
 M = await ms();
@@ -346,6 +360,8 @@ await exitSim();
 check('39 large town (1000 houses) with removal + wind: interactive frame rate', fps39.mean < 100 && A.stats.share < 0.8, { fps: +(1000 / fps39.mean).toFixed(1), worstFrameMs: +fps39.worst.toFixed(1), atmosMs: A.ms, gl39 });
 
 // ══ 40: repeated runs ══════════════════════════════════════════════════════════════════════════
+await newWorld();
+await wait(500);
 const geoA = await geometries();
 const heaps40 = [];
 for (let k = 0; k < 3; k++) {
@@ -359,6 +375,8 @@ for (let k = 0; k < 3; k++) {
   await exitSim();
   heaps40.push(await heapMB());
 }
+await newWorld();
+await wait(500);
 const geoB = await geometries();
 check('40 repeated runs release their resources: GPU geometries back, heap flat', geoB <= geoA + 2 && heaps40[2] - heaps40[0] < 20, { geoA, geoB, heaps40 });
 

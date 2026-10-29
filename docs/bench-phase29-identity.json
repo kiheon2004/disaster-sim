@@ -2,7 +2,7 @@
  "date": "2026-10-17",
  "bench": "src/bench/identity.bench.test.ts (IDENTITY_ATMOS=1: base + heat + fire + atmosphere-era scenes; thermal, fire and volcano state hashed)",
  "A": "e7a7ce9 (Phase 28)",
- "B": "b732502 (Phase 29, no atmosphere experiment)",
+ "B": "f863d4e + inspector fix (Phase 29 final code, no atmosphere experiment); re-run after the performance changes: 18/18 identical",
  "scenes": {
   "street earthquake 1.1 g": {
    "phase28": "350f4ad6f2deb4fe6c6603a1b89b54fe18cb8381df27cece279cdaeb9be5db55",
