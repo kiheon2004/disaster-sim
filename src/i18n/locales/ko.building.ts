@@ -1,6 +1,7 @@
 /** Korean strings of the Modular Building Creator (Phase 17). */
 export const koBuilding = {
   'component.door': '문',
+  'ground.gravel': '자갈',
   'building.warn.onSoil': '기초 없이 지면에 바로 선 부재 {n}개 (흙이 직접 지지): {ids}',
   'flag.partialCollapse': '부분 붕괴',
   'panel.building': "건물",

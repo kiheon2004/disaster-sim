@@ -11,6 +11,9 @@ import { decodeTerrain, encodeTerrain } from '@/terrain/terrainCodec';
 import { TERRAIN_PRESETS } from '@/terrain/TerrainPresets';
 import { parseDesign } from '@/buildings/schema';
 import { deriveFields } from '@/buildings/design';
+import type { BuildingDesign } from '@/buildings/types';
+import { parseLink, parseNetwork, serializeNetwork, type RoadLoadReport } from '@/roads/schema';
+import { rebakeAll } from '@/roads/sync';
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -43,6 +46,8 @@ const objectSchema = z.object({
   // Phase 17: modular building design (validated by buildings/schema) and slope alignment.
   building: z.unknown().optional(),
   terrainAlign: z.number().min(0).max(1).optional().catch(undefined),
+  // Phase 18: link to a road segment (validated by roads/schema; dangling links are dropped).
+  roadLink: z.unknown().optional(),
 });
 
 const terrainSchema = z.union([
@@ -105,7 +110,7 @@ function normalizeWater(raw: z.infer<typeof waterSchema> | undefined): WaterSett
 }
 
 const documentSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -141,6 +146,9 @@ const documentSchema = z.object({
     // Phase 15: experiment plan, validated per instance in parseExperiment().
     experiment: z.unknown().optional(),
   }).partial().optional(),
+  // Phase 18 (v6): road network and the shared modular-design table.
+  roads: z.unknown().optional(),
+  designs: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -154,11 +162,42 @@ export interface DesignLoadReport {
   repairedMembers: number;
 }
 
-export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport } | { ok: false; error: string };
+export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport; roads: RoadLoadReport } | { ok: false; error: string };
 
-/** JSON-ready copy of a document (terrain layers → compact encoded strings). */
+/** Reference to an entry of the shared design table (v6). */
+const DESIGN_REF = '$design';
+
+/**
+ * JSON-ready copy of a document (terrain layers → compact encoded strings).
+ *
+ * v6 size measures (Phase 17 residual B) — both lossless:
+ *  - `components` are not written: the loader always regenerates them from params / design
+ *    (it did so since Phase 8 — the saved copy was never read);
+ *  - a modular design used by two or more objects (copies of one preset, generated
+ *    neighbourhoods) is written ONCE in `designs` and referenced as {"$design": "d<k>"}.
+ *    Designs used once stay inline, exactly as in v5.
+ */
 export function toSerializable(doc: WorldDocument) {
-  return { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain) };
+  const uses = new Map<BuildingDesign, number>();
+  for (const o of Object.values(doc.objects)) if (o.building) uses.set(o.building, (uses.get(o.building) ?? 0) + 1);
+  const table: Record<string, BuildingDesign> = {};
+  const refOf = new Map<BuildingDesign, string>();
+  for (const [design, n] of uses) {
+    if (n < 2) continue;
+    const id = `d${refOf.size + 1}`;
+    refOf.set(design, id);
+    table[id] = design;
+  }
+  const objects: Record<string, unknown> = {};
+  for (const [id, o] of Object.entries(doc.objects)) {
+    const { components: _c, ...rest } = o;
+    void _c;
+    const ref = o.building ? refOf.get(o.building) : undefined;
+    objects[id] = ref ? { ...rest, building: { [DESIGN_REF]: ref } } : rest;
+  }
+  const out: Record<string, unknown> = { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain), objects, roads: serializeNetwork(doc.roads) };
+  if (refOf.size) out.designs = table;
+  return out;
 }
 
 export function serializeDocument(doc: WorldDocument, pretty = true): string {
@@ -169,12 +208,14 @@ export function serializeDocument(doc: WorldDocument, pretty = true): string {
  * Validate + normalize a document. Unknown object types are skipped and components are
  * regenerated from params so files stay consistent with the current object definitions.
  *
- * Migration (automatic, any older schema → v4):
+ * Migration (automatic, any older schema → v6):
  *   v1 → flat terrain;  v1/v2 → default soil layer (dense soil), default structural and
  *   foundation properties on buildings, empty scenario;  v1–v3 → default water settings
  *   (all edges 'auto', infiltration on, 30 mm/h drainage) and an empty flood scenario;
  *   v1–v4 → empty experiment and multi-hazard interactions OFF, so a combined scenario saved
- *   before Phase 15 reproduces exactly (the user can switch interactions on).
+ *   before Phase 15 reproduces exactly (the user can switch interactions on);
+ *   v1–v5 → an empty road network (Phase 18): legacy 'road' objects stay objects — they are
+ *   converted only on request (Road tab → convert), never silently.
  *   Positions, physics, terrain heights and surfaces are kept exactly, so wind and earthquake
  *   results of old projects do not change.
  */
@@ -195,6 +236,15 @@ export function parseDocument(json: string): LoadResult {
   const designs: DesignLoadReport = { invalidDesigns: 0, droppedMembers: 0, repairedMembers: 0 };
   // Identical designs in the file (copies of one preset) become one shared, immutable object.
   const sharedDesigns = new Map<string, NonNullable<WorldObject['building']>>();
+  // v6 design table: each entry is validated once and shared by every object referencing it.
+  const tableDesigns = new Map<string, ReturnType<typeof parseDesign> | null>();
+  const tableDesign = (key: string) => {
+    if (!tableDesigns.has(key)) {
+      const raw = res.data.designs?.[key];
+      tableDesigns.set(key, raw === undefined ? null : parseDesign(raw));
+    }
+    return tableDesigns.get(key) ?? null;
+  };
   for (const [id, o] of Object.entries(res.data.objects)) {
     if (!hasDefinition(o.type)) {
       skipped++;
@@ -202,7 +252,7 @@ export function parseDocument(json: string): LoadResult {
     }
     const def = getDefinition(o.type);
     const params = { ...def.defaultParams, ...o.params };
-    const { seismic: rawSeismic, group, building: rawBuilding, terrainAlign, ...rest } = o;
+    const { seismic: rawSeismic, group, building: rawBuilding, terrainAlign, roadLink: rawLink, ...rest } = o;
     const obj: WorldObject = {
       ...rest,
       id,
@@ -214,14 +264,25 @@ export function parseDocument(json: string): LoadResult {
     if (seismic) obj.seismic = seismic;
     if (group) obj.group = group;
     if (terrainAlign !== undefined) obj.terrainAlign = terrainAlign;
+    const link = rawLink === undefined ? undefined : parseLink(rawLink);
+    if (link) obj.roadLink = link;
     if (rawBuilding !== undefined && o.type === 'building') {
-      const r = parseDesign(rawBuilding);
-      designs.droppedMembers += r.dropped;
-      designs.repairedMembers += r.repaired;
+      const refKey = rawBuilding && typeof rawBuilding === 'object' && DESIGN_REF in rawBuilding ? String((rawBuilding as Record<string, unknown>)[DESIGN_REF]) : null;
+      const counted = refKey !== null && tableDesigns.has(refKey);
+      const r = refKey !== null ? tableDesign(refKey) ?? { design: null, dropped: 0, repaired: 0 } : parseDesign(rawBuilding);
+      // Member repairs of a shared table entry are counted once.
+      if (!counted) {
+        designs.droppedMembers += r.dropped;
+        designs.repairedMembers += r.repaired;
+      }
       if (r.design) {
-        const key = JSON.stringify(r.design);
-        const design = sharedDesigns.get(key) ?? r.design;
-        sharedDesigns.set(key, design);
+        // Table entries are shared already; inline designs are deduplicated by content.
+        let design = r.design;
+        if (refKey === null) {
+          const key = JSON.stringify(r.design);
+          design = sharedDesigns.get(key) ?? r.design;
+          sharedDesigns.set(key, design);
+        }
         // Derived fields follow the design; saved physics (incl. manual overrides) are kept.
         const d = deriveFields(design, o.seed, obj.seismic);
         obj.building = design;
@@ -259,7 +320,21 @@ export function parseDocument(json: string): LoadResult {
     enabled: { ...floodDefaults.enabled, ...(rawFlood?.enabled ?? {}) },
   };
   const scenario = { ...defaultScenario(), earthquake: res.data.scenario?.earthquake ?? null, flood, experiment: parseExperiment(res.data.scenario?.experiment) };
-  return { ok: true, doc: { ...res.data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario }, skipped, designs };
+  // Roads (v6; older files → no roads, terrain untouched). The saved terrain already carries
+  // the baked roads. If parts of the network had to be dropped, the natural ground is restored
+  // from the underlay and the remaining roads are baked again, so terrain and network agree.
+  const { network, report: roads } = parseNetwork(res.data.roads, terrain.nx * terrain.nz);
+  let net = network;
+  if (roads.droppedSegments > 0 && !roads.underlayLost) {
+    net.underlay.idx.forEach((i, k) => { terrain.heights[i] = net.underlay.h[k]; terrain.ground[i] = net.underlay.g[k]; });
+    net = rebakeAll(terrain, { ...net, underlay: { idx: [], h: [], g: [] } });
+  }
+  // Links to segments that do not exist are dropped (the object stays where it is).
+  for (const obj of Object.values(objects)) if (obj.roadLink && !net.segments[obj.roadLink.segment]) delete obj.roadLink;
+  const { designs: _table, roads: _rawRoads, ...data } = res.data;
+  void _table;
+  void _rawRoads;
+  return { ok: true, doc: { ...data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario, roads: net }, skipped, designs, roads };
 }
 
 const SAVE_KEY = 'ds.project';

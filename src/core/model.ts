@@ -102,6 +102,11 @@ export interface WorldObject {
    * of the Phase 16 known issue).
    */
   terrainAlign?: number;
+  /**
+   * Link to a road (Phase 18): where the object sits relative to a road segment and whether it
+   * follows road edits (src/roads/links.ts). Absent = not linked.
+   */
+  roadLink?: import('@/roads/types').RoadLink;
 }
 
 // ── Earthquake: structure & foundation (approximate model parameters) ─────────
@@ -249,7 +254,8 @@ export interface WorldSettings {
 }
 
 /** Ground type ids (index into the GroundMaterialRegistry; stored as bytes). */
-export type GroundTypeId = 0 | 1 | 2 | 3 | 4;
+/** 5 = gravel (Phase 18, road material). */
+export type GroundTypeId = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** Soil profile ids (index into the SoilProfileRegistry; stored as bytes). Independent of the surface. */
 export type SoilProfileId = 0 | 1 | 2 | 3;
@@ -320,10 +326,15 @@ export interface ScenarioSettings {
 }
 
 export interface WorldDocument {
-  schemaVersion: 5;
+  schemaVersion: 6;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;
   objects: Record<EntityId, WorldObject>;
   scenario: ScenarioSettings;
+  /**
+   * Road network (Phase 18). Baked into `terrain` (heights + ground types); `roads.underlay`
+   * keeps the natural terrain values under the roads so edits can restore them.
+   */
+  roads: import('@/roads/types').RoadNetwork;
 }

@@ -3,6 +3,7 @@ import type { koBuilding } from './ko.building';
 /** English strings of the Modular Building Creator (Phase 17). */
 export const enBuilding: Record<keyof typeof koBuilding, string> = {
   'component.door': 'Door',
+  'ground.gravel': 'Gravel',
   'building.warn.onSoil': '{n} member(s) stand directly on the ground without a footing (the soil carries them): {ids}',
   'flag.partialCollapse': 'Partial collapse',
   'panel.building': "Building",

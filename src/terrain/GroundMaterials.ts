@@ -20,7 +20,7 @@ import type { MessageKey } from '@/i18n/i18n';
 
 export interface GroundMaterial {
   id: GroundTypeId;
-  key: 'grass' | 'soil' | 'sand' | 'asphalt' | 'concrete';
+  key: 'grass' | 'soil' | 'sand' | 'asphalt' | 'concrete' | 'gravel';
   labelKey: MessageKey;
   /** Display color (sRGB). */
   color: string;
@@ -38,6 +38,8 @@ export const GROUND_MATERIALS: readonly GroundMaterial[] = [
   { id: 2, key: 'sand', labelKey: 'ground.sand', color: '#d6c08b', friction: 0.5, roughness: 0.2, permeability: 0.85, manning: 0.025, paved: false },
   { id: 3, key: 'asphalt', labelKey: 'ground.asphalt', color: '#4a4f55', friction: 0.7, roughness: 0.1, permeability: 0.05, manning: 0.016, paved: true },
   { id: 4, key: 'concrete', labelKey: 'ground.concrete', color: '#a9a8a2', friction: 0.65, roughness: 0.08, permeability: 0.02, manning: 0.014, paved: true },
+  // Phase 18 (gravel roads / shoulders): loose, fairly permeable, no storm drains.
+  { id: 5, key: 'gravel', labelKey: 'ground.gravel', color: '#9b948a', friction: 0.6, roughness: 0.25, permeability: 0.5, manning: 0.025, paved: false },
 ];
 
 export const DEFAULT_GROUND: GroundTypeId = 0;

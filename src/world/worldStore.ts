@@ -21,6 +21,12 @@ import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
 import { isGrounded, reseat } from '@/terrain/groundPlacement';
 import { terrainStats } from '@/terrain/terrainStats';
 import { preserveOnTerrainEdit, releasePlinth } from '@/buildings/foundation';
+import type { RoadNetwork } from '@/roads/types';
+import { assertValid } from '@/roads/network';
+import { bakeRegion, dirtyRect } from '@/roads/bake';
+import { followRoads } from '@/roads/links';
+import { rebakeAfterTerrainEdit, rebakeAll } from '@/roads/sync';
+import { roadStats } from '@/roads/stats';
 
 const HISTORY_LIMIT = 100;
 
@@ -28,11 +34,13 @@ type Objects = WorldDocument['objects'];
 
 /**
  * One undo step: the objects as they were, plus — for terrain edits — the touched terrain
- * rectangle before/after (objects standing on edited ground move with it in the same step).
+ * rectangle before/after (objects standing on edited ground move with it in the same step),
+ * plus the road network as it was (Phase 18; immutable, so a reference costs nothing).
  */
 export interface HistoryEntry {
   objects: Objects;
   terrain: TerrainPatch | null;
+  roads: RoadNetwork;
 }
 
 /** Live brush stroke (terrain arrays are edited in place; one history entry at the end). */
@@ -53,6 +61,12 @@ export interface WorldEdit {
   /** Replacement objects (matched by id; unknown ids are ignored). */
   update?: WorldObject[];
   remove?: EntityId[];
+  /**
+   * The new road network (Phase 18). It is validated and baked into the terrain (only the
+   * changed rectangle), linked objects follow their policies and grounded objects are re-seated
+   * — all in the same single undo step as the object changes.
+   */
+  roads?: RoadNetwork;
 }
 
 export interface MutationOptions {
@@ -118,9 +132,14 @@ const touch = (doc: WorldDocument, objects: Objects): WorldDocument => ({
  * Objects that stood on the ground before a terrain change, re-seated on the new ground
  * (heading kept). Lifted objects stay where they are.
  */
-function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainSampler): Objects {
+function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainSampler, area?: [number, number, number, number]): Objects {
   let out: Objects | null = null;
   for (const o of Object.values(objects)) {
+    // Only objects near the changed area can be affected (largest footprints ≈ 60 m).
+    if (area) {
+      const [x, , z] = o.transform.position;
+      if (x < area[0] - 40 || x > area[2] + 40 || z < area[1] - 40 || z > area[3] + 40) continue;
+    }
     if (!isGrounded(o, before)) continue;
     // Phase 17 foundation policy 'preserve': keep the world transform, freeze the plinth.
     if (o.building?.options.foundationPolicy === 'preserve') {
@@ -153,30 +172,71 @@ export const useWorldStore = create<WorldState>((set, get) => {
     if (opts?.history === false) {
       set({ doc: touch(doc, next) });
     } else {
-      set({ doc: touch(doc, next), past: [...past, { objects: doc.objects, terrain: null }].slice(-HISTORY_LIMIT), future: [] });
+      set({ doc: touch(doc, next), past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads }].slice(-HISTORY_LIMIT), future: [] });
     }
   };
 
-  /** Finish a terrain change made in place: objects follow, one history entry, new doc. */
-  const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect) => {
+  /**
+   * Finish a terrain change made in place: roads over the edited ground are re-baked (unless the
+   * caller already did), objects follow, one history entry, new doc.
+   */
+  const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect, roadsAfter?: RoadNetwork) => {
     const { doc, past } = get();
     // (Terrain arrays are edited in place: callers check `locked` before touching them.)
     const t = doc.terrain;
+    let roads = roadsAfter ?? doc.roads;
+    if (!roadsAfter) {
+      const r = rebakeAfterTerrainEdit(t, doc.roads, before, rect);
+      roads = r.roads;
+      rect = r.rect;
+    }
     const patch = makePatch(t, before, rect);
     const objects = followTerrain(doc.objects, samplerOver(t, before), samplerFor(t));
     set({
-      doc: { ...touch(doc, objects), terrain: { ...t } },
-      past: [...past, { objects: doc.objects, terrain: patch }].slice(-HISTORY_LIMIT),
+      doc: { ...touch(doc, objects), terrain: { ...t }, roads },
+      past: [...past, { objects: doc.objects, terrain: patch, roads: doc.roads }].slice(-HISTORY_LIMIT),
       future: [],
     });
   };
 
-  /** Undo/redo: swap objects, and apply the terrain side of the patch if there is one. */
+  /** Undo/redo: swap objects + roads, and apply the terrain side of the patch if there is one. */
   const travel = (entry: HistoryEntry, side: 'before' | 'after'): WorldDocument => {
     const doc = get().doc;
-    if (!entry.terrain) return touch(doc, entry.objects);
+    if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads };
     applyPatch(doc.terrain, entry.terrain, side);
-    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain } };
+    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads };
+  };
+
+  /**
+   * Road part of an atomic edit: bake prev → next into the terrain (dirty rectangle only), then
+   * linked objects follow their policies and grounded objects are re-seated. Mutates the terrain
+   * in place; returns what the caller commits. Throws (before touching anything) on an invalid
+   * network.
+   */
+  const bakeRoads = (doc: WorldDocument, objects: Objects, next: RoadNetwork) => {
+    assertValid(next);
+    const t0 = performance.now();
+    const t = doc.terrain;
+    const prev = doc.roads;
+    const rect = dirtyRect(t, prev, next);
+    if (!rect) return { objects, roads: { ...next, underlay: prev.underlay }, patch: null };
+    const before = snapshotLayers(t);
+    const res = bakeRegion(t, prev, next, rect);
+    const roads: RoadNetwork = { ...next, underlay: res.underlay };
+    const beforeSampler = samplerOver(t, before);
+    const after = samplerFor(t);
+    let out = followRoads(objects, prev, roads, beforeSampler, after);
+    if (res.rect) {
+      const area: [number, number, number, number] = [
+        t.originX + res.rect.x0 * t.cellSize, t.originZ + res.rect.z0 * t.cellSize,
+        t.originX + res.rect.x1 * t.cellSize, t.originZ + res.rect.z1 * t.cellSize,
+      ];
+      out = followTerrain(out, beforeSampler, after, area);
+    }
+    roadStats.bakes++;
+    roadStats.bakeMs += performance.now() - t0;
+    roadStats.lastBakeMs = performance.now() - t0;
+    return { objects: out, roads, patch: res.rect ? makePatch(t, before, res.rect) : null };
   };
 
   const patchObject = (id: EntityId, fn: (o: WorldObject) => WorldObject, opts?: MutationOptions) => {
@@ -215,6 +275,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
         changed = true;
       }
       const ids: EntityId[] = [];
+      if (edit.roads) assertValid(edit.roads); // refuse before anything changes
       if (edit.add?.length) {
         // Running serial numbers per type, computed once (not O(n) per added object).
         const serial = new Map<string, number>();
@@ -228,6 +289,19 @@ export const useWorldStore = create<WorldState>((set, get) => {
           ids.push(obj.id);
         }
         changed = true;
+      }
+      if (edit.roads && edit.roads !== get().doc.roads) {
+        const doc = get().doc;
+        const r = bakeRoads(doc, objects, edit.roads);
+        const entry: HistoryEntry = { objects: doc.objects, terrain: r.patch, roads: doc.roads };
+        set({
+          doc: { ...touch(doc, r.objects), terrain: r.patch ? { ...doc.terrain } : doc.terrain, roads: r.roads },
+          // Always an undo step: the terrain patch and the network must travel together
+          // (road tools preview drags without committing and commit once on release).
+          past: [...get().past, entry].slice(-HISTORY_LIMIT),
+          future: [],
+        });
+        return ids;
       }
       if (changed) commit(objects, opts);
       return ids;
@@ -370,7 +444,8 @@ export const useWorldStore = create<WorldState>((set, get) => {
       t.soil.set(next.soil);
       t.settings = next.settings;
       t.revision++;
-      commitTerrain(before, fullRect(t));
+      // The whole ground is new and natural: roads are baked onto it from scratch.
+      commitTerrain(before, fullRect(t), rebakeAll(t, get().doc.roads));
     },
 
     setWaterLevel: (level) => {
@@ -380,20 +455,20 @@ export const useWorldStore = create<WorldState>((set, get) => {
       t.settings = { ...t.settings, waterLevel: level };
       t.revision++;
       // Settings-only change: a 1-vertex patch still carries settings before/after for undo.
-      commitTerrain(before, { x0: 0, z0: 0, x1: 0, z1: 0 });
+      commitTerrain(before, { x0: 0, z0: 0, x1: 0, z1: 0 }, get().doc.roads);
     },
 
     checkpoint: () => {
       const { doc, past, locked } = get();
       if (locked) return;
-      set({ past: [...past, { objects: doc.objects, terrain: null }].slice(-HISTORY_LIMIT), future: [] });
+      set({ past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads }].slice(-HISTORY_LIMIT), future: [] });
     },
 
     undo: () => {
       const { doc, past, future, locked } = get();
       const prev = past[past.length - 1];
       if (!prev || stroke || locked) return;
-      const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain };
+      const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future] });
     },
 
@@ -401,7 +476,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       const { doc, past, future, locked } = get();
       const next = future[0];
       if (!next || stroke || locked) return;
-      const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain };
+      const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1) });
     },
   };

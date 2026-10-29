@@ -350,14 +350,14 @@ describe('experiment comparison', () => {
   }, 240_000);
 });
 
-describe('save / load (schema v5)', () => {
+describe('save / load (schema v5+)', () => {
   it('round-trips the experiment plan; invalid instances are dropped; v1–v4 files migrate with interactions off', () => {
     const d = doc(sampleTown().slice(0, 5));
     const p1 = createInstance('wind', []);
     const p2 = { ...createInstance('earthquake', [p1]), start: { after: p1.id, anchor: 'start' as const, offset: 10 }, seed: 9 };
     d.scenario.experiment = { instances: [p1, p2], notes: 'A vs B', compareDuration: 30 };
     const res = parseDocument(serializeDocument(d));
-    expect(res.ok && res.doc.schemaVersion).toBe(5);
+    expect(res.ok && res.doc.schemaVersion).toBe(6);
     if (!res.ok) return;
     expect(res.doc.scenario.experiment).toEqual(d.scenario.experiment);
     expect(res.doc.settings.simulation.interactions).toEqual({ enabled: true });

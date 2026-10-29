@@ -382,14 +382,14 @@ describe('derived fields, save / load and blueprints', () => {
     return doc;
   };
 
-  it('a modular building round-trips exactly through save / load (schema v5 kept)', () => {
+  it('a modular building round-trips exactly through save / load (schema v6)', () => {
     const o = withDesign(object(design('office')), setRole(design('office'), ['c0-0-0'], 'secondary'));
     const doc = docWith([o, object(design('house'), 30, 0)]);
     const json = serializeDocument(doc, false);
     const res = parseDocument(json);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.doc.schemaVersion).toBe(5);
+    expect(res.doc.schemaVersion).toBe(6);
     expect(res.designs).toEqual({ invalidDesigns: 0, droppedMembers: 0, repairedMembers: 0 });
     for (const id of Object.keys(doc.objects)) {
       const a = doc.objects[id], b = res.doc.objects[id];
