@@ -46,7 +46,7 @@ export const koRoads = {
   'road.elevation.follow': '지형 따라가기',
   'road.elevation.graded': '정지(완만하게)',
   'road.elevation.fixed': '고정 높이',
-  'road.elevation.note': '지형 따라가기: 지형을 바꾸지 않음. 정지: 16 m 이동평균으로 종단을 완만하게 하고 횡단을 수평으로, 1:2 비탈로 깎기/쌓기(최대 8 m). 고정: 양 끝 노드 높이 사이를 직선으로.',
+  'road.elevation.note': '지형 따라가기: 지형을 바꾸지 않음. 정지: 16 m 이동평균으로 종단을 완만하게, 횡단은 포장별 경사(아스팔트 2 %)로 연석 쪽 배수, 1:2 비탈로 깎기/쌓기(최대 8 m). 고정: 양 끝 노드 높이 사이를 직선으로.',
   'road.drainage': '배수',
   'road.drainage.none': '없음',
   'road.drainage.standard': '표준 (30 m 간격)',

@@ -114,7 +114,7 @@
       }
     },
     {
-      "name": "10 terrain preset: roads re-baked on the hills, level cross-section",
+      "name": "10 terrain preset: roads re-baked on the hills, symmetric crown",
       "ok": true,
       "detail": {
         "left": -0.10999999940395355,

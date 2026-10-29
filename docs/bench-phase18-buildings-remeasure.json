@@ -1,66 +1,66 @@
 {
   "url": "http://localhost:4173/",
-  "date": "2026-10-09T03:47:14.328Z",
+  "date": "2026-10-09T03:55:36.768Z",
   "cpus": 8,
   "results": [
     {
       "kind": "legacy",
       "n": 100,
       "load": [
-        118,
-        92.7,
-        68
+        7.1,
+        38,
+        56
       ],
       "objects": 100,
       "buildings": 100,
       "members": 0,
-      "designMs": 2,
-      "commitMs": 5,
-      "loadMs": 47,
-      "heapMB": 22.9,
+      "designMs": 1,
+      "commitMs": 3,
+      "loadMs": 37,
+      "heapMB": 22.8,
       "editor": {
-        "fps": 60.3,
+        "fps": 60,
         "drawCalls": 10,
         "trianglesK": 70,
-        "subscribers": 5
+        "subscribers": 6
       },
-      "editorGcMsPerS": 5.1,
+      "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 1.9,
-        "analyzeMs": 14.9,
-        "deriveMs": 13.5,
+        "generateMs": 0.7,
+        "analyzeMs": 10.8,
+        "deriveMs": 5.7,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 318,
+        "selectMs": 82,
         "addFloorMs": null
       },
-      "saveMs": 2,
-      "loadMs2": 57,
-      "parseMs": 29,
+      "saveMs": 1,
+      "loadMs2": 32,
+      "parseMs": 13,
       "fileKB": 67,
-      "simLoadMs": 1456,
+      "simLoadMs": 474,
       "sim": {
-        "fps": 59.4,
+        "fps": 60,
         "drawCalls": 26,
         "trianglesK": 152,
-        "subscribers": 22
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 5.21,
-        "physicsMs": 0.23,
-        "stepsPerTick": 1.01,
+        "tickMs": 2.68,
+        "physicsMs": 0.12,
+        "stepsPerTick": 1,
         "simSpeed": 1,
-        "structuralMs": 0.68,
-        "seismicDamageMs": 0.87,
-        "damageMs": 2.63,
-        "windMs": 0.29
+        "structuralMs": 0.34,
+        "seismicDamageMs": 0.39,
+        "damageMs": 1.39,
+        "windMs": 0.18
       },
-      "simGcMsPerS": 113.2,
-      "simHeapMB": 47.7,
+      "simGcMsPerS": 10.6,
+      "simHeapMB": 53.6,
       "simEvents": {
-        "total": 849,
+        "total": 795,
         "failed": 0,
         "collapsed": 0
       }
@@ -69,58 +69,58 @@
       "kind": "modular",
       "n": 100,
       "load": [
-        137.7,
-        101.6,
-        72.6
+        6.8,
+        36,
+        54.8
       ],
       "objects": 100,
       "buildings": 100,
       "members": 14550,
-      "designMs": 2,
-      "commitMs": 136,
-      "loadMs": 247,
-      "heapMB": 24.1,
+      "designMs": 1,
+      "commitMs": 75,
+      "loadMs": 145,
+      "heapMB": 23.9,
       "editor": {
-        "fps": 58.9,
+        "fps": 59.9,
         "drawCalls": 10,
         "trianglesK": 175,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 1.6,
-        "analyzeMs": 18.1,
-        "deriveMs": 8.2,
+        "generateMs": 0.7,
+        "analyzeMs": 10.5,
+        "deriveMs": 6.8,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 166,
-        "addFloorMs": 43
+        "selectMs": 56,
+        "addFloorMs": 38
       },
-      "saveMs": 2,
-      "loadMs2": 276,
-      "parseMs": 173,
+      "saveMs": 1,
+      "loadMs2": 149,
+      "parseMs": 88,
       "fileKB": 123,
-      "simLoadMs": 780,
+      "simLoadMs": 403,
       "sim": {
-        "fps": 47.4,
-        "drawCalls": 26,
-        "trianglesK": 258,
-        "subscribers": 22
+        "fps": 58.6,
+        "drawCalls": 27,
+        "trianglesK": 261,
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 10.52,
-        "physicsMs": 2.56,
-        "stepsPerTick": 1.21,
-        "simSpeed": 0.95,
-        "structuralMs": 0.65,
-        "seismicDamageMs": 1.07,
-        "damageMs": 3.9,
-        "windMs": 1.21
+        "tickMs": 6.41,
+        "physicsMs": 1.43,
+        "stepsPerTick": 1.02,
+        "simSpeed": 1,
+        "structuralMs": 0.39,
+        "seismicDamageMs": 0.61,
+        "damageMs": 2.5,
+        "windMs": 0.8
       },
-      "simGcMsPerS": 51.5,
-      "simHeapMB": 72.4,
+      "simGcMsPerS": 35.4,
+      "simHeapMB": 73.8,
       "simEvents": {
         "total": 3375,
         "failed": 178,
@@ -131,60 +131,60 @@
       "kind": "legacy",
       "n": 500,
       "load": [
-        139.7,
-        105.7,
-        75.1
+        6.6,
+        34,
+        53.7
       ],
       "objects": 500,
       "buildings": 500,
       "members": 0,
-      "designMs": 2,
-      "commitMs": 17,
-      "loadMs": 156,
-      "heapMB": 38.4,
+      "designMs": 1,
+      "commitMs": 14,
+      "loadMs": 83,
+      "heapMB": 38.3,
       "editor": {
         "fps": 60,
         "drawCalls": 15,
         "trianglesK": 352,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 1.8,
-        "analyzeMs": 34.3,
-        "deriveMs": 7.4,
+        "generateMs": 1,
+        "analyzeMs": 14.6,
+        "deriveMs": 4.2,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 162,
+        "selectMs": 106,
         "addFloorMs": null
       },
       "saveMs": 4,
-      "loadMs2": 151,
-      "parseMs": 41,
+      "loadMs2": 75,
+      "parseMs": 17,
       "fileKB": 342,
-      "simLoadMs": 958,
+      "simLoadMs": 672,
       "sim": {
-        "fps": 32.9,
+        "fps": 47.2,
         "drawCalls": 25,
-        "trianglesK": 481,
-        "subscribers": 22
+        "trianglesK": 498,
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 20.38,
-        "physicsMs": 0.46,
-        "stepsPerTick": 1,
-        "simSpeed": 0.54,
-        "structuralMs": 2.95,
-        "seismicDamageMs": 3.08,
-        "damageMs": 12.26,
-        "windMs": 1.05
+        "tickMs": 15.17,
+        "physicsMs": 0.28,
+        "stepsPerTick": 1.01,
+        "simSpeed": 0.79,
+        "structuralMs": 2.43,
+        "seismicDamageMs": 1.99,
+        "damageMs": 9.33,
+        "windMs": 0.73
       },
-      "simGcMsPerS": 21.3,
-      "simHeapMB": 82.1,
+      "simGcMsPerS": 16.8,
+      "simHeapMB": 82.7,
       "simEvents": {
-        "total": 4277,
+        "total": 3295,
         "failed": 0,
         "collapsed": 0
       }
@@ -193,60 +193,60 @@
       "kind": "modular",
       "n": 500,
       "load": [
-        145.4,
-        110.4,
-        77.8
+        6.9,
+        32.3,
+        52.6
       ],
       "objects": 500,
       "buildings": 500,
       "members": 72750,
-      "designMs": 2,
-      "commitMs": 566,
-      "loadMs": 1052,
-      "heapMB": 46,
+      "designMs": 3,
+      "commitMs": 353,
+      "loadMs": 683,
+      "heapMB": 45.9,
       "editor": {
-        "fps": 60.3,
+        "fps": 60,
         "drawCalls": 15,
         "trianglesK": 873,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 1.4,
-        "analyzeMs": 20,
+        "generateMs": 2.8,
+        "analyzeMs": 17.2,
         "deriveMs": 8,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 135,
-        "addFloorMs": 41
+        "selectMs": 129,
+        "addFloorMs": 44
       },
-      "saveMs": 6,
-      "loadMs2": 1055,
-      "parseMs": 589,
+      "saveMs": 5,
+      "loadMs2": 767,
+      "parseMs": 490,
       "fileKB": 419,
-      "simLoadMs": 1579,
+      "simLoadMs": 1009,
       "sim": {
-        "fps": 22.5,
+        "fps": 29.4,
         "drawCalls": 24,
-        "trianglesK": 998,
-        "subscribers": 22
+        "trianglesK": 1000,
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 26.59,
-        "physicsMs": 0.56,
+        "tickMs": 20.19,
+        "physicsMs": 0.33,
         "stepsPerTick": 1,
-        "simSpeed": 0.37,
-        "structuralMs": 2.29,
-        "seismicDamageMs": 4.42,
-        "damageMs": 17.3,
-        "windMs": 1.29
+        "simSpeed": 0.49,
+        "structuralMs": 1.75,
+        "seismicDamageMs": 3.32,
+        "damageMs": 13.46,
+        "windMs": 0.93
       },
-      "simGcMsPerS": 13.8,
-      "simHeapMB": 111.3,
+      "simGcMsPerS": 45,
+      "simHeapMB": 112.4,
       "simEvents": {
-        "total": 7478,
+        "total": 1431,
         "failed": 0,
         "collapsed": 0
       }
@@ -255,58 +255,58 @@
       "kind": "legacy",
       "n": 1000,
       "load": [
-        142.5,
-        113.5,
-        80.3
+        8.1,
+        30.9,
+        51.6
       ],
       "objects": 1000,
       "buildings": 1000,
       "members": 0,
-      "designMs": 2,
-      "commitMs": 51,
-      "loadMs": 235,
-      "heapMB": 67.6,
+      "designMs": 1,
+      "commitMs": 17,
+      "loadMs": 103,
+      "heapMB": 67.4,
       "editor": {
-        "fps": 57.3,
+        "fps": 60.3,
         "drawCalls": 25,
         "trianglesK": 703,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 1.7,
-        "analyzeMs": 22.6,
-        "deriveMs": 9.7,
+        "generateMs": 1.2,
+        "analyzeMs": 21.2,
+        "deriveMs": 22.2,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 227,
+        "selectMs": 172,
         "addFloorMs": null
       },
-      "saveMs": 11,
-      "loadMs2": 244,
-      "parseMs": 49,
+      "saveMs": 6,
+      "loadMs2": 190,
+      "parseMs": 43,
       "fileKB": 668,
-      "simLoadMs": 1506,
+      "simLoadMs": 935,
       "sim": {
-        "fps": 16,
+        "fps": 25.6,
         "drawCalls": 24,
-        "trianglesK": 907,
-        "subscribers": 22
+        "trianglesK": 908,
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 44.66,
-        "physicsMs": 0.75,
+        "tickMs": 29.53,
+        "physicsMs": 0.56,
         "stepsPerTick": 1,
-        "simSpeed": 0.27,
-        "structuralMs": 6.55,
-        "seismicDamageMs": 7.19,
-        "damageMs": 26.55,
-        "windMs": 2.37
+        "simSpeed": 0.43,
+        "structuralMs": 4.34,
+        "seismicDamageMs": 3.73,
+        "damageMs": 18.64,
+        "windMs": 1.62
       },
-      "simGcMsPerS": 12.4,
-      "simHeapMB": 113.2,
+      "simGcMsPerS": 19.3,
+      "simHeapMB": 129.3,
       "simEvents": {
         "total": 0,
         "failed": 0,
@@ -317,58 +317,58 @@
       "kind": "modular",
       "n": 1000,
       "load": [
-        138.9,
-        116.3,
-        82.6
+        7.8,
+        29.4,
+        50.6
       ],
       "objects": 1000,
       "buildings": 1000,
       "members": 145500,
-      "designMs": 2,
-      "commitMs": 923,
-      "loadMs": 1858,
+      "designMs": 1,
+      "commitMs": 660,
+      "loadMs": 1223,
       "heapMB": 70.8,
       "editor": {
-        "fps": 54,
+        "fps": 55.3,
         "drawCalls": 25,
         "trianglesK": 1746,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 2.3,
-        "analyzeMs": 19.2,
-        "deriveMs": 11.8,
+        "generateMs": 0.9,
+        "analyzeMs": 10.3,
+        "deriveMs": 5.1,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 261,
+        "selectMs": 153,
         "addFloorMs": 55
       },
-      "saveMs": 12,
-      "loadMs2": 2020,
-      "parseMs": 1111,
+      "saveMs": 15,
+      "loadMs2": 1271,
+      "parseMs": 729,
       "fileKB": 769,
-      "simLoadMs": 2461,
+      "simLoadMs": 1401,
       "sim": {
-        "fps": 13.7,
+        "fps": 17.2,
         "drawCalls": 24,
         "trianglesK": 1950,
-        "subscribers": 22
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 46.09,
-        "physicsMs": 0.66,
+        "tickMs": 37.74,
+        "physicsMs": 0.59,
         "stepsPerTick": 1,
-        "simSpeed": 0.23,
-        "structuralMs": 3.69,
-        "seismicDamageMs": 8.07,
-        "damageMs": 30.78,
-        "windMs": 2.01
+        "simSpeed": 0.28,
+        "structuralMs": 2.95,
+        "seismicDamageMs": 6.53,
+        "damageMs": 24.56,
+        "windMs": 2.12
       },
-      "simGcMsPerS": 17.6,
-      "simHeapMB": 173.7,
+      "simGcMsPerS": 26.6,
+      "simHeapMB": 153.1,
       "simEvents": {
         "total": 0,
         "failed": 0,
@@ -379,58 +379,58 @@
       "kind": "complex",
       "n": 1,
       "load": [
-        99,
-        109.3,
-        81.5
+        6.6,
+        27.4,
+        49.3
       ],
       "objects": 1,
       "buildings": 1,
       "members": 11544,
       "designMs": 10,
-      "commitMs": 197,
-      "loadMs": 269,
+      "commitMs": 180,
+      "loadMs": 233,
       "heapMB": 45.5,
       "editor": {
         "fps": 60,
         "drawCalls": 8,
         "trianglesK": 139,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 11544,
-        "generateMs": 18,
-        "analyzeMs": 152.8,
-        "deriveMs": 72.1,
+        "generateMs": 11,
+        "analyzeMs": 110.5,
+        "deriveMs": 49.1,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 223,
-        "addFloorMs": 312
+        "selectMs": 121,
+        "addFloorMs": 257
       },
-      "saveMs": 10,
-      "loadMs2": 350,
-      "parseMs": 298,
+      "saveMs": 11,
+      "loadMs2": 365,
+      "parseMs": 316,
       "fileKB": 1982,
-      "simLoadMs": 511,
+      "simLoadMs": 531,
       "sim": {
         "fps": 60,
         "drawCalls": 24,
         "trianglesK": 192,
-        "subscribers": 22
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 1.14,
-        "physicsMs": 0.09,
+        "tickMs": 0.78,
+        "physicsMs": 0.08,
         "stepsPerTick": 1,
         "simSpeed": 1,
         "structuralMs": 0.02,
-        "seismicDamageMs": 0.23,
-        "damageMs": 0.71,
+        "seismicDamageMs": 0.15,
+        "damageMs": 0.46,
         "windMs": 0.02
       },
-      "simGcMsPerS": 6.7,
-      "simHeapMB": 76.2,
+      "simGcMsPerS": 9,
+      "simHeapMB": 78.2,
       "simEvents": {
         "total": 7,
         "failed": 0,
@@ -441,58 +441,58 @@
       "kind": "cityLegacy",
       "n": 1,
       "load": [
-        75.3,
-        103.3,
-        80
+        6.1,
+        25.9,
+        48.2
       ],
       "objects": 571,
       "buildings": 31,
       "members": 0,
-      "designMs": 122,
-      "commitMs": 8,
-      "loadMs": 238,
-      "heapMB": 48.6,
+      "designMs": 62,
+      "commitMs": 5,
+      "loadMs": 145,
+      "heapMB": 48.4,
       "editor": {
         "fps": 60,
         "drawCalls": 25,
         "trianglesK": 105,
-        "subscribers": 5
+        "subscribers": 6
       },
       "editorGcMsPerS": 0,
       "generation": {
         "members": 485,
-        "generateMs": 0.8,
-        "analyzeMs": 16,
-        "deriveMs": 6.3,
+        "generateMs": 1.9,
+        "analyzeMs": 13.2,
+        "deriveMs": 3.5,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 120,
+        "selectMs": 87,
         "addFloorMs": null
       },
-      "saveMs": 5,
-      "loadMs2": 87,
-      "parseMs": 14,
+      "saveMs": 3,
+      "loadMs2": 71,
+      "parseMs": 15,
       "fileKB": 256,
-      "simLoadMs": 613,
+      "simLoadMs": 445,
       "sim": {
-        "fps": 53.5,
+        "fps": 57.4,
         "drawCalls": 32,
         "trianglesK": 266,
-        "subscribers": 22
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 10.5,
-        "physicsMs": 3.22,
-        "stepsPerTick": 1.09,
-        "simSpeed": 0.98,
-        "structuralMs": 0.23,
-        "seismicDamageMs": 0.72,
-        "damageMs": 3.1,
-        "windMs": 1.67
+        "tickMs": 8.28,
+        "physicsMs": 2.58,
+        "stepsPerTick": 1.03,
+        "simSpeed": 0.99,
+        "structuralMs": 0.19,
+        "seismicDamageMs": 0.53,
+        "damageMs": 2.52,
+        "windMs": 1.26
       },
-      "simGcMsPerS": 45,
-      "simHeapMB": 65.5,
+      "simGcMsPerS": 16.5,
+      "simHeapMB": 90,
       "simEvents": {
         "total": 20000,
         "failed": 0,
@@ -503,58 +503,58 @@
       "kind": "city",
       "n": 1,
       "load": [
-        57.3,
-        97.3,
-        78.4
+        6.4,
+        25,
+        47.5
       ],
       "objects": 571,
       "buildings": 31,
       "members": 12678,
-      "designMs": 12,
-      "commitMs": 96,
-      "loadMs": 239,
-      "heapMB": 40.3,
+      "designMs": 8,
+      "commitMs": 78,
+      "loadMs": 212,
+      "heapMB": 40.1,
       "editor": {
         "fps": 60,
         "drawCalls": 31,
         "trianglesK": 177,
-        "subscribers": 5
+        "subscribers": 6
       },
-      "editorGcMsPerS": 1.7,
+      "editorGcMsPerS": 0.9,
       "generation": {
         "members": 485,
-        "generateMs": 0.9,
-        "analyzeMs": 14.4,
-        "deriveMs": 6.1,
+        "generateMs": 0.5,
+        "analyzeMs": 6.8,
+        "deriveMs": 7.7,
         "unsupported": 0
       },
       "select": {
-        "selectMs": 76,
-        "addFloorMs": 24
+        "selectMs": 49,
+        "addFloorMs": 28
       },
-      "saveMs": 13,
-      "loadMs2": 322,
-      "parseMs": 194,
+      "saveMs": 7,
+      "loadMs2": 213,
+      "parseMs": 123,
       "fileKB": 1112,
-      "simLoadMs": 680,
+      "simLoadMs": 373,
       "sim": {
-        "fps": 42.3,
+        "fps": 46.9,
         "drawCalls": 35,
-        "trianglesK": 339,
-        "subscribers": 22
+        "trianglesK": 338,
+        "subscribers": 23
       },
       "simProfile": {
-        "tickMs": 14.28,
-        "physicsMs": 4.6,
-        "stepsPerTick": 1.23,
+        "tickMs": 11.81,
+        "physicsMs": 3.85,
+        "stepsPerTick": 1.11,
         "simSpeed": 0.87,
-        "structuralMs": 0.26,
-        "seismicDamageMs": 2.58,
-        "damageMs": 2.83,
-        "windMs": 2.15
+        "structuralMs": 0.22,
+        "seismicDamageMs": 2.07,
+        "damageMs": 2.35,
+        "windMs": 1.84
       },
-      "simGcMsPerS": 40.1,
-      "simHeapMB": 72.5,
+      "simGcMsPerS": 83.1,
+      "simHeapMB": 78.6,
       "simEvents": {
         "total": 20000,
         "failed": 167,

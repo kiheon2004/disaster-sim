@@ -33,20 +33,14 @@ export function RoadSimSection() {
         <span>{t('road.sim.inundated')}</span><span>{s.inundated}</span>
         <span>{t('road.sim.impassable')}</span><span>{s.impassable}</span>
         <span>{t('road.sim.scoured')}</span><span>{s.scoured}</span>
-        {worst.map((w) => (
-          <Row key={w.id} label={w.id} value={t('road.sim.row', { crack: Math.round(w.crack * 100), pgv: w.peakPgv.toFixed(2), depth: w.maxDepth.toFixed(2), crown: w.maxCrownDepth.toFixed(2) })} />
-        ))}
       </div>
+      {/* Most affected roads: one line each (long values do not fit the two-column grid). */}
+      {worst.map((w) => (
+        <div key={w.id} className={styles.note} data-road-state={w.status}>
+          <b>{w.id}</b> · {t('road.sim.row', { crack: Math.round(w.crack * 100), pgv: w.peakPgv.toFixed(2), depth: w.maxDepth.toFixed(2), crown: w.maxCrownDepth.toFixed(2) })}
+        </div>
+      ))}
       <div className={styles.note}>{t('road.sim.note')}</div>
     </Section>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <span>{label}</span>
-      <span>{value}</span>
-    </>
   );
 }

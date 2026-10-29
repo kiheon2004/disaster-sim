@@ -46,7 +46,7 @@ export const enRoads: Record<keyof typeof koRoads, string> = {
   'road.elevation.follow': 'Follow terrain',
   'road.elevation.graded': 'Graded (smooth)',
   'road.elevation.fixed': 'Fixed elevation',
-  'road.elevation.note': 'Follow: the terrain is not changed. Graded: 16 m moving-average long profile, level cross-section, 1:2 cut/fill slopes (max 8 m). Fixed: straight line between the two node elevations.',
+  'road.elevation.note': 'Follow: the terrain is not changed. Graded: 16 m moving-average long profile, crown cross-fall per surface (asphalt 2 %) draining to the curbs, 1:2 cut/fill slopes (max 8 m). Fixed: straight line between the two node elevations.',
   'road.drainage': 'Drainage',
   'road.drainage.none': 'None',
   'road.drainage.standard': 'Standard (30 m spacing)',
