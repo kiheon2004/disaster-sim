@@ -33,7 +33,7 @@ import { residualStrength } from '../interactions/integrity';
 import { footprint, groundLevel, stateOf } from '../deformation/response';
 import { knockDown } from '../damage/behaviors/human';
 import type { GroundFailureChannel } from './GroundFailureChannel';
-import { currentStories } from '../buildings/modular';
+import { currentStories, governingHazard, raiseDamage } from '../buildings/modular';
 
 export const AIR = 1.225;
 /** Dynamic pressure coefficient of debris impact (lower end of the published range). */
@@ -197,6 +197,9 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, ch: GroundFailure
       e.lastHazard = 'ground';
       e.lastCause = 'debris';
     }
+    // Modular buildings (Phase 25): the lateral sediment load acts on the ground story — its lateral
+    // members carry the damage (capacity × (1 − 0.3·D)); at 1 the story mechanism collapses it.
+    if (e.modular) for (const i of e.modular.storyMembers[0] ?? []) raiseDamage(e.modular, i, 0.9 * st.debrisDamage, governingHazard(e, 'ground', ctx));
     if (st.damage >= 0.3 && !st.noted.has('debrisLoad')) {
       st.noted.add('debrisLoad');
       // (The state transition itself is recorded once by the MetricsSystem with hazard / cause / source.)

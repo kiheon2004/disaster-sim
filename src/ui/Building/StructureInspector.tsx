@@ -31,11 +31,14 @@ export function StructureSection({ obj }: { obj: WorldObject }) {
   const m = st?.model;
   if (!m) {
     const g = graphOf(mr.design, mr.scale);
+    let damaged = 0;
+    for (let i = 0; i < g.n; i++) if (mr.damage[i] >= 0.3 && !g.absent[i]) damaged++;
     return (
       <Section title={t('struct.title')} defaultOpen={false}>
         <div className={styles.summary} data-testid="structure-state">
-          <span>{t('struct.level')}</span><span>{t('struct.level.intact')}</span>
+          <span>{t('struct.level')}</span><span>{t(damaged ? 'struct.level.damaged' : 'struct.level.intact')}</span>
           <span>{t('struct.members')}</span><span>{g.n}</span>
+          <span>{t('struct.damaged')}</span><span>{damaged}</span>
           <span>{t('struct.connections')}</span><span>{g.edges}</span>
         </div>
         <div className={styles.note} style={{ marginTop: 6 }}>{t('struct.untouched')}</div>

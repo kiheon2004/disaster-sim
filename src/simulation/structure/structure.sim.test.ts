@@ -23,6 +23,10 @@ import { ACCOUNTS } from '@/structure/ledger';
 import { SimulationController } from '../SimulationController';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import { FRAGMENT_LIMITS } from './fragments';
+import { defaultWaterSettings } from '@/core/model';
+import { WaterField, relativeError } from '../water/WaterField';
+import { captureWaterState } from '../water/waterStateCodec';
+import { samplerFor } from '@/terrain/TerrainSampler';
 
 const T = (x = 0, z = 0): CreateObjectInput['transform'] => ({ position: [x, 0, z] as Vec3, rotation: [0, 0, 0] as Vec3, scale: [1, 1, 1] as Vec3 });
 const design = (id: string) => createDesign(presetSpec(id)!, id);
@@ -252,5 +256,77 @@ describe('roads, restoration, determinism, save / load, shared designs, resource
     expect(c.getRuntime()!.structures!.fragments.length).toBeGreaterThan(0);
     c.unload();
     expect(rapierWorlds.live).toBe(live);
+  });
+});
+
+describe('flood, landslide, impact, residual strength', { timeout: 600_000 }, () => {
+
+  it('landslide: the lateral sediment load damages the ground-story members (ground hazard, never wind)', async () => {
+    const S = useWorldStore.getState();
+    S.setLocked(false);
+    S.newDocument();
+    const t0 = useWorldStore.getState().doc.terrain;
+    const heights = new Float32Array(t0.heights.length);
+    const tb = Math.tan((32 * Math.PI) / 180);
+    for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) { const x = t0.originX + ix * t0.cellSize; heights[iz * t0.nx + ix] = x < 0 ? Math.min(90, -x) * tb : 0; }
+    useWorldStore.getState().applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+    useWorldStore.getState().applyEdit({ add: [B(design('house'), 7, 0, 1)] });
+    const c = await run(structuredClone(useWorldStore.getState().doc), [{ event: 'landslide', area: { kind: 'circle', center: [-14, 0], radius: 12 }, thickness: 2.5, saturation: 1, trigger: 'user', targetSaturation: 1, duration: 10 } as EventSpec], 40);
+    const e = buildings(c)[0];
+    const lateral = e.modular!.storyMembers[0];
+    expect(Math.max(...lateral.map((i) => e.modular!.damage[i]))).toBeGreaterThan(0.3);
+    expect(c.getDamageEvents().every((x) => x.hazard === 'ground')).toBe(true);
+    c.unload();
+  });
+
+  it('impact: buildings near the crater collapse through the engine; every member record is the impact’s', async () => {
+    const d = doc([B(design('house'), 30, 0, 1), B(design('apartment'), -40, 10, 2)]);
+    const c = await run(d, [{ event: 'impact', target: [6, 6], material: 'stony', diameter: 2, speed: 15000, angle: 70, azimuth: 45, entry: 'direct' } as EventSpec], 25);
+    const models = buildings(c).filter((e) => e.modular!.structure).map(model);
+    expect(models.length).toBeGreaterThan(0);
+    for (const m of models) for (const r of m.records) expect(r.hazard).toBe('impact');
+    expect(c.getDamageEvents().filter((x) => x.objectType === 'building').every((x) => x.hazard === 'impact')).toBe(true);
+    c.unload();
+  });
+
+  it('flood: houses that lose their ground story in deep water collapse into rubble — the flood’s, never the wind’s', async () => {
+    const S = useWorldStore.getState();
+    S.setLocked(false);
+    S.newDocument();
+    useWorldStore.getState().applyEdit({ add: [0, 1, 2, 3, 4, 5].map((k) => B(design(k % 2 ? 'apartment' : 'house'), -30 + k * 12, 0, k + 1)) });
+    const d = structuredClone(useWorldStore.getState().doc);
+    d.settings.simulation.water = { ...defaultWaterSettings(), infiltration: false };
+    const c = new SimulationController({ headless: true });
+    const f = new WaterField(samplerFor(d.terrain), d.settings.simulation.water);
+    f.h.fill(2.5);
+    c.setInitialWaterState(captureWaterState(f, 0));
+    await c.load(d);
+    c.addEvent({ event: 'risingWater', boundary: 'S', level: 3.5, riseRate: 0.5 } as EventSpec);
+    c.advance(40);
+    const collapsed = buildings(c).filter((e) => e.modular!.structure && model(e).piles.length > 0);
+    expect(collapsed.length).toBeGreaterThan(0);
+    for (const e of collapsed) {
+      expect(model(e).records.filter((r) => r.cause !== 'facade').every((r) => r.hazard === 'flood')).toBe(true);
+      expect(Math.abs(model(e).ledger.residual()) / model(e).ledger.original).toBeLessThan(1e-12);
+    }
+    expect(c.getDamageEvents().some((x) => x.hazard === 'wind')).toBe(false);
+    // Water mass conservation is untouched by the structural engine.
+    expect(relativeError(c.getEnvironment().flood.field!.budget)).toBeLessThan(1e-9);
+    c.unload();
+  });
+
+  it('residual strength: members damaged by the earthquake keep F·(1 − 0.3·D) of their gravity capacity, once (envelope)', async () => {
+    const c = await run(doc([B(design('apartment'))]), [quake(0.45)], 20);
+    const e = buildings(c)[0];
+    const mr = e.modular!;
+    const damaged = mr.storyMembers.flat().filter((i) => mr.damage[i] > 0.05 && !mr.failed[i]);
+    expect(damaged.length).toBeGreaterThan(0);
+    if (mr.structure) {
+      for (const i of damaged) {
+        expect(model(e).s.capFactor[i]).toBeCloseTo(1 - 0.3 * Math.min(1, mr.damage[i]), 9);
+        if (mr.damage[i] >= 0.3) expect(model(e).state[i] === MS.DAMAGED || model(e).state[i] === MS.SEVERE).toBe(true);
+      }
+    }
+    c.unload();
   });
 });

@@ -47,16 +47,25 @@ import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicS
  * motion, impact shocks and air-pressure loads — failures go to the one that governs (Phase 23 / 24
  * attribution), so the collapse sequence and the damage log agree.
  */
-export function governingHazard(e: RuntimeEntity, h: Hazard): Hazard {
-  if (h !== 'earthquake') return h;
-  if (blastGovernsStructure(e.seismic)) return 'blast';
-  if (impactGovernsShaking(e.seismic)) return 'impact';
+export function governingHazard(e: RuntimeEntity, h: Hazard, ctx?: SystemContext): Hazard {
+  if (h === 'earthquake') {
+    if (blastGovernsStructure(e.seismic)) return 'blast';
+    if (impactGovernsShaking(e.seismic)) return 'impact';
+    return h;
+  }
+  // Ground changed by an impact (crater, rim, ejecta deposit) is the impact's (Phase 23 attribution).
+  if (h === 'ground') {
+    const ch = ctx?.env.groundFailure;
+    const src = e.ground?.source ?? (ch?.field ? sourceAt(ch, e.initialPose.position[0], e.initialPose.position[2]) : undefined);
+    if (src?.startsWith('impact:')) return 'impact';
+  }
   return h;
 }
 import { accumulate, capacities, CRACK_LEVELS, failPart, isDriftPart } from '../damage/behaviors/seismic';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 import type { DamageCause, Hazard } from '../analysis/DamageEvent';
 import { foundationPlinth } from '@/terrain/groundPlacement';
+import { sourceAt } from '../ground/objects';
 import { scaleShape } from '../RuntimeBuilder';
 
 /** ± scatter of member drift capacities (deterministic per object seed + member id). */
@@ -223,7 +232,7 @@ export function raiseDamage(mr: ModularRuntime, i: number, d: number, hazard: st
 }
 
 /** Members whose story peak drift grew since the last evaluation; returns the newly failed. */
-function evaluateDrift(mr: ModularRuntime): number[] {
+function evaluateDrift(mr: ModularRuntime, hazard: Hazard = 'earthquake'): number[] {
   const out: number[] = [];
   for (let s = 0; s < mr.floors; s++) {
     if (s >= mr.collapsedFrom) break;
@@ -233,7 +242,7 @@ function evaluateDrift(mr: ModularRuntime): number[] {
     for (const i of mr.storyMembers[s]) {
       if (mr.failed[i]) continue;
       const d = memberDemand(mr, i) / mr.capacity[i];
-      if (d > mr.damage[i] && d < 1) raiseDamage(mr, i, d, 'earthquake');
+      if (d > mr.damage[i] && d < 1) raiseDamage(mr, i, d, hazard);
       if (d >= 1) out.push(i);
     }
   }
@@ -270,7 +279,7 @@ export function failMembers(e: RuntimeEntity, ctx: SystemContext, list: number[]
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
   const pending = o.cause === 'gravity' && o.response === 0;
-  st.model.fail(batch, FAIL_CAUSE[o.cause] ?? 'story', pending ? ORIGINAL_WORLD : governingHazard(e, o.hazard), ctx.time, {
+  st.model.fail(batch, FAIL_CAUSE[o.cause] ?? 'story', pending ? ORIGINAL_WORLD : governingHazard(e, o.hazard, ctx), ctx.time, {
     u: o.response,
     impulse: o.impulse,
     velocity: (i) => o.velocity?.(i) ?? (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3),
@@ -418,7 +427,7 @@ export function modularCollapse(e: RuntimeEntity, ctx: SystemContext, quake?: Qu
   // Direction / speed of the sway (fragments leave with the structure's velocity, not this).
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
-  st.model.failStory(0, 'story', governingHazard(e, hazard), ctx.time, quake?.response ?? e.loadRatio, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  st.model.failStory(0, 'story', governingHazard(e, hazard, ctx), ctx.time, quake?.response ?? e.loadRatio, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
   syncFailed(mr);
   mr.rev++;
   e.rev++;
@@ -472,7 +481,7 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
   truncate(e, ctx, s);
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
-  st.model.failStory(s, 'story', governingHazard(e, o.hazard), ctx.time, o.response, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  st.model.failStory(s, 'story', governingHazard(e, o.hazard, ctx), ctx.time, o.response, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
   syncFailed(mr);
   st.lateralDirty = true;
   st.analysisDirty = true;
@@ -532,7 +541,7 @@ export function updateModularQuake(e: RuntimeEntity, ctx: SystemContext, model: 
     return [dx, 0, dz];
   };
   // Member failures (drift capacity) → load path → partial / total collapse.
-  const failedNow = evaluateDrift(mr);
+  const failedNow = evaluateDrift(mr, governingHazard(e, 'earthquake', ctx));
   if (failedNow.length) failMembers(e, ctx, failedNow, { hazard: 'earthquake', cause: 'drift', response: maxPeak, dir: dir() });
   if (e.flags.collapsed) return;
   // Backstop: the lumped model's damage index (drift + cumulative plastic drift) at a dof, or

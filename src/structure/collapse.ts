@@ -546,7 +546,7 @@ export class CollapseModel {
       this.restOn[i] = r;
       (this.resting.get(r) ?? this.resting.set(r, []).get(r)!).push(i);
       this.ledger.move('falling', 'resting', G.mass[i]);
-      this.s.addExtra(r, G.weight[i]);
+      this.s.addExtra(r, G.weight[i], i);
     } else {
       this.set(i, MS.SETTLED);
       this.ledger.move('falling', 'rubble', G.mass[i]);
@@ -859,7 +859,8 @@ export class CollapseModel {
       this.restOn[i] = r;
       (this.resting.get(r) ?? this.resting.set(r, []).get(r)!).push(i);
       this.ledger.move('falling', 'resting', G.mass[i]);
-      this.s.addExtra(r, G.weight[i]);
+      // The rubble is what loads the floor now: a later overload failure is part of its chain.
+      this.s.addExtra(r, G.weight[i], i);
     }
     for (const i of onGround) {
       const o = 6 * i;

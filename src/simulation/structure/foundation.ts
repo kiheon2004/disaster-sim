@@ -22,6 +22,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 import { CONTACT_GAP } from '../deformation/response';
 import { activate, structureOf } from './state';
+import { governingHazard } from '../buildings/modular';
 
 interface Fit { a: number; b: number; cz: number; c: number; s: number; x0: number; z0: number }
 
@@ -54,13 +55,14 @@ export function foundationSupport(e: RuntimeEntity, ctx: SystemContext, engine: 
   if (!factors) return;
   const st = structureOf(e, ctx);
   const m = st.model;
+  const hazard = governingHazard(e, 'ground', ctx);
   let lost = 0;
   for (let i = 0; i < n; i++) {
     if (!(g.ground[i] || g.soilFallback[i]) || m.state[i] > MS.SEVERE) continue;
     const prev = m.s.groundFactor[i];
     const next = Math.min(prev, factors[i]); // ground support never comes back in a run
     if (prev - next < 0.02 && !(next < 0.05 && prev >= 0.05)) continue;
-    m.setGround(i, next, 'ground');
+    m.setGround(i, next, hazard);
     if (next < 0.05) lost++;
   }
   if (lost) {

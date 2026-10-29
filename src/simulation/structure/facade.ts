@@ -20,6 +20,8 @@ import { noteFacadeFailure } from '../damage/behaviors/building';
 import type { RuntimeComponent, RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 import { activate, structureOf } from './state';
+import { governingHazard } from '../buildings/modular';
+import type { Hazard } from '../analysis/DamageEvent';
 import { spawnFragment } from './fragments';
 
 /**
@@ -35,6 +37,7 @@ export function detachFacadeMember(ctx: SystemContext, e: RuntimeEntity, c: Runt
   const st = structureOf(e, ctx);
   const m = st.model;
   if (m.state[i] > MS.SEVERE) return true;
+  hazard = governingHazard(e, hazard as Hazard, ctx);
   m.detachFacade(i, hazard, ctx.time);
   mr.failed[i] = 1;
   mr.failedSet.add(mr.design.members[i].id);
