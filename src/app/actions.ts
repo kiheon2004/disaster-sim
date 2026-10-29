@@ -287,6 +287,12 @@ export function compareExperiment(onProgress: (scenario: number, simTime: number
 
 /** Download the current water (depth + soil saturation) as a *.water.json file. */
 export function saveWaterState() {
+  // Mid-run water over a DEFORMED ground is explicitly unsupported (Phase 21): the state fits
+  // only the terrain it was computed on, and the deformation itself is not part of the file.
+  if ((simulationController.getEnvironment().deformation.engine?.rev ?? 0) > 0) {
+    toast('warn', { key: 'toast.waterDeformed' });
+    return;
+  }
   const state = simulationController.captureWaterState();
   if (!state) {
     toast('warn', { key: 'toast.noWater' });

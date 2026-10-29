@@ -146,4 +146,5 @@ export const koDeformation = {
   'deformHud.bed': "물과 함께 이동한 체적",
   'deformHud.cost': "마지막 갱신",
   'deformHud.collider': "충돌체",
+  'toast.waterDeformed': "지형이 변형된 상태의 물 상태는 저장할 수 없습니다(지원하지 않음) — 물 상태는 원래 지형에서만 다시 불러올 수 있고, 변형 자체는 실험 설정으로 다시 재현됩니다.",
 } as const;

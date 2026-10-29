@@ -36,6 +36,7 @@ import type { DeformationEngine } from '@/deformation/engine';
 import type { GridRect } from '@/terrain/TerrainData';
 import type { RoadRuntime, RoadSegmentState } from '../roads/RoadRuntime';
 import { recordStateChange } from '../interactions/integrity';
+import { groundResponseFor } from '@/deformation/groundModel';
 
 /** Empirical angular-distortion limits (rad). */
 export const BETA = { safe: 1 / 500, cracking: 1 / 300, structural: 1 / 150, severe: 1 / 50 } as const;
@@ -166,6 +167,10 @@ function note(e: RuntimeEntity, key: string, run: () => void) {
 function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: DeformationEngine) {
   const st = stateOf(e);
   const f = fitBase(engine, e, N);
+  // Ground-material extension point (groundModel.ts): none is registered in this phase, so the
+  // prescribed settlement is used as is.
+  const gm = groundResponseFor(ctx.env.terrain.sampleSoilType(f.x0, f.z0));
+  if (gm) f.a += gm.additionalSettlement({ soil: ctx.env.terrain.sampleSoilType(f.x0, f.z0), settlement: f.a, bearingRatio: Number.isNaN(st.bearing0) ? 0 : st.bearing0, elapsed: ctx.time });
   st.settlement = f.a;
   st.gradient = f.gradient;
   st.tilt = Math.atan(Math.hypot(f.gradient[0], f.gradient[1]));
@@ -204,8 +209,9 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: Deformati
   }
   // Events (once each).
   if (st.peakBeta >= BETA.cracking) note(e, 'cracked', () => ctx.recordDamage(e, { eventType: 'CRACKED', cause: 'foundation', hazard: 'ground', response: st.peakBeta, damageBefore: 0, damageAfter: st.damage }));
-  if (st.peakBeta >= BETA.structural) note(e, 'structural', () => { ctx.recordDamage(e, { eventType: 'CRITICAL', cause: 'foundation', hazard: 'ground', response: st.peakBeta, damageAfter: st.damage }); ctx.log(e.id, 'danger', { key: 'log.deform.structural', params: { beta: Math.round(1 / st.peakBeta) } }); });
-  if (st.peakBeta >= BETA.severe) note(e, 'severe', () => ctx.recordDamage(e, { eventType: 'DESTROYED', cause: 'foundation', hazard: 'ground', response: st.peakBeta, damageAfter: 1 }));
+  // State transitions (DAMAGED / CRITICAL / DESTROYED) are recorded once by the MetricsSystem
+  // from e.state + lastHazard / lastCause — only the ground-specific events are recorded here.
+  if (st.peakBeta >= BETA.structural) note(e, 'structural', () => ctx.log(e.id, 'danger', { key: 'log.deform.structural', params: { beta: Math.round(1 / st.peakBeta) } }));
   if (st.tilt >= TILT_NOTICEABLE) note(e, 'tilted', () => { ctx.recordDamage(e, { eventType: 'TILTED', cause: 'foundation', hazard: 'ground', response: st.tilt, damageAfter: st.damage }); ctx.log(e.id, 'warn', { key: 'log.deform.tilted', params: { deg: ((st.tilt * 180) / Math.PI).toFixed(2) } }); });
   if (st.minContact < CONTACT_LOST) note(e, 'contact', () => ctx.log(e.id, 'danger', { key: 'log.deform.contact', params: { pct: Math.round(st.minContact * 100) } }));
   if (st.bearingRatio > 1) note(e, 'bearing', () => ctx.log(e.id, 'danger', { key: 'log.deform.bearing', params: { r: st.bearingRatio.toFixed(2) } }));
