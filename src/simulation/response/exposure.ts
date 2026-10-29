@@ -30,6 +30,11 @@ export interface ExposureState {
    * person (K) and the radiant flux of the sources they face (W/m²), current and peak. No physiology.
    */
   thermal?: { airT: number; radiant: number; peakAirT: number; peakRadiant: number };
+  /**
+   * Fire exposure (Phase 27, only in runs with a fire): soot concentration of the air around the person
+   * (kg/m³), the visibility it allows (m, S = 3/K), the O₂ mass fraction; worst values. No physiology.
+   */
+  fire?: { smoke: number; visibility: number; oxygen: number; minVisibility: number; peakSmoke: number };
   /** Seconds with water ≥ 0.1 m / wind ≥ 20 m/s / shaking ≥ 0.1 g. */
   time: { water: number; wind: number; shaking: number };
 }

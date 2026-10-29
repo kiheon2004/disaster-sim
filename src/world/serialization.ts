@@ -1,4 +1,5 @@
 import { AMBIENT_LIMITS } from '@/thermal/units';
+import { MOISTURE_LIMITS } from '@/fire/types';
 import { z } from 'zod';
 import { SCHEMA_VERSION, defaultScenario } from './WorldDocument';
 import { DEFAULT_WIND_MODEL, defaultFloodScenario, defaultSimulationSettings, defaultWaterSettings, type WaterSettings, type WorldDocument, type WorldObject } from '@/core/model';
@@ -146,6 +147,12 @@ const documentSchema = z.object({
           ambient: z.number().min(AMBIENT_LIMITS[0]).max(AMBIENT_LIMITS[1]),
           airLayerHeight: z.number().min(2).max(50),
           restraint: z.enum(['frame', 'full', 'none']),
+        }).optional().catch(undefined),
+        // Phase 27: fire settings (absent = defaults; invalid values are dropped, not fixed).
+        fire: z.object({
+          foliageMoisture: z.number().min(MOISTURE_LIMITS[0]).max(MOISTURE_LIMITS[1]),
+          openings: z.enum(['asBuilt', 'windowsOpen', 'closed']),
+          heatIgnition: z.boolean().optional(),
         }).optional().catch(undefined),
       })
       .partial()
@@ -348,6 +355,7 @@ export function parseDocument(json: string): LoadResult {
       water: normalizeWater(sim?.water),
       interactions: { enabled: sim?.interactions?.enabled ?? res.data.schemaVersion >= 5 },
       ...(sim?.thermal ? { thermal: { ...sim.thermal } } : {}),
+      ...(sim?.fire ? { fire: { ...sim.fire, heatIgnition: !!sim.fire.heatIgnition } } : {}),
       ...(sim?.vegetation ? { vegetation: { canopyShelter: !!sim.vegetation.canopyShelter, floodResponse: !!sim.vegetation.floodResponse } } : {}),
     },
   };

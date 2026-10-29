@@ -193,6 +193,11 @@ export interface SimulationSettings {
    * when a heat source runs — runs without one are unchanged.
    */
   thermal?: import('@/thermal/ThermalWorld').ThermalSettings;
+  /**
+   * Fire (Phase 27): live foliage moisture and the opening state of building rooms at the start.
+   * Absent = defaults (150 %, as built); only read when an ignition runs.
+   */
+  fire?: import('@/fire/types').FireSettings;
 }
 
 // ── Flood: water model settings (Phase 14, approximate model parameters) ─────

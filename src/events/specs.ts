@@ -24,7 +24,7 @@ export type EventType =
   | 'explosion';
 
 /** Event types that are recognized but not simulated yet. ('flood' alone maps to rising water.) */
-export const UNSUPPORTED_EVENT_TYPES: EventType[] = ['tsunami', 'snow', 'fire', 'explosion'];
+export const UNSUPPORTED_EVENT_TYPES: EventType[] = ['tsunami', 'snow', 'explosion'];
 
 /** Event types that drive the water model (Phase 14). */
 export const WATER_EVENT_TYPES = ['rain', 'risingWater', 'waterSource'] as const;
@@ -136,7 +136,7 @@ export interface WaterSourceEventSpec {
 
 export type WaterEventSpec = RainEventSpec | RisingWaterEventSpec | WaterSourceEventSpec;
 
-export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec;
+export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec | import('@/fire/types').FireSpec;
 
 export function isWaterEvent(s: EventSpec): s is WaterEventSpec {
   return s.event === 'rain' || s.event === 'risingWater' || s.event === 'waterSource';

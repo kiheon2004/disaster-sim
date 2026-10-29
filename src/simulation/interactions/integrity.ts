@@ -54,7 +54,7 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
   return { wind: Math.max(0, wind), earthquake: shakeByImpact || byBlast ? 0 : earthquake, flood, ground: groundByImpact ? 0 : groundAll, impact, blast,
     // Phase 26: heat has no damage index — its effect is the separate material factor of the members
     // (temperature-dependent strength), never a second damage index (no double counting).
-    thermal: 0 };
+    thermal: 0, fire: 0 };
 }
 
 /**

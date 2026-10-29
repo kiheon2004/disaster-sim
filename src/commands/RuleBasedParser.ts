@@ -349,6 +349,13 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
   let lastWind: { spec: WindEventSpec; delay: number } | null = null;
 
   for (const raw of clauses) {
+    // Phase 27: a fire is recognized but placed in the experiment editor (the ignition point must be on
+    // fuel the user picks on the map) — text never starts a fire.
+    if (phenomena.implemented('fire')!.keywords.test(raw) && !WIND_WORDS.test(raw)) {
+      result.unsupported.push({ event: 'fire', params: {} });
+      result.warnings.push({ key: 'parse.fire.editor' });
+      continue;
+    }
     // Phase 15: a phenomenon that is not implemented is reported, never executed.
     const planned = phenomena.matchPlanned(raw);
     if (planned) {

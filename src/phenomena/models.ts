@@ -208,6 +208,30 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['K', 'N', '—'], validRange: 'steel / concrete 20–1200 °C, timber 20–300 °C (EN 1993/1992/1995-1-2); masonry, glass: no reduction',
     limitations: ['model.lim.notFireDesign', 'model.lim.uniaxial', 'model.lim.notEngineering'], reference: 'docs/THERMAL_PHYSICS.md §19–22',
   }),
+  combustion: m({
+    id: 'combustion', labelKey: 'model.combustion', level: 'empirical',
+    assumptions: ['model.as.fuelTable', 'model.as.ftpIgnition', 'model.as.burningRate', 'model.as.oxygenConsumption', 'model.as.chemLedger'],
+    units: ['kg', 'J', 'W', 'kg/(m²·s)'], validRange: 'timber / vegetation / room contents with representative literature properties; flaming combustion only',
+    limitations: ['model.lim.noChemistry', 'model.lim.noSmoldering', 'model.lim.noCfd', 'model.lim.notFireSafety'], reference: 'docs/FIRE_COMBUSTION.md §3–9',
+  }),
+  roomFire: m({
+    id: 'roomFire', labelKey: 'model.roomFire', level: 'empirical',
+    assumptions: ['model.as.oneZone', 'model.as.designFire', 'model.as.ventFlow', 'model.as.externalFlame', 'model.as.flashover'],
+    units: ['K', 'kg/s', 'W', 'm²'], validRange: 'one well-mixed room per story of a modular building; vertical openings from the structural state',
+    limitations: ['model.lim.noTwoZone', 'model.lim.noInteriorWalls', 'model.lim.noBackdraft', 'model.lim.notFireSafety'], reference: 'docs/FIRE_COMBUSTION.md §10–11',
+  }),
+  fireSpread: m({
+    id: 'fireSpread', labelKey: 'model.fireSpread', level: 'empirical',
+    assumptions: ['model.as.spreadByHeat', 'model.as.flameGeometry', 'model.as.windTilt', 'model.as.noRandom'],
+    units: ['W/m²', 'm', 's'], validRange: 'spread by radiation, convection, flame contact and burning debris between modelled fuels',
+    limitations: ['model.lim.noFirebrands', 'model.lim.noGroundFuel', 'model.lim.notFireSafety'], reference: 'docs/FIRE_COMBUSTION.md §12–14',
+  }),
+  smoke: m({
+    id: 'smoke', labelKey: 'model.smoke', level: 'empirical',
+    assumptions: ['model.as.sootYield', 'model.as.smokeTracer', 'model.as.visibility'],
+    units: ['kg', 'kg/m³', 'm'], validRange: 'soot mass in rooms and the 5 m air-layer columns; visibility by the mass extinction coefficient',
+    limitations: ['model.lim.noSpecies', 'model.lim.noCfd'], reference: 'docs/FIRE_COMBUSTION.md §20–21',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

@@ -18,7 +18,9 @@ export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firs
   // Phase 25 structural destruction.
   | 'memberFailure' | 'connectionFailure' | 'loadRedistribution' | 'progressiveCollapse' | 'partialCollapse' | 'globalCollapse' | 'debrisImpact' | 'secondaryDamage'
   // Phase 26 thermal physics.
-  | 'heatSource' | 'peakTemperature' | 'heatFlux' | 'thermalStress' | 'strengthReduction' | 'thermalFailure' | 'waterBoiling';
+  | 'heatSource' | 'peakTemperature' | 'heatFlux' | 'thermalStress' | 'strengthReduction' | 'thermalFailure' | 'waterBoiling'
+  // Phase 27 fire.
+  | 'ignition' | 'ignitionRejected' | 'fireSpread' | 'heatRelease' | 'oxygenLimited' | 'flashover' | 'fireDecay' | 'fireOut' | 'windowBreak' | 'fireFailure' | 'secondaryIgnition';
 
 export interface Milestone {
   time: number;

@@ -47,7 +47,9 @@ export type DamageCause =
   // pushed / knocked down / toppled by the wave's net load (pressure difference + blast wind).
   | 'overpressure' | 'blast'
   // Phase 26: heat — strength lost with temperature / restrained thermal expansion (thermal buckling).
-  | 'thermal';
+  | 'thermal'
+  // Phase 27: burned (fuel consumed by flaming combustion).
+  | 'fire';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -62,9 +64,9 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal';
-/** Order matters only for ties (origin); 'thermal' is last so earlier hazards keep their indices. */
-export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal'];
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire';
+/** Order matters only for ties (origin); 'thermal' and 'fire' are last so earlier hazards keep their indices. */
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire'];
 
 export interface DamageEventRecord {
   id: number;

@@ -34,7 +34,7 @@ import { intervalEnergy, intervalTemperature, radiativeFraction, amplitude } fro
 import { pointFraction, projectedArea, sphereViewFactor } from '@/thermal/radiation';
 import { IRRADIANCE_FLOOR } from '@/thermal/types';
 import { groundReceivers, sourceReach, type GroundGrid } from '@/thermal/geometry';
-import { beamAxialCapacity, columnFactor, meanTemp, restrainedForce, restraintDegree, sectionFactors, thermalStrain, bowingCurvature, type NodeTemps } from '@/thermal/structural';
+import { beamAxialCapacity, columnFactor, meanTemp, restrainedForce, restraintDegree, sectionFactors, thermalStrain, bowingCurvature, type NodeTemps, type StrengthState } from '@/thermal/structural';
 import { SIGMA, BOILING, RHO_WATER, C_WATER, toC } from '@/thermal/units';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
 import type { SystemContext } from '../systems/SimulationSystem';
@@ -142,6 +142,18 @@ export class ThermalRuntime {
   msTotal = 0;
   /** Inspector: per-body source energy is in world.bodies.Esrc; per cell in world.contributions. */
 
+  /**
+   * Phase 27 hooks (unset without fire — nothing changes): where a body's energy went when it merged
+   * into a heap / the ground or left the world; a section that replaces the temperature-based one
+   * (charred timber: EN 1995-1-2 reduced cross-section); the hazard named for heat effects of a building.
+   */
+  hooks: {
+    merged?(b: number, kind: number, index: number): void;
+    removed?(b: number): void;
+    section?(bt: BuildingThermal, i: number): StrengthState | null;
+    hazard?(bt: BuildingThermal): string;
+  } = {};
+
   constructor(ctx: SystemContext) {
     const ch = ctx.env.thermal;
     this.world = new ThermalWorld(ctx.env.terrain.data, ch.settings, ch.airDensity);
@@ -180,12 +192,12 @@ export class ThermalRuntime {
     }
   }
 
-  private groundY(ctx: SystemContext, x: number, z: number) {
+  groundY(ctx: SystemContext, x: number, z: number) {
     return ctx.env.terrain.sampleHeight(x, z);
   }
 
   /** Air-layer column (or −1 above) at a world point. */
-  private airAt(ctx: SystemContext, x: number, y: number, z: number) {
+  airAt(ctx: SystemContext, x: number, y: number, z: number) {
     return this.world.air.index(x, z, y - this.groundY(ctx, x, z));
   }
 
@@ -361,7 +373,7 @@ export class ThermalRuntime {
     }
   }
 
-  private toWorld(e: RuntimeEntity, local: Vec3): Vec3 {
+  toWorld(e: RuntimeEntity, local: Vec3): Vec3 {
     const p = qRotate(e.pose.quaternion, local);
     return [e.pose.position[0] + p[0], e.pose.position[1] + p[1], e.pose.position[2] + p[2]];
   }
@@ -559,7 +571,10 @@ export class ThermalRuntime {
           B.fOut[b] = 1; B.fC1[b] = 0; B.fC2[b] = 0;
           B.dropContacts(b);
           B.wind[b] = bt.e.localWind?.speed ?? 0;
-          if (m.hazardName(i) === 'thermal' || m.causeHazard[i] === m.hazards.indexOf('thermal')) bt.thermalFailures++;
+          // Heat-caused failures (the hazard index is only compared when that hazard is registered —
+          // an unregistered name gives −1, which equals the 'no cause' marker).
+          const heat = (h: string) => m.hazardName(i) === h || (m.hazards.indexOf(h) >= 0 && m.causeHazard[i] === m.hazards.indexOf(h));
+          if (heat('thermal') || heat('fire')) bt.thermalFailures++;
         }
         if (st === MS.SETTLED) {
           if (!m.external[i] || !this.hasFragment(b)) this.intoRubble(ctx, b, B.x[b], B.z[b]);
@@ -606,7 +621,7 @@ export class ThermalRuntime {
       const inside = w.terrain.index(p[0], p[2]) >= 0;
       // Aggregated into rubble (still in the world) or gone beyond the edge.
       if (inside && (d.structural!.settled || ctx.runtime.debris.indexOf(d) < 0)) this.intoRubble(ctx, b, p[0], p[2]);
-      else w.removeBody(b);
+      else { w.removeBody(b); this.hooks.removed?.(b); }
     }
   }
 
@@ -618,11 +633,12 @@ export class ThermalRuntime {
     if (hit?.heap) {
       const hb = this.heapBodyOf(ctx, hit.heap);
       w.mergeBody(b, { kind: TK.body, index: hb });
+      this.hooks.merged?.(b, TK.body, hb);
       return;
     }
     const c = w.terrain.index(x, z);
-    if (c >= 0) w.mergeBody(b, { kind: TK.ground, index: c });
-    else w.removeBody(b);
+    if (c >= 0) { w.mergeBody(b, { kind: TK.ground, index: c }); this.hooks.merged?.(b, TK.ground, c); }
+    else { w.removeBody(b); this.hooks.removed?.(b); }
   }
 
   private heapBodyOf(ctx: SystemContext, h: import('../structure/rubbleField').RubbleHeap): number {
@@ -722,7 +738,7 @@ export class ThermalRuntime {
           const f = frac * pointFraction(Ap, Math.max(0.3, r));
           if ((f * P0) / Math.max(1e-6, Ap) < IRRADIANCE_FLOOR) continue;
           const wgt = f * THERMAL_MATERIALS[B.matS[i]].emissivity;
-          bodyW.push({ kind: TK.body, index: i, w: wgt });
+          bodyW.push({ kind: TK.body, index: i, w: wgt, a: Ap });
           if (dy < 0) down += f;
         }
         const ground: Deposit[] = [];
@@ -755,7 +771,7 @@ export class ThermalRuntime {
           if (Math.hypot(B.x[i] - P[0], B.y[i] - P[1], B.z[i] - P[2]) > spec.radius) continue;
           const A = (B.Av[i] + B.Atop[i] + B.Abot[i]) * Math.min(1, B.fOut[i] + B.fC1[i] + B.fC2[i] || 1);
           if (A <= 0) continue;
-          items.push({ kind: TK.body, index: i, w: A });
+          items.push({ kind: TK.body, index: i, w: A, a: A });
           total += A;
         }
         for (const r of groundOf(s.id)) { items.push({ kind: TK.ground, index: r.cell, w: r.w }); total += r.w; }
@@ -783,12 +799,12 @@ export class ThermalRuntime {
           const r = Math.hypot(dx, dy, dz);
           const A = B.Av[i] + B.Atop[i] + B.Abot[i];
           const eps = THERMAL_MATERIALS[B.matS[i]].emissivity;
-          if (r <= R) { exchanges.push({ kind: TK.body, index: i, aRad: A, aConv: A, eps, L: B.Lv[i] }); continue; }
+          if (r <= R) { exchanges.push({ kind: TK.body, index: i, aRad: A, aConv: A, eps, L: B.Lv[i], a: A }); continue; }
           if (r > far + R) continue;
           const vis = this.visible(i, P, inside, shield);
           if (vis <= 0) continue;
           const Ap = this.projected(i, -dx / r, -dy / r, -dz / r) * vis;
-          exchanges.push({ kind: TK.body, index: i, aRad: Ap * sphereViewFactor(R, r), aConv: 0, eps, L: B.Lv[i] });
+          exchanges.push({ kind: TK.body, index: i, aRad: Ap * sphereViewFactor(R, r), aConv: 0, eps, L: B.Lv[i], a: Ap });
         }
         if (!inside) for (const r of groundOf(s.id)) exchanges.push({ kind: TK.ground, index: r.cell, aRad: r.w, aConv: r.aConv, eps: r.eps, L: 1 });
         // The sphere's surface convects into the air (or the room) it occupies.
@@ -818,7 +834,7 @@ export class ThermalRuntime {
   }
 
   /** The modular building room containing a point (local plan bounds, story by height). */
-  private buildingContaining(P: Vec3): { bt: BuildingThermal; comp: number } | null {
+  buildingContaining(P: Vec3): { bt: BuildingThermal; comp: number } | null {
     for (const bt of this.buildings) {
       const e = bt.e, q = e.pose.quaternion;
       const inv: [number, number, number, number] = [-q[0], -q[1], -q[2], q[3]];
@@ -843,7 +859,7 @@ export class ThermalRuntime {
    * Buildings that can shade objects, indexed on an 8 m grid (by their bounding circle). A ray only
    * tests the buildings of the cells it passes — the same answer as testing every building.
    */
-  private shields(P: Vec3, reach: number): ShieldGrid {
+  shields(P: Vec3, reach: number): ShieldGrid {
     void P; void reach;
     if (this.shieldGrid) return this.shieldGrid;
     const list: { e: RuntimeEntity; top: number }[] = [];
@@ -866,7 +882,7 @@ export class ThermalRuntime {
   private shieldGrid: ShieldGrid | null = null;
 
   /** Visibility (0 / 1) of a body from a point source. */
-  private visible(i: number, P: Vec3, inside: { bt: BuildingThermal; comp: number } | null, shields: ShieldGrid): number {
+  visible(i: number, P: Vec3, inside: { bt: BuildingThermal; comp: number } | null, shields: ShieldGrid): number {
     const B = this.world.bodies;
     if (B.kind[i] === BK.member && B.sub[i] >= 0) {
       const bt = this.buildings[B.ref[i]];
@@ -913,7 +929,7 @@ export class ThermalRuntime {
   }
 
   /** Projected area of a body toward a direction (world). */
-  private projected(i: number, dx: number, dy: number, dz: number): number {
+  projected(i: number, dx: number, dy: number, dz: number): number {
     const B = this.world.bodies;
     let d: Vec3 = [dx, dy, dz];
     if (B.kind[i] === BK.member && B.sub[i] >= 0) {
@@ -940,6 +956,7 @@ export class ThermalRuntime {
     const mode = this.world.settings.restraint;
     for (const bt of this.buildings) {
       const g = bt.g;
+      const hz = this.hooks.hazard?.(bt) ?? 'thermal';
       let model = bt.e.modular!.structure?.model;
       // Restraint of the frame as it stands (−2: the original structure, no collapse model yet).
       if (mode === 'frame' && bt.restraintRev !== (model ? model.structRev : -2)) this.restraints(bt);
@@ -952,13 +969,13 @@ export class ThermalRuntime {
         const temps: NodeTemps = { Ts: B.TS[b], Tc: B.TC[b], TmaxS: B.TmaxS[b], TmaxC: B.TmaxC[b], wS: bt.wS[i] };
         if (Math.max(temps.TmaxS, temps.TmaxC) - Tref < 1 && Math.abs(temps.Ts - Tref) < 1) continue;
         const tm = bt.tmat[i];
-        const f = sectionFactors(tm, temps);
+        const f = this.hooks.section?.(bt, i) ?? sectionFactors(tm, temps);
         const vertical = t === MT_COLUMN || t === MT_WALL;
         const factor = vertical ? columnFactor(f, bt.crush[i], bt.buckle[i]) : f.bending;
         if (factor < bt.minFactor) bt.minFactor = factor;
         if (Math.abs(factor - bt.fApplied[i]) > FACTOR_QUANTUM || (factor < 1e-3 && bt.fApplied[i] > 1e-3)) {
           model ??= structureOf(bt.e, ctx).model;
-          model.setMaterialFactor(i, factor, 'thermal');
+          model.setMaterialFactor(i, factor, hz);
           bt.fApplied[i] = factor;
           activate(bt.e, ctx);
         }
@@ -979,7 +996,7 @@ export class ThermalRuntime {
           bt.util[i] = Math.max(0, N) / cap;
           if (Math.abs(N - bt.nApplied[i]) > LOAD_QUANTUM * g.capN[i]) {
             model ??= structureOf(bt.e, ctx).model;
-            model.addLoad(i, N - bt.nApplied[i], 'thermal');
+            model.addLoad(i, N - bt.nApplied[i], hz);
             bt.nApplied[i] = N;
             activate(bt.e, ctx);
           }
@@ -990,7 +1007,7 @@ export class ThermalRuntime {
           bt.util[i] = Math.max(0, N) / cap;
           if (bt.util[i] >= OVERLOAD) {
             model ??= structureOf(bt.e, ctx).model;
-            model.fail([i], 'thermal', 'thermal', ctx.time, { u: bt.util[i] });
+            model.fail([i], 'thermal', hz, ctx.time, { u: bt.util[i] });
             activate(bt.e, ctx);
           }
         }
@@ -1164,7 +1181,7 @@ function canonical(s: SourceRecord): string {
 }
 
 const SHIELD_CELL = 8;
-interface ShieldGrid { list: { e: RuntimeEntity; top: number }[]; cells: Map<number, number[]>; stamp: Int32Array; pass: number }
+export interface ShieldGrid { list: { e: RuntimeEntity; top: number }[]; cells: Map<number, number[]>; stamp: Int32Array; pass: number }
 
 /**
  * Reach of STRONG heating (m): where a source delivers ≥ 1 kW/m² (point / temperature sphere), or its

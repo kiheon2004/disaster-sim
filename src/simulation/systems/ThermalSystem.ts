@@ -15,6 +15,7 @@
  */
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { ThermalRuntime } from '../thermal/runtime';
+import { FireRuntime } from '../fire/runtime';
 import { simProfiler } from '../profiling/SimProfiler';
 
 /** Thermal solver period in fixed steps (6 × 1/60 s = 0.1 s). Deterministic: the step counter only. */
@@ -25,12 +26,12 @@ export class ThermalSystem implements SimulationSystem {
   readonly phase = 'postPhysics' as const;
   readonly interval = THERMAL_INTERVAL;
   readonly reads = ['temperature', 'water', 'airflow', 'poses', 'structure', 'debris'] as const;
-  readonly writes = ['temperature', 'structure', 'exposure'] as const;
+  readonly writes = ['temperature', 'structure', 'exposure', 'damage'] as const;
   /** Debris of this step is placed after the collapse system; the thermal state follows it next time. */
   readonly lagged = ['debris', 'structure'] as const;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.thermal.active;
+    return ctx.env.thermal.active || ctx.env.fire.active;
   }
 
   update(ctx: SystemContext, dt: number) {
@@ -44,9 +45,23 @@ export class ThermalSystem implements SimulationSystem {
     const rt = ch.rt;
     for (const s of ch.sources) ctx.milestone?.({ time: s.start, kind: 'heatSource', hazard: 'thermal', subject: 'heatSource', label: { key: 'milestone.heatSource', params: { id: s.name, kind: s.spec.kind } } }, `heat:${s.id}`);
     const steps = rt.prepare(ctx, dt);
+    // Phase 27: combustion on top of the thermal state (created with the first ignition).
+    const fc = ctx.env.fire;
+    if (!fc.rt && fc.wanted()) fc.rt = new FireRuntime(ctx, rt);
+    const fire = fc.rt;
+    if (fire) {
+      const tf = simProfiler.now();
+      steps.push(...fire.prepare(ctx, dt, steps));
+      simProfiler.add('fire.combustion', tf);
+    }
     const t1 = simProfiler.now();
     rt.world.step(dt, steps);
     simProfiler.add('thermal.solve', t1);
+    if (fire) {
+      const tf = simProfiler.now();
+      fire.after(ctx, dt);
+      simProfiler.add('fire.after', tf);
+    }
     const t2 = simProfiler.now();
     rt.after(ctx);
     simProfiler.add('thermal.couple', t2);

@@ -53,6 +53,8 @@ export interface Deposit {
   kind: TargetKind;
   index: number;
   w: number;
+  /** Area the absorbed energy arrives through (m²: projected / face area) — incident flux of a body (Phase 27). */
+  a?: number;
 }
 
 /** A receiver of a prescribed-temperature sphere. */
@@ -66,6 +68,8 @@ export interface Exchange {
   eps: number;
   /** Characteristic length of the convection (m). */
   L: number;
+  /** Projected area of the receiver (m², incident flux — Phase 27). */
+  a?: number;
 }
 
 export interface SourceStep {
@@ -78,6 +82,10 @@ export interface SourceStep {
   exchanges?: readonly Exchange[];
   /** Share of the output released above the resolved air layer (convected plume of a high source) — booked lost. */
   aboveLayer?: number;
+  /** Phase 27: heat of combustion (booked `combustion`, not source input). */
+  combustion?: boolean;
+  /** Phase 27: existing heat moved out of a node (radiation leaving a room through its openings) — no ledger input. */
+  from?: { kind: TargetKind; index: number };
 }
 
 /** Building room (one story of a modular building). */
@@ -91,6 +99,17 @@ export interface Compartment {
   alive: boolean;
   dE: number;
   gS: number;
+  /** Phase 27: conductance of the fire's vent flow ṁ·c_p (W/K, 0 without fire). */
+  Gx: number;
+  /** Phase 27: emissivity of the room's smoky gas (radiation to its surfaces, 0 without smoke). */
+  eps: number;
+}
+
+/** Phase 27: rooms connected through a failed slab (buoyant exchange conductance ṁ·c_p, W/K). */
+export interface CompLink {
+  a: number;
+  b: number;
+  G: number;
 }
 
 export interface StepInfo {
@@ -105,6 +124,8 @@ export class ThermalWorld {
   readonly air: AirLayer;
   readonly bodies: ThermalBodies;
   readonly comps: Compartment[] = [];
+  /** Phase 27: room ↔ room exchanges (empty without fire). */
+  readonly compLinks: CompLink[] = [];
   readonly ledger = new ThermalLedger();
   water: (WaterLink & { cellArea: number; out: number; moved: number }) | null = null;
   /** Wind at 10 m (m/s) and its flow direction (unit, +x east / +z south). */
@@ -167,7 +188,7 @@ export class ThermalWorld {
 
   addCompartment(volume: number, air: number, ach: number, airDensity = this.air.rho): number {
     const C = airDensity * CP_AIR * volume;
-    this.comps.push({ E: 0, C, air, Gv: (C * ach) / 3600, alive: true, dE: 0, gS: 0 });
+    this.comps.push({ E: 0, C, air, Gv: (C * ach) / 3600, alive: true, dE: 0, gS: 0, Gx: 0, eps: 0 });
     return this.comps.length - 1;
   }
 
@@ -264,7 +285,16 @@ export class ThermalWorld {
           used += J;
         }
         const above = s.energy * (s.aboveLayer ?? 0);
-        L.added += s.energy;
+        if (s.from) {
+          // Moved heat: taken from its node; what no receiver takes leaves to the surroundings.
+          this.deposit(s.from.kind, s.from.index, -s.energy);
+          if (s.from.kind === TK.body) this.bodies.Esrc[s.from.index] += s.energy;
+          L.lost.aboveLayer += above;
+          L.lost.radiationSky += s.energy - used - above;
+          continue;
+        }
+        if (s.combustion) { L.combustion += s.energy; L.combustionUnresolved += s.energy - used; }
+        else L.added += s.energy;
         L.lost.aboveLayer += above;
         L.lost.unresolvedRadiation += s.energy - used - above;
         L.bySource.set(s.id, (L.bySource.get(s.id) ?? 0) + s.energy);
@@ -381,17 +411,28 @@ export class ThermalWorld {
     let maxRate = this.bodies.fluxes({
       closed, acc, airT: (a) => air.T(a), toAir, compT: (c) => this.compT(c),
       toComp: (c, W, G) => this.toComp(c, W, G),
+      compEps: this.hasGasRadiation ? (c) => (c >= 0 && this.comps[c].alive ? this.comps[c].eps : 0) : undefined,
     });
     // Rooms: ventilation with the outdoors.
     for (const cp of this.comps) {
       if (!cp.alive) continue;
       const Tc = this.Tref + cp.E / cp.C;
       const Ta = air.T(cp.air);
-      const q = cp.Gv * (Tc - Ta);
-      if (cp.air >= 0) { cp.dE -= q; toAir(cp.air, q, cp.Gv); }
+      const Gv = cp.Gv + cp.Gx;
+      const q = Gv * (Tc - Ta);
+      if (cp.air >= 0) { cp.dE -= q; toAir(cp.air, q, Gv); }
       else if (!closed) { cp.dE -= q; acc.aboveLayer += q; }
       acc.convection += Math.abs(q);
-      cp.gS += cp.Gv;
+      cp.gS += Gv;
+    }
+    // Phase 27: rooms joined through failed slabs.
+    for (const l of this.compLinks) {
+      const a = this.comps[l.a], b = this.comps[l.b];
+      if (!a.alive || !b.alive || l.G <= 0) continue;
+      const q = l.G * (this.compT(l.a) - this.compT(l.b));
+      a.dE -= q; b.dE += q;
+      a.gS += l.G; b.gS += l.G;
+      acc.convection += Math.abs(q);
     }
     this.sphereExchanges(sources, false);
     // Buoyant venting of the air layer (also collects the air stability).
@@ -490,6 +531,45 @@ export class ThermalWorld {
     else this.ledger.lost.aboveLayer += cp.E;
     cp.E = 0;
     cp.alive = false;
+  }
+
+  /** Phase 27: room gas radiation is evaluated (set when a fire exists). */
+  hasGasRadiation = false;
+
+  /** Phase 27: remove energy from a node into a sink outside the world (latent heat of evaporated water). */
+  sink(i: number, core: boolean, J: number) {
+    const b = this.bodies;
+    if (core) b.EC[i] -= J; else b.ES[i] -= J;
+    b.refresh(i);
+    this.ledger.lost.evaporation += J;
+  }
+
+  /** Phase 27: move energy from a body node into a target (kind −1: above the layer / out — booked lost). */
+  moveEnergy(i: number, core: boolean, kind: number, index: number, J: number) {
+    if (J === 0) return;
+    const b = this.bodies;
+    if (core) b.EC[i] -= J; else b.ES[i] -= J;
+    b.refresh(i);
+    if (kind < 0) this.ledger.lost.aboveLayer += J;
+    else this.deposit(kind as TargetKind, index, J);
+    if (kind === TK.body) b.Esrc[index] -= J;
+  }
+
+  /**
+   * Phase 27: a node loses mass (burned fuel, evaporated water) at its temperature: its sensible heat
+   * goes with it into a target (kind −1: booked as evaporation — the steam / volatiles left).
+   */
+  removeMass(i: number, core: boolean, dm: number, kind: number, index: number) {
+    const b = this.bodies;
+    const m = core ? b.mC[i] : b.mS[i];
+    if (dm <= 0 || m <= 0) return;
+    const take = Math.min(dm, m * 0.999);
+    const E = core ? b.EC[i] : b.ES[i];
+    const J = (E * take) / m;
+    if (core) { b.mC[i] = m - take; b.EC[i] = E - J; } else { b.mS[i] = m - take; b.ES[i] = E - J; }
+    b.refresh(i);
+    if (kind < 0) this.ledger.lost.evaporation += J;
+    else { this.deposit(kind as TargetKind, index, J); if (kind === TK.body) b.Esrc[index] -= J; }
   }
 
   /** Book energy leaving the world with an object (fragment beyond the edge). */

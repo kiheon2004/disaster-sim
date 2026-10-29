@@ -1,3 +1,5 @@
+import { FireChannel } from '../fire/FireChannel';
+import { defaultFireSettings, type FireSettings } from '@/fire/types';
 import type { Vec3 } from '@/core/types';
 import { AIR_DENSITY } from '@/core/units';
 import { DEFAULT_WIND_MODEL, defaultWaterSettings, type WaterSettings, type WindModelSettings } from '@/core/model';
@@ -43,7 +45,8 @@ export interface EnvironmentState {
   blast: BlastChannel;
   /** Temperature channel (Phase 26): heat sources, impact heat deposits, the thermal state of the run. */
   thermal: ThermalChannel;
-  // Future: fire?: FireField (Phase 27, on top of the temperature channel).
+  /** Fire channel (Phase 27): ignitions and the combustion state on top of the thermal state. */
+  fire: FireChannel;
 }
 
 export function createEnvironment(
@@ -53,6 +56,7 @@ export function createEnvironment(
   terrain: TerrainSampler = flatSampler(),
   water: WaterSettings = defaultWaterSettings(),
   thermal: ThermalSettings = defaultThermalSettings(),
+  fire: FireSettings = defaultFireSettings(),
 ): EnvironmentState {
   const wind = new WindField();
   wind.terrain = terrain;
@@ -65,6 +69,7 @@ export function createEnvironment(
     impact: new ImpactChannel(),
     blast: new BlastChannel(),
     thermal: new ThermalChannel(thermal, airDensity),
+    fire: new FireChannel(fire),
   };
 }
 

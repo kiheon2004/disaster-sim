@@ -36,6 +36,8 @@ export interface VisualState {
   foliageLoss: number;
   /** Angular velocity of the sway spring (internal). */
   swayVel: number;
+  /** 0–1: share of the crown fuel burned (trees, Phase 27; absent without fire). */
+  burned?: number;
 }
 
 export interface RuntimeEntity {

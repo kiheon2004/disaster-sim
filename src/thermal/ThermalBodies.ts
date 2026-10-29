@@ -278,7 +278,15 @@ export class ThermalBodies {
         const cmp = k === 0 ? this.comp1[i] : this.comp2[i];
         if (f <= 0 || cmp < 0 || A <= 0) continue;
         const Tc = env.compT(cmp);
-        const hc = hBox(Ts, Tc, 0, this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
+        let hc = hBox(Ts, Tc, 0, this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
+        // Phase 27: a smoky room radiates to its surfaces (gray gas ε_g, surface ε), linearized like the outdoor radiation.
+        const eg = env.compEps ? env.compEps(cmp) : 0;
+        if (eg > 0) {
+          const es = THERMAL_MATERIALS[matS].emissivity;
+          const e = 1 / (1 / eg + 1 / es - 1);
+          const hr = e * SIGMA * (Ts * Ts + Tc * Tc) * (Ts + Tc);
+          hc += hr;
+        }
         if (hc <= 0) continue;
         const G = (A * f) / (R + 1 / hc);
         const q = G * (Ts - Tc);
@@ -371,4 +379,6 @@ export interface BodyEnv {
   toAir(a: number, W: number, G: number): void;
   compT(c: number): number;
   toComp(c: number, W: number, G: number): void;
+  /** Phase 27: gas emissivity of a room (absent / 0: no gas radiation). */
+  compEps?(c: number): number;
 }

@@ -43,6 +43,7 @@ import { prepareSeismicRuntime } from './seismic/SeismicState';
 import { capacities } from './damage/behaviors/seismic';
 import { validatePipeline } from './systems/pipeline';
 import { defaultThermalSettings } from '@/thermal/ThermalWorld';
+import { defaultFireSettings } from '@/fire/types';
 
 const MAX_STEPS_PER_FRAME = 16;
 /** Wall-clock budget for physics per frame; beyond it the simulation slows instead of the UI freezing. */
@@ -146,7 +147,7 @@ export class SimulationController {
     const water = sim.water ?? defaultWaterSettings();
     const hydro = this.snapshot.landscape ? hydrologyPlan(this.snapshot.landscape, this.snapshot.terrain, water) : null;
     const runWater = hydro && Object.keys(hydro.boundaries).length ? { ...water, boundaries: { ...water.boundaries, ...hydro.boundaries } } : water;
-    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, runWater, { ...defaultThermalSettings(), ...(sim.thermal ?? {}) });
+    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, runWater, { ...defaultThermalSettings(), ...(sim.thermal ?? {}) }, { ...defaultFireSettings(), ...(sim.fire ?? {}) });
     const obstacles = [];
     for (const e of this.runtime.entities.values()) {
       const o = obstacleFromEntity(e);
