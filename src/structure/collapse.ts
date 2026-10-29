@@ -387,11 +387,13 @@ export class CollapseModel {
    * Gravity ratio of member i (g_down / g₀, Phase 31) with the hazard it is attributed to. A change larger than
    * SUDDEN_RATIO is a sudden load change (dynamic increase Ω on the next round), a smaller one gradual.
    */
-  setGravityRatio(i: number, k: number, hazard = 'gravity') {
+  setGravityRatio(i: number, k: number, hazard = 'gravity', sudden?: boolean) {
     const old = this.s.kM[i];
     if (Math.abs(k) === old) return;
     this.causeHazard[i] = this.hz(hazard);
-    if (Math.abs(Math.abs(k) - old) > SUDDEN_RATIO) this.suddenGravity = true;
+    // `sudden` from the adapter: whether the FIELD changed suddenly since this member's last application (a model
+    // created or re-applied late must not mistake a gradual ramp for a jump, Phase 31 audit M3); else by the change itself.
+    if (sudden ?? Math.abs(Math.abs(k) - old) > SUDDEN_RATIO) this.suddenGravity = true;
     this.gravityQueued = true;
     this.s.setGravityRatio(i, k);
   }

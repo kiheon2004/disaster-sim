@@ -430,23 +430,36 @@ export class SimulationController {
 
   private step(dt: number) {
     // Phase 31: every model of the step (events starting now included) reads this step's gravity ratios
-    // (thermal/gravityScope.ts) — prepared once here; without a gravity experiment the ratios stay 1.
+    // (thermal/gravityScope.ts) — prepared once here; without a gravity experiment the ratios are exactly 1, set
+    // explicitly so that a controller stepped inside another's step never sees that one's ratios (Phase 31 audit §10).
     const gf = this.env.gravity.field;
-    if (!gf) return this.stepBody(dt);
-    const G = gf.prepare(this.time).G, g0 = this.env.gravity.g0;
-    withGravity(Math.hypot(G[0], G[1], G[2]) / g0, -G[1] / g0, () => this.stepBody(dt));
+    if (gf) return withGravity(...this.gravityRatios(gf), () => { this.scheduleStep(dt); this.stepBody(dt); });
+    withGravity(1, 1, () => this.scheduleStep(dt));
+    // A gravity experiment that started in this step: the rest of the step already runs under its field (the
+    // GravitySystem gives Rapier the new gravity in this very step).
+    const started = this.env.gravity.field;
+    if (started) return withGravity(...this.gravityRatios(started), () => this.stepBody(dt));
+    withGravity(1, 1, () => this.stepBody(dt));
   }
 
-  private stepBody(dt: number) {
-    const runtime = this.runtime!;
-    const physics = this.physics!;
+  private gravityRatios(gf: import('@/gravity/field').GravityField): [number, number] {
+    const G = gf.prepare(this.time).G, g0 = this.env.gravity.g0;
+    return [Math.hypot(G[0], G[1], G[2]) / g0, -G[1] / g0];
+  }
+
+  /** Events starting / ending in this step (Phase 21 scheduler). */
+  private scheduleStep(dt: number) {
     this.env.time = this.time;
     this.scheduler.update({ env: this.env, time: this.time }, dt, (ev) => {
       this.log(null, 'info', { key: 'log.event.started', params: { label: '', eventKey: ev.describe().key, ...ev.describe().params } });
       this.metrics.milestones.add({ time: this.time, kind: 'start', subject: ev.type, label: ev.describe() });
     });
     if (this.scheduler.rev !== this.endSeenRev) this.noteEnds();
+  }
 
+  private stepBody(dt: number) {
+    const runtime = this.runtime!;
+    const physics = this.physics!;
     const forces = this.forces!;
     forces.beginStep(this.stepIndex);
     const ctx: SystemContext = {
