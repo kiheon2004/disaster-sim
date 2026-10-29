@@ -15,6 +15,7 @@ import { WaterSolver } from '@/simulation/water/WaterSolver';
 import { ThermalWorld, defaultThermalSettings } from '@/thermal/ThermalWorld';
 import { hGround } from '@/thermal/convection';
 import { qSat, humidityFromRH, wetBulb } from './psychro';
+import { freshSnowDensity } from './snow';
 import { snowFraction } from './surfaceState';
 import { emptyResult, stepNode } from './cover';
 import { defaultClimateSpec, type ClimateSpec } from './types';
@@ -189,4 +190,27 @@ describe('climate physical state', () => {
     expect(r.qBottom / ((k / (d / 2)) * (r.T - Tb))).toBeGreaterThan(0.97);
     expect(r.qBottom / ((k / (d / 2)) * (r.T - Tb))).toBeLessThan(1.03);
   });
+
+  it('fresh snow has the Anderson density of the air it fell through', () => {
+    for (const Tc of [-12, -4]) {
+      const r = setup(spec({ temperature: K(Tc), target: K(Tc), forcing: 'prescribed', humidity: 0.9, precipitation: 8, precipPhase: 'snow' } as Partial<ClimateSpec>));
+      r.step(6.1);
+      // Independent: Anderson (1976) ρ = 50 + 1.7·(T − T_f + 15)^1.5.
+      const want = 50 + 1.7 * Math.pow(Tc + 15, 1.5);
+      expect(r.cw.cRho[20 * 40 + 20]).toBeCloseTo(want, 0);
+      expect(freshSnowDensity(K(Tc))).toBeCloseTo(want, 9);
+    }
+  });
+
+  it('an atmosphere removal takes the vapour and condensate of a column in the same share as its air', () => {
+    const r = setup(spec({ temperature: K(15), target: K(15), humidity: 0.7 }));
+    const cw = r.cw, a = 3;
+    cw.cond[a] = 0.5;
+    const v0 = cw.vap[a], c0 = cw.cond[a];
+    cw.removeWithAir(a, 0.3);
+    expect(cw.vap[a]).toBeCloseTo(0.7 * v0, 12);
+    expect(cw.cond[a]).toBeCloseTo(0.7 * c0, 12);
+    expect(cw.water.removed).toBeCloseTo(0.3 * (v0 + c0), 12);
+  });
 });
+
