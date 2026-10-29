@@ -146,4 +146,9 @@ export const enBlast: Record<keyof typeof koBlast, string> = {
   'blast.obj.capacity': 'design capacity',
   'blast.obj.note': 'Computed: time integral of face pressures → force and impulse → structural model / part SDOF / rigid body. Progressive collapse is refined in Phase 25',
   'blast.obj.noteHuman': 'The push is computed (ForceLedger), losing balance follows a rigid-block toppling criterion (approximate), the fall itself is the existing fall motion — no injury model',
+  'blastHud.reached': 'Objects reached',
+  'blastHud.l.near': 'near source',
+  'blastHud.l.diss': 'shock loss',
+  'blastHud.l.transit': 'in transit',
+  'blastHud.l.out': 'left world',
 };

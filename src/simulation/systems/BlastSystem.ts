@@ -222,7 +222,7 @@ export class BlastSystem implements SimulationSystem {
         const ta = w.init.time + smp.t;
         const dn = Math.min(smp.dp, 0.3 * smp.p);
         if (t1 < ta || t0 > ta + smp.T + (smp.dp * smp.T) / Math.max(1e-9, dn) + 0.1) continue;
-        faces ??= boxFaces([p[0], p[1] - d.size[1] / 2, p[2]], d.size, d.pose.quaternion);
+        faces ??= boxFaces([p[0], p[1] - d.size[1] / 2, p[2]], d.size, d.pose.quaternion, 1, true);
         faceLoads(faces, (x, out) => w.contributions(x, NO_SHIELD, out), w.sourceAmbient.c, loads);
         netImpulse(faces, loads, t0, t1, L, P);
         J[0] += L[0]; J[1] += L[1]; J[2] += L[2];

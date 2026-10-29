@@ -87,6 +87,22 @@ const SCENARIOS = {
     ds.actions.addPhenomenon('impact', { event: 'impact', target: [6, 6], material: 'stony', diameter: 1.2, speed: 8000, angle: 70, azimuth: 45, entry: 'direct' });
     ds.actions.addPhenomenon('impact', { event: 'impact', target: [-30, 20], material: 'stony', diameter: 0.8, speed: 7000, angle: 60, azimuth: 200, entry: 'direct', startTime: 3 });
   },
+  // Phase 24: two air-pressure waves over a town (field overlay, wavefronts, vectors, rings, debris).
+  blastTown: () => {
+    const ds = window.__ds, L = ds.roadLib, d = L.presetDesign('house', 1), add = [];
+    for (let z = -50; z <= 50; z += 12) for (let x = -50; x <= 50; x += 12) add.push({ type: 'building', building: d, seed: add.length + 1, transform: { position: [x, 0, z], rotation: [0, 0, 0], scale: [1, 1, 1] } });
+    for (let k = 0; k < 8; k++) add.push({ type: 'car', seed: 100 + k, transform: { position: [-42 + k * 12, 0, 6], rotation: [0, 0, 0], scale: [1, 1, 1] } });
+    ds.world.getState().applyEdit({ add });
+    ds.actions.addPhenomenon('blast', { event: 'blast', position: [6, 6], height: 1, energy: 1e9, model: 'weakShock', waveform: 'nWave' });
+    ds.actions.addPhenomenon('blast', { event: 'blast', position: [-40, 30], height: 10, energy: 3e8, model: 'weakShock', waveform: 'nWave', startTime: 2 });
+    ds.view.getState().setBlastViz({ field: 'current', vectors: true, objects: true, front: true });
+  },
+  impactBlast: () => {
+    const ds = window.__ds, L = ds.roadLib, d = L.presetDesign('house', 1), add = [];
+    for (let z = -40; z <= 40; z += 14) for (let x = -40; x <= 40; x += 14) add.push({ type: 'building', building: d, seed: add.length + 1, transform: { position: [x, 0, z], rotation: [0, 0, 0], scale: [1, 1, 1] } });
+    ds.world.getState().applyEdit({ add });
+    ds.actions.addPhenomenon('impact', { event: 'impact', target: [6, 6], material: 'stony', diameter: 1.2, speed: 8000, angle: 70, azimuth: 45, entry: 'direct', airBlast: true });
+  },
   allHazards: () => {
     const ds = window.__ds;
     ds.world.getState().replaceDocument(ds.blueprintLib.buildTemplate('mountainVillage', 3));
@@ -102,7 +118,7 @@ async function runTo(t) {
 }
 
 const rows = [await measure(0, 'start')];
-const names = Object.keys(SCENARIOS);
+const names = process.env.STRESS_ONLY ? process.env.STRESS_ONLY.split(',') : Object.keys(SCENARIOS);
 for (let c = 1; c <= CYCLES && !crashed; c++) {
   const name = names[(c - 1) % names.length];
   try {

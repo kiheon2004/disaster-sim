@@ -30,6 +30,8 @@ import { GeoField } from '@/ground/GeoField';
 import { LandslideModel } from '@/ground/landslide';
 import { sinkholeOutlook } from '@/phenomena/groundDefinitions';
 import { ImpactPreview } from '../impact/ImpactPreview';
+import { BlastPreview } from '../blast/BlastPreview';
+import type { BlastSpec } from '@/blast/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -39,7 +41,7 @@ function groundTerrain(): TerrainData {
 }
 
 function useGroundInstance(id: string | null): PhenomenonInstance | null {
-  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact')) ?? null : null));
+  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast')) ?? null : null));
 }
 
 /** Points of a closed (or open) line on the ground, lifted a little. */
@@ -135,6 +137,7 @@ export function GroundPicker() {
       if (!cur) return done();
       if (mode === 'point') {
         if (cur.type === 'impact') updatePhenomenon(id, { spec: { ...(cur.spec as ImpactSpec), target: p } });
+        else if (cur.type === 'blast') updatePhenomenon(id, { spec: { ...(cur.spec as BlastSpec), position: p } });
         else if (cur.type === 'sinkhole') updatePhenomenon(id, { spec: { ...(cur.spec as SinkholeSpec), center: p } });
         else updatePhenomenon(id, { spec: { ...(cur.spec as LandslideSpec), area: moveArea((cur.spec as LandslideSpec).area, p) } });
         return done();
@@ -186,7 +189,7 @@ export function GroundPicker() {
   }
   if (!hover) return null;
   let outline: [number, number][];
-  if (inst.type === 'impact') return <AimMarker x={hover[0]} z={hover[1]} color="#ffd34d" />;
+  if (inst.type === 'impact' || inst.type === 'blast') return <AimMarker x={hover[0]} z={hover[1]} color="#ffd34d" />;
   if (inst.type === 'sinkhole') outline = circlePts(hover[0], hover[1], (inst.spec as SinkholeSpec).cavityRadius);
   else outline = areaOutline(moveArea((inst.spec as LandslideSpec).area, hover));
   return <GroundLine pts={outline} color="#ffd34d" />;
@@ -261,5 +264,6 @@ export function GroundPreview() {
   const inst = useGroundInstance(id);
   if (!inst) return null;
   if (inst.type === 'impact') return <ImpactPreview inst={inst} />;
+  if (inst.type === 'blast') return <BlastPreview inst={inst} />;
   return inst.type === 'sinkhole' ? <SinkholePreview inst={inst} /> : <LandslidePreview inst={inst} />;
 }

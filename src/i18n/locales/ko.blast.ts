@@ -144,4 +144,9 @@ export const koBlast = {
   'blast.obj.capacity': '설계 용량',
   'blast.obj.note': '계산값: 면 압력의 시간 적분 → 힘·충격량 → 구조 모델 / 부재 SDOF / 강체. 붕괴 연쇄는 Phase 25에서 고도화',
   'blast.obj.noteHuman': '밀림은 계산(ForceLedger), 넘어짐은 강체 전도 기준(근사), 넘어지는 동작은 기존 쓰러짐 연출 — 인체 손상은 계산하지 않습니다',
+  'blastHud.reached': '도달한 객체',
+  'blastHud.l.near': '근거리 소산',
+  'blastHud.l.diss': '충격 소산',
+  'blastHud.l.transit': '전파 중',
+  'blastHud.l.out': '월드 밖',
 } as const;

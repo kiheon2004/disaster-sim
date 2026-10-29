@@ -74,7 +74,7 @@ export function resolveSchedule(instances: readonly PhenomenonInstance[], ctx: P
     }
     if (!(start >= 0)) return fail('negativeStart', String(start));
     const duration = def.duration(spec, ctx);
-    const item: ResolvedInstance = { instance: inst, start, duration, end: start + duration, spec: { ...spec, startTime: timeBase + start, ...((spec.event === 'terrainDeformation' || spec.event === 'sinkhole' || spec.event === 'landslide' || spec.event === 'impact') && !spec.name ? { name: inst.id } : {}) } as EventSpec };
+    const item: ResolvedInstance = { instance: inst, start, duration, end: start + duration, spec: { ...spec, startTime: timeBase + start, ...((spec.event === 'terrainDeformation' || spec.event === 'sinkhole' || spec.event === 'landslide' || spec.event === 'impact' || spec.event === 'blast') && !spec.name ? { name: inst.id } : {}) } as EventSpec };
     done.set(inst.id, item);
     return item;
   };

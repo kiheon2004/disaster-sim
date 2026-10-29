@@ -61,6 +61,22 @@ export interface ImpactViz {
 }
 export const FRAGMENT_SCALES = [1, 3, 10] as const;
 
+/**
+ * Air-blast visuals (Phase 24, render-only). The pressure field modes show the COMPUTED field
+ * (ground level, same contributions as the simulation); the wavefront shell is drawn at the computed
+ * front radius — its glow (`frontGlow`) is a visual exaggeration only; the flash is a visual effect.
+ */
+export type BlastFieldMode = 'off' | 'current' | 'peak' | 'arrival' | 'impulse';
+export interface BlastViz {
+  field: BlastFieldMode;
+  front: boolean;
+  vectors: boolean;
+  objects: boolean;
+  flash: boolean;
+  frontGlow: number;
+}
+export const FRONT_GLOWS = [1, 3] as const;
+
 /** Ground tool in the 3D view: set a point (sinkhole / landslide circle) or draw a polygon. */
 export interface GroundPick {
   id: string;
@@ -118,6 +134,8 @@ interface ViewState {
   setGroundViz: (patch: Partial<GroundViz>) => void;
   impactViz: ImpactViz;
   setImpactViz: (patch: Partial<ImpactViz>) => void;
+  blastViz: BlastViz;
+  setBlastViz: (patch: Partial<BlastViz>) => void;
   groundPick: GroundPick | null;
   setGroundPick: (p: GroundPick | null) => void;
   /** Experiment instance (sinkhole / landslide) whose predicted outcome is drawn on the ground. */
@@ -161,6 +179,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setGroundViz: (patch) => set((s) => ({ groundViz: { ...s.groundViz, ...patch } })),
   impactViz: { trajectory: true, ejecta: true, trails: true, flash: true, dust: true, fragmentScale: 3 },
   setImpactViz: (patch) => set((s) => ({ impactViz: { ...s.impactViz, ...patch } })),
+  blastViz: { field: 'current', front: true, vectors: false, objects: true, flash: true, frontGlow: 1 },
+  setBlastViz: (patch) => set((s) => ({ blastViz: { ...s.blastViz, ...patch } })),
   groundPick: null,
   setGroundPick: (groundPick) => set({ groundPick }),
   groundPreview: null,

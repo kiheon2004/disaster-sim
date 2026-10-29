@@ -25,7 +25,7 @@ const EVENT_COLORS: Partial<Record<DamageEventType, string>> = {
   INUNDATED: '#46a0e6', FLOATED: '#2d7fd0', SCOURED: '#8a6a48',
 };
 
-const HAZARD_COLORS: Partial<Record<Hazard, string>> = { earthquake: '#ffb3a1', flood: '#9fd3ff', ground: '#ffd9a0', impact: '#ff8fd0' };
+const HAZARD_COLORS: Partial<Record<Hazard, string>> = { earthquake: '#ffb3a1', flood: '#9fd3ff', ground: '#ffd9a0', impact: '#ff8fd0', blast: '#ffcf5c' };
 
 function objectLabel(e: DamageEventRecord, objects: ReturnType<typeof useWorldStore.getState>['doc']['objects'], t: TFunction) {
   const o = objects[e.objectId];
@@ -449,7 +449,8 @@ function ExperimentSummary({ t }: { t: TFunction }) {
       const def = phenomena.get(m.subject ?? '');
       return `${def ? t(def.labelKey) : m.subject} ${t(`milestone.${m.kind}`)}`;
     }
-    return t(`milestone.${m.kind}` as MessageKey, { hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' });
+    // The milestone's own parameters (id, values) — they were dropped, leaving '{id}' in Phase 23 labels.
+    return t(`milestone.${m.kind}` as MessageKey, { ...m.label.params, hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' });
   };
   return (
     <div className={styles.box} data-testid="experiment-results">

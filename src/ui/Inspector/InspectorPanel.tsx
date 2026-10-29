@@ -13,6 +13,7 @@ import { QuakeLiveSection } from './SeismicInspector';
 import { FloodLiveSection, FloodProbeSection } from './FloodInspector';
 import { DeformationLiveSection, DeformationProbeSection } from './DeformationInspector';
 import { GroundObjectSection, GroundProbeSection, ImpactObjectSection } from './GroundInspector';
+import { BlastObjectSection, BlastProbeSection } from './BlastInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
 import { MemberInspector } from '@/ui/Building/MemberInspector';
@@ -50,12 +51,14 @@ export function InspectorPanel() {
           {inSim && <DeformationLiveSection id={obj.id} />}
           {inSim && <GroundObjectSection id={obj.id} />}
           {inSim && <ImpactObjectSection id={obj.id} />}
+          {inSim && <BlastObjectSection id={obj.id} />}
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>
       ) : inSim ? (
         <>
           <GroundProbeSection />
+          <BlastProbeSection />
           <DeformationProbeSection />
           <FloodProbeSection />
           <SimSummary />

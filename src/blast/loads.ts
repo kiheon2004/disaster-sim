@@ -42,19 +42,23 @@ export interface Faces {
 }
 
 const LOCAL: { n: Vec3; axis: 0 | 1 | 2 }[] = [
-  { n: [1, 0, 0], axis: 0 }, { n: [-1, 0, 0], axis: 0 }, { n: [0, 0, 1], axis: 2 }, { n: [0, 0, -1], axis: 2 }, { n: [0, 1, 0], axis: 1 },
+  { n: [1, 0, 0], axis: 0 }, { n: [-1, 0, 0], axis: 0 }, { n: [0, 0, 1], axis: 2 }, { n: [0, 0, -1], axis: 2 }, { n: [0, 1, 0], axis: 1 }, { n: [0, -1, 0], axis: 1 },
 ];
 
 /**
  * Exposed faces of an oriented box standing on its base point `base` (local y from 0 to dims[1]).
- * Side faces are scaled by `areaFactor` (frontal area / silhouette).
+ * Side faces are scaled by `areaFactor` (frontal area / silhouette). `bottom`: the underside is
+ * loaded too — free bodies (vehicles with ground clearance, people, debris): the wave reaches under
+ * them within milliseconds, so the roof pressure is not a net downward blow (without it a vehicle
+ * was driven into the ground and bounced out of it). Structures fixed to the ground: no underside.
  */
-export function boxFaces(base: Readonly<Vec3>, dims: Readonly<Vec3>, q: Readonly<Quat>, areaFactor = 1): Faces {
+export function boxFaces(base: Readonly<Vec3>, dims: Readonly<Vec3>, q: Readonly<Quat>, areaFactor = 1, bottom = false): Faces {
   const [w, h, d] = dims;
   const up = qRotate(q as Quat, [0, h / 2, 0]);
   const center: Vec3 = [base[0] + up[0], base[1] + up[1], base[2] + up[2]];
   const out: Faces = { n: [], c: [], A: [], S: [], center };
   for (const f of LOCAL) {
+    if (f.n[1] < 0 && !bottom) continue;
     const n = qRotate(q as Quat, f.n);
     const off = qRotate(q as Quat, [f.n[0] * w / 2, f.n[1] * h / 2, f.n[2] * d / 2]);
     out.n.push(n);

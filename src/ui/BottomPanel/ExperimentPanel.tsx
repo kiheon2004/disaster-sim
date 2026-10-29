@@ -19,6 +19,7 @@ import x from './ExperimentPanel.module.css';
 import { DeformationTools } from './DeformationTools';
 import { GroundTools } from './GroundTools';
 import { ImpactTools } from './ImpactTools';
+import { BlastTools } from './BlastTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -192,6 +193,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
         {(inst.type === 'sinkhole' || inst.type === 'landslide') && <GroundTools inst={inst} />}
         {inst.type === 'impact' && <ImpactTools inst={inst} />}
+        {inst.type === 'blast' && <BlastTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

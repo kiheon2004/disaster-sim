@@ -317,7 +317,7 @@ function failPart(e: RuntimeEntity, ctx: SystemContext, p: PartEntry, ratio: num
 
 /** Faces of a body at its current pose. */
 function bodyFaces(e: RuntimeEntity): Faces {
-  return boxFaces(e.pose.position, e.dims, e.pose.quaternion, e.areaFactor);
+  return boxFaces(e.pose.position, e.dims, e.pose.quaternion, e.areaFactor, true);
 }
 
 /** Vehicles, people, toppled structures: impulse + drag through the ForceLedger. */

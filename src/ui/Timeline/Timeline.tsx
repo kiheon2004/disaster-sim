@@ -79,7 +79,7 @@ export function Timeline() {
             ))}
             {milestones.filter((m) => m.kind !== 'start' && m.kind !== 'end').map((m, i) => (
               <div key={i} className={styles.milestone} data-hazard={m.hazard} style={{ left: pct(m.time) }}
-                title={`${m.time.toFixed(1)} s · ${t(`milestone.${m.kind}` as MessageKey, { hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' })}`} />
+                title={`${m.time.toFixed(1)} s · ${t(`milestone.${m.kind}` as MessageKey, { ...m.label.params, hazard: m.hazard ? t(`hazardName.${m.hazard}` as MessageKey) : '', ha: (m.label.params?.ha as number) ?? '' })}`} />
             ))}
             <div className={styles.progress} style={{ width: pct(time) }} />
             <div className={styles.head} style={{ left: pct(time) }} />

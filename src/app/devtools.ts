@@ -48,6 +48,9 @@ import { emptyNetwork, defaultProfile, PROFILE_PRESETS } from '@/roads/types';
 import * as blueprintActions from './blueprintActions';
 import { useBlueprintStore } from '@/editor/blueprintStore';
 import { useLibraryStore } from '@/blueprints/library';
+import { planBlast } from '@/blast/plan';
+import { previewField } from '@/rendering/blast/BlastPreview';
+import type { BlastSpec } from '@/blast/types';
 import { captureBlueprint } from '@/blueprints/capture';
 import { planPlacement as planBlueprint, defaultPlacement } from '@/blueprints/place';
 import { parseBlueprintText, serializeBlueprint } from '@/blueprints/schema';
@@ -126,6 +129,8 @@ export function installDevtools() {
       sinkholeOutlook, landslideOutlook,
       /** Phase 23: the impact plan of a spec on the document terrain (same function as the run). */
       impactPlan: (spec: ImpactSpec) => { const d = useWorldStore.getState().doc; return planImpact(spec, d.terrain, spec.seed ?? d.settings.simulation.seed); },
+      blastPlan: (spec: BlastSpec) => { const d = useWorldStore.getState().doc; return planBlast(spec, d.terrain, d.settings.airDensity); },
+      blastField: (spec: BlastSpec) => { const d = useWorldStore.getState().doc; return previewField(planBlast(spec, d.terrain, d.settings.airDensity), d.terrain, d.objects); },
     },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {

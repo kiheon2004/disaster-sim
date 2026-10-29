@@ -4,7 +4,8 @@ import { WIND_COLOR_STOPS } from '@/rendering/sim/windColors';
 import { DAMAGE_STATE_COLORS, DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
 import { Toggle } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
-import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS, FRAGMENT_SCALES } from '@/rendering/viewStore';
+import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS, FRAGMENT_SCALES, FRONT_GLOWS } from '@/rendering/viewStore';
+import { ARRIVAL_GRADIENT, cssLogGradient, IMPULSE_STOPS, PRESSURE_STOPS } from '@/rendering/blast/blastColors';
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { useSimStore } from '@/simulation/simStore';
 import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
@@ -28,6 +29,8 @@ export function OverlayToggles() {
   const groundLive = useSimStore((s) => s.ground !== null);
   const impactLive = useSimStore((s) => s.impacts !== null);
   const impact = useViewStore((s) => s.impactViz);
+  const blastLive = useSimStore((s) => s.blasts !== null);
+  const blast = useViewStore((s) => s.blastViz);
   const ground = useViewStore((s) => s.groundViz);
   const gradient = `linear-gradient(90deg, ${WIND_COLOR_STOPS.map(([s, c]) => `${c} ${(s / 60) * 100}%`).join(', ')})`;
   return (
@@ -194,6 +197,55 @@ export function OverlayToggles() {
             <Toggle checked={impact.flash} onChange={(b) => v.setImpactViz({ flash: b })} label={t('overlay.impact.flash')} />
             <Toggle checked={impact.dust} onChange={(b) => v.setImpactViz({ dust: b })} label={t('overlay.impact.dust')} />
             <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.impact.note')}</span>
+          </div>
+        </>
+      )}
+      {blastLive && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#ffcf5c', marginTop: 2 }}>{t('overlay.blast')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="blast-overlay">
+            <Segmented
+              size="small"
+              value={blast.field}
+              onChange={(m) => v.setBlastViz({ field: m })}
+              options={(['off', 'current', 'peak', 'arrival', 'impulse'] as const).map((m) => ({ value: m, label: t(`overlay.blast.${m}`) }))}
+            />
+            {(blast.field === 'current' || blast.field === 'peak') && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: cssLogGradient(PRESSURE_STOPS) }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>0.1</span><span>1</span><span>3</span><span>10</span><span>30</span><span>100 kPa</span>
+                </div>
+                {blast.field === 'current' && <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.blast.suction')}</span>}
+              </div>
+            )}
+            {blast.field === 'impulse' && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: cssLogGradient(IMPULSE_STOPS) }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>1</span><span>10</span><span>100</span><span>1000 Pa·s</span>
+                </div>
+              </div>
+            )}
+            {blast.field === 'arrival' && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: ARRIVAL_GRADIENT }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>{t('overlay.blast.early')}</span><span>{t('overlay.blast.late')}</span>
+                </div>
+              </div>
+            )}
+            <Toggle checked={blast.front} onChange={(b) => v.setBlastViz({ front: b })} label={t('overlay.blast.front')} />
+            {blast.front && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.blast.glow')}</span>
+                <Segmented size="small" value={blast.frontGlow} onChange={(k) => v.setBlastViz({ frontGlow: k })} options={FRONT_GLOWS.map((k) => ({ value: k, label: `×${k}` }))} />
+              </div>
+            )}
+            <Toggle checked={blast.vectors} onChange={(b) => v.setBlastViz({ vectors: b })} label={t('overlay.blast.vectors')} />
+            <Toggle checked={blast.objects} onChange={(b) => v.setBlastViz({ objects: b })} label={t('overlay.blast.objects')} />
+            <Toggle checked={blast.flash} onChange={(b) => v.setBlastViz({ flash: b })} label={t('overlay.blast.flash')} />
+            <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.blast.note')}</span>
           </div>
         </>
       )}
