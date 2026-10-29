@@ -226,11 +226,13 @@ export class PointField {
         w = sm(u);
         dw = -dsm(u) / e / r; // w′(r)/r
       }
-      const d = [d0, d1, d2];
+      // (No temporary array per call — Phase 32.1; the same expressions in the same order.)
       for (let i = 0; i < 3; i++) {
-        const gi = (-l.mu * d[i]) / q32; // untapered g_i
+        const di = i === 0 ? d0 : i === 1 ? d1 : d2;
+        const gi = (-l.mu * di) / q32; // untapered g_i
         for (let j = 0; j < 3; j++) {
-          out[3 * i + j] += l.mu * w * ((3 * d[i] * d[j]) / q52 - (i === j ? 1 / q32 : 0)) + gi * dw * d[j];
+          const dj = j === 0 ? d0 : j === 1 ? d1 : d2;
+          out[3 * i + j] += l.mu * w * ((3 * di * dj) / q52 - (i === j ? 1 / q32 : 0)) + gi * dw * dj;
         }
       }
     }

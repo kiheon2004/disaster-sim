@@ -96,6 +96,9 @@ export class RapierEngine implements PhysicsEngine {
   /** Bodies whose type changed: the narrow phase may drop or revive their pairs without an event (a pair of two fixed
    *  bodies is no longer computed) — after the next step their pairs are taken from the narrow phase directly. */
   private resync = new Set<BodyHandle>();
+  /** Bodies created or made dynamic (the body type only changes through createBody / setBodyKind) — isDynamic without
+   *  a WASM call per body per step. */
+  private dynamic = new Set<BodyHandle>();
 
   async init(gravity: number, terrain: TerrainColliderDesc | null = null) {
     await ensureRapier();
@@ -198,6 +201,7 @@ export class RapierEngine implements PhysicsEngine {
 
     this.bodies.set(body.handle, body);
     this.userData.set(body.handle, desc.userData);
+    if (desc.kind !== 'fixed') this.dynamic.add(body.handle);
     return body.handle;
   }
 
@@ -209,12 +213,16 @@ export class RapierEngine implements PhysicsEngine {
     this.bodies.delete(h);
     this.userData.delete(h);
     this.forced.delete(h);
+    this.dynamic.delete(h);
   }
 
   setBodyKind(h: BodyHandle, kind: BodyKind) {
     const b = this.bodies.get(h);
     b?.setBodyType(kind === 'fixed' ? RAPIER.RigidBodyType.Fixed : RAPIER.RigidBodyType.Dynamic, true);
-    if (b) this.resync.add(h);
+    if (b) {
+      this.resync.add(h);
+      if (kind === 'fixed') this.dynamic.delete(h); else this.dynamic.add(h);
+    }
   }
 
   setRotationsLocked(h: BodyHandle, locked: boolean) {
@@ -348,7 +356,7 @@ export class RapierEngine implements PhysicsEngine {
   }
 
   isDynamic(h: BodyHandle) {
-    return this.bodies.get(h)?.isDynamic() ?? false;
+    return this.dynamic.has(h);
   }
 
   /** The narrow phase asked pair by pair: a collider pair of the body with at least one solver contact (reference of `touching`). */
@@ -473,6 +481,7 @@ export class RapierEngine implements PhysicsEngine {
     this.heightfields.clear();
     this.colliderBody.clear();
     this.resync.clear();
+    this.dynamic.clear();
     this.userData.clear();
     this.forced.clear();
   }
