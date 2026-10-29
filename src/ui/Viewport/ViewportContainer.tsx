@@ -15,6 +15,7 @@ import { WindHud } from './WindHud';
 import { QuakeHud } from './QuakeHud';
 import { FloodHud } from './FloodHud';
 import { DeformHud } from './DeformHud';
+import { GroundHud } from './GroundHud';
 import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
@@ -56,6 +57,7 @@ export function ViewportContainer() {
         {!isEditor && <QuakeHud />}
         {!isEditor && <FloodHud />}
         {!isEditor && <DeformHud />}
+        {!isEditor && <GroundHud />}
       </div>
       <div className={`${styles.overlay} ${styles.bottomLeft}`}>
         <span className={styles.hint} data-testid="viewport-hint">

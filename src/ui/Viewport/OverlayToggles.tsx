@@ -7,6 +7,7 @@ import { Segmented } from '@/ui/common/Segmented';
 import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS } from '@/rendering/viewStore';
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { useSimStore } from '@/simulation/simStore';
+import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
 import { cssGradient, DEPTH_MAX, DEPTH_STOPS, SPEED_MAX, SPEED_STOPS } from '@/rendering/sim/water/waterColors';
 
@@ -24,6 +25,8 @@ export function OverlayToggles() {
   const flood = useViewStore((s) => s.floodViz);
   const deform = useViewStore((s) => s.deformViz);
   const deformLive = useSimStore((s) => s.deform);
+  const groundLive = useSimStore((s) => s.ground !== null);
+  const ground = useViewStore((s) => s.groundViz);
   const gradient = `linear-gradient(90deg, ${WIND_COLOR_STOPS.map(([s, c]) => `${c} ${(s / 60) * 100}%`).join(', ')})`;
   return (
     <div
@@ -137,6 +140,41 @@ export function OverlayToggles() {
             {deform.mode !== 'off' && <Toggle checked={deform.foundations} onChange={(b) => v.setDeformViz({ foundations: b })} label={t('overlay.deform.foundations')} />}
             {deform.mode !== 'off' && deform.foundations && <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.deform.contact')}</span>}
             <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.deform.note')}</span>
+          </div>
+        </>
+      )}
+      {groundLive && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#ffc58f', marginTop: 2 }}>{t('overlay.ground')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="ground-overlay">
+            <Segmented
+              size="small"
+              value={ground.mode}
+              onChange={(m) => v.setGroundViz({ mode: m })}
+              options={(['off', 'stability', 'sediment', 'deposit', 'change'] as const).map((m) => ({ value: m, label: t(`overlay.ground.${m}`) }))}
+            />
+            {ground.mode === 'stability' && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: FS_GRADIENT }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>FS 0.8</span><span>1.0</span><span>1.2</span><span>1.5</span><span>2.5+</span>
+                </div>
+                <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.ground.stabilityNote')}</span>
+              </div>
+            )}
+            {(ground.mode === 'sediment' || ground.mode === 'deposit') && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: ground.mode === 'sediment' ? SEDIMENT_GRADIENT : DEPOSIT_GRADIENT }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>0</span><span>{(ground.mode === 'sediment' ? SEDIMENT_MAX : DEPOSIT_MAX)}+ m</span>
+                </div>
+              </div>
+            )}
+            {ground.mode === 'change' && <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.ground.changeNote')}</span>}
+            <Toggle checked={ground.arrows} onChange={(b) => v.setGroundViz({ arrows: b })} label={t('overlay.ground.arrows')} />
+            <Toggle checked={ground.sources} onChange={(b) => v.setGroundViz({ sources: b })} label={t('overlay.ground.sources')} />
+            <Toggle checked={ground.dust} onChange={(b) => v.setGroundViz({ dust: b })} label={t('overlay.ground.dust')} />
+            <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.ground.note')}</span>
           </div>
         </>
       )}

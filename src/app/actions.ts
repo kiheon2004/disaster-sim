@@ -82,9 +82,19 @@ function applyLoad(res: LoadResult | null, emptyKey: 'toast.noSave' | 'toast.imp
   if (res.skipped) toast('warn', { key: 'toast.skipped', params: { count: res.skipped } });
 }
 
+/**
+ * Saving always writes the ORIGINAL world and the experiment plan (the simulation never writes
+ * the document). Mid-run state — deformed ground, sediment, water, damage, bodies — is not saved
+ * (see simulation/runtimeState.ts); the user is told so when saving during a run.
+ */
+function noteRuntimeNotSaved() {
+  if (useEditorStore.getState().mode === 'simulation') toast('info', { key: 'toast.runtimeNotSaved' });
+}
+
 export function saveProject() {
   const ok = storage.save(useWorldStore.getState().doc);
   toast(ok ? 'success' : 'error', { key: ok ? 'toast.saved' : 'toast.saveFailed' });
+  if (ok) noteRuntimeNotSaved();
 }
 
 export function loadProject() {
@@ -94,6 +104,7 @@ export function loadProject() {
 export function exportProject() {
   downloadDocument(useWorldStore.getState().doc);
   toast('info', { key: 'toast.exported' });
+  noteRuntimeNotSaved();
 }
 
 export async function importProject() {

@@ -28,10 +28,13 @@ const LATTICE = 4;
 const MAX_ARROWS = 4096;
 const MAX_RINGS = 1024;
 
-/** Union of every source's vertex rectangle (where W can be non-zero). */
+/**
+ * Union of the prescribed sources' vertex rectangles (where they make W non-zero). The ground-
+ * failure field (Phase 22) covers the whole grid and has its own overlay (GroundOverlay).
+ */
 function regionOf(engine: DeformationEngine): GridRect | null {
   let r: GridRect | null = null;
-  for (const s of engine.sources) r = unionRect(r, s.rect);
+  for (const s of engine.sources) if (s.kind !== 'groundFailure') r = unionRect(r, s.rect);
   return r;
 }
 
@@ -88,6 +91,7 @@ function Overlay({ engine }: { engine: DeformationEngine }) {
     // The region grows when a new source starts: rebuild the patch then.
     if (engine.sources.length !== nSources.current) {
       nSources.current = engine.sources.length;
+      if (meshRef.current) meshRef.current.visible = false;
       patchRef.current?.dispose();
       const r = regionOf(engine);
       patchRef.current = r ? new FieldPatch(t, r) : null;

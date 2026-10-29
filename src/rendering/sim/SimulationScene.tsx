@@ -18,6 +18,8 @@ import { WaterLayer } from './water/WaterLayer';
 import { DeformationOverlay } from '../deformation/DeformationOverlay';
 import { ShaderWarmup } from '../deformation/ShaderWarmup';
 import { DeformationPicker, DeformationPreview } from '../deformation/DeformationTools';
+import { GroundOverlay } from '../ground/GroundOverlay';
+import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
 
@@ -37,8 +39,10 @@ function GroundDeselect() {
       onClick={(e) => {
         if (e.delta > 5) return;
         useEditorStore.getState().select(null);
-        // Flood inspector: the point on the actual terrain under the cursor (Phase 14).
-        if (!useSimStore.getState().flood && !useSimStore.getState().deform) return;
+        // The point on the actual terrain under the cursor (Phase 14).
+        // Flood, deformation (Phase 21) and ground-failure (Phase 22) inspectors.
+        const ss = useSimStore.getState();
+        if (!ss.flood && !ss.deform && !ss.ground) return;
         const o = e.ray.origin;
         const d = e.ray.direction;
         const terrain = simulationController.getEnvironment().terrain;
@@ -73,9 +77,12 @@ export function SimulationScene() {
       <WindArrows />
       <WaterLayer />
       <DeformationOverlay />
+      <GroundOverlay />
       <ShaderWarmup />
       <DeformationPreview />
       <DeformationPicker />
+      <GroundPreview />
+      <GroundPicker />
       <GroundMotionLayer />
       <EpicenterMarker />
       <CameraShake />

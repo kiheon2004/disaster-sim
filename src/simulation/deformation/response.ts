@@ -380,7 +380,7 @@ function respondRoads(ctx: SystemContext, roads: RoadRuntime, engine: Deformatio
     for (const v of d) sum += v;
     const prev = st.deform;
     const passable = !(offset >= ROAD_IMPASSABLE_STEP || (grade >= ROAD_IMPASSABLE_GRADE && grade > grade0 + 0.01));
-    st.deform = { offset: Math.max(prev?.offset ?? 0, offset), grade, grade0, settlement: sum / d.length, passable: (prev?.passable ?? true) && passable };
+    st.deform = { offset: Math.max(prev?.offset ?? 0, offset), grade, grade0, settlement: sum / d.length, passable: (prev?.passable ?? true) && passable, ...(prev?.debris ? { debris: prev.debris } : {}) };
     // Pavement cracking from differential movement (same scale as the Phase 18 ground-failure hook).
     const crack = Math.min(1, st.deform.offset / ROAD_CRACK_OFFSET);
     if (crack > st.crack) {

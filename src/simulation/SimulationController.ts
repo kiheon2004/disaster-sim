@@ -1,4 +1,5 @@
-import type { DeformLive } from './simStore';
+import type { DeformLive, GroundLive } from './simStore';
+import { runtimeStateManifest } from './runtimeState';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
 import { FIXED_DT, type SimSpeed } from '@/core/units';
@@ -45,6 +46,8 @@ const SETTLE_TIME = 8; // s after the last event before the run is "finished"
 /** Water keeps running off after the last water event: give it longer before "finished". */
 const SETTLE_TIME_WATER = 60;
 const MIN_TIMELINE = 30; // s
+/** Longest extension of a run past its planned end while sediment is still moving (s). */
+const RUNOUT_EXTENSION = 300;
 const LOG_LIMIT = 300;
 
 /**
@@ -108,6 +111,7 @@ export class SimulationController {
 
   private async rebuild(token = ++this.loadToken) {
     this.disposeRuntime();
+    this.extendEnd = 0;
     if (!this.snapshot) return;
     // Rapier (WASM) is loaded on demand so the editor starts fast.
     const { RapierEngine } = await import('@/physics/RapierEngine');
@@ -218,6 +222,7 @@ export class SimulationController {
       seismicSeries: null,
       flood: null,
       deform: null,
+      ground: null,
       floodSeries: null,
       milestones: [],
     });
@@ -304,10 +309,21 @@ export class SimulationController {
 
   private extendEnd = 0;
 
-  private endTime(): number {
+  /** Mobile sediment above 1 % of what was released (and 0.5 m³) — the runout is still going. */
+  private sedimentMoving(): boolean {
+    const b = this.env.groundFailure.field?.budget;
+    return !!b && b.mobile > Math.max(0.5, 0.01 * b.released);
+  }
+
+  /** End of the run from the plan alone (events + settling time). */
+  private plannedEnd(): number {
     const planned = this.scheduler.plannedEnd();
     const settle = this.scenario.some(isWaterEvent) ? SETTLE_TIME_WATER : SETTLE_TIME;
-    return Math.max(MIN_TIMELINE, planned > 0 ? planned + settle : 0, this.extendEnd);
+    return Math.max(MIN_TIMELINE, planned > 0 ? planned + settle : 0);
+  }
+
+  private endTime(): number {
+    return Math.max(this.plannedEnd(), this.extendEnd);
   }
 
   private setStatus(s: SimStatus) {
@@ -335,6 +351,13 @@ export class SimulationController {
     simProfiler.endTick(tickStart);
 
     if (this.time >= this.endTime() && !this.scheduler.hasPendingOrActive()) {
+      // Sediment still running out (Phase 22): the run is not over until it comes to rest
+      // (at most RUNOUT_EXTENSION s past the planned end; the timeline grows with it).
+      if (this.sedimentMoving() && this.time < this.plannedEnd() + RUNOUT_EXTENSION) {
+        this.extendEnd = this.time + 2;
+        this.publish(true);
+        return;
+      }
       this.status = 'finished';
       this.publish(true);
       return;
@@ -527,6 +550,7 @@ export class SimulationController {
     }
     patch.flood = this.floodLive();
     patch.deform = this.deformLive();
+    patch.ground = this.groundLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -570,13 +594,15 @@ export class SimulationController {
   /** Live terrain deformation status (null until the first deformation starts). Phase 21. */
   private deformLive(): DeformLive | null {
     const e = this.env.deformation.engine;
-    if (!e || !e.sources.length) return null;
+    // Prescribed deformations only: the ground-failure field has its own summary (groundLive).
+    const prescribed = e?.sources.filter((s) => s.kind !== 'groundFailure') ?? [];
+    if (!e || !prescribed.length) return null;
     const st = this.env.deformation.stats;
     const bm = this.env.flood.field?.bedMotion;
     const last = e.history[e.history.length - 1];
     return {
-      sources: e.sources.length,
-      changing: e.sources.filter((s) => s.version(this.time - s.startTime) < 1 || s.duration === Infinity).length,
+      sources: prescribed.length,
+      changing: prescribed.filter((s) => s.version(this.time - s.startTime) < 1 || s.duration === Infinity).length,
       maxAbs: e.maxAbs,
       volume: last?.volume ?? 0,
       updates: e.updates,
@@ -587,6 +613,33 @@ export class SimulationController {
       bedVolume: bm?.displacedVolume ?? 0,
       bedRise: bm?.maxRise ?? 0,
       bedDrop: bm?.maxDrop ?? 0,
+    };
+  }
+
+  /** What the runtime state of this run consists of (mid-run saving is not supported; see runtimeState.ts). */
+  runtimeState() {
+    return runtimeStateManifest(this.env, this.runtime, this.time);
+  }
+
+  /** Live ground-failure summary (Phase 22): model states, sediment budget, cost. */
+  private groundLive(): GroundLive | null {
+    const ch = this.env.groundFailure;
+    const f = ch.field;
+    if (!f) return null;
+    const b = f.budget;
+    let blocked = 0;
+    const roads = this.runtime?.roads;
+    if (roads) for (const s of roads.segments) if (s.deform?.debris && !s.deform.passable) blocked++;
+    return {
+      sinkholes: ch.sinkholes.map((m) => {
+        let low = 0;
+        for (const i of m.cells) low = Math.min(low, f.bed[i] + f.h[i]);
+        return { id: m.id, name: m.name, phase: m.phase, radius: m.a, fs: m.fs, pitDepth: -low };
+      }),
+      landslides: ch.landslides.map((m) => ({ id: m.id, name: m.name, minFS: m.minFS, failed: m.failedCells, cells: m.cells.length, newmark: m.maxNewmark })),
+      released: b.released, mobile: b.mobile, deposited: b.deposited, outflow: b.outflow, intoCavity: b.intoCavity,
+      residual: b.residual, residualMass: b.residualMass, peakMobile: b.peakMobile,
+      maxSpeed: ch.stats.maxSpeed, ms: ch.stats.totalMs, flowMs: ch.stats.flowMs, substeps: ch.stats.flowSubsteps, blockedRoads: blocked,
     };
   }
 

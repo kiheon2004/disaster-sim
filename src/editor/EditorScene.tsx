@@ -19,6 +19,7 @@ import { TerrainTool, isBrushTool } from './tools/TerrainTool';
 import { NatureTool } from './tools/NatureTool';
 import { StaticWaterLayer } from '@/rendering/landscape/StaticWaterLayer';
 import { DeformationPicker, DeformationPreview } from '@/rendering/deformation/DeformationTools';
+import { GroundPicker, GroundPreview } from '@/rendering/ground/GroundTools';
 import { RoadTool } from './tools/RoadTool';
 import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
 import { PasteTool } from './tools/PasteTool';
@@ -202,6 +203,8 @@ export function EditorScene() {
       <StaticWaterLayer />
       <DeformationPreview />
       <DeformationPicker />
+      <GroundPreview />
+      <GroundPicker />
       {live.map((o) => (
         <EditorEntity
           key={o.id}

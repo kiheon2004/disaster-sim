@@ -1,5 +1,6 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
 import { useWorldStore } from '@/world/worldStore';
+import { landslideOutlook, sinkholeOutlook } from '@/phenomena/groundDefinitions';
 import { useEditorStore } from '@/editor/editorStore';
 import { useBuildStore } from '@/editor/buildStore';
 import * as buildActions from './buildActions';
@@ -96,6 +97,8 @@ export function installDevtools() {
     profiler: simProfiler,
     /** Phase 21 terrain deformation (benchmarks / browser verification). */
     deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation, phenomena, rapierWarmUpMs: () => rapierWarmUpMs },
+    /** Phase 22 ground failure (benchmarks / browser verification). */
+    groundLib: { sinkholeOutlook, landslideOutlook },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {
       const doc = useWorldStore.getState().doc;

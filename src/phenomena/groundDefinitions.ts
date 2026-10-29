@@ -47,6 +47,11 @@ export function profileAt(t: TerrainData | null, x: number, z: number, override?
 
 const inside = (t: TerrainData | null, x: number, z: number) => !t || (x >= t.originX && z >= t.originZ && x <= t.originX + (t.nx - 1) * t.cellSize && z <= t.originZ + (t.nz - 1) * t.cellSize);
 
+/** Default input of each initiation mode (filled in when the mode is chosen and the input is unset). */
+const SINKHOLE_MODE_DEFAULTS: Record<SinkholeSpec['initiation'], Partial<SinkholeSpec>> = {
+  growth: { growthRate: 0.2 }, supportLoss: { supportLoss: 0.5 }, water: { saturation: 1 }, load: { surcharge: 50 },
+};
+
 // ── Sinkhole ────────────────────────────────────────────────────────────────
 
 export function sinkholeOutlook(spec: SinkholeSpec, ctx: PhenomenonContext) {
@@ -69,7 +74,11 @@ export const sinkhole = implemented<SinkholeSpec>({
     { key: 'cavityHeight', labelKey: 'sink.cavityHeight', unit: 'm', min: SINKHOLE_LIMITS.cavityHeight[0], max: SINKHOLE_LIMITS.cavityHeight[1], step: 0.5, precision: 1 },
     { key: 'cover', labelKey: 'sink.cover', unit: 'm', min: SINKHOLE_LIMITS.cover[0], max: SINKHOLE_LIMITS.cover[1], step: 0.5, precision: 1 },
     materialField<SinkholeSpec>(),
-    { key: 'initiation', labelKey: 'sink.initiation', unit: '', min: 0, max: 0, step: 0, precision: 0, options: SINKHOLE_INITIATIONS.map((k) => ({ value: k, labelKey: `sink.init.${k}` as MessageKey })) },
+    {
+      key: 'initiation', labelKey: 'sink.initiation', unit: '', min: 0, max: 0, step: 0, precision: 0, options: SINKHOLE_INITIATIONS.map((k) => ({ value: k, labelKey: `sink.init.${k}` as MessageKey })),
+      // Switching the mode gives its input a default (an unset input could not be edited).
+      ...nested<SinkholeSpec>((s) => s.initiation, (s, v) => ({ ...SINKHOLE_MODE_DEFAULTS[v as SinkholeSpec['initiation']], ...s, initiation: v as SinkholeSpec['initiation'] })),
+    },
     { visible: (s) => (s as SinkholeSpec).initiation === 'growth', key: 'growthRate', labelKey: 'sink.growthRate', unit: 'cm/s', min: 0, max: 100, step: 1, precision: 1, scale: 100 },
     { visible: (s) => (s as SinkholeSpec).initiation === 'supportLoss', key: 'supportLoss', labelKey: 'sink.supportLoss', unit: '%', min: 0, max: 95, step: 5, precision: 0, scale: 100 },
     { visible: (s) => (s as SinkholeSpec).initiation === 'water', key: 'saturation', labelKey: 'sink.saturation', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100 },
@@ -136,7 +145,10 @@ export const landslide = implemented<LandslideSpec>({
     { key: 'thickness', labelKey: 'slide.thickness', unit: 'm', min: LANDSLIDE_LIMITS.thickness[0], max: LANDSLIDE_LIMITS.thickness[1], step: 0.1, precision: 1 },
     materialField<LandslideSpec>(),
     { key: 'saturation', labelKey: 'slide.saturation', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100 },
-    { key: 'trigger', labelKey: 'slide.trigger', unit: '', min: 0, max: 0, step: 0, precision: 0, options: LANDSLIDE_TRIGGERS.map((k) => ({ value: k, labelKey: `slide.trigger.${k}` as MessageKey })) },
+    {
+      key: 'trigger', labelKey: 'slide.trigger', unit: '', min: 0, max: 0, step: 0, precision: 0, options: LANDSLIDE_TRIGGERS.map((k) => ({ value: k, labelKey: `slide.trigger.${k}` as MessageKey })),
+      ...nested<LandslideSpec>((s) => s.trigger, (s, v) => ({ ...(v === 'saturation' ? { targetSaturation: 1 } : {}), ...s, trigger: v as LandslideSpec['trigger'] })),
+    },
     { visible: (s) => (s as LandslideSpec).trigger === 'saturation', key: 'targetSaturation', labelKey: 'slide.targetSaturation', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100 },
     { visible: (s) => (s as LandslideSpec).trigger === 'saturation', key: 'duration', labelKey: 'sink.duration', unit: 's', min: 0, max: LANDSLIDE_LIMITS.duration[1], step: 1, precision: 0 },
     { visible: (s) => (s as LandslideSpec).trigger === 'earthquake', key: 'newmarkLimit', labelKey: 'slide.newmarkLimit', unit: 'cm', min: 1, max: 100, step: 1, precision: 0, scale: 100, optional: true },

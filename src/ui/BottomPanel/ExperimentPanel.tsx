@@ -17,6 +17,7 @@ import styles from './BottomPanel.module.css';
 import eq from './EarthquakeForm.module.css';
 import x from './ExperimentPanel.module.css';
 import { DeformationTools } from './DeformationTools';
+import { GroundTools } from './GroundTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -186,6 +187,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
           onChange={(n, live) => !live && updatePhenomenon(inst.id, { start: after ? { ...after, offset: n } : { at: n } })} />
         {!valid.success && <div className={x.issue} data-testid="exp-invalid">⚠ {valid.error.issues[0]?.message}</div>}
         {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
+        {(inst.type === 'sinkhole' || inst.type === 'landslide') && <GroundTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

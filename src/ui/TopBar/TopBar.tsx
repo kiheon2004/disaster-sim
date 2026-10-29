@@ -44,7 +44,7 @@ export function TopBar() {
         <button className={styles.iconBtn} disabled={!editing} onClick={() => useBlueprintStore.getState().setWizardOpen(true)} title={t('wiz.title')} data-testid="topbar-new-world">
           <Icon name="globe" /> {t('topbar.newWorld')}
         </button>
-        <button className={styles.iconBtn} onClick={saveProject} title={t('topbar.save.title')}>
+        <button className={styles.iconBtn} onClick={saveProject} title={t(editing ? 'topbar.save.title' : 'topbar.save.titleRun')} data-testid="save">
           <Icon name="save" /> {t('topbar.save')}
         </button>
         <button className={styles.iconBtn} onClick={loadProject} disabled={!editing} title={t('topbar.load.title')}>

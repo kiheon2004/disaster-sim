@@ -89,6 +89,27 @@ export interface DeformLive {
   bedDrop: number;
 }
 
+/** Live ground-failure summary (Phase 22) for the HUD / inspector. */
+export interface GroundLive {
+  sinkholes: { id: string; name: string; phase: string; radius: number; fs: number; pitDepth: number }[];
+  landslides: { id: string; name: string; minFS: number; failed: number; cells: number; newmark: number }[];
+  /** Sediment budget (m³ bulked / kg): released, moving, deposited, out of the world, into cavities, residual. */
+  released: number;
+  mobile: number;
+  deposited: number;
+  outflow: number;
+  intoCavity: number;
+  residual: number;
+  residualMass: number;
+  peakMobile: number;
+  maxSpeed: number;
+  /** Cost of the last update (ms) and the runout substeps. */
+  ms: number;
+  flowMs: number;
+  substeps: number;
+  blockedRoads: number;
+}
+
 export interface SimStats {
   byState: [number, number, number, number, number];
   debris: number;
@@ -135,6 +156,7 @@ export interface SimState {
   seismicSeries: SeismicSeries | null;
   flood: FloodLive | null;
   deform: DeformLive | null;
+  ground: GroundLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -166,6 +188,7 @@ export const useSimStore = create<SimState>((set) => ({
   seismicSeries: null,
   flood: null,
   deform: null,
+  ground: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

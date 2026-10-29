@@ -188,10 +188,14 @@ export class GroundFailureSystem implements SimulationSystem {
         rs.deform.debris = debris;
         roads.rev++;
       }
-      if (debris >= ROAD_BLOCK_DEPTH && rs.deform.passable) {
+      // Blocked by the deposit — also when the height change already made it impassable (the
+      // deformation step check runs on the same surface): the cause is recorded once.
+      if (debris >= ROAD_BLOCK_DEPTH && !this.reported.has(`road:${rs.id}`)) {
+        this.reported.add(`road:${rs.id}`);
         rs.deform.passable = false;
         roads.rev++;
-        if (roads.mark(rs, 'impassable', ctx.time, debris)) {
+        roads.mark(rs, 'impassable', ctx.time, debris);
+        {
           ctx.log(null, 'danger', { key: 'log.ground.roadBlocked', params: { id: rs.id, m: debris.toFixed(2) } });
           ctx.milestone?.({ time: ctx.time, kind: 'roadBlocked', hazard: 'ground', label: { key: 'milestone.roadBlocked', params: { id: rs.id } } }, `roadBlocked:${rs.id}`);
         }

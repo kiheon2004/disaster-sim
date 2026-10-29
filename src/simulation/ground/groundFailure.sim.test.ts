@@ -22,6 +22,7 @@ import type { LakeFeature } from '@/landscape/types';
 import { MECHANICAL_PROFILES, DEG, unitWeight, GAMMA_W } from '@/ground/materials';
 import { criticalCavityRadius, infiniteSlopeFS } from '@/ground/stability';
 import { ROAD_BLOCK_DEPTH } from '../systems/GroundFailureSystem';
+import { SYNC_TOLERANCE } from './GroundFailureChannel';
 
 const S = () => useWorldStore.getState();
 const tf = (x: number, z: number) => ({ position: [x, 0, z] as [number, number, number], rotation: [0, 0, 0] as [number, number, number], scale: [1, 1, 1] as [number, number, number] });
@@ -138,6 +139,23 @@ describe('sinkhole', { timeout: 300_000 }, () => {
       return tt;
     };
     expect(await t(true)).toBeLessThan(await t(false));
+  });
+
+  it('a settled pit comes to rest: creep below 1 cm/s deposits, the terrain stops updating and stays within 1 mm of the field', async () => {
+    const c = await start(structuredClone(S().doc), [sink({ cavityRadius: 5, cavityHeight: 8, cover: 5, initiation: 'supportLoss', supportLoss: 0.9, duration: 2, growthRate: undefined })]);
+    c.advance(60);
+    const env = c.getEnvironment(), f = gf(c).field!, eng = env.deformation.engine!;
+    const u0 = eng.updates;
+    c.advance(20);
+    // (Without the rest threshold and the sync tolerance: 200 updates in these 20 s.)
+    expect(eng.updates - u0).toBeLessThanOrEqual(5);
+    expect(f.budget.mobile).toBeLessThan(0.01 * f.budget.released);
+    const src = gf(c).source!;
+    let drift = 0;
+    for (let i = 0; i < f.n; i++) drift = Math.max(drift, Math.abs(f.bed[i] + f.h[i] - src.applied[i]));
+    expect(drift).toBeLessThanOrEqual(SYNC_TOLERANCE);
+    expect(terrainBudgetError(c)).toBeLessThan(1e-6);
+    c.unload();
   });
 
   it('bulking can choke the cavity: no surface collapse; a shallow cover collapses with drop h_c − (B − 1)·H', async () => {
@@ -470,6 +488,24 @@ describe('determinism, restoration, save / load', { timeout: 600_000 }, () => {
     expect(inst[0].spec).toMatchObject({ material: 'cohesive', initiation: 'water', saturation: 0.8 });
     expect(inst[1].spec).toMatchObject({ trigger: 'earthquake', newmarkLimit: 0.05, boundary: 'open', area: { kind: 'polygon' } });
     expect(text).not.toContain('"releasedInSitu"');
+  });
+
+  it('runtime-state manifest: what a mid-run snapshot would need (ground field is state, deformation is derived); the document stays the original', async () => {
+    const doc = slopeWorld(35);
+    const c = await start(doc, [slide({ trigger: 'user' }), sink({ center: [40, 0], cavityRadius: 4, growthRate: 0, initiation: 'supportLoss', supportLoss: 0.9, duration: 1 })]);
+    c.advance(5);
+    const m = c.runtimeState();
+    const by = new Map(m.map((x) => [x.id, x]));
+    expect(by.get('groundFailure')!.kind).toBe('state');
+    expect(by.get('groundFailure')!.present).toBe(true);
+    expect(by.get('groundFailure')!.bytes).toBeGreaterThan(gf(c).field!.n * 20);
+    expect(by.get('deformation')!.kind).toBe('derived');
+    expect(by.get('bodies')!.kind).toBe('external');
+    expect(by.get('document')!.kind).toBe('document');
+    // Saving mid-run serializes the document only: no runtime arrays, the original terrain.
+    const text = serializeDocument(S().doc);
+    const r = parseDocument(text);
+    expect(r.ok && worldFingerprint(r.doc)).toBe(worldFingerprint(doc));
   });
 });
 

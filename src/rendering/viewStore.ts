@@ -32,6 +32,26 @@ export interface FloodViz {
 /** Terrain deformation overlay (Phase 21, render-only). */
 export type DeformVizMode = 'off' | 'displacement' | 'original' | 'vectors';
 
+/**
+ * Ground-failure overlay (Phase 22, render-only): factor of safety of the evaluated areas, mobile
+ * sediment thickness, deposits, total height change of the field; flow arrows; dust (a purely
+ * visual effect, never part of the sediment budget).
+ */
+export type GroundVizMode = 'off' | 'stability' | 'sediment' | 'deposit' | 'change';
+
+export interface GroundViz {
+  mode: GroundVizMode;
+  arrows: boolean;
+  sources: boolean;
+  dust: boolean;
+}
+
+/** Ground tool in the 3D view: set a point (sinkhole / landslide circle) or draw a polygon. */
+export interface GroundPick {
+  id: string;
+  mode: 'point' | 'polygon';
+}
+
 export interface DeformViz {
   mode: DeformVizMode;
   /** Foundation contact / tilt markers on buildings standing on moving ground. */
@@ -79,6 +99,13 @@ interface ViewState {
   /** Experiment instance whose predicted final displacement is drawn on the ground. */
   deformPreview: string | null;
   setDeformPreview: (id: string | null) => void;
+  groundViz: GroundViz;
+  setGroundViz: (patch: Partial<GroundViz>) => void;
+  groundPick: GroundPick | null;
+  setGroundPick: (p: GroundPick | null) => void;
+  /** Experiment instance (sinkhole / landslide) whose predicted outcome is drawn on the ground. */
+  groundPreview: string | null;
+  setGroundPreview: (id: string | null) => void;
   /** Developer performance HUD (off by default; `?perf` or Shift+P). */
   showPerfHud: boolean;
   togglePerfHud: () => void;
@@ -113,6 +140,12 @@ export const useViewStore = create<ViewState>((set) => ({
   setDeformPick: (deformPick) => set({ deformPick }),
   deformPreview: null,
   setDeformPreview: (deformPreview) => set({ deformPreview }),
+  groundViz: { mode: 'change', arrows: true, sources: true, dust: true },
+  setGroundViz: (patch) => set((s) => ({ groundViz: { ...s.groundViz, ...patch } })),
+  groundPick: null,
+  setGroundPick: (groundPick) => set({ groundPick }),
+  groundPreview: null,
+  setGroundPreview: (groundPreview) => set({ groundPreview }),
   showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
   togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),
