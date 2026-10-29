@@ -14,7 +14,7 @@ export function FireHud() {
   const t = useT();
   const s = useSimStore((x) => x.fire);
   if (!s) return null;
-  const k = (key: MessageKey) => <span style={{ color: 'var(--text-2)' }}>{t(key)}</span>;
+  const k = (key: MessageKey) => <span style={{ color: 'var(--text-2)', textAlign: 'left' }}>{t(key)}</span>;
   const L = s.ledger;
   const h = s.history;
   const max = Math.max(1, ...h);
@@ -37,7 +37,7 @@ export function FireHud() {
           <polyline points={path} fill="none" stroke="#ff8a3d" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
         </svg>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', columnGap: 8, rowGap: 1, color: 'var(--text-1)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 8, rowGap: 1, color: 'var(--text-1)', textAlign: 'right' }} className="fire-hud-grid">
         {k('fireHud.peak')}<span className="mono">{powerText(s.peakHrr)} · {s.peakTime.toFixed(0)} s</span>
         {k('fireHud.objects')}<span className="mono" data-testid="fire-hud-objects">{t('fireHud.objectsValue', { burning: s.burningObjects, ignited: s.ignitedObjects, out: s.burnedOutObjects })}</span>
         {s.rooms > 0 && <>{k('fireHud.rooms')}<span className="mono">{t('fireHud.roomsValue', { burning: s.roomsBurning, flash: s.flashovers, limited: s.ventLimited })}</span></>}
