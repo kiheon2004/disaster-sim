@@ -13,7 +13,7 @@ const finite = z.number().refine(Number.isFinite);
 const clampTo = ([lo, hi]: readonly [number, number]) => finite.transform((v) => Math.min(hi, Math.max(lo, v)));
 
 const d = defaultProfile();
-const profileSchema = z.object({
+export const profileSchema = z.object({
   width: clampTo(PROFILE_LIMITS.width).catch(d.width),
   lanes: clampTo(PROFILE_LIMITS.lanes).transform(Math.round).catch(d.lanes),
   oneWay: z.boolean().catch(d.oneWay),

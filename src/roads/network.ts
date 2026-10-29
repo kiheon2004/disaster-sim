@@ -275,6 +275,33 @@ export function mergeAtNode(net: RoadNetwork, nodeId: string): RoadNetwork | nul
   return n;
 }
 
+/**
+ * Insert a sub-network with NEW ids and no snapping (paste with the "isolated" connection
+ * policy): nodes / segments are added as given (segment ends index into `nodes`). Returns the
+ * new ids in input order. Validated like every edit.
+ */
+export function insertSubnetwork(
+  net: RoadNetwork,
+  nodes: readonly { x: number; z: number; y: number | null }[],
+  segs: readonly { a: number; b: number; control: readonly [number, number][]; profile: RoadProfile; condition?: number }[],
+): { network: RoadNetwork; nodeIds: string[]; segmentIds: string[] } {
+  const n = clone(net);
+  const nodeIds = nodes.map((p) => {
+    const id = newId(n, 'n');
+    n.nodes[id] = { id, x: round(p.x), z: round(p.z), y: p.y === null ? null : Math.round(p.y * 100) / 100 };
+    return id;
+  });
+  const segmentIds = segs.map((s) => {
+    const id = newId(n, 's');
+    const seg: RoadSegment = { id, a: nodeIds[s.a], b: nodeIds[s.b], control: s.control.map((c) => [round(c[0]), round(c[1])] as [number, number]), profile: sanitizeProfile(s.profile) };
+    if (s.condition) seg.condition = s.condition;
+    n.segments[id] = seg;
+    return id;
+  });
+  assertValid(n);
+  return { network: n, nodeIds, segmentIds };
+}
+
 /** Delete segments; nodes left without segments are removed too. */
 export function deleteSegments(net: RoadNetwork, ids: readonly string[]): RoadNetwork {
   const n = clone(net);

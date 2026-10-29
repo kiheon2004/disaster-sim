@@ -21,6 +21,8 @@ import type { CreateObjectInput } from '@/world/WorldDocument';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { groundPose, isGrounded, yawOf } from '@/terrain/groundPlacement';
 import { selectionPivot, yawRotate } from './groupTransform';
+import type { LinkPolicy, RoadNetwork } from '@/roads/types';
+import { blueprintRoadsSchema, captureRoads, type BlueprintRoads } from '@/roads/blueprintRoads';
 
 export const BLUEPRINT_FORMAT = 'disaster-sim/blueprint';
 export const BLUEPRINT_VERSION = 1;
@@ -49,6 +51,8 @@ export interface BlueprintObject {
   building?: BuildingDesign;
   /** Slope alignment chosen at placement (Phase 17). */
   terrainAlign?: number;
+  /** Link to a road of this blueprint (Phase 18): index into `roads.segments`. */
+  roadLink?: { segment: number; t: number; lateral: number; yaw: number; policy: LinkPolicy };
 }
 
 export interface Blueprint {
@@ -58,11 +62,28 @@ export interface Blueprint {
   /** Size of the ground-plane bounds of the object origins (m). */
   size: [number, number];
   objects: BlueprintObject[];
+  /** Road segments (Phase 18), relative to the anchor; pasted with fresh ids. */
+  roads?: BlueprintRoads;
 }
 
-/** Build a blueprint from objects of the world (deep copies; ids dropped). */
-export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSampler, name = ''): Blueprint {
-  const pivot = selectionPivot(objs);
+/**
+ * Build a blueprint from objects of the world (deep copies; ids dropped). `roads` (Phase 18):
+ * segments of the network to copy along; links of copied objects to copied segments are kept,
+ * links to other roads are dropped (the copy is not attached to the source's roads).
+ */
+export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSampler, name = '', roads?: { network: RoadNetwork; segments: readonly string[] }): Blueprint {
+  const segIds = roads ? roads.segments.filter((id) => roads.network.segments[id]) : [];
+  let pivot = selectionPivot(objs);
+  if (roads && segIds.length && !objs.length) {
+    // Roads only: anchor at the center of the copied nodes' bounds.
+    let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+    for (const id of segIds) for (const nd of [roads.network.nodes[roads.network.segments[id].a], roads.network.nodes[roads.network.segments[id].b]]) {
+      a = Math.min(a, nd.x); b = Math.max(b, nd.x); c = Math.min(c, nd.z); d = Math.max(d, nd.z);
+    }
+    pivot = { x: (a + b) / 2, z: (c + d) / 2, y: 0 };
+  }
+  const groundAtPivot = terrain.sampleHeight(pivot.x, pivot.z);
+  const captured = roads && segIds.length ? captureRoads(roads.network, segIds, pivot.x, pivot.z, groundAtPivot) : null;
   const groupKeys = new Map<string, string>();
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   const objects = [...objs]
@@ -92,15 +113,19 @@ export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSa
       if (group) bo.group = group;
       if (o.building) bo.building = structuredClone(o.building);
       if (o.terrainAlign !== undefined) bo.terrainAlign = o.terrainAlign;
+      const li = o.roadLink && captured ? captured.index.get(o.roadLink.segment) : undefined;
+      if (o.roadLink && li !== undefined) bo.roadLink = { segment: li, t: o.roadLink.t, lateral: o.roadLink.lateral, yaw: o.roadLink.yaw, policy: o.roadLink.policy };
       return bo;
     });
-  return {
+  const bp: Blueprint = {
     format: BLUEPRINT_FORMAT,
     version: BLUEPRINT_VERSION,
     name,
     size: objs.length ? [x1 - x0, z1 - z0] : [0, 0],
     objects,
   };
+  if (captured) bp.roads = captured.roads;
+  return bp;
 }
 
 /**
@@ -162,7 +187,9 @@ const blueprintSchema = z.object({
     scale: vec3,
     grounded: z.boolean(),
     group: z.string().optional(),
+    roadLink: z.object({ segment: z.number().int().min(0), t: z.number().min(0).max(1), lateral: z.number(), yaw: z.number(), policy: z.enum(['follow', 'preserve', 'detach']).catch('follow') }).optional().catch(undefined),
   })),
+  roads: blueprintRoadsSchema.optional().catch(undefined),
 });
 
 export function serializeBlueprint(bp: Blueprint): string {

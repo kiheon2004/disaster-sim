@@ -1,3 +1,4 @@
+import { Segmented } from '@/ui/common/Segmented';
 import { useT } from '@/i18n/i18n';
 import { useEditorStore } from '@/editor/editorStore';
 import { GRID_SIZES, ROTATION_STEPS, useBuildStore, BRUSH_LIMITS, type GridSize } from '@/editor/buildStore';
@@ -139,8 +140,21 @@ function LastResult() {
 function PasteInfo() {
   const t = useT();
   const clip = useBuildStore((s) => s.clipboard);
+  const policy = useBuildStore((s) => s.roadPaste);
   if (!clip) return <div className={styles.hint}>{t('opts.paste.empty')}</div>;
-  return <div className={styles.hint}>{t('opts.paste.info', { count: clip.objects.length, w: clip.size[0].toFixed(1), d: clip.size[1].toFixed(1) })}</div>;
+  return (
+    <>
+      <div className={styles.hint}>{t('opts.paste.info', { count: clip.objects.length, w: clip.size[0].toFixed(1), d: clip.size[1].toFixed(1) })}</div>
+      {clip.roads && (
+        <>
+          <div className={styles.hint}>{t('road.paste.policy')} ({clip.roads.segments.length})</div>
+          <Segmented size="small" value={policy} onChange={(v) => useBuildStore.getState().setRoadPaste(v)}
+            options={[{ value: 'connect', label: t('road.paste.connect') }, { value: 'isolate', label: t('road.paste.isolate') }]} />
+          <div className={styles.hint}>{t('road.paste.note')}</div>
+        </>
+      )}
+    </>
+  );
 }
 
 /** Options of the active build tool + placement assistance (left panel, under the palette). */

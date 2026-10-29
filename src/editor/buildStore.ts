@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_PLACEMENT, type PlacementSettings } from './build/placementPlan';
 import type { AreaShape, LineOrient, Vec2 } from './build/distribution';
+import type { RoadPastePolicy } from '@/roads/blueprintRoads';
 import type { Blueprint } from './build/blueprint';
 import type { BuildingDesign, BuildingSpec } from '@/buildings/types';
 import { defaultSpec } from '@/buildings/spec';
@@ -91,6 +92,9 @@ interface BuildState {
   /** Transient (not persisted). */
   clipboard: Blueprint | null;
   pasteYaw: number;
+  /** How pasted roads attach to existing roads (Phase 18): explicit, default connect. */
+  roadPaste: RoadPastePolicy;
+  setRoadPaste: (p: RoadPastePolicy) => void;
   lineSession: LineSession;
   areaSession: AreaSession;
   /** Last bulk-placement summary for the tool options panel. */
@@ -129,6 +133,8 @@ export const useBuildStore = create<BuildState>()(
       favorites: [],
       clipboard: null,
       pasteYaw: 0,
+      roadPaste: 'connect',
+      setRoadPaste: (roadPaste) => set({ roadPaste }),
       lineSession: { points: [] },
       areaSession: { shape: null, dragging: false },
       lastResult: null,

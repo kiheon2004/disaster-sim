@@ -13,6 +13,10 @@ import { useBuildStore } from '@/editor/buildStore';
 import type { CreateObjectInput } from '@/world/WorldDocument';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { createBlueprint, instantiateBlueprint } from '@/editor/build/blueprint';
+import { useRoadStore } from '@/editor/roadStore';
+import { pasteRoads } from '@/roads/blueprintRoads';
+import { measureLink } from '@/roads/links';
+import { yawOf } from '@/terrain/groundPlacement';
 import { alignObjects, distributeObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
 import { toast } from '@/ui/common/toast';
@@ -144,10 +148,24 @@ export function ungroupSelection() {
 // ── Copy / paste ─────────────────────────────────────────────────────────
 
 export function copySelection(): boolean {
+  // Road Editing Mode (Phase 18): the selected roads + the objects linked to them.
+  if (editor().tool === 'road') return copyRoadSelection();
   const objs = selectedObjects();
   if (!objs.length) return false;
   useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(world().doc.terrain)));
   toast('info', { key: 'build.toast.copied', params: { count: objs.length } });
+  return true;
+}
+
+/** Copy the selected road segments with every object linked to them (one blueprint). */
+export function copyRoadSelection(): boolean {
+  const segs = useRoadStore.getState().selection.segments;
+  if (!segs.length) return false;
+  const doc = world().doc;
+  const set = new Set(segs);
+  const objs = Object.values(doc.objects).filter((o) => o.roadLink && set.has(o.roadLink.segment));
+  useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(doc.terrain), '', { network: doc.roads, segments: segs }));
+  toast('info', { key: 'road.toast.copied', params: { roads: segs.length, count: objs.length } });
   return true;
 }
 
@@ -165,9 +183,32 @@ export function startPaste() {
 export function pasteAt(x: number, z: number): EntityId[] {
   const b = useBuildStore.getState();
   if (!editable() || !b.clipboard) return [];
-  const ids = world().applyEdit({ add: instantiateBlueprint(b.clipboard, x, z, b.pasteYaw, samplerFor(world().doc.terrain)) });
-  editor().setSelection(ids);
-  return ids;
+  const terrain = samplerFor(world().doc.terrain);
+  const inputs = instantiateBlueprint(b.clipboard, x, z, b.pasteYaw, terrain);
+  if (!b.clipboard.roads) {
+    const ids = world().applyEdit({ add: inputs });
+    editor().setSelection(ids);
+    return ids;
+  }
+  // Roads (Phase 18): fresh ids, the chosen connection policy, links re-measured on the copy.
+  try {
+    const r = pasteRoads(world().doc.roads, b.clipboard.roads, x, z, b.pasteYaw, b.roadPaste, terrain.sampleHeight(x, z));
+    b.clipboard.objects.forEach((o, i) => {
+      if (!o.roadLink) return;
+      const ids = r.segments[o.roadLink.segment] ?? [];
+      const p = inputs[i].transform.position;
+      const link = measureLink(r.network, p[0], p[2], yawOf(inputs[i].transform.rotation), o.roadLink.policy, ids.length === 1 ? ids[0] : undefined);
+      if (link && ids.includes(link.segment)) inputs[i].roadLink = link;
+    });
+    const ids = world().applyEdit({ roads: r.network, add: inputs });
+    if (r.unconnectedCrossings) toast('warn', { key: 'road.toast.unconnected', params: { n: r.unconnectedCrossings } });
+    useRoadStore.getState().select({ segments: r.segments.flat(), node: null });
+    if (editor().tool !== 'road') editor().setSelection(ids);
+    return ids;
+  } catch (e) {
+    toast('error', { key: 'road.error.invalid' }, (e as Error).message);
+    return [];
+  }
 }
 
 // ── Bulk placement ───────────────────────────────────────────────────────

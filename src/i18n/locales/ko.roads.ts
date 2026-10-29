@@ -199,4 +199,10 @@ export const koRoads = {
   'road.sim.scoured': '세굴',
   'road.sim.row': '균열 {crack}% · PGV {pgv} m/s · 최대 수심 {depth} m',
   'road.sim.note': '균열은 최대 지반 속도와 포장별 임계값으로 판정한 근사 지표입니다(지반 파괴·액상화는 미포함). 침수는 1 m 홍수 격자의 수심입니다.',
+  'road.toast.copied': '도로 {roads}개와 연결된 오브젝트 {count}개를 복사했습니다.',
+  'road.toast.unconnected': '붙여넣은 도로가 기존 도로와 {n}곳에서 교차하지만 연결하지 않았습니다(분리 정책).',
+  'road.paste.policy': '붙여넣은 도로 연결',
+  'road.paste.connect': '기존 도로에 연결',
+  'road.paste.isolate': '분리(연결 안 함)',
+  'road.paste.note': '연결: 끝점이 가까운 노드·도로에 붙고 교차하면 교차로가 됩니다. 분리: 복사한 그대로 넣고 기존 도로와 연결하지 않습니다.',
 } as const;

@@ -144,3 +144,67 @@ describe('road store integration', () => {
     S().setLocked(false);
   });
 });
+
+describe('road blueprints', () => {
+  it('copy roads + linked objects, paste with new ids (connect / isolate), links follow the copy', async () => {
+    const { createBlueprint, instantiateBlueprint, parseBlueprint, serializeBlueprint } = await import('@/editor/build/blueprint');
+    const { pasteRoads } = await import('./blueprintRoads');
+    const { samplerFor: sf } = await import('@/terrain/TerrainSampler');
+    let n = draw(S().doc.roads, [[-40, 0], [0, 0], [0, 30]]);
+    S().applyEdit({ roads: n });
+    n = S().doc.roads;
+    const segs = Object.keys(n.segments);
+    const link = measureLink(n, -20, 6, 0, 'follow')!;
+    S().applyEdit({ add: [{ type: 'streetLight', transform: { position: [-20, 0, 6], rotation: [0, 0, 0], scale: [1, 1, 1] }, roadLink: link }] });
+    const lamp = Object.values(S().doc.objects)[0];
+    const bp = createBlueprint([lamp], sf(S().doc.terrain), '', { network: n, segments: segs });
+    expect(bp.roads!.segments).toHaveLength(2);
+    expect(bp.roads!.nodes).toHaveLength(3);
+    expect(bp.objects[0].roadLink).toBeDefined();
+    // JSON round trip keeps roads and links.
+    const bp2 = parseBlueprint(serializeBlueprint(bp))!;
+    expect(bp2.roads).toEqual(bp.roads);
+    expect(bp2.objects[0].roadLink).toEqual(bp.objects[0].roadLink);
+    // Paste far away (isolated): new ids, nothing shared with the source.
+    const r = pasteRoads(n, bp.roads!, 60, 60, 0, 'isolate');
+    const newSegs = r.segments.flat();
+    expect(newSegs.every((id) => !n.segments[id])).toBe(true);
+    expect(Object.keys(r.network.segments)).toHaveLength(4);
+    expect(r.unconnectedCrossings).toBe(0);
+    const inputs = instantiateBlueprint(bp, 60, 60, 0, sf(S().doc.terrain));
+    expect(inputs).toHaveLength(1);
+    // Paste so that one end lands on the source road: connect makes a junction, isolate does not.
+    const anchorX = 0, anchorZ = -12;
+    const c = pasteRoads(n, bp.roads!, anchorX, anchorZ, Math.PI / 2, 'connect');
+    const i = pasteRoads(n, bp.roads!, anchorX, anchorZ, Math.PI / 2, 'isolate');
+    const { degree } = await import('./network');
+    const junctions = (net: RoadNetwork) => Object.keys(net.nodes).filter((id) => degree(net, id) >= 3).length;
+    expect(junctions(c.network)).toBeGreaterThan(junctions(i.network));
+    expect(i.unconnectedCrossings).toBeGreaterThan(0);
+  });
+
+  it('pasting a road blueprint through the store is one undo step and relinks objects', async () => {
+    const { useBuildStore } = await import('@/editor/buildStore');
+    const { createBlueprint } = await import('@/editor/build/blueprint');
+    const { pasteAt } = await import('@/app/buildActions');
+    const { samplerFor: sf } = await import('@/terrain/TerrainSampler');
+    S().applyEdit({ roads: draw(S().doc.roads, [[-40, 0], [40, 0]]) });
+    const n = S().doc.roads;
+    const seg = Object.keys(n.segments)[0];
+    S().applyEdit({ add: [{ type: 'streetLight', transform: { position: [10, 0, 6], rotation: [0, 0, 0], scale: [1, 1, 1] }, roadLink: measureLink(n, 10, 6, 0, 'follow')! }] });
+    const lamp = Object.values(S().doc.objects)[0];
+    useBuildStore.getState().setClipboard(createBlueprint([lamp], sf(S().doc.terrain), '', { network: n, segments: [seg] }));
+    useBuildStore.getState().setRoadPaste('isolate');
+    const pastBefore = S().past.length;
+    const ids = pasteAt(0, 50);
+    expect(ids).toHaveLength(1);
+    expect(S().past.length).toBe(pastBefore + 1);
+    expect(Object.keys(S().doc.roads.segments)).toHaveLength(2);
+    const copy = S().doc.objects[ids[0]];
+    expect(copy.roadLink!.segment).not.toBe(seg);
+    expect(S().doc.roads.segments[copy.roadLink!.segment]).toBeDefined();
+    S().undo();
+    expect(Object.keys(S().doc.roads.segments)).toHaveLength(1);
+    expect(S().doc.objects[ids[0]]).toBeUndefined();
+  });
+});

@@ -96,6 +96,22 @@ class PreviewLines {
   }
 }
 
+/** Outlines of some segments of a network (paste preview). */
+export function RoadOutlines({ network, segments, color = COLORS.ok }: { network: RoadNetwork; segments: readonly string[]; color?: string }) {
+  const terrain = useWorldStore((s) => s.doc.terrain);
+  const lines = useMemo(() => new PreviewLines(), []);
+  useEffect(() => () => lines.dispose(), [lines]);
+  useEffect(() => {
+    const sampler = samplerFor(terrain);
+    lines.clear();
+    for (const id of segments) {
+      const s = network.segments[id];
+      if (s) lines.road(segmentLine(network, s), s.profile, color, sampler);
+    }
+  }, [lines, network, segments, color, terrain]);
+  return <primitive object={lines.root} />;
+}
+
 interface DraftInfo {
   ok: boolean;
   length: number;

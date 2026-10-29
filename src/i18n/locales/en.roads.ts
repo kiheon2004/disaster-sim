@@ -186,4 +186,10 @@ export const enRoads: Record<keyof typeof koRoads, string> = {
   'road.sim.scoured': 'Scoured',
   'road.sim.row': 'cracks {crack}% · PGV {pgv} m/s · max depth {depth} m',
   'road.sim.note': 'Cracking is an approximate indicator from peak ground velocity vs. a per-surface threshold (ground failure / liquefaction not included). Inundation is the depth on the 1 m flood grid.',
+  'road.toast.copied': 'Copied {roads} road(s) and {count} linked object(s).',
+  'road.toast.unconnected': 'The pasted roads cross existing roads at {n} place(s) without connecting (isolate policy).',
+  'road.paste.policy': 'Pasted roads',
+  'road.paste.connect': 'Connect to existing roads',
+  'road.paste.isolate': 'Isolate (no connection)',
+  'road.paste.note': 'Connect: ends snap to nearby nodes / roads and crossings become junctions. Isolate: inserted exactly as copied, not connected to existing roads.',
 };

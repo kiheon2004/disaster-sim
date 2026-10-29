@@ -6,6 +6,9 @@ import type { PlannedObject } from '../build/placementPlan';
 import { useEditorStore } from '../editorStore';
 import { gridStep, useBuildStore } from '../buildStore';
 import { pasteAt } from '@/app/buildActions';
+import { useWorldStore } from '@/world/worldStore';
+import { pasteRoads } from '@/roads/blueprintRoads';
+import { RoadOutlines } from './RoadTool';
 import { GroundCatcher, PlanPreview, groundHitOf, useSampler } from './shared';
 
 /**
@@ -26,6 +29,19 @@ export function PasteTool() {
     if (!clipboard || !at) return [];
     return instantiateBlueprint(clipboard, at[0], at[1], yaw, sampler).map((input) => ({ input, ok: true, warnings: [] }));
   }, [clipboard, at, yaw, sampler]);
+
+  const policy = useBuildStore((s) => s.roadPaste);
+  const roads = useWorldStore((s) => s.doc.roads);
+  // Pasted roads preview (Phase 18): outline of the network the click would create.
+  const roadPreview = useMemo(() => {
+    if (!clipboard?.roads || !at) return null;
+    try {
+      const r = pasteRoads(roads, clipboard.roads, at[0], at[1], yaw, policy, sampler.sampleHeight(at[0], at[1]));
+      return { network: r.network, segments: r.segments.flat(), ok: true };
+    } catch {
+      return null;
+    }
+  }, [clipboard, at, yaw, policy, roads, sampler]);
 
   if (!clipboard) return null;
   const hit = (e: ThreeEvent<PointerEvent | MouseEvent>): Vec2 | null => {
@@ -49,6 +65,7 @@ export function PasteTool() {
         }}
       />
       <PlanPreview plan={plan} />
+      {roadPreview && <RoadOutlines network={roadPreview.network} segments={roadPreview.segments} />}
     </>
   );
 }
