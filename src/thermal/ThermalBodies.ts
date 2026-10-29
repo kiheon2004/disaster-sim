@@ -260,11 +260,13 @@ export class ThermalBodies {
         const Ta = env.airT(a);
         const hc = env.pr ? hBox(Ts, Ta, this.wind[i], this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i], env.pr(a)) : hBox(Ts, Ta, this.wind[i], this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
         const eps = THERMAL_MATERIALS[matS].emissivity;
-        const hr = env.closed ? 0 : eps * SIGMA * (Ts * Ts + Tref * Tref) * (Ts + Tref);
+        // Radiative surroundings: the reference (Phase 26) or, under a climate, the sky / ground view (Phase 30).
+        const Tr = env.Trad ? env.Trad(i) : Tref;
+        const hr = env.closed ? 0 : eps * SIGMA * (Ts * Ts + Tr * Tr) * (Ts + Tr);
         // Surface temperature of the linearized balance through the half-skin resistance.
-        const Tsf = (Ts / R + hc * Ta + hr * Tref) / (1 / R + hc + hr);
+        const Tsf = (Ts / R + hc * Ta + hr * Tr) / (1 / R + hc + hr);
         const qc = hc * A * fo * (Tsf - Ta);
-        const qr = hr * A * fo * (Tsf - Tref);
+        const qr = hr * A * fo * (Tsf - Tr);
         this.dS[i] -= qc + qr;
         if (a >= 0) env.toAir(a, qc, (4 / 3) * hc * A * fo); else acc.aboveLayer += qc;
         acc.convection += Math.abs(qc);
@@ -383,4 +385,6 @@ export interface BodyEnv {
   compEps?(c: number): number;
   /** Phase 29: pressure ratio to the standard pressure at an air column (absent: 1). */
   pr?(a: number): number;
+  /** Phase 30: effective radiative surroundings of a body's outdoor faces (K; absent: the reference). */
+  Trad?(i: number): number;
 }

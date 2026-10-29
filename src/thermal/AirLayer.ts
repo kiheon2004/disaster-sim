@@ -81,8 +81,11 @@ export class AirLayer {
   }
 
   T(a: number): number {
-    return a < 0 ? this.Tref : this.Tref + this.E[a] / (this.Ca ? this.Ca[a] : this.C);
+    return a < 0 ? (this.aboveT ?? this.Tref) : this.Tref + this.E[a] / (this.Ca ? this.Ca[a] : this.C);
   }
+
+  /** Phase 30: temperature of the air above the layer / outside the world under a climate forcing (null: the reference). */
+  aboveT: number | null = null;
 
   /** Heat capacity of a column (J/K). */
   cap(a: number): number {
@@ -112,8 +115,10 @@ export class AirLayer {
     if (this.Ca) return this.ventAtmos(closed);
     let lost = 0, maxRate = 0;
     const A = this.cellArea, k = this.rho * CP_AIR * A, gH = GRAVITY * this.H / this.Tref;
+    // Phase 30: under a climate forcing the layer vents relative to the background air above it.
+    const ref = this.ventRef === null ? 0 : this.ventRef - this.Tref;
     for (let a = 0; a < this.count; a++) {
-      const dT = this.E[a] / this.C;
+      const dT = this.E[a] / this.C - ref;
       if (!closed && dT > 0) {
         const w = Math.sqrt(gH * dT);
         const q = k * w * dT;
@@ -187,8 +192,14 @@ export class AirLayer {
     const fx = cx * h, fz = cz * h;
     const { nx, nz, E, tmp } = this;
     let out = 0, moved = 0;
+    // Phase 30: background air entering at the upwind edges carries its temperature excess (null: ambient).
+    const ex = this.inflowExcess !== null && this.inflowExcess !== 0 ? this.inflowExcess * this.C : 0;
     for (let s = 0; s < n; s++) {
       tmp.set(E);
+      if (ex !== 0) {
+        if (fx > 0) for (let iz = 0; iz < nz; iz++) { const a = iz * nx + (u > 0 ? 0 : nx - 1); E[a] += ex * fx; out -= ex * fx; moved += Math.abs(ex * fx); }
+        if (fz > 0) for (let ix = 0; ix < nx; ix++) { const a = (w > 0 ? 0 : nz - 1) * nx + ix; E[a] += ex * fz; out -= ex * fz; moved += Math.abs(ex * fz); }
+      }
       for (let iz = 0; iz < nz; iz++) {
         for (let ix = 0; ix < nx; ix++) {
           const a = iz * nx + ix;

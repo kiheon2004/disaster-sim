@@ -47,17 +47,22 @@ export interface WaterBudget {
   boundaryOut: number;
   infiltration: number;
   drainage: number;
+  /** Phase 30 (climate): meltwater in, water frozen out, evaporated out, condensed / internal precipitation in (m³). */
+  melt: number;
+  frozen: number;
+  evaporated: number;
+  condensed: number;
   current: number;
   /** current − (initial + inputs − outputs). */
   error: number;
 }
 
 export function emptyBudget(): WaterBudget {
-  return { initial: 0, rain: 0, sources: 0, boundaryIn: 0, boundaryOut: 0, infiltration: 0, drainage: 0, current: 0, error: 0 };
+  return { initial: 0, rain: 0, sources: 0, boundaryIn: 0, boundaryOut: 0, infiltration: 0, drainage: 0, melt: 0, frozen: 0, evaporated: 0, condensed: 0, current: 0, error: 0 };
 }
 
 export function expectedVolume(b: WaterBudget): number {
-  return b.initial + b.rain + b.sources + b.boundaryIn - b.boundaryOut - b.infiltration - b.drainage;
+  return b.initial + b.rain + b.sources + b.boundaryIn - b.boundaryOut - b.infiltration - b.drainage + b.melt - b.frozen - b.evaporated + b.condensed;
 }
 
 /** Relative conservation error: |error| / total water that ever entered. */
@@ -145,6 +150,18 @@ export class WaterField {
   infilHeat: Float64Array | null = null;
   heatOut = 0;
   heatMoved = 0;
+
+  /**
+   * Phase 30 (climate experiments only — null otherwise, the Phase 14 paths unchanged):
+   *  infilFactor  infiltration capacity multiplier of frozen soil (impedance 10^(−Ω·Q))
+   *  iceLoad      floating ice per cell as water depth (m): its weight presses on the water surface
+   *  iceFric      Manning n² multiplier under an ice cover (Sabaneev composite roughness)
+   *  frozen       1: the water is frozen to the bed (liquid under the ice too thin to flow) — no flow
+   */
+  infilFactor: Float32Array | null = null;
+  iceLoad: Float64Array | null = null;
+  iceFric: Float32Array | null = null;
+  frozen: Uint8Array | null = null;
 
   /** Inclusive cell range that may hold water (empty when x0 > x1). */
   x0 = 1;

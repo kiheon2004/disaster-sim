@@ -24,7 +24,9 @@
 import type { TerrainData } from '@/core/model';
 import { GROUND_EMISSIVITY, GROUND_THERMAL, SOIL_THERMAL, THERMAL_MATERIALS } from './materials';
 import { hGround, hWaterSide } from './convection';
-import { SIGMA, C_WATER, RHO_WATER } from './units';
+import { SIGMA, C_WATER, RHO_WATER, CP_AIR } from './units';
+import { dqSatdT, qSat } from '@/climate/psychro';
+import { L_S, L_V, LEWIS, T_MELT } from '@/climate/constants';
 
 export const LAYERS = [0.02, 0.06, 0.18, 0.54] as const;
 export const NL = LAYERS.length;
@@ -230,6 +232,7 @@ export class TerrainThermal {
    * ΣG/C (1/s) over the active nodes — the explicit stability limit is dt·max < 1.
    */
   fluxes(env: TerrainEnv): number {
+    if (env.climate) return this.fluxesClimate(env, env.climate);
     const { nx, nl, E, dE, dW, area, gS, gW, Tn, Gc, Gx, Gz, R0 } = this;
     const C = this.C;
     const Tref = this.Tref;
@@ -355,9 +358,183 @@ export class TerrainThermal {
     return maxRate;
   }
 
+  /**
+   * Phase 30: the same evaluation with the climate's surface balance (sky longwave, shortwave, latent heat) and
+   * snow / ice covered cells left to the climate. Conduction terms are identical to fluxes().
+   */
+  private fluxesClimate(env: TerrainEnv, cl: SurfaceClimate): number {
+    const { nx, nl, E, dE, dW, area, gS, gW, Tn, Gc, Gx, Gz, R0 } = this;
+    const C = this.C;
+    const Tref = this.Tref;
+    const acc = env.acc;
+    const water = env.water;
+    const closed = env.closed;
+    const ntx = this.ntx, tileOn = this.tileOn;
+    const Tsky = cl.Tsky, Tsky4 = Tsky * Tsky * Tsky * Tsky;
+    const kLe = 1 / (CP_AIR * Math.pow(LEWIS, 2 / 3));
+    let cond = 0, conv = 0, deep = 0, sky = 0;
+    for (const t of this.tiles) {
+      const tx = t % ntx, tz = (t / ntx) | 0;
+      const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
+      for (let iz = z0; iz < z1; iz++) for (let j = (iz * nx + x0) * nl, e = (iz * nx + x1) * nl; j < e; j++) Tn[j] = Tref + E[j] / C[j];
+    }
+    for (const t of this.tiles) {
+      const tx = t % ntx, tz = (t / ntx) | 0;
+      const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
+      const eastOn = tx + 1 < ntx && tileOn[t + 1] === 1;
+      const southOn = tz + 1 < this.ntz && tileOn[t + ntx] === 1;
+      for (let iz = z0; iz < z1; iz++) {
+        const lastRow = iz + 1 === z1;
+        for (let ix = x0; ix < x1; ix++) {
+          const c = iz * nx + ix;
+          const j = c * nl;
+          for (let l = 0; l < nl - 1; l++) {
+            const a = j + l;
+            const G = Gc[a];
+            const q = G * (Tn[a] - Tn[a + 1]);
+            gS[a] += G; gS[a + 1] += G;
+            dE[a] -= q; dE[a + 1] += q;
+            cond += q < 0 ? -q : q;
+          }
+          if (!closed) {
+            const a = j + nl - 1;
+            const G = Gc[a];
+            const q = G * (Tn[a] - Tref);
+            gS[a] += G;
+            dE[a] -= q;
+            deep += q;
+          }
+          if (ix + 1 < nx && (ix + 1 < x1 || eastOn)) {
+            for (let l = 0; l < nl; l++) {
+              const a = j + l, b = a + nl, G = Gx[a];
+              const q = G * (Tn[a] - Tn[b]);
+              gS[a] += G; gS[b] += G;
+              if (q !== 0) { dE[a] -= q; dE[b] += q; cond += q < 0 ? -q : q; }
+            }
+          }
+          if (iz + 1 < this.nz && (!lastRow || southOn)) {
+            for (let l = 0; l < nl; l++) {
+              const a = j + l, b = a + nx * nl, G = Gz[a];
+              const q = G * (Tn[a] - Tn[b]);
+              gS[a] += G; gS[b] += G;
+              if (q !== 0) { dE[a] -= q; dE[b] += q; cond += q < 0 ? -q : q; }
+            }
+          }
+          if (this.covered[c] || env.noSurface) continue;
+          const T0 = Tn[j];
+          const r0 = R0[c];
+          const hw = water ? water.h[c] : 0;
+          const wet = hw > WATER_MERGE;
+          if (cl.covered[c]) {
+            // Under the climate's snow / ice cover: the bed still conducts to the water above it.
+            if (wet) {
+              const Cw = RHO_WATER * C_WATER * hw * area;
+              const Tw = Tref + water!.heat[c] / Cw;
+              const hws = hWaterSide(Tw, T0);
+              const Gwb = hws > 0 ? area / (1 / hws + r0) : 0;
+              const qb = Gwb * (Tw - T0);
+              dE[j] += qb; dW[c] -= qb;
+              cond += Math.abs(qb);
+              gS[j] += Gwb * (4 / 3);
+              gW[c] = (Gwb * (4 / 3)) / Cw;
+            }
+            continue;
+          }
+          const air = env.airIndex(ix, iz);
+          const Ta = env.airT(air);
+          const qa = air >= 0 ? cl.qAir[air] : cl.qAir[0];
+          const pa = air >= 0 ? cl.pAir[air] : cl.pAir[0];
+          const S = cl.solar[c] * area;
+          if (wet) {
+            const Cw = RHO_WATER * C_WATER * hw * area;
+            const Tw = Tref + water!.heat[c] / Cw;
+            const hws = hWaterSide(Tw, T0);
+            const Gwb = hws > 0 ? area / (1 / hws + r0) : 0;
+            const qb = Gwb * (Tw - T0);
+            dE[j] += qb; dW[c] -= qb;
+            cond += Math.abs(qb);
+            const hc = env.pr ? hGround(Tw, Ta, env.u2, 1, env.pr(air)) : hGround(Tw, Ta, env.u2);
+            const eps = 0.96;
+            const qc = hc * area * (Tw - Ta);
+            const qr = closed ? 0 : eps * SIGMA * area * (Tw * Tw * Tw * Tw - Tsky4);
+            // Open water: no surface resistance; condensation (dew) when the air is moister than saturation at Tw.
+            const km = hc * kLe * area;
+            let Ev = km * (qSat(Tw, pa) - qa);
+            if (Ev > cl.evapMax[c]) Ev = cl.evapMax[c];
+            const ql = L_V * Ev;
+            dW[c] += S - qc - qr - ql;
+            cl.evapRate[c] += Ev;
+            cl.latRate[c] += ql;
+            env.toAir(air, qc, (4 / 3) * hc * area);
+            conv += Math.abs(qc);
+            sky += qr;
+            gS[j] += Gwb * (4 / 3);
+            gW[c] = (Gwb * (4 / 3) + (4 / 3) * hc * area + (closed ? 0 : 4 * eps * SIGMA * Tw * Tw * Tw * area) + L_V * km * dqSatdT(Tw, pa)) / Cw;
+          } else {
+            const hc = env.pr ? hGround(T0, Ta, env.u2, 1, env.pr(air)) : hGround(T0, Ta, env.u2);
+            const eps = this.emiss[c];
+            const hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tsky * Tsky) * (T0 + Tsky);
+            // Latent: evaporation of soil water through the soil resistance (soilWet), condensation (dew / frost)
+            // on the surface without it; L_s for frost below 0 °C.
+            const ice = T0 < T_MELT;
+            const qs0 = qSat(T0, pa, ice);
+            const cond0 = qs0 < qa;
+            const k = hc * kLe * (cond0 ? 1 : cl.soilWet[c]);
+            const L = cond0 && ice ? L_S : L_V;
+            const s = k > 0 ? dqSatdT(T0, pa, ice) : 0;
+            // Surface temperature of the linearized balance (latent flux linear in Ts about T0).
+            let Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - L * k * (qs0 - s * T0 - qa)) / (1 / r0 + hc + hr + L * k * s);
+            let Ev = k * area * (qs0 + s * (Ts - T0) - qa);
+            if (Ev > cl.evapMax[c]) {
+              Ev = cl.evapMax[c];
+              Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - (L * Ev) / area) / (1 / r0 + hc + hr);
+            }
+            const qc = hc * area * (Ts - Ta);
+            const qr = hr * area * (Ts - Tsky);
+            const ql = L * Ev;
+            dE[j] += S - qc - qr - ql;
+            cl.evapRate[c] += Ev;
+            cl.latRate[c] += ql;
+            env.toAir(air, qc, area / (r0 + 1 / Math.max(1e-12, (4 / 3) * hc)));
+            conv += qc < 0 ? -qc : qc;
+            sky += qr;
+            const hTan = (4 / 3) * hc + (closed ? 0 : 4 * eps * SIGMA * T0 * T0 * T0) + L * k * s;
+            gS[j] += hTan > 0 ? area / (r0 + 1 / hTan) : 0;
+          }
+        }
+      }
+    }
+    acc.conduction += cond;
+    acc.convection += conv;
+    acc.deepGround += deep;
+    acc.radiationSky += sky;
+    let maxRate = this.extra;
+    this.extra = 0;
+    for (const t of this.tiles) {
+      const tx = t % ntx, tz = (t / ntx) | 0;
+      const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
+      for (let iz = z0; iz < z1; iz++) {
+        for (let c = iz * nx + x0, ce = iz * nx + x1; c < ce; c++) {
+          const j = c * nl;
+          for (let l = 0; l < nl; l++) { const r = gS[j + l] / C[j + l]; if (r > maxRate) maxRate = r; gS[j + l] = 0; }
+          if (gW[c] > maxRate) maxRate = gW[c];
+          gW[c] = 0;
+        }
+      }
+    }
+    return maxRate;
+  }
+
   /** Apply the accumulated rates over dt and clear them. Water heat applies to the link. */
-  apply(dt: number, water: WaterLink | null) {
+  apply(dt: number, water: WaterLink | null, climate?: SurfaceClimate | null) {
     const { nl, E, dE, dW, nx } = this;
+    if (climate) {
+      const { evapRate, latRate, evap, latent } = climate;
+      this.forActive((c) => {
+        if (evapRate[c] !== 0) { evap[c] += evapRate[c] * dt; evapRate[c] = 0; }
+        if (latRate[c] !== 0) { latent[c] += latRate[c] * dt; latRate[c] = 0; }
+      });
+    }
     for (const t of this.tiles) {
       const tx = t % this.ntx, tz = (t / this.ntx) | 0;
       const x0 = tx * TILE, z0 = tz * TILE, x1 = Math.min(nx, x0 + TILE), z1 = Math.min(this.nz, z0 + TILE);
@@ -384,8 +561,37 @@ export class TerrainThermal {
   }
 }
 
+/**
+ * Phase 30: the climate's coupling of the bare surface in the ground step (absent without a climate experiment —
+ * the Phase 26 path is then taken unchanged). The surface balance gains absorbed shortwave, longwave exchange with
+ * the sky's effective temperature instead of the reference, and the latent heat of evaporation / condensation
+ * with the mass-transfer coefficient of the same convection (Chilton–Colburn: h_m = h_c / (c_p·Le^(2/3))).
+ * Cells under a snow / ice cover exchange nothing with air / sky here (the climate does it for the cover).
+ */
+export interface SurfaceClimate {
+  covered: Uint8Array;
+  /** Shortwave absorbed by the bare surface (W/m²) — the ground surface layer or the water node. */
+  solar: Float32Array;
+  /** Effective sky temperature (K). */
+  Tsky: number;
+  /** Specific humidity (kg/kg) and pressure (Pa) of the air columns. */
+  qAir: Float64Array;
+  pAir: Float64Array;
+  /** Soil evaporation conductance share (0 dry … 1 free water) — the soil resistance. */
+  soilWet: Float32Array;
+  /** Largest evaporation the cell's water / soil water can supply over this ground step (kg/s). */
+  evapMax: Float32Array;
+  /** Rates of one evaluation (kg/s evaporation +, condensation −; W latent taken +) and the step totals (kg, J). */
+  evapRate: Float64Array;
+  latRate: Float64Array;
+  evap: Float64Array;
+  latent: Float64Array;
+}
+
 /** What the ground needs from its surroundings during a flux evaluation. */
 export interface TerrainEnv {
+  /** Phase 30: climate surface coupling (absent: Phase 26 surface). */
+  climate?: SurfaceClimate | null;
   closed: boolean;
   /** Tests: the ground surface exchanges nothing (insulated). */
   noSurface?: boolean;

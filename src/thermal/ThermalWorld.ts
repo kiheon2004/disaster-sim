@@ -20,7 +20,7 @@
  *  5. ledger: internal energy and residual.
  */
 import type { TerrainData } from '@/core/model';
-import { TerrainThermal, WATER_MERGE, emptyRates, type ThermalRates, type WaterLink } from './TerrainThermal';
+import { TerrainThermal, WATER_MERGE, emptyRates, type SurfaceClimate, type ThermalRates, type WaterLink } from './TerrainThermal';
 import { AirLayer, DEFAULT_LAYER_HEIGHT } from './AirLayer';
 import { ThermalBodies } from './ThermalBodies';
 import { ThermalLedger } from './ledger';
@@ -95,6 +95,8 @@ export interface SourceStep {
    * transferred heat); what no receiver absorbs left as radiation to the sky.
    */
   volcanic?: boolean;
+  /** Phase 30: absorbed shortwave (booked `solar`, every receiver takes its share — weights sum to 1). */
+  solar?: boolean;
 }
 
 /** Building room (one story of a modular building). */
@@ -148,6 +150,17 @@ export class ThermalWorld {
    * an atmosphere experiment (the uniform mean-wind advection of Phase 26 is used).
    */
   flow: { fx: Float64Array; fz: Float64Array } | null = null;
+  /**
+   * Phase 30: the climate's surface coupling of the ground step, the radiative surroundings of the bodies
+   * (sky / ground view → effective temperature, K) and the cover that takes heat deposited on a snow / ice
+   * covered cell (returns true when it did) — all null without a climate experiment.
+   */
+  climate: SurfaceClimate | null = null;
+  bodyTrad: ((i: number) => number) | null = null;
+  coverSink: ((c: number, J: number) => boolean) | null = null;
+  /** Phase 30: whether the last step ran the ground operator, and over which interval (s). */
+  groundStepped = false;
+  groundStepDt = 0;
   private readonly insulated: boolean;
   time = 0;
   steps = 0;
@@ -248,6 +261,8 @@ export class ThermalWorld {
     switch (kind) {
       case TK.ground:
       case TK.water:
+        // Phase 30: heat arriving on a snow / ice covered surface goes into the cover first.
+        if (this.coverSink && this.coverSink(i, J)) { this.ledger.cover -= J; break; }
         if (this.wet(i)) { this.water!.heat[i] += J; this.terrain.activateCell(i); }
         else { this.terrain.E[i * this.terrain.nl] += J; this.terrain.activateCell(i); }
         break;
@@ -308,6 +323,11 @@ export class ThermalWorld {
           L.lost.radiationSky += s.energy - used - above;
           continue;
         }
+        if (s.solar) {
+          L.solar += s.energy;
+          L.lost.unresolvedRadiation += s.energy - used;
+          continue;
+        }
         if (s.volcanic) {
           L.volcanic += s.energy;
           L.lost.aboveLayer += above;
@@ -325,7 +345,10 @@ export class ThermalWorld {
     // Slow operator: the ground (and water on it) on its own step.
     this.groundAcc += dt;
     let maxRate = 0, n = 1;
+    this.groundStepped = false;
     if (this.groundAcc >= this.groundDt - 1e-9) {
+      this.groundStepped = true;
+      this.groundStepDt = this.groundAcc;
       const g = this.groundOp(this.groundAcc, sources);
       this.groundAcc = 0;
       maxRate = g.maxRate;
@@ -367,7 +390,7 @@ export class ThermalWorld {
     const tr = this.terrain;
     const cx = tr.originX + 0.5 * tr.cell, cz = tr.originZ + 0.5 * tr.cell;
     const ix2a = (ix: number, iz: number) => air.index(cx + ix * tr.cell, cz + iz * tr.cell);
-    const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc, pr: air.prA ? (a: number) => air.prAt(a) : undefined };
+    const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc, pr: air.prA ? (a: number) => air.prAt(a) : undefined, climate: this.climate };
     const evaluate = () => {
       let r = tr.fluxes(env);
       // Ground contacts (foundations, slabs on grade, rubble heaps, whole-building nodes): slow
@@ -384,7 +407,7 @@ export class ThermalWorld {
     const h = dt / n;
     for (let k = 0; k < n; k++) {
       if (k > 0) { const r = evaluate(); if (r > maxRate) maxRate = r; }
-      tr.apply(h, this.water);
+      tr.apply(h, this.water, this.climate);
       this.bodies.apply(h);
       air.apply(h);
       this.book(h);
@@ -436,6 +459,7 @@ export class ThermalWorld {
       toComp: (c, W, G) => this.toComp(c, W, G),
       compEps: this.hasGasRadiation ? (c) => (c >= 0 && this.comps[c].alive ? this.comps[c].eps : 0) : undefined,
       pr: air.prA ? (a) => air.prAt(a) : undefined,
+      Trad: this.bodyTrad ?? undefined,
     });
     // Rooms: ventilation with the outdoors.
     for (const cp of this.comps) {

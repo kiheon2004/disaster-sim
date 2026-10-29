@@ -159,7 +159,7 @@ export class WaterSolver {
     f.rev++;
     f.budget.current = f.totalVolume();
     f.budget.error =
-      f.budget.current - (f.budget.initial + f.budget.rain + f.budget.sources + f.budget.boundaryIn - f.budget.boundaryOut - f.budget.infiltration - f.budget.drainage);
+      f.budget.current - (f.budget.initial + f.budget.rain + f.budget.sources + f.budget.boundaryIn - f.budget.boundaryOut - f.budget.infiltration - f.budget.drainage + f.budget.melt - f.budget.frozen - f.budget.evaporated + f.budget.condensed);
     f.updateStats();
     f.stats.substeps = n;
     f.stats.minDt = this.minDt;
@@ -173,7 +173,8 @@ export class WaterSolver {
       this.waveSpeed = 0;
       return;
     }
-    this.computeFluxes(dt);
+    if (f.iceLoad) this.computeFluxesIce(dt);
+    else this.computeFluxes(dt);
     this.limitOutflow(dt);
     // Phase 26: heat rides on the limited face volumes (no-op without a thermal run).
     if (f.heat) this.advectHeat(dt);
@@ -225,6 +226,7 @@ export class WaterSolver {
     if (!f.hasWater()) return;
     const { h, infilRate, infilStore, infiltrated, drainRate, nx } = f;
     const heat = f.heat;
+    const ifac = f.infilFactor;
     let inf = 0;
     let drn = 0;
     for (let iz = f.z0; iz <= f.z1; iz++) {
@@ -238,6 +240,7 @@ export class WaterSolver {
           if (room > 0) {
             // Capacity falls linearly as the soil column fills (bucket model).
             let a = infilRate[i] * (room / store) * dt;
+            if (ifac !== null) a *= ifac[i];
             if (a > room) a = room;
             if (a > d) a = d;
             d -= a;
@@ -374,6 +377,131 @@ export class WaterSolver {
             if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
             qn = (num * H) / (H + gdt * 0.5 * (n2[T] + n2[B]) * aq);
+            const lim = fr2 * hf * hf * hf;
+            if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
+            if (hf > hfMax) hfMax = hf;
+            const u = (qn < 0 ? -qn : qn) / hf;
+            if (u > uMax) uMax = u;
+          }
+        }
+        rowOld[ix] = old;
+        qz[fi] = qn;
+      }
+    }
+    let speed = Math.sqrt(G * hfMax) + uMax;
+
+    // Boundary faces (only the part of each edge inside the active range).
+    if (xa === 0) for (let iz = za; iz <= zb; iz++) speed = Math.max(speed, this.edgeFace('W', iz * nx, iz * W, -1, iz * nx + 1, dt));
+    if (xb === nx - 1) for (let iz = za; iz <= zb; iz++) speed = Math.max(speed, this.edgeFace('E', iz * nx + nx - 1, iz * W + nx, +1, iz * nx + nx - 2, dt));
+    if (za === 0) for (let ix = xa; ix <= xb; ix++) speed = Math.max(speed, this.edgeFace('N', ix, ix, -1, nx + ix, dt));
+    if (zb === nz - 1) for (let ix = xa; ix <= xb; ix++) speed = Math.max(speed, this.edgeFace('S', (nz - 1) * nx + ix, nz * nx + ix, +1, (nz - 2) * nx + ix, dt));
+    this.waveSpeed = speed;
+  }
+
+  /**
+   * Phase 30: the same face update under floating ice — the ice weight (as water depth) adds to the surface
+   * that drives the flow, the ice underside adds friction (n² × iceFric), water frozen to the bed does not flow.
+   * The flowing depth stays the liquid depth. A simplified boundary condition, not an under-ice flow model.
+   */
+  private computeFluxesIce(dt: number) {
+    const iceL = this.field.iceLoad!, fric = this.field.iceFric!, frz = this.field.frozen!;
+    const f = this.field;
+    const { nx, nz, h, bed, n2, qx, qz, blocked } = f;
+    const dx = f.cell;
+    const xa = Math.max(0, f.x0 - 1);
+    const xb = Math.min(nx - 1, f.x1 + 1);
+    const za = Math.max(0, f.z0 - 1);
+    const zb = Math.min(nz - 1, f.z1 + 1);
+    const W = nx + 1;
+    const gdt = G * dt;
+    const slopeK = gdt / dx;
+    const th = THETA;
+    const th2 = (1 - THETA) * 0.5;
+    const fr2 = FROUDE_MAX * FROUDE_MAX * G;
+    let hfMax = 0;
+    let uMax = 0;
+    // Interaction terms (Phase 15), all zero in single-hazard runs → identical arithmetic path.
+    const ws = this.forcing.windStress;
+    const gdv = this.forcing.groundDv;
+    const share = this.callDt > 0 ? dt / this.callDt : 0;
+    const sX = ws[0] * dt;
+    const sZ = ws[1] * dt;
+    const gX = gdv[0] * share;
+    const gZ = gdv[1] * share;
+    const extX = sX !== 0 || gX !== 0;
+    const extZ = sZ !== 0 || gZ !== 0;
+    // Air-pressure waves (Phase 24): −h·∂(∫p dt)/∂x / ρ_w, the call's share of it (null otherwise).
+    const air = this.forcing.airPending ? this.forcing.airImpulse : null;
+    const airK = air !== null ? share / (WATER_DENSITY * dx) : 0;
+
+    // x faces, row by row (face k lies between cells k−1 and k).
+    for (let iz = za; iz <= zb; iz++) {
+      const row = iz * nx;
+      const frow = iz * W;
+      let prevOld = qx[frow + xa]; // old value of the face left of the first updated one
+      for (let k = xa + 1; k <= xb; k++) {
+        const L = row + k - 1;
+        const R = L + 1;
+        const fi = frow + k;
+        const old = qx[fi];
+        const hL = h[L];
+        const hR = h[R];
+        let qn = 0;
+        if ((hL > 0 || hR > 0) && blocked[L] === 0 && blocked[R] === 0 && frz[L] === 0 && frz[R] === 0) {
+          const bL = bed[L];
+          const bR = bed[R];
+          const eL = bL + hL;
+          const eR = bR + hR;
+          const hf = (eL > eR ? eL : eR) - (bL > bR ? bL : bR);
+          if (hf > H_FLOW_MIN) {
+            const q0 = th * old + th2 * (prevOld + qx[fi + 1]);
+            const aq = q0 < 0 ? -q0 : q0;
+            const H = hf * hf * cbrtFast(hf);
+            let num = q0 - slopeK * hf * (eR + iceL[R] - eL - iceL[L]);
+            if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
+            if (air !== null) num -= hf * airK * (air[R] - air[L]);
+            qn = (num * H) / (H + gdt * 0.5 * (n2[L] * fric[L] + n2[R] * fric[R]) * aq);
+            // Froude limiter: q² ≤ Fr²·g·hf³
+            const lim = fr2 * hf * hf * hf;
+            if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
+            // Gravity waves travel even through still water: hf always enters the CFL bound.
+            if (hf > hfMax) hfMax = hf;
+            const u = (qn < 0 ? -qn : qn) / hf;
+            if (u > uMax) uMax = u;
+          }
+        }
+        prevOld = old;
+        qx[fi] = qn;
+      }
+    }
+
+    // z faces (face row k lies between cell rows k−1 and k).
+    const rowOld = this.rowOld;
+    for (let ix = xa; ix <= xb; ix++) rowOld[ix] = qz[za * nx + ix];
+    for (let k = za + 1; k <= zb; k++) {
+      const top = (k - 1) * nx;
+      for (let ix = xa; ix <= xb; ix++) {
+        const T = top + ix;
+        const B = T + nx;
+        const fi = B; // face row k, column ix = k·nx + ix
+        const old = qz[fi];
+        const hT = h[T];
+        const hB = h[B];
+        let qn = 0;
+        if ((hT > 0 || hB > 0) && blocked[T] === 0 && blocked[B] === 0 && frz[T] === 0 && frz[B] === 0) {
+          const bT = bed[T];
+          const bB = bed[B];
+          const eT = bT + hT;
+          const eB = bB + hB;
+          const hf = (eT > eB ? eT : eB) - (bT > bB ? bT : bB);
+          if (hf > H_FLOW_MIN) {
+            const q0 = th * old + th2 * (rowOld[ix] + qz[fi + nx]);
+            const aq = q0 < 0 ? -q0 : q0;
+            const H = hf * hf * cbrtFast(hf);
+            let num = q0 - slopeK * hf * (eB + iceL[B] - eT - iceL[T]);
+            if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
+            if (air !== null) num -= hf * airK * (air[B] - air[T]);
+            qn = (num * H) / (H + gdt * 0.5 * (n2[T] * fric[T] + n2[B] * fric[B]) * aq);
             const lim = fr2 * hf * hf * hf;
             if (qn * qn > lim) qn = qn > 0 ? Math.sqrt(lim) : -Math.sqrt(lim);
             if (hf > hfMax) hfMax = hf;
