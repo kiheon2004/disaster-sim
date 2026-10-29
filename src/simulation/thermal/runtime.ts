@@ -127,6 +127,7 @@ export class ThermalRuntime {
   readonly humans: RuntimeEntity[] = [];
   private readonly geom = new Map<string, SourceGeom>();
   private readonly upto = new Map<string, number>();
+  private readonly groundCache = new Map<string, { rev: number; list: ReturnType<typeof groundReceivers> }>();
   readonly heapBody = new Map<number, number>();
   private heapMass = new Map<number, number>();
   /** Body → fragment it follows (structural fragments). */
@@ -622,6 +623,15 @@ export class ThermalRuntime {
     }
     const inside = this.buildingContaining(P);
     const shield = this.shields(P, reach);
+    // Ground receivers depend only on the source and the terrain: cached until the ground deforms.
+    const terrainRev = ctx.env.deformation.engine?.rev ?? 0;
+    const groundOf = (id: string) => {
+      const hit = this.groundCache.get(id);
+      if (hit && hit.rev === terrainRev) return hit.list;
+      const list = groundReceivers(spec, grid, w.Tref);
+      this.groundCache.set(id, { rev: terrainRev, list });
+      return list;
+    };
     const grid: GroundGrid = {
       nx: tr.nx, nz: tr.nz, cell: tr.cell, originX: tr.originX, originZ: tr.originZ, height: (x, z) => this.groundY(ctx, x, z), covered: (c) => tr.covered[c] === 1,
       emissivity: (c) => (w.water && w.water.h[c] > WATER_MERGE ? 0.96 : tr.emiss[c]),
@@ -649,7 +659,7 @@ export class ThermalRuntime {
         const ground: Deposit[] = [];
         let gsum = 0;
         // Inside a room the walls stand between the source and the ground outside.
-        if (!inside) for (const r of groundReceivers(spec, grid, w.Tref)) { ground.push({ kind: TK.ground, index: r.cell, w: r.w }); gsum += r.w / r.eps; }
+        if (!inside) for (const r of groundOf(s.id)) { ground.push({ kind: TK.ground, index: r.cell, w: r.w }); gsum += r.w / r.eps; }
         // Objects below the source shade the ground they stand on (conservative uniform reduction).
         const shade = gsum > 0 ? Math.max(0, (gsum - down) / gsum) : 0;
         for (const d of ground) d.w *= shade;
@@ -663,7 +673,7 @@ export class ThermalRuntime {
         break;
       }
       case 'area': {
-        const rs = groundReceivers(spec, grid, w.Tref);
+        const rs = groundOf(s.id);
         if (!rs.length) { const c = tr.index(P[0], P[2]); if (c >= 0) rs.push({ cell: c, w: 1, aConv: 0, eps: 1 }); }
         for (const r of rs) deposits.push({ kind: TK.ground, index: r.cell, w: r.w });
         break;
@@ -679,7 +689,7 @@ export class ThermalRuntime {
           items.push({ kind: TK.body, index: i, w: A });
           total += A;
         }
-        for (const r of groundReceivers(spec, grid, w.Tref)) { items.push({ kind: TK.ground, index: r.cell, w: r.w }); total += r.w; }
+        for (const r of groundOf(s.id)) { items.push({ kind: TK.ground, index: r.cell, w: r.w }); total += r.w; }
         if (total <= 0) { const c = tr.index(P[0], P[2]); if (c >= 0) { items.push({ kind: TK.ground, index: c, w: 1 }); total = 1; } }
         for (const d of items) deposits.push({ ...d, w: d.w / total });
         break;
@@ -711,7 +721,7 @@ export class ThermalRuntime {
           const Ap = this.projected(i, -dx / r, -dy / r, -dz / r) * vis;
           exchanges.push({ kind: TK.body, index: i, aRad: Ap * sphereViewFactor(R, r), aConv: 0, eps, L: B.Lv[i] });
         }
-        if (!inside) for (const r of groundReceivers(spec, grid, w.Tref)) exchanges.push({ kind: TK.ground, index: r.cell, aRad: r.w, aConv: r.aConv, eps: r.eps, L: 1 });
+        if (!inside) for (const r of groundOf(s.id)) exchanges.push({ kind: TK.ground, index: r.cell, aRad: r.w, aConv: r.aConv, eps: r.eps, L: 1 });
         // The sphere's surface convects into the air (or the room) it occupies.
         const As = 4 * Math.PI * R * R;
         if (inside) exchanges.push({ kind: TK.comp, index: inside.comp, aRad: 0, aConv: As, eps: 1, L: R });

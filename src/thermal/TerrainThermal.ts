@@ -170,6 +170,10 @@ export class TerrainThermal {
     return this.Tref + this.E[j] / this.C[j];
   }
 
+  isActiveCell(c: number): boolean {
+    return this.tileOn[((c / this.nx / TILE) | 0) * this.ntx + (((c % this.nx) / TILE) | 0)] === 1;
+  }
+
   activateCell(c: number) {
     const t = ((c / this.nx / TILE) | 0) * this.ntx + (((c % this.nx) / TILE) | 0);
     this.activateTile(t);

@@ -27,6 +27,9 @@ import { ThermalLedger } from './ledger';
 import { hBox, hGround, hSphere } from './convection';
 import { SIGMA, CP_AIR, C_WATER, RHO_WATER } from './units';
 
+/** Water warmer / colder than the reference by this much (K) brings its tile into the ground computation. */
+export const WATER_ACTIVATE = 1e-3;
+
 export const TK = { ground: 0, water: 1, air: 2, comp: 3, body: 4 } as const;
 export type TargetKind = (typeof TK)[keyof typeof TK];
 
@@ -116,8 +119,35 @@ export class ThermalWorld {
   /** Largest sub-step count needed so far and the last stability numbers. */
   maxSubsteps = 1;
   last: StepInfo = { substeps: 0, maxRate: 0, airSubsteps: 0 };
-  /** Per source: energy deposited on each receiver (for the inspector), keyed `${kind}:${index}`. */
-  readonly contributions = new Map<string, Map<number, number>>();
+  /**
+   * Per source: energy deposited on each body / ground receiver (inspector). Accumulated per geometry
+   * epoch (the receiver weights are fixed between rebuilds): the epoch's energy × each weight is
+   * flushed into the totals when the geometry changes — exact, without per-step map updates.
+   */
+  private readonly contrib = new Map<string, { deposits: readonly Deposit[]; energy: number; totals: Map<number, number>; index: Map<number, number> | null }>();
+
+  /** Energy a source has put into a receiver so far (J). */
+  contribution(id: string, key: number): number {
+    const c = this.contrib.get(id);
+    if (!c) return 0;
+    if (!c.index) {
+      c.index = new Map();
+      for (const d of c.deposits) if (d.kind === TK.body || d.kind === TK.ground) { const k = contributionKey(d.kind, d.index); c.index.set(k, (c.index.get(k) ?? 0) + d.w); }
+    }
+    return (c.totals.get(key) ?? 0) + c.energy * (c.index.get(key) ?? 0);
+  }
+
+  private flushContributions(id: string, deposits: readonly Deposit[], energy: number) {
+    let c = this.contrib.get(id);
+    if (!c) this.contrib.set(id, (c = { deposits, energy: 0, totals: new Map(), index: null }));
+    if (c.deposits !== deposits) {
+      if (c.energy !== 0) for (const d of c.deposits) if (d.kind === TK.body || d.kind === TK.ground) { const k = contributionKey(d.kind, d.index); c.totals.set(k, (c.totals.get(k) ?? 0) + c.energy * d.w); }
+      c.deposits = deposits;
+      c.energy = 0;
+      c.index = null;
+    }
+    c.energy += energy;
+  }
   private readonly rates: ThermalRates = emptyRates();
   /** The ground advances on its own step (its time constants are ≥ minutes); energy is exact either way. */
   groundDt = 1;
@@ -225,15 +255,13 @@ export class ThermalWorld {
     for (const s of sources) {
       if (s.energy !== 0) {
         let used = 0;
-        let per = this.contributions.get(s.id);
-        if (!per) this.contributions.set(s.id, (per = new Map()));
+        this.flushContributions(s.id, s.deposits, s.energy);
         for (const d of s.deposits) {
           // A receiver that merged / left since the geometry was built: its share stays unresolved.
           if (d.kind === TK.body && !this.bodies.alive[d.index]) continue;
           const J = s.energy * d.w;
           this.deposit(d.kind, d.index, J);
           used += J;
-          if (d.kind === TK.body || d.kind === TK.ground) { const key = contributionKey(d.kind, d.index); per.set(key, (per.get(key) ?? 0) + J); }
         }
         const above = s.energy * (s.aboveLayer ?? 0);
         L.added += s.energy;
@@ -416,9 +444,12 @@ export class ThermalWorld {
       if (inf !== 0) { g.E[c * nl] += inf; w.infilHeat![c] = 0; g.activateCell(c); }
       const e = w.heat[c];
       if (e === 0) continue;
-      g.activateCell(c);
       const hw = w.h[c];
-      if (hw <= 0) { g.E[c * nl] += e; w.heat[c] = 0; continue; }
+      if (hw <= 0) { g.E[c * nl] += e; w.heat[c] = 0; g.activateCell(c); continue; }
+      // Water carries heat into a tile: the tile joins once that water differs from the reference by
+      // more than WATER_ACTIVATE (until then its heat simply stays in the water — nothing is lost).
+      if (!g.isActiveCell(c) && Math.abs(e) < WATER_ACTIVATE * Cw1 * hw) continue;
+      g.activateCell(c);
       if (hw <= WATER_MERGE) {
         // Equilibrium of the film and the surface layer (constant capacities over the merge).
         const j = c * nl;

@@ -38,7 +38,7 @@ function contributions(kind: number, index: number): [string, number][] {
   const key = contributionKey(kind, index);
   const out: [string, number][] = [];
   for (const s of env.thermal.sources) {
-    const v = rt.world.contributions.get(s.id)?.get(key);
+    const v = rt.world.contribution(s.id, key);
     if (v) out.push([s.name, v]);
   }
   return out;
