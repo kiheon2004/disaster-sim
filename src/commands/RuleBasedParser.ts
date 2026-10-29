@@ -363,6 +363,13 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       result.warnings.push({ key: 'parse.volcano.editor' });
       continue;
     }
+    // Phase 29: an atmosphere experiment is recognized but set up in the experiment editor (reference state,
+    // removal schedule, boundary) — text never removes air.
+    if (phenomena.implemented('atmosphere')!.keywords.test(raw)) {
+      result.unsupported.push({ event: 'atmosphere', params: {} });
+      result.warnings.push({ key: 'parse.atmosphere.editor' });
+      continue;
+    }
     // Phase 15: a phenomenon that is not implemented is reported, never executed.
     const planned = phenomena.matchPlanned(raw);
     if (planned) {

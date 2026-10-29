@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano']); // Phase 27: + fire, Phase 28: + volcano
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere']); // Phase 27: + fire, Phase 28: + volcano, Phase 29: + atmosphere
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -64,6 +64,7 @@ describe('registration', () => {
       for (const c of d.channels) expect(CHANNELS[c].status).not.toBe('interface');
     }
     // (meteor → implemented as 'impact' since Phase 23)
+    // (air removal → implemented as the atmosphere experiment 'atmosphere' since Phase 29; an O₂-fraction change stays planned)
     for (const type of ['blackHole', 'tornado', 'gravityChange', 'atmosphereLoss']) {
       const d = phenomena.get(type)!;
       expect(d.status).toBe('planned');
@@ -76,6 +77,8 @@ describe('registration', () => {
     expect(phenomena.get('blast')?.status).toBe('implemented');
     expect(phenomena.get('fire')?.status).toBe('implemented');
     expect(phenomena.get('volcano')?.status).toBe('implemented');
+    expect(phenomena.get('atmosphere')?.status).toBe('implemented');
+    expect(phenomena.matchPlanned('대기를 제거해')).toBeFalsy();
     expect(phenomena.matchPlanned('create a black hole')?.type).toBe('blackHole');
   });
 

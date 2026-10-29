@@ -3,6 +3,7 @@
  * only WRITES a channel: at its start it builds the wave (tables, ground reflection) on the run's
  * current terrain and adds it to the pressure channel; the BlastSystem does the rest.
  */
+import { blastBackground } from '@/simulation/atmosphere/runtime';
 import { createId } from '@/core/id';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { TerrainData } from '@/core/model';
@@ -50,9 +51,22 @@ export class BlastEvent implements SimulationEvent<BlastSpec> {
   }
 
   onStart({ env }: EventContext) {
+    // Phase 29 (opt-in): an atmosphere experiment's local background state replaces the standard
+    // ambient — unless the spec sets its own; outside the blast model's range the ambient is kept (logged).
+    const bg = this.spec.ambientPressure === undefined && this.spec.ambientDensity === undefined ? blastBackground(env, this.spec.position[0], this.spec.position[1], 'blast') : null;
+    if (bg && bg !== 'range') {
+      const name = this.spec.name ?? this.id;
+      const spec = { ...this.spec, ambientPressure: bg.p, ambientDensity: bg.rho };
+      const wave = waveOf(spec, env.terrain.data, { id: this.id, source: `blast:${name}`, name, time: this.startTime });
+      this.plan = planOfWave(spec, wave, env.terrain.data);
+      this.prepared = null;
+      env.blast.add(this.plan.wave, this.plan, this.startTime + this.plan.worldExit + 2 * this.plan.wave.sample(1e3).T + 0.1);
+      return;
+    }
     const reuse = this.prepared !== null && (env.deformation.engine?.rev ?? 0) === 0 && (this.spec.ambientDensity !== undefined || env.airDensity === AIR_DENSITY);
     const plan = (this.plan = reuse ? this.prepared! : this.build(env.terrain.data, env.airDensity));
     this.prepared = null;
+    if (bg === 'range') plan.warnings.push({ key: 'atmos.warn.blastRange' } as BlastPlan['warnings'][number]);
     env.blast.add(plan.wave, plan, this.startTime + plan.worldExit + 2 * plan.wave.sample(1e3).T + 0.1);
   }
 

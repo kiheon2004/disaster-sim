@@ -196,6 +196,33 @@ export interface VolcanoLive {
   cost: { flow: number; cool: number; ash: number; bombs: number; heat: number; objects: number };
 }
 
+/** Live atmosphere summary (Phase 29) for the HUD, results and verification. SI units. */
+export interface AtmosphereLive {
+  name: string;
+  /** Experiments rejected with their reason. */
+  rejected: { name: string; reason: string }[];
+  spec: import('@/atmosphere/types').AtmosphereSpec;
+  p0: number;
+  T0: number;
+  rho0: number;
+  stats: import('./atmosphere/runtime').AtmosphereStats;
+  mass: import('@/atmosphere/AtmosphereField').MassLedger & { residual: number };
+  energy: import('@/atmosphere/AtmosphereField').EnergyLedger & { residual: number };
+  momentum: import('@/atmosphere/AtmosphereField').MomentumLedger;
+  oxygen: import('@/atmosphere/AtmosphereField').OxygenLedger & { deficitOut: number; roomsAndMixing: number; layer: number };
+  gas: import('@/atmosphere/AtmosphereField').GasLedger;
+  /** Heat change of the air booked by the thermal world for atmospheric mass changes (J). */
+  thermalAirMass: number;
+  warnings: string[];
+  /** Domain pressure-adjustment time (s), the fastest change the model follows. */
+  adjustTime: number;
+  /** Phase 21–22 terrain changes taken into the column ground heights. */
+  terrainUpdates: number;
+  series: import('./atmosphere/runtime').AtmosSample[];
+  ms: number;
+  msTotal: number;
+}
+
 /** Live fire summary (Phase 27) for the HUD, results and verification. Energies J, powers W, masses kg. */
 export interface FireLive {
   hrr: number;
@@ -346,6 +373,8 @@ export interface SimState {
   thermal: ThermalLive | null;
   fire: FireLive | null;
   volcano: VolcanoLive | null;
+  /** Phase 29: atmosphere experiment (null without one). */
+  atmosphere: AtmosphereLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -384,6 +413,7 @@ export const useSimStore = create<SimState>((set) => ({
   thermal: null,
   fire: null,
   volcano: null,
+  atmosphere: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

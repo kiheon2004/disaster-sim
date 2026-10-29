@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive } from './simStore';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
@@ -237,6 +237,7 @@ export class SimulationController {
       structure: null,
       thermal: null,
       volcano: null,
+      atmosphere: null,
       floodSeries: null,
       milestones: [],
     });
@@ -604,6 +605,7 @@ export class SimulationController {
     patch.thermal = this.thermalLive();
     patch.fire = this.fireLive();
     patch.volcano = this.volcanoLive();
+    patch.atmosphere = this.atmosphereLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -772,6 +774,29 @@ export class SimulationController {
       internal: L.final, residual: L.residual(), relativeResidual: L.relativeResidual(),
       bodies: s.bodies, buildings: s.buildings, activeTiles: s.activeTiles, substeps: w.last.substeps, maxSubsteps: w.maxSubsteps, ms: rt.ms, msTotal: rt.msTotal,
       damagedStructures: s.damagedStructures, failedMembers: s.failedMembers, minFactor: s.minFactor, maxUtil: s.maxUtil, restraint: w.settings.restraint,
+    };
+  }
+
+  /** Live atmosphere summary (Phase 29; null without an atmosphere experiment). */
+  atmosphereLive(): AtmosphereLive | null {
+    const ch = this.env.atmosphere;
+    const rejected = ch.experiments.filter((r) => r.reason).map((r) => ({ name: r.name, reason: r.reason! }));
+    const ar = ch.rt;
+    if (!ar) return null;
+    const f = ar.field;
+    return {
+      name: ar.rec.name, rejected, spec: ar.spec, p0: ar.p0, T0: ar.T0, rho0: ar.rho0, stats: { ...ar.stats },
+      mass: { ...f.mass, residual: f.massResidual() },
+      energy: { ...f.energy, residual: f.energy.final - f.energyExpected() },
+      momentum: { ...f.momentum },
+      oxygen: { ...f.oxygen, deficitOut: ar.o2.deficitOut, roomsAndMixing: ar.o2.roomsAndMixing, layer: ar.o2.layer },
+      gas: { ...f.gasLedger },
+      thermalAirMass: ar.trt.world.ledger.airMass,
+      warnings: ar.warnings.slice(),
+      adjustTime: f.adjustmentTime(),
+      terrainUpdates: ar.terrainUpdates,
+      series: ar.series.slice(),
+      ms: ar.ms, msTotal: ar.msTotal,
     };
   }
 

@@ -27,6 +27,29 @@ export class WaterSolverSystem implements SimulationSystem {
     return ctx.env.flood.solver !== null;
   }
 
+  /** Phase 29: ∫(p* − mean p*) dt over the call at the wet cells (bilinear in the 5 m columns). */
+  private pressureImpulse(ctx: SystemContext, atm: import('../atmosphere/runtime').AtmosphereRuntime, dt: number) {
+    const af = atm.field;
+    if (af.maxSpeed === 0 && af.maxLayerSpeed === 0) return;
+    const wf = ctx.env.flood.solver!.field;
+    const mean = af.meanReducedPressure();
+    let buf: Float64Array | null = null;
+    for (let iz = 0; iz < wf.nz; iz++) for (let ix = 0; ix < wf.nx; ix++) {
+      const i = iz * wf.nx + ix;
+      if (wf.h[i] <= 0) continue;
+      const x = wf.originX + (ix + 0.5) * wf.cell, z = wf.originZ + (iz + 0.5) * wf.cell;
+      const gx = Math.max(0, Math.min(af.nx - 1, (x - af.originX) / af.dx - 0.5)), gz = Math.max(0, Math.min(af.nz - 1, (z - af.originZ) / af.dx - 0.5));
+      const x0 = Math.min(af.nx - 2, Math.floor(gx)), z0 = Math.min(af.nz - 2, Math.floor(gz));
+      if (x0 < 0 || z0 < 0) continue;
+      const tx = gx - x0, tz = gz - z0;
+      const P = (a: number) => af.sigma[a] * af.red[a] * 9.81;
+      const a = z0 * af.nx + x0;
+      const p = (P(a) * (1 - tx) + P(a + 1) * tx) * (1 - tz) + (P(a + af.nx) * (1 - tx) + P(a + af.nx + 1) * tx) * tz;
+      buf ??= ctx.env.flood.forcing!.ensureAirImpulse(wf.count);
+      buf[i] += (p - mean) * dt;
+    }
+  }
+
   /** Ground velocity at the end of the previous call (map center, reference soil). */
   private lastV: [number, number] = [0, 0];
   private gm = createGroundMotionSample();
@@ -46,13 +69,19 @@ export class WaterSolverSystem implements SimulationSystem {
    *  - Earthquake + flood: in the ground's frame the water receives −a_g; integrated exactly over
    *    the call as the ground-velocity change Δv_g (map center, reference soil) — no aliasing at
    *    10 Hz, but sloshing faster than ~5 Hz is filtered out.
+   *  - Atmosphere (Phase 29, experiments only): the wind stress with the mean air density, and the
+   *    atmosphere's surface pressure differences (reduced to the datum) as an impulse on the water
+   *    through the Phase 24 air-impulse path (−h·∇∫p dt/ρ_w: inverse-barometer response). A uniform
+   *    pressure change does nothing to the water (no gradient) — water never disappears with the air.
    */
   private couple(ctx: SystemContext, dt: number) {
     const f = ctx.env.flood.forcing!;
     const U = ctx.env.wind.baseSpeed;
+    const atm = ctx.env.atmosphere.rt;
+    if (atm) this.pressureImpulse(ctx, atm, dt);
     if (U > 0.01) {
       const cd = (0.8 + 0.065 * U) * 1e-3;
-      const k = (AIR_DENSITY * cd * U * U) / WATER_DENSITY;
+      const k = ((atm ? atm.stats.meanDensity : AIR_DENSITY) * cd * U * U) / WATER_DENSITY;
       const flow = ctx.env.wind.flow();
       f.windStress[0] = k * flow[0];
       f.windStress[1] = k * flow[2];

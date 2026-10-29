@@ -20,6 +20,7 @@ const dirW: Vec3 = [0, 0, 0];
 const local: Vec3 = [0, 0, 0];
 const qc: Quat = [0, 0, 0, 1];
 const debrisWind = createLocalWind();
+const flow: [number, number] = [0, 0];
 
 function conjInto(q: Quat): Quat {
   qc[0] = -q[0]; qc[1] = -q[1]; qc[2] = -q[2]; qc[3] = q[3];
@@ -32,6 +33,13 @@ function conjInto(q: Quat): Quat {
  *  - records the load ratio for the damage system,
  *  - applies drag F = ½ρ·Cd·A·|v_rel|²  at the pressure center of every dynamic body
  *    (so tipping torque and sliding emerge from the rigid-body solver).
+ *
+ * Phase 29 (atmosphere experiments only): the air is the atmosphere's — ρ at the centre of pressure
+ * (p(z)/(R·T)), the velocity = the prescribed wind (Phase 15 background, unchanged) + the computed
+ * flow (column + near-surface layer; zero in a resting atmosphere, so nothing is added twice), the
+ * load ratio × ρ/ρ_design (design speeds are sea-level calibrations: load ∝ ρ·v²), and dynamic bodies
+ * moving through still air get the same drag (their own motion) — one force per body through the
+ * ForceLedger's 'wind' source, never a second one.
  */
 export class WindForceSystem implements SimulationSystem {
   readonly name = 'windForce';
@@ -47,13 +55,15 @@ export class WindForceSystem implements SimulationSystem {
   private dirty = false;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.wind.baseSpeed > 0.01 || this.dirty;
+    return ctx.env.wind.baseSpeed > 0.01 || this.dirty || ctx.env.atmosphere.rt !== null;
   }
 
   update({ env, runtime, physics, time, forces, interactions }: SystemContext) {
     const field = env.windField;
-    const rho = env.airDensity || AIR_DENSITY;
-    const calm = env.wind.baseSpeed <= 0.01;
+    const rho0 = env.airDensity || AIR_DENSITY;
+    let rho = rho0;
+    const atm = env.atmosphere.rt;
+    const calm = env.wind.baseSpeed <= 0.01 && !atm;
     this.dirty = !calm;
 
     for (const e of runtime.entities.values()) {
@@ -75,10 +85,18 @@ export class WindForceSystem implements SimulationSystem {
           lw.shelter *= k;
         }
       }
+      if (atm) {
+        // Phase 29: computed flow on top of the prescribed wind, local density.
+        atm.flowAt(cop[0], cop[2], cop[1] - env.terrain.sampleHeight(cop[0], cop[2]), flow);
+        lw.velocity[0] += flow[0]; lw.velocity[2] += flow[1];
+        lw.speed = Math.hypot(lw.velocity[0], lw.velocity[1], lw.velocity[2]);
+        rho = atm.densityAt(cop[0], cop[1], cop[2]);
+      }
       const v = lw.velocity;
       const speed = lw.speed;
       e.windAtCop = speed;
       e.loadRatio = loadRatio(speed, e.source.physics.windResistance * e.strength);
+      if (atm) e.loadRatio *= rho / AIR_DENSITY;
       // Residual strength (Phase 15): earthquake / flood damage lowers the capacity the wind
       // load is compared with (load ∝ v², capacity × (1 − 0.3·D)). Exactly 1 without them.
       if (interactions && (e.seismic || e.flood)) e.loadRatio /= residualStrength(e, 'wind');
@@ -112,6 +130,12 @@ export class WindForceSystem implements SimulationSystem {
     if (calm) return;
     for (const d of runtime.debris) {
       const v = field.sample(d.pose.position, time, undefined, undefined, debrisWind).velocity;
+      if (atm) {
+        const q = d.pose.position;
+        atm.flowAt(q[0], q[2], q[1] - env.terrain.sampleHeight(q[0], q[2]), flow);
+        v[0] += flow[0]; v[2] += flow[1];
+        rho = atm.densityAt(q[0], q[1], q[2]);
+      }
       const vRel = vSub(v, physics.getLinearVelocity(d.body));
       const rel = vLen(vRel);
       if (rel < 0.05) continue;

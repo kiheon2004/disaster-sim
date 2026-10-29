@@ -87,7 +87,7 @@ export const koPhenomena = {
   'phen.volcano': '화산',
   'phen.fire': '화재',
   'phen.extremeTemperature': '극한 온도',
-  'phen.atmosphereLoss': '대기 소멸·산소 감소',
+  'phen.atmosphereLoss': '산소 분율 변화·저산소',
   'phen.gravityChange': '중력 변화',
   'phen.blackHole': '블랙홀',
   'phen.tsunami': '쓰나미',

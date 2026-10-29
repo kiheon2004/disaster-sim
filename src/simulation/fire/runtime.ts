@@ -282,9 +282,9 @@ export class FireRuntime {
       const h = (s === 0 ? spec.groundFloorHeight ?? spec.floorHeight : spec.floorHeight) * mr.scale[1];
       if (tc < 0) { storyRoom.push(-1); y += h; continue; }
       const cp = w.comps[tc];
-      const V = cp.C / (w.air.rho * CP_AIR);
+      const V = cp.C / (w.air.rhoAt(cp.air) * CP_AIR);
       const leak = this.settings.openings === 'closed' ? 0 : cp.Gv / CP_AIR;
-      const r = this.fw.addRoom(tc, V, planA, 2 * planA + per * h, cp.air, leak, w.air.rho);
+      const r = this.fw.addRoom(tc, V, planA, 2 * planA + per * h, cp.air, leak, w.air.rhoAt(cp.air));
       this.roomOfComp.set(tc, r);
       storyRoom.push(r);
       this.rooms.push({ r, bt, story: s, y0: y, h, openings: [], slabs: [], windows: [], surfaces: [], surfArea: 0, surfAt: -Infinity, sideA: new Float64Array(SIDES), sideGeom: new Array(SIDES).fill(null) });
@@ -530,7 +530,7 @@ export class FireRuntime {
         if (up) {
           FR.links.push([up.r, slabA]);
           const dT = Math.abs(w.compT(FR.tc) - w.compT(fw.rooms[up.r].tc));
-          const mx = 0.5 * w.air.rho * slabA * buoyantVelocity(R.h, dT, w.Tref);
+          const mx = 0.5 * w.air.rhoAt(FR.air) * slabA * buoyantVelocity(R.h, dT, w.Tref);
           if (mx > 0) w.compLinks.push({ a: FR.tc, b: fw.rooms[up.r].tc, G: mx * CP_AIR });
         }
       }
@@ -742,7 +742,7 @@ export class FireRuntime {
       const chi = chiE2 / gr.E;
       const D = Math.max(0.3, Math.sqrt(Ab));
       const L = flameHeight(gr.Q, D);
-      const tilt = flameTilt(u10, gr.Q, D, dHcE / gr.E, w.air.rho);
+      const tilt = flameTilt(u10, gr.Q, D, dHcE / gr.E, w.air.rhoAt(w.air.index(base[0], base[2])));
       const half = 0.5 * Math.max(L, 0.3);
       const P: Vec3 = [base[0] + Math.sin(tilt) * w.flowX * half, base[1] + Math.cos(tilt) * half, base[2] + Math.sin(tilt) * w.flowZ * half];
       gr.base = base; gr.P = P; gr.D = D; gr.L = L; gr.tilt = tilt;
@@ -1005,7 +1005,7 @@ export class FireRuntime {
     const fw = this.fw, w = this.trt.world;
     fw.roomRadiation();
     const U = w.u10 * Math.pow(Math.max(0.5, w.air.H / 2) / 10, 0.14);
-    fw.transportOutdoor(dt, U * w.flowX, U * w.flowZ);
+    fw.transportOutdoor(dt, U * w.flowX, U * w.flowZ, w.flow ?? undefined);
     fw.ledger.unresolved = w.ledger.combustionUnresolved;
     // Flashover: a burning room whose gas or floor flux reaches the criterion.
     for (let r = 0; r < fw.rooms.length; r++) {

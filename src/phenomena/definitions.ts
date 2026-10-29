@@ -25,6 +25,7 @@ import { blast } from './blastDefinitions';
 import { heatSource } from './thermalDefinitions';
 import { fire } from './fireDefinitions';
 import { volcano } from './volcanoDefinitions';
+import { atmosphere } from './atmosphereDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -211,7 +212,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -226,10 +227,12 @@ export const PLANNED: PlannedPhenomenon[] = [
     type: 'extremeTemperature', labelKey: 'phen.extremeTemperature', icon: 'warning', channels: ['temperature'], models: [],
     keywords: /폭염|혹한|한파|극한\s*(?:온도|기온)|heat\s*wave|cold\s*snap|extreme\s*(?:heat|cold|temperature)/, missing: ['missing.climate'], reuses: ['reuse.thermal', 'reuse.exposure'],
   }),
+  // Phase 29: removing / restoring air (with its composition) is the implemented 'atmosphere' experiment;
+  // changing the O₂ FRACTION of the air and its effect on people (hypoxia, Phase 34) remain planned.
   planned({
-    type: 'atmosphereLoss', labelKey: 'phen.atmosphereLoss', icon: 'warning', channels: ['atmosphere', 'pressure'], models: [],
-    keywords: /대기\s*(?:소멸|제거|상실|없)|산소\s*(?:감소|부족|농도)|기압\s*(?:변화|강하|감소)|진공|vacuum|atmosphere\s*(?:loss|removal)|oxygen|air\s*pressure/,
-    missing: ['missing.atmosphereField', 'missing.physiology'], reuses: ['reuse.exposure', 'reuse.airDensity'],
+    type: 'atmosphereLoss', labelKey: 'phen.atmosphereLoss', icon: 'warning', channels: ['atmosphere'], models: [],
+    keywords: /산소\s*(?:감소|부족|농도)|저산소|oxygen|hypoxia/,
+    missing: ['missing.o2Composition', 'missing.physiology'], reuses: ['reuse.exposure', 'reuse.atmosphere'],
   }),
   planned({
     type: 'gravityChange', labelKey: 'phen.gravityChange', icon: 'warning', channels: ['gravity'], models: [],

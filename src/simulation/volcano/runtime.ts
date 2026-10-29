@@ -43,6 +43,15 @@ import type { FireRuntime } from '../fire/runtime';
 import type { EruptionRecord } from './VolcanoChannel';
 import { VolcanoObjects } from './objects';
 
+/** The air of an atmosphere experiment as the volcano needs it. */
+function atmosAccess(rt: import('../atmosphere/runtime').AtmosphereRuntime): NonNullable<VolcanoEnv['atmos']> {
+  return {
+    velocity: (x, z, h, out) => rt.flowAt(x, z, h, out),
+    settling: (cls, x, z, h) => rt.settling(cls, x, z, h),
+    density: (x, z, h) => { const a = rt.column(x, z); return rt.field.densityAt(a, h, rt.temperatureAt(a, 0)); },
+  };
+}
+
 /** Radiation patch size (vertices) and the irradiance below which a receiver is not listed (W/m²). */
 export const PATCH = 4;
 export const RAD_FLOOR = 200;
@@ -162,6 +171,8 @@ export class VolcanoRuntime {
       groundR: (i) => { const k = this.cellsOf(i, cb); let s = 0; for (let j = 0; j < k; j++) s += LAYERS[0] / (2 * tr.k[cb[j] * tr.nl]); return k ? s / k : 0.01; },
       waterDepth: (i) => { const wt = w.water; if (!wt) return 0; const k = this.cellsOf(i, cb); let s = 0; for (let j = 0; j < k; j++) s += wt.h[cb[j]]; return k ? s / k : 0; },
       waterT: (i) => { const wt = w.water; if (!wt) return w.Tref; const k = this.cellsOf(i, cb); let s = 0, h = 0; for (let j = 0; j < k; j++) { s += w.waterT(cb[j]) * wt.h[cb[j]]; h += wt.h[cb[j]]; } return h > 0 ? s / h : w.Tref; },
+      // Phase 29: convection in the local air pressure (atmosphere experiments only).
+      ...(w.air.prA ? { pr: (i: number) => w.air.prAt(w.air.index(f.xOf(i), f.zOf(i))) } : {}),
     };
   }
 
@@ -173,6 +184,8 @@ export class VolcanoRuntime {
       u10: w.u10, flowX: w.flowX, flowZ: w.flowZ,
       rain: (x, z) => { let I = 0; for (const r of rains) I += rainAt(r, x, z); return I; },
       ground: (x, z) => ctx.env.terrain.sampleHeight(x, z),
+      // Phase 29: the atmosphere's air for ash and bombs (absent without an atmosphere experiment).
+      ...(ctx.env.atmosphere.rt ? { atmos: atmosAccess(ctx.env.atmosphere.rt) } : {}),
     };
   }
 

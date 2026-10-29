@@ -262,6 +262,24 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['kg', 'm/s', 'kPa'], validRange: 'ash released at a prescribed plume height ≤ 300 m, carried by the mean wind',
     limitations: ['model.lim.noPlumeDynamics', 'model.lim.noAggregation', 'model.lim.noGasChemistry'], reference: 'docs/VOLCANO.md §13–14',
   }),
+  atmosphereColumn: m({
+    id: 'atmosphereColumn', labelKey: 'model.atmosphereColumn', level: 'physics',
+    assumptions: ['model.as.idealGas', 'model.as.hydrostaticColumn', 'model.as.semiImplicit', 'model.as.layerContinuity'],
+    units: ['kg/m²', 'Pa', 'kg/m³', 'm/s'], validRange: '5 m columns of a 200 m world, datum −0.4 … 8 km, 100 Pa – 120 kPa; changes slower than ≈ 1 s',
+    limitations: ['model.lim.noAcoustic', 'model.lim.noTurbulence', 'model.lim.noClimate', 'model.lim.notWeatherForecast'], reference: 'docs/ATMOSPHERE.md §4–13',
+  }),
+  atmosphereRemoval: m({
+    id: 'atmosphereRemoval', labelKey: 'model.atmosphereRemoval', level: 'hypothetical',
+    assumptions: ['model.as.removalMass', 'model.as.adiabaticWork', 'model.as.reservoir'],
+    units: ['kg', 'J', 'Pa'], validRange: 'removal / restoration over ≥ 10 s (faster changes are warned)',
+    limitations: ['model.lim.rarefied', 'model.lim.noVacuumPhysics'], reference: 'docs/ATMOSPHERE.md §15–17',
+  }),
+  aerodynamicDensity: m({
+    id: 'aerodynamicDensity', labelKey: 'model.aerodynamicDensity', level: 'empirical',
+    assumptions: ['model.as.dynamicPressure', 'model.as.densityConvection', 'model.as.slip'],
+    units: ['N', 'Pa', 'W/(m²·K)'], validRange: 'Mach < 0.3, Knudsen < 0.01 (objects)',
+    limitations: ['model.lim.designSeaLevel', 'model.lim.noCompressibleAero'], reference: 'docs/ATMOSPHERE.md §19–20',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

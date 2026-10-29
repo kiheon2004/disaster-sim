@@ -89,7 +89,7 @@ export const enPhenomena: Record<keyof typeof koPhenomena, string> = {
   'phen.volcano': 'Volcano',
   'phen.fire': 'Fire',
   'phen.extremeTemperature': 'Extreme temperature',
-  'phen.atmosphereLoss': 'Atmosphere loss / low oxygen',
+  'phen.atmosphereLoss': 'Oxygen fraction change / hypoxia',
   'phen.gravityChange': 'Gravity change',
   'phen.blackHole': 'Black hole',
   'phen.tsunami': 'Tsunami',

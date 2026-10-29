@@ -12,11 +12,17 @@
  *   and records exposure, statistics and timeline milestones.
  * Inactive and free until the first heat source (or impact heat deposit): runs without heat are
  * bit-identical to Phase 25.
+ *
+ * Phase 29: an atmosphere experiment runs here too (it shares the air temperature with the thermal
+ * state): its mass / flow step comes first (the volcano's ash, the fire's O₂ and the thermal step read
+ * the air it leaves), its gas transport and ledgers after the fire's smoke transport.
  */
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { ThermalRuntime } from '../thermal/runtime';
 import { FireRuntime } from '../fire/runtime';
 import { VolcanoRuntime } from '../volcano/runtime';
+import { AtmosphereRuntime } from '../atmosphere/runtime';
+import { datumState } from '@/events/atmosphere/AtmosphereEvent';
 import { simProfiler } from '../profiling/SimProfiler';
 
 /** Thermal solver period in fixed steps (6 × 1/60 s = 0.1 s). Deterministic: the step counter only. */
@@ -32,13 +38,19 @@ export class ThermalSystem implements SimulationSystem {
   readonly lagged = ['debris', 'structure'] as const;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.thermal.active || ctx.env.fire.active || ctx.env.volcano.active;
+    return ctx.env.thermal.active || ctx.env.fire.active || ctx.env.volcano.active || ctx.env.atmosphere.active;
   }
 
   update(ctx: SystemContext, dt: number) {
     const t0 = simProfiler.now();
     const w0 = performance.now();
     const ch = ctx.env.thermal;
+    const ac = ctx.env.atmosphere;
+    // Phase 29: the thermal reference IS the atmosphere's datum temperature when the experiment comes first.
+    if (!ch.rt && !ac.rt) {
+      const first = ac.experiments.find((r) => !r.done && AtmosphereRuntime.reject(r, null) === null);
+      if (first) ch.settings.ambient = datumState(first.spec).T;
+    }
     if (!ch.rt) {
       ch.rt = new ThermalRuntime(ctx);
       for (const s of ch.sources) ctx.milestone?.({ time: s.start, kind: 'heatSource', hazard: 'thermal', subject: 'heatSource', label: { key: 'milestone.heatSource', params: { id: s.name, kind: s.spec.kind } } }, `heat:${s.id}`);
@@ -46,6 +58,21 @@ export class ThermalSystem implements SimulationSystem {
     const rt = ch.rt;
     for (const s of ch.sources) ctx.milestone?.({ time: s.start, kind: 'heatSource', hazard: 'thermal', subject: 'heatSource', label: { key: 'milestone.heatSource', params: { id: s.name, kind: s.spec.kind } } }, `heat:${s.id}`);
     const steps = rt.prepare(ctx, dt);
+    for (const rec of ac.experiments) {
+      if (rec.done || rec.start >= ctx.time + dt) continue;
+      rec.done = true;
+      rec.reason = AtmosphereRuntime.reject(rec, ac.rt);
+      if (rec.reason) {
+        ctx.milestone?.({ time: ctx.time, kind: 'atmosRejected', subject: 'atmosphere', label: { key: 'milestone.atmosRejected', params: { id: rec.name, reason: rec.reason } } }, `atmos:reject:${rec.id}`);
+        ctx.log(null, 'warn', { key: 'log.atmos.rejected', params: { id: rec.name, reason: rec.reason } });
+      } else ac.rt = new AtmosphereRuntime(ctx, rec, rt);
+    }
+    const atmos = ac.rt;
+    if (atmos) {
+      const ta = simProfiler.now();
+      atmos.prepare(ctx, dt);
+      simProfiler.add('atmosphere.prepare', ta);
+    }
     // Phase 28: the volcano (created with the first eruption) — its heat joins the step's sources
     // before the fire model reads the incident fluxes, so lava heat is judged by the normal ignition rules.
     const vc = ctx.env.volcano;
@@ -74,6 +101,11 @@ export class ThermalSystem implements SimulationSystem {
       const tf = simProfiler.now();
       fire.after(ctx, dt);
       simProfiler.add('fire.after', tf);
+    }
+    if (atmos) {
+      const ta = simProfiler.now();
+      atmos.after(ctx, dt);
+      simProfiler.add('atmosphere.after', ta);
     }
     if (volcano) {
       const tv = simProfiler.now();

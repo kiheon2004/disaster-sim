@@ -20,6 +20,7 @@
  *  - trees: a base-moment oscillator (period ≈ 0.1·H s, 0.5–3 s, approximate) against their wind
  *    design moment → topple (they become free bodies).
  */
+import { blastAirDensity } from '../atmosphere/runtime';
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
 import { hashString, seededRandom } from '@/core/math';
@@ -89,7 +90,7 @@ function staticImpulse(st: BlastEntityState, t1: number, out: Vec3, rho: number)
 export function respondStructure(e: RuntimeEntity, ctx: SystemContext, dt: number) {
   const st = e.blast!, sr = ctx.runtime.seismic;
   if (!sr || !e.seismic || e.seismic.unit < 0 || e.flags.collapsed || e.flags.toppled || e.dynamic) return;
-  staticImpulse(st, ctx.time + dt, F, ctx.env.airDensity);
+  staticImpulse(st, ctx.time + dt, F, blastAirDensity(ctx.env, e.pose.position));
   const fx = F[0] / dt, fz = F[2] / dt;
   if (fx === 0 && fz === 0) return;
   const m = sr.model, ui = e.seismic.unit;
@@ -399,7 +400,7 @@ export function respondBody(e: RuntimeEntity, ctx: SystemContext, dt: number) {
   if (!e.dynamic || e.body === null) return;
   const t0 = ctx.time, t1 = t0 + dt;
   const faces = bodyFaces(e);
-  const rho = ctx.env.airDensity;
+  const rho = blastAirDensity(ctx.env, e.pose.position);
   let any = false;
   F[0] = F[1] = F[2] = 0;
   L[0] = L[1] = L[2] = 0;
@@ -486,7 +487,7 @@ export function respondTree(e: RuntimeEntity, ctx: SystemContext, dt: number) {
       let mx = L[0] + (ry * J[2] - rz * J[1]), mz = L[2] + (rx * J[1] - ry * J[0]);
       // Blast-wind drag at the centre of pressure.
       if (w.cdA > 0) {
-        dragImpulse(w.center, w.cdA, ctx.env.airDensity, ZERO, a, b, D);
+        dragImpulse(w.center, w.cdA, blastAirDensity(ctx.env, e.pose.position), ZERO, a, b, D);
         const hy = e.copLocal[1];
         mx += hy * D[2];
         mz -= hy * D[0];

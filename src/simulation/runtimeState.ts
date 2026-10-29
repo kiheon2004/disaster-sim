@@ -107,6 +107,13 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
     },
     { id: 'volcanoAir', owner: 'VolcanoWorld.bombs / puffs', kind: 'state', holds: 'bombs in flight (parcel paths), ash puffs (position, mass, spread), vent accumulators', present: !!env.volcano.rt, bytes: env.volcano.rt ? env.volcano.rt.world.bombs.length * 400 + env.volcano.rt.world.puffs.length * 64 : 0 },
     { id: 'volcanoLedger', owner: 'VolcanoWorld / LavaField ledgers', kind: 'state', holds: 'supplied / held / outflow mass of lava, bombs, ash, gas; heat to ground / objects / water / air / radiation, plume heat; eruption progress (local time, launches, releases)', present: !!env.volcano.rt, bytes: 512 },
+    // Phase 29: atmosphere state (only in runs with an atmosphere experiment) — separate from the document; never saved.
+    {
+      id: 'atmosphereColumns', owner: 'AtmosphereField', kind: 'state', holds: 'column air mass σ (now / initial), face mass fluxes, column and layer face velocities, layer potential, ground heights / reduction factors, free-atmosphere temperature, volcanic-gas tracer',
+      present: !!env.atmosphere.rt, bytes: env.atmosphere.rt ? env.atmosphere.rt.field.count * 7 * 8 + env.atmosphere.rt.field.Ux.length * 5 * 8 : 0,
+    },
+    { id: 'atmosphereLayerCoupling', owner: 'AirLayer (Ca / rhoA / prA / ventRef / inflowExcess) + ThermalWorld.flow', kind: 'state', holds: 'per air column: heat capacity from the air mass, density, pressure ratio; layer face velocities; room masses (compartments / fire rooms)', present: !!env.atmosphere.rt, bytes: env.atmosphere.rt ? env.atmosphere.rt.field.count * 3 * 8 : 0 },
+    { id: 'atmosphereLedger', owner: 'AtmosphereField ledgers + AtmosphereRuntime', kind: 'state', holds: 'air mass (initial, boundary in / out, sources, removed, restored, shortfall), energy (heat in, vented, advected, boundary, removed / restored, pressure work, isothermal heat), momentum, O₂, gas; plan progress (restoration start share); history samples', present: !!env.atmosphere.rt, bytes: env.atmosphere.rt ? 1024 + env.atmosphere.rt.series.length * 64 : 0 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

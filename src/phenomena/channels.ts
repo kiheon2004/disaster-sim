@@ -81,8 +81,10 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     readers: ['deformation (terrain)', 'sedimentForce (drag)', 'objects (loads, burial)', 'roads (blockage)', 'renderer'],
   },
   atmosphere: {
-    id: 'atmosphere', labelKey: 'channel.atmosphere', status: 'interface', quantity: 'pressure kPa, O₂ fraction, density kg/m³',
-    owner: '— (future AtmosphereField)', writers: [], readers: ['exposure (baseline constant)'],
+    id: 'atmosphere', labelKey: 'channel.atmosphere', status: 'active', quantity: 'column air mass kg/m², surface pressure Pa, density kg/m³, flow m/s, O₂ kg',
+    owner: 'env.atmosphere (AtmosphereField: column mass, face fluxes, layer flow; the air temperature stays the Phase 26 air layer\'s)',
+    writers: ['AtmosphereEvent (reference state, removal / restoration plan)', 'volcano (gas source)'],
+    readers: ['thermal (layer capacity, convection, transport)', 'fire (O₂, room gas, smoke transport)', 'windForce (density, flow)', 'water (wind stress, pressure head)', 'volcano (ash, bombs)', 'blast / impact (opt-in)', 'exposure', 'inspector'],
   },
 };
 
@@ -90,7 +92,7 @@ export const CHANNEL_IDS = Object.keys(CHANNELS) as ChannelId[];
 
 // ── Field contracts (implemented channels already have their own fields) ─────────────
 
-/** Atmospheric state at a point. Only the baseline below exists (no atmospheric model). */
+/** Atmospheric state at a point (Phase 29: from env.atmosphere during an atmosphere experiment, else the baseline below). */
 export interface AtmosphereSample {
   /** kPa */
   pressure: number;

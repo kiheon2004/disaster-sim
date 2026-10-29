@@ -6,6 +6,7 @@
  * The event starts at the top of the atmosphere (or at the hand-over point in direct mode); the
  * impact happens after the computed flight time.
  */
+import { blastBackground, meteorAir } from '@/simulation/atmosphere/runtime';
 import { createId } from '@/core/id';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { EventContext, SimulationEvent } from '../SimulationEvent';
@@ -33,12 +34,18 @@ export function addImpactWave(env: EnvironmentState, b: BlastSource, id: string,
   const y = b.kind === 'airburst' ? g + b.position[1] : b.position[1] + 0.5;
   const wave = new BlastWave({
     id, source: b.source, name, kind: b.kind, position: [x, y, z], time: b.time, energy: b.energy, model: 'weakShock', waveform: 'nWave',
-    ambient: makeAmbient(STANDARD_PRESSURE, env.airDensity), groundY: g, world: worldBox(t),
+    ambient: ambientOf(env, x, z), groundY: g, world: worldBox(t),
   });
   const spec: BlastSpec = { event: 'blast', position: [x, z], height: y - g, energy: b.energy, model: 'weakShock', waveform: 'nWave' };
   const plan = planOfWave(spec, wave, t);
   env.blast.add(wave, plan, b.time + plan.worldExit + 2 * wave.sample(1e3).T + 0.1);
   return wave;
+}
+
+/** Phase 29 (opt-in blast coupling): the atmosphere's background at the wave's ground point. */
+function ambientOf(env: EnvironmentState, x: number, z: number) {
+  const bg = blastBackground(env, x, z, 'blast');
+  return bg && bg !== 'range' ? makeAmbient(bg.p, bg.rho) : makeAmbient(STANDARD_PRESSURE, env.airDensity);
 }
 
 /** Shown as running from entry to a few seconds after the impact (its effects persist). */
@@ -78,7 +85,9 @@ export class ImpactEvent implements SimulationEvent<ImpactSpec> {
     const name = this.spec.name ?? this.id;
     // Same function and inputs as computing it now — unless earlier phenomena already changed the ground.
     const unchanged = this.prepared !== null && (env.deformation.engine?.rev ?? 0) === 0;
-    const plan = (this.plan = unchanged ? this.prepared! : planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed));
+    // Phase 29 (opt-in): an atmosphere experiment's column mass thins the entry atmosphere and the ejecta's air.
+    const air = meteorAir(env, this.spec.target[0], this.spec.target[1]);
+    const plan = (this.plan = unchanged && !air ? this.prepared! : planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed, true, air ?? undefined));
     this.prepared = null;
     const ch = env.groundFailure;
     const f = ch.ensure();

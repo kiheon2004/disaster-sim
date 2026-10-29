@@ -16,6 +16,7 @@
  * Nothing is applied before a wave arrives (arrival times from the tables, exact step integrals).
  * Inactive (and free) without a wave.
  */
+import { blastAirDensity } from '../atmosphere/runtime';
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
@@ -245,7 +246,7 @@ export class BlastSystem implements SimulationSystem {
           const q = d.pose.quaternion;
           const local = qRotate([-q[0], -q[1], -q[2], q[3]], main.k);
           const v = ctx.physics.getLinearVelocity(d.body);
-          dragImpulse(centre, 1.15 * projectedArea(d.size, local), ctx.env.airDensity, v, t0, t1, D);
+          dragImpulse(centre, 1.15 * projectedArea(d.size, local), blastAirDensity(ctx.env, d.pose.position), v, t0, t1, D);
           J[0] += D[0]; J[1] += D[1]; J[2] += D[2];
         }
         any = true;

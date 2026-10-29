@@ -1,5 +1,6 @@
 import { FireChannel } from '../fire/FireChannel';
 import { VolcanoChannel } from '../volcano/VolcanoChannel';
+import { AtmosphereChannel } from '../atmosphere/AtmosphereChannel';
 import { defaultFireSettings, type FireSettings } from '@/fire/types';
 import type { Vec3 } from '@/core/types';
 import { AIR_DENSITY } from '@/core/units';
@@ -50,6 +51,8 @@ export interface EnvironmentState {
   fire: FireChannel;
   /** Volcano channel (Phase 28): eruptions, the lava / deposit / ash state on top of the thermal state. */
   volcano: VolcanoChannel;
+  /** Atmosphere channel (Phase 29): the air mass / pressure / flow of an atmosphere experiment (dormant otherwise). */
+  atmosphere: AtmosphereChannel;
 }
 
 export function createEnvironment(
@@ -74,6 +77,7 @@ export function createEnvironment(
     thermal: new ThermalChannel(thermal, airDensity),
     fire: new FireChannel(fire),
     volcano: new VolcanoChannel(deformation),
+    atmosphere: new AtmosphereChannel(),
   };
 }
 
