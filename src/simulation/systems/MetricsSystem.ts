@@ -46,6 +46,7 @@ export class MetricsSystem implements SimulationSystem {
           eventType: DAMAGE_STATE_IDS[e.state] as 'DAMAGED' | 'CRITICAL' | 'DESTROYED',
           cause: e.lastCause ?? (hazard === 'earthquake' ? (e.source.type === 'building' ? 'drift' : 'shaking') : hazard === 'flood' ? 'inundation' : hazard === 'ground' ? 'foundation' : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue'),
           hazard,
+          source: hazard === 'ground' ? e.ground?.source : undefined,
         });
       }
     }

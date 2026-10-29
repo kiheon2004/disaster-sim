@@ -405,6 +405,17 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       continue;
     }
 
+    // 3) Ground phenomena (Phase 21–22): the phenomenon with its default parameters — position,
+    //    material and triggers are set in the experiment tab (the note says so).
+    const ground = (['sinkhole', 'landslide', 'terrainDeformation'] as const).map((t) => phenomena.implemented(t)!).find((d) => d.keywords.test(clause));
+    if (ground && !windish) {
+      const check = simulationCommandSchema.safeParse({ kind: 'event', spec: ground.defaults() });
+      if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
+      else result.commands.push({ command: check.data, source: clause, notes: [...notes, { key: 'parse.note.groundDefaults' }], delay: tokens.find((t) => t.kind === 'time' && isDelay(t))?.si ?? 0 } satisfies ParsedCommand);
+      attach();
+      continue;
+    }
+
     // 4) Wind
     const ramping = RAMP_UP.test(clause) || RAMP_DOWN.test(clause);
     if (windish || (ramping && lastWind)) {

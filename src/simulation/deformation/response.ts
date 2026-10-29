@@ -75,9 +75,14 @@ export interface GroundEntityState {
   health: number;
   /** Events already recorded (once each). */
   noted: Set<string>;
+  /** Phase 22: lateral sediment load ratio, its damage index, loose material at the object (m), cause. */
+  debrisRatio?: number;
+  debrisDamage?: number;
+  overburden?: number;
+  source?: string;
 }
 
-function stateOf(e: RuntimeEntity): GroundEntityState {
+export function stateOf(e: RuntimeEntity): GroundEntityState {
   return (e.ground ??= {
     settlement: 0, gradient: [0, 0], tilt: 0, beta: 0, peakBeta: 0, contact: 1, minContact: 1, support: 1,
     bearing0: NaN, bearingRatio: 0, damage: 0, health: 1, noted: new Set(),
@@ -90,6 +95,9 @@ export function groundLevel(st: GroundEntityState): DamageState {
   if (st.peakBeta >= BETA.safe || st.contact < 1) s = DamageState.STRESSED;
   if (st.peakBeta >= BETA.cracking || st.minContact < CONTACT_LOST) s = worst(s, DamageState.DAMAGED);
   if (st.peakBeta >= BETA.structural || st.bearingRatio > 1) s = worst(s, DamageState.CRITICAL);
+  // Damage index levels (Phase 22: also sediment loads) — 0.3 / 0.6 are the β levels 1/300, 1/150.
+  if (st.damage >= 0.3) s = worst(s, DamageState.DAMAGED);
+  if (st.damage >= 0.6) s = worst(s, DamageState.CRITICAL);
   if (st.peakBeta >= BETA.severe || st.damage >= 1) s = DamageState.DESTROYED;
   return s;
 }
@@ -116,6 +124,14 @@ export function footprint(e: RuntimeEntity): { hx: number; hz: number; yaw: numb
   return { hx: Math.max(0.25, d[0] / 2), hz: Math.max(0.25, d[2] / 2), yaw: yawOf(e.source.transform.rotation) };
 }
 
+/** |ΔW| > 0 anywhere under an object's footprint circle (+ 0.5 m), scanned at 1 m spacing. */
+function groundChangedUnder(e: RuntimeEntity, delta: (x: number, z: number) => number): boolean {
+  const [x, , z] = e.pose.position;
+  const r = Math.hypot(e.dims[0], e.dims[2]) / 2 + 0.5;
+  for (let dz = -r; dz <= r + 1e-9; dz += 1) for (let dx = -r; dx <= r + 1e-9; dx += 1) if (delta(x + dx, z + dz) !== 0) return true;
+  return delta(x + r, z + r) !== 0 || delta(x - r, z - r) !== 0;
+}
+
 const overlaps = (e: RuntimeEntity, r: { x0: number; z0: number; x1: number; z1: number }, pad: number) => {
   const [x, , z] = e.pose.position;
   const ext = Math.hypot(e.dims[0], e.dims[2]) / 2 + pad;
@@ -134,7 +150,8 @@ function fitBase(engine: DeformationEngine, e: RuntimeEntity, n: number) {
   let sum = 0;
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
     const lx = -hx + (2 * hx * i) / (n - 1), lz = -hz + (2 * hz * j) / (n - 1);
-    const v = engine.displacementAt(x0 + lx * c + lz * s, z0 - lx * s + lz * c);
+    // Foundations follow the ground itself, not loose material deposited around them (Phase 22).
+    const v = engine.supportDisplacementAt(x0 + lx * c + lz * s, z0 - lx * s + lz * c);
     w.push(v); lxs.push(lx); lzs.push(lz); sum += v;
   }
   const a = sum / w.length;
@@ -194,7 +211,7 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: Deformati
   st.contact = bearing / f.residual.length;
   st.minContact = Math.min(st.minContact, st.contact);
   st.support = support / f.residual.length;
-  if (Number.isNaN(st.bearing0)) st.bearing0 = bearingRatioAt0(e, ctx);
+  if (Number.isNaN(st.bearing0)) st.bearing0 = bearingRatioAt0(e, ctx, engine);
   st.bearingRatio = st.bearing0 / Math.max(1e-3, st.contact * st.support);
   st.damage = Math.max(st.damage, betaDamage(st.peakBeta));
   st.health = 1 - st.damage;
@@ -219,9 +236,10 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: Deformati
 }
 
 /** Static bearing ratio of the building at t = 0 (Phase 17 foundation contact, original ground). */
-function bearingRatioAt0(e: RuntimeEntity, ctx: SystemContext): number {
+function bearingRatioAt0(e: RuntimeEntity, ctx: SystemContext, engine?: DeformationEngine): number {
   try {
-    const c = foundationContact(e.source as WorldObject, ctx.env.terrain);
+    // On the ORIGINAL ground (the engine keeps it) when the ground already moved (lazy priming).
+    const c = foundationContact(e.source as WorldObject, engine ? engine.originalSampler() : ctx.env.terrain);
     return Number.isFinite(c.bearingRatio) ? c.bearingRatio : 0;
   } catch {
     return 0;
@@ -282,6 +300,9 @@ export function respond(ctx: SystemContext, engine: DeformationEngine, rect: Gri
   for (const e of ctx.runtime.entities.values()) {
     if (e.body === null || e.def.inert) continue;
     if (!overlaps(e, world, 2)) continue;
+    // Only objects whose ground actually changed in this update (Phase 22: a ground-failure
+    // field covers the whole grid; untouched objects are neither refitted nor woken).
+    if (!groundChangedUnder(e, delta)) continue;
     if (e.dynamic) {
       const p = e.pose.position;
       const d = delta(p[0], p[2]);
@@ -306,6 +327,7 @@ export function respond(ctx: SystemContext, engine: DeformationEngine, rect: Gri
     const p = dbr.pose.position;
     if (p[0] < world.x0 - 2 || p[0] > world.x1 + 2 || p[2] < world.z0 - 2 || p[2] > world.z1 + 2) continue;
     const d = delta(p[0], p[2]);
+    if (d === 0) continue;
     if (d > 0 && p[1] - before(p[0], p[2]) < RESTING) {
       dbr.pose = { position: [p[0], p[1] + d, p[2]], quaternion: dbr.pose.quaternion };
       ctx.physics.setBodyPose(dbr.body, dbr.pose.position, dbr.pose.quaternion);
@@ -335,6 +357,8 @@ export interface RoadDeformState {
   settlement: number;
   /** Can ordinary vehicles still use it (design connectivity is never changed). */
   passable: boolean;
+  /** Loose sediment on the carriageway (m; Phase 22). */
+  debris?: number;
 }
 
 function respondRoads(ctx: SystemContext, roads: RoadRuntime, engine: DeformationEngine, w: { x0: number; z0: number; x1: number; z1: number }): number {

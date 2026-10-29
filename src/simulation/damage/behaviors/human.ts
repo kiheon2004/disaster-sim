@@ -8,7 +8,7 @@ import { floodLevel } from '../floodLevels';
 /** Load ratio at which a standing person is knocked over immediately (gust). */
 const KNOCKDOWN_RATIO = 1.0;
 
-export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood', impactForce?: number, dir?: [number, number, number]) {
+export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood' | 'ground', impactForce?: number, dir?: [number, number, number]) {
   if (e.flags.fallen || !e.dynamic || e.body === null) return;
   e.flags.fallen = true;
   e.rev++;
@@ -25,6 +25,11 @@ export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' |
   if (reason === 'flood') {
     ctx.log(e.id, 'danger', { key: 'log.flood.personFell' });
     ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'hydrodynamic', hazard: 'flood', localWindSpeed: e.localWind.speed, force: e.flood?.load });
+    return;
+  }
+  if (reason === 'ground') {
+    ctx.log(e.id, 'danger', { key: 'log.ground.personFell' });
+    ctx.recordDamage(e, { eventType: 'FALLEN', cause: 'debris', hazard: 'ground', localWindSpeed: e.localWind.speed });
     return;
   }
   if (reason === 'earthquake') {

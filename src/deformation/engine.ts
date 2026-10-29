@@ -21,6 +21,7 @@
  */
 import type { TerrainData } from '@/core/model';
 import { unionRect, type GridRect } from '@/terrain/TerrainData';
+import { TerrainSampler } from '@/terrain/TerrainSampler';
 import { amplitude, eventDuration, shapeAt, shapeGrid, timeFactor } from './field';
 import type { DeformationSource, ModelClass, TerrainDeformationSpec } from './types';
 
@@ -247,6 +248,25 @@ export class DeformationEngine {
     return (W[i] * (1 - ax) + W[i + 1] * ax) * (1 - az) + (W[i + t.nx] * (1 - ax) + W[i + t.nx + 1] * ax) * az;
   }
 
+  private origSampler: TerrainSampler | null = null;
+
+  /** A sampler over the original composed terrain (foundation checks on the ground before it moved). */
+  originalSampler(): TerrainSampler {
+    return (this.origSampler ??= new TerrainSampler({ ...this.terrain, heights: this.original, revision: -1 }));
+  }
+
+  /** Loose material on the ground at a point (deposits, moving sediment; Phase 22), m. */
+  overburdenAt(x: number, z: number): number {
+    let v = 0;
+    for (const e of this.entries) if (e.source.overburdenAt) v += e.source.overburdenAt(x, z);
+    return v;
+  }
+
+  /** Displacement of the ground ITSELF (what foundations follow): W minus the overburden. */
+  supportDisplacementAt(x: number, z: number): number {
+    return this.displacementAt(x, z) - this.overburdenAt(x, z);
+  }
+
   /** Original (pre-deformation) elevation at a point. */
   originalAt(x: number, z: number): number {
     const t = this.terrain;
@@ -269,7 +289,7 @@ export class DeformationEngine {
     const out: { source: DeformationSource; value: number }[] = [];
     for (const e of this.entries) {
       const s = e.source;
-      const v = s instanceof PrescribedSource ? s.at(x, z, time - s.startTime) : 0;
+      const v = s instanceof PrescribedSource ? s.at(x, z, time - s.startTime) : s.valueAt ? s.valueAt(x, z, time - s.startTime) : 0;
       if (Math.abs(v) > 1e-4) out.push({ source: s, value: v });
     }
     return out.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));

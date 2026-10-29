@@ -7,6 +7,7 @@ import { flatSampler, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { GroundMotionField } from '../seismic/GroundMotionField';
 import { FloodEnvironment } from '../water/FloodEnvironment';
 import { DeformationChannel } from '../deformation/DeformationChannel';
+import { GroundFailureChannel } from '../ground/GroundFailureChannel';
 
 /**
  * Shared environmental fields. Events WRITE the global values; systems READ local values.
@@ -30,6 +31,8 @@ export interface EnvironmentState {
   flood: FloodEnvironment;
   /** Terrain deformation channel (Phase 21): runtime displacement sources over the run's terrain copy. */
   deformation: DeformationChannel;
+  /** Ground-failure channel (Phase 22): sinkholes, landslides and the shared geotechnical field. */
+  groundFailure: GroundFailureChannel;
   // Future: fire?: FireField;
 }
 
@@ -42,10 +45,12 @@ export function createEnvironment(
 ): EnvironmentState {
   const wind = new WindField();
   wind.terrain = terrain;
+  const deformation = new DeformationChannel(terrain.data, seed);
   return {
     time: 0, airDensity, wind, windField: new SpatialWindField(wind, windModel, seed), terrain, groundMotion: new GroundMotionField(terrain),
     flood: new FloodEnvironment(terrain, water),
-    deformation: new DeformationChannel(terrain.data, seed),
+    deformation,
+    groundFailure: new GroundFailureChannel(terrain.data, deformation),
   };
 }
 

@@ -71,8 +71,12 @@ export class DeformationSystem implements SimulationSystem {
     for (const s of engine.sources) {
       if (this.primed.has(s.id)) continue;
       this.primed.add(s.id);
-      primeFoundation(ctx, engine, s.rect);
-      if (!this.started.has(s.phenomenon)) {
+      // Prescribed sources: prime the buildings of their rectangle. The ground-failure field
+      // covers the whole grid — its buildings get their initial bearing lazily, on the original
+      // ground, when the ground under them first changes (Phase 22).
+      if (s instanceof PrescribedSource) primeFoundation(ctx, engine, s.rect);
+      // (Ground-failure sources log their own events — Phase 22.)
+      if (s instanceof PrescribedSource && !this.started.has(s.phenomenon)) {
         this.started.add(s.phenomenon);
         const amount = s instanceof PrescribedSource ? (s.spec.kind === 'prescribed' ? Math.max(...s.spec.field!.values.map(Math.abs)) : s.spec.amount) : 0;
         ctx.log(null, 'warn', { key: `log.deform.started.${s.kind}` as 'log.deform.started.subsidence', params: { m: amount.toFixed(2) } });
@@ -117,7 +121,7 @@ export class DeformationSystem implements SimulationSystem {
     if (engine.maxAbs > this.peak + 1e-6) this.peak = engine.maxAbs;
     // Timeline: a source reaching its final state = peak displacement of that deformation.
     for (const s of engine.sources) {
-      if (s.version(ctx.time - s.startTime) < 1) continue;
+      if (!(s instanceof PrescribedSource) || s.version(ctx.time - s.startTime) < 1) continue;
       ctx.milestone?.({ time: ctx.time, kind: 'deformPeak', hazard: 'ground', subject: s.kind, label: { key: 'milestone.deformPeak', params: { m: engine.maxAbs.toFixed(2) } } }, `peak:${s.id}`);
     }
     for (const ent of ctx.runtime.entities.values()) {

@@ -59,6 +59,38 @@ export const MODELS: Record<string, ModelInfo> = {
     assumptions: ['model.as.prescribedField', 'model.as.superposition'],
     units: ['m', 's'], validRange: '|w| ≤ 30 m, radius 2–150 m', limitations: ['model.lim.noFailureMechanism', 'model.lim.heightfield'], reference: 'docs/TERRAIN_DEFORMATION.md §3–6',
   }),
+  sinkholePlug: m({
+    id: 'sinkholePlug', labelKey: 'model.sinkholePlug', level: 'physics',
+    assumptions: ['model.as.hiddenCavity', 'model.as.plugShear', 'model.as.bulkingChoke'], units: ['m', 'kPa', 's'],
+    validRange: 'cavity radius 0.5–40 m, cover 1–60 m, soils (not rock roofs)',
+    limitations: ['model.lim.noCavityChemistry', 'model.lim.heightfield', 'model.lim.notGeotechnical'], reference: 'docs/GROUND_FAILURE.md §5–8',
+  }),
+  cutStability: m({
+    id: 'cutStability', labelKey: 'model.cutStability', level: 'physics',
+    assumptions: ['model.as.culmann'], units: ['m', 'kPa', 'deg'], validRange: 'planar failure of steep walls (c–φ soils)',
+    limitations: ['model.lim.notGeotechnical'], reference: 'docs/GROUND_FAILURE.md §8',
+  }),
+  infiniteSlope: m({
+    id: 'infiniteSlope', labelKey: 'model.infiniteSlope', level: 'physics',
+    assumptions: ['model.as.infiniteSlope', 'model.as.perchedWater'], units: ['m', 'kPa', 'deg'], validRange: 'shallow translational slides (depth ≪ length)',
+    limitations: ['model.lim.noDeepSlides', 'model.lim.noSeepage', 'model.lim.notGeotechnical'], reference: 'docs/GROUND_FAILURE.md §11',
+  }),
+  newmark: m({
+    id: 'newmark', labelKey: 'model.newmark', level: 'empirical',
+    assumptions: ['model.as.rigidBlock', 'model.as.newmarkThreshold'], units: ['m', 'm/s²'], validRange: 'coherent shallow slides under strong shaking',
+    limitations: ['model.lim.notGeotechnical'], reference: 'docs/GROUND_FAILURE.md §12',
+  }),
+  granularRunout: m({
+    id: 'granularRunout', labelKey: 'model.granularRunout', level: 'empirical',
+    assumptions: ['model.as.voellmy', 'model.as.massConservative', 'model.as.bulking'], units: ['m', 'm/s', 'kg'],
+    validRange: '1 m grid, explicit; ξ and μ are calibration parameters',
+    limitations: ['model.lim.noMultiphase', 'model.lim.noEntrainment', 'model.lim.heightfield'], reference: 'docs/GROUND_FAILURE.md §13–14',
+  }),
+  sedimentLoads: m({
+    id: 'sedimentLoads', labelKey: 'model.sedimentLoads', level: 'empirical',
+    assumptions: ['model.as.continuumLoad', 'model.as.earthPressure'], units: ['N', 'kPa'], validRange: 'one resultant per object',
+    limitations: ['model.lim.noBoulders', 'model.lim.noSafety'], reference: 'docs/GROUND_FAILURE.md §16',
+  }),
   bedDisplacement: m({
     id: 'bedDisplacement', labelKey: 'model.bedDisplacement', level: 'physics',
     assumptions: ['model.as.depthPreserving'], units: ['m', 'm³'], validRange: 'bed motion slow vs. gravity waves',

@@ -15,6 +15,8 @@ import { FloodDamageSystem } from './FloodDamageSystem';
 import { RoadSystem } from './RoadSystem';
 import { ExposureSystem } from '../response/exposure';
 import { DeformationSystem } from './DeformationSystem';
+import { GroundFailureSystem } from './GroundFailureSystem';
+import { SedimentForceSystem } from './SedimentForceSystem';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -26,12 +28,15 @@ import { DeformationSystem } from './DeformationSystem';
  */
 export function createDefaultSystems(): SimulationSystem[] {
   return [
-    // Phase 21: the ground moves first; every later system of the step sees the new surface.
+    // Phase 22: sinkholes / landslides advance the shared ground field, then (Phase 21) the
+    // ground moves; every later system of the step sees the new surface.
+    new GroundFailureSystem(),
     new DeformationSystem(),
     new WindForceSystem(),
     new SeismicForceSystem(),
     new WaterSolverSystem(),
     new WaterForceSystem(),
+    new SedimentForceSystem(),
     new GroundContactSystem(),
     new PoseSyncSystem(),
     new StructuralResponseSystem(),

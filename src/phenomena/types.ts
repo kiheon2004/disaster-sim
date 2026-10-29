@@ -36,6 +36,8 @@ export type ChannelId =
   | 'temperature'
   | 'gravity'
   | 'terrainDeformation'
+  | 'groundSupport'
+  | 'sediment'
   | 'atmosphere';
 
 /**

@@ -9,13 +9,18 @@ import { earthquakeEventSchema } from '@/events/earthquake/earthquakeSchema';
 import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from '@/events/flood/floodSchema';
 
 import { compassSchema, windEventSchema } from '@/events/wind/windSchema';
+import { terrainDeformationSchema } from '@/events/deformation/deformationSchema';
+import { landslideSchema, sinkholeSchema } from '@/events/ground/groundSchema';
 
 export { compassSchema, windEventSchema, earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema };
 
 export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema, earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema]);
 
+/** Ground phenomena (Phase 21–22): validated by their own schemas (added to the event union). */
+const groundSpecSchema = z.union([terrainDeformationSchema as unknown as z.ZodTypeAny, sinkholeSchema as unknown as z.ZodTypeAny, landslideSchema as unknown as z.ZodTypeAny]);
+
 export const simulationCommandSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('event'), spec: eventSpecSchema }),
+  z.object({ kind: z.literal('event'), spec: z.union([eventSpecSchema, groundSpecSchema]) as unknown as typeof eventSpecSchema }),
   z.object({ kind: z.literal('control'), action: z.enum(['play', 'pause', 'reset']) }),
   z.object({ kind: z.literal('speed'), value: z.union(SIM_SPEEDS.map((s) => z.literal(s)) as unknown as [z.ZodLiteral<0.25>, z.ZodLiteral<0.5>, z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<4>, z.ZodLiteral<8>, z.ZodLiteral<16>]) }),
 ]);

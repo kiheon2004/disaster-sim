@@ -23,7 +23,9 @@ export type DamageEventType =
   | 'SCOURED'
   // Phase 17 modular buildings: a structural member failed / the stories above a level collapsed.
   | 'FAILED'
-  | 'STORY_COLLAPSED';
+  | 'STORY_COLLAPSED'
+  // Phase 22: covered by deposited sediment (people, vehicles, small structures).
+  | 'BURIED';
 
 /**
  * Why it happened:
@@ -36,7 +38,9 @@ export type DamageCause =
   | 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' | 'acceleration' | 'foundation' | 'shaking'
   | 'hydrostatic' | 'hydrodynamic' | 'buoyancy' | 'inundation' | 'scour'
   // Phase 17: a member lost its load path or was overloaded by redistributed gravity load.
-  | 'gravity';
+  | 'gravity'
+  // Phase 22: moving / deposited sediment (lateral debris load or drag) and burial.
+  | 'debris' | 'burial';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:

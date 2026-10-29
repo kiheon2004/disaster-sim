@@ -2,7 +2,7 @@
  * ForceLedger (Phase 15): the single path for continuous forces into Rapier.
  *
  * Every system that pushes a body (wind drag, earthquake inertial load, buoyancy / water drag,
- * a future gravity field) calls `ledger.force*()` with its SOURCE instead of the physics engine
+ * moving sediment drag (Phase 22), a future gravity field) calls `ledger.force*()` with its SOURCE instead of the physics engine
  * directly. The ledger forwards the call unchanged (same arguments, same order → bit-identical
  * physics) and
  *  - rejects a second application of the same source to the same body in the same fixed step
@@ -17,10 +17,10 @@
 import type { Vec3 } from '@/core/types';
 import type { BodyHandle, PhysicsEngine } from '@/physics/PhysicsEngine';
 
-export const FORCE_SOURCES = ['wind', 'groundMotion', 'water', 'gravityField'] as const;
+export const FORCE_SOURCES = ['wind', 'groundMotion', 'water', 'gravityField', 'sediment'] as const;
 export type ForceSource = (typeof FORCE_SOURCES)[number];
-const SOURCE_BIT: Record<ForceSource, number> = { wind: 1, groundMotion: 2, water: 4, gravityField: 8 };
-const SOURCE_INDEX: Record<ForceSource, number> = { wind: 0, groundMotion: 1, water: 2, gravityField: 3 };
+const SOURCE_BIT: Record<ForceSource, number> = { wind: 1, groundMotion: 2, water: 4, gravityField: 8, sediment: 16 };
+const SOURCE_INDEX: Record<ForceSource, number> = { wind: 0, groundMotion: 1, water: 2, gravityField: 3, sediment: 4 };
 
 /** Per-entity record: [|F| per source …, step of that value per source …]. */
 export type ForceRecord = Float64Array;
@@ -96,11 +96,21 @@ export class ForceLedger {
 
 /** Force magnitudes an owner received in a given step (−1 = none), by source. */
 export function forcesAt(owner: ForceOwner, step: number): Record<ForceSource, number> {
-  const out = { wind: -1, groundMotion: -1, water: -1, gravityField: -1 } as Record<ForceSource, number>;
+  const out = { wind: -1, groundMotion: -1, water: -1, gravityField: -1, sediment: -1 } as Record<ForceSource, number>;
   const r = owner.forces;
   if (!r) return out;
   FORCE_SOURCES.forEach((s, i) => {
     if (r[FORCE_SOURCES.length + i] >= step) out[s] = r[i];
   });
   return out;
+}
+
+/**
+ * Whether moving ground pushed this body recently (Phase 22): sediment drag applied in the last
+ * `window` steps at least as large as any wind force in that window. Used to attribute pushes and
+ * impacts of bodies carried by a landslide to the ground hazard, never to a calm wind.
+ */
+export function pushedBySediment(owner: ForceOwner, step: number, window = 60): boolean {
+  const f = forcesAt(owner, step - window);
+  return f.sediment > 0 && f.sediment >= f.wind;
 }

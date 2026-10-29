@@ -64,8 +64,18 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
   },
   terrainDeformation: {
     id: 'terrainDeformation', labelKey: 'channel.terrainDeformation', status: 'active', quantity: 'vertical ground displacement m (+ up)',
-    owner: 'env.deformation (DeformationEngine over the run\'s terrain copy)', writers: ['TerrainDeformationEvent', '(Phase 22–23 sources)'],
+    owner: 'env.deformation (DeformationEngine over the run\'s terrain copy)', writers: ['TerrainDeformationEvent', 'groundFailure field (sinkholes, landslides)', '(Phase 23 craters)'],
     readers: ['deformation (terrain, collider, water bed, foundations, roads)', 'renderer'],
+  },
+  groundSupport: {
+    id: 'groundSupport', labelKey: 'channel.groundSupport', status: 'active', quantity: 'factor of safety, support multiplier, water-table ratio',
+    owner: 'env.groundFailure (GeoField: soil thickness, strength, water table, failure state)', writers: ['SinkholeEvent', 'LandslideEvent', 'rain infiltration (water solver)'],
+    readers: ['groundFailure (stability, Newmark, cavity roof)', 'foundations (support)', 'inspector'],
+  },
+  sediment: {
+    id: 'sediment', labelKey: 'channel.sediment', status: 'active', quantity: 'mobile layer thickness m, velocity m/s, deposits m, mass kg',
+    owner: 'env.groundFailure (granular runout solver)', writers: ['groundFailure (failures → mobile layer → deposits)'],
+    readers: ['deformation (terrain)', 'sedimentForce (drag)', 'objects (loads, burial)', 'roads (blockage)', 'renderer'],
   },
   atmosphere: {
     id: 'atmosphere', labelKey: 'channel.atmosphere', status: 'interface', quantity: 'pressure kPa, O₂ fraction, density kg/m³',

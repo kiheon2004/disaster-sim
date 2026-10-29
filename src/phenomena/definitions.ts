@@ -19,6 +19,7 @@ import { DEFORMATION_KINDS, FALLOFFS, TIME_PROFILES, type TerrainDeformationSpec
 import { LIMITS as DEF_LIMITS, eventDuration as deformEventDuration, validateDeformation } from '@/deformation/field';
 import { terrainDeformationSchema } from '@/events/deformation/deformationSchema';
 import { TerrainDeformationEvent } from '@/events/deformation/TerrainDeformationEvent';
+import { landslide, sinkhole } from './groundDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -205,7 +206,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -215,14 +216,6 @@ export const PLANNED: PlannedPhenomenon[] = [
   planned({
     type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', channels: ['airflow', 'pressure', 'mechanicalForce'], models: [],
     keywords: /토네이도|회오리|tornado|twister/, missing: ['missing.vortexWind', 'missing.pressureDrop'], reuses: ['reuse.windForce', 'reuse.windDamage', 'reuse.debris'],
-  }),
-  planned({
-    type: 'sinkhole', labelKey: 'phen.sinkhole', icon: 'warning', channels: ['terrainDeformation', 'mechanicalForce'], models: [],
-    keywords: /싱크홀|땅\s*꺼짐|지반\s*함몰|sinkhole/, missing: ['missing.cavityCollapse', 'missing.supportLoss'], reuses: ['reuse.deformationEngine', 'reuse.terrainCollider', 'reuse.waterBed', 'reuse.debris'],
-  }),
-  planned({
-    type: 'landslide', labelKey: 'phen.landslide', icon: 'warning', channels: ['terrainDeformation', 'mechanicalForce'], models: [],
-    keywords: /산사태|토석류|landslide|mudslide|debris\s*flow/, missing: ['missing.slopeStability', 'missing.granularFlow'], reuses: ['reuse.deformationEngine', 'reuse.groundMotion', 'reuse.water', 'reuse.debris'],
   }),
   planned({
     type: 'meteor', labelKey: 'phen.meteor', icon: 'warning', channels: ['mechanicalForce', 'pressure', 'temperature', 'terrainDeformation'], models: [],

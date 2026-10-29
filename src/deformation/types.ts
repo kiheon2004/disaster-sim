@@ -114,4 +114,12 @@ export interface DeformationSource {
    * (Phase 22 landslides move material); informational for prescribed fields.
    */
   netVolume?(localTime: number): number;
+  /**
+   * Part of the contribution at a point that is loose material lying ON the ground (deposits,
+   * moving sediment) rather than a movement of the ground itself (Phase 22). Foundations follow
+   * the ground without it; burial and lateral loads come from it.
+   */
+  overburdenAt?(x: number, z: number): number;
+  /** Contribution at a point now (inspector; non-separable sources, Phase 22). */
+  valueAt?(x: number, z: number, localTime: number): number;
 }
