@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive } from './simStore';
 import { runtimeStateManifest } from './runtimeState';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
@@ -230,6 +230,7 @@ export class SimulationController {
       ground: null,
       impacts: null,
       blasts: null,
+      structure: null,
       floodSeries: null,
       milestones: [],
     });
@@ -593,6 +594,7 @@ export class SimulationController {
     patch.ground = this.groundLive();
     patch.impacts = this.impactLive();
     patch.blasts = this.blastLive();
+    patch.structure = this.structureLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -708,6 +710,34 @@ export class SimulationController {
         model: i.model, waveform: i.waveform,
       };
     });
+  }
+
+  /** Live structural destruction summary (Phase 25; null without modular buildings). */
+  private structureLive(): StructureLive | null {
+    const rt = this.runtime;
+    if (!rt?.hasModular) return null;
+    const S = rt.structures;
+    const out: StructureLive = {
+      modular: 0, models: S?.all.length ?? 0, active: S?.active.length ?? 0, fallingBlocks: 0, damaged: 0, local: 0, partial: 0, global: 0, failedMembers: 0, connectionsFailed: 0,
+      mass: { structure: 0, falling: 0, resting: 0, bodies: 0, rubble: 0, fines: 0, left: 0, unresolved: 0 }, residual: 0,
+      fragments: S?.fragments.length ?? 0, fragmentsMoving: S ? S.fragments.filter((f) => !f.structural!.settled).length : 0, aggregated: S?.aggregated ?? 0,
+      heaps: S?.rubble.heaps.length ?? 0, rubbleMass: S?.rubble.totalMass() ?? 0, roadsBlocked: rt.roads?.summary().rubble ?? 0, secondary: S?.secondary ?? 0,
+    };
+    for (const e of rt.entities.values()) if (e.modular) out.modular++;
+    for (const e of S?.all ?? []) {
+      const m = e.modular!.structure!.model;
+      for (const b of m.blocks) if (b.active) out.fallingBlocks++;
+      const lvl = e.modular!.structure!.level ?? m.collapseLevel();
+      if (lvl === 'damaged') out.damaged++;
+      else if (lvl === 'local') out.local++;
+      else if (lvl === 'partial') out.partial++;
+      else if (lvl === 'global') out.global++;
+      for (const r of m.records) if (r.cause !== 'facade') out.failedMembers++;
+      for (let k = 0; k < m.s.edgeAlive.length; k++) if (!m.s.edgeAlive[k]) out.connectionsFailed++;
+      for (const a of Object.keys(out.mass) as (keyof StructureLive['mass'])[]) out.mass[a] += m.ledger.mass[a];
+      out.residual += m.ledger.residual();
+    }
+    return out;
   }
 
   /** Live ground-failure summary (Phase 22): model states, sediment budget, cost. */

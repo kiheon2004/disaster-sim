@@ -106,6 +106,14 @@ function Editor({ obj }: { obj: WorldObject }) {
   const selEdges = useMemo(() => memberEdges(selMembers), [selMembers]);
   useEffect(() => () => selEdges.dispose(), [selEdges]);
   const lp = useMemo(() => (loadPath ? loadPathGeometry(design) : null), [design, loadPath]);
+  // Removal preview (Phase 25): removed members white, the members that would follow red.
+  const preview = ms.preview && ms.preview.design === design ? ms.preview.result : null;
+  const previewEdges = useMemo(() => {
+    if (!preview) return null;
+    const failed = new Set(preview.failed.map((f) => f.id));
+    return memberEdges(design.members.filter((m) => failed.has(m.id)), 0.06);
+  }, [design, preview]);
+  useEffect(() => () => previewEdges?.dispose(), [previewEdges]);
   const badEdges = useMemo(() => (lp ? memberEdges(lp.unsupported, 0.08) : null), [lp]);
   useEffect(() => () => { lp?.lines.dispose(); badEdges?.dispose(); }, [lp, badEdges]);
 
@@ -169,6 +177,11 @@ function Editor({ obj }: { obj: WorldObject }) {
       {badEdges && lp && lp.unsupported.length > 0 && (
         <lineSegments geometry={badEdges} renderOrder={13} raycast={() => null}>
           <lineBasicMaterial color="#ff4d4d" depthTest={false} transparent />
+        </lineSegments>
+      )}
+      {previewEdges && (
+        <lineSegments geometry={previewEdges} renderOrder={13} raycast={() => null}>
+          <lineBasicMaterial color="#ff6a3d" depthTest={false} transparent />
         </lineSegments>
       )}
       {ghost && (

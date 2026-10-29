@@ -94,9 +94,10 @@ export const CONNECTION_KEYS = ['beamSeat', 'beamBeam', 'splice', 'base', 'trans
  *                  mechanism: earthquake damage index, wind fatigue, flood / sediment load)
  *  - overpressure: out-of-plane wall failure under an air-pressure wave (Phase 24 SDOF)
  *  - facade:       a facade part (cladding, window, door, roof covering) detached by its own model
+ *  - removed:      taken out by the user's removal preview in the building editor (alternate-path check)
  */
-export type FailCause = 'drift' | 'axial' | 'bending' | 'shear' | 'connection' | 'support' | 'impact' | 'foundation' | 'bearing' | 'story' | 'overpressure' | 'facade';
-export const FAIL_CAUSES: readonly FailCause[] = ['drift', 'axial', 'bending', 'shear', 'connection', 'support', 'impact', 'foundation', 'bearing', 'story', 'overpressure', 'facade'];
+export type FailCause = 'drift' | 'axial' | 'bending' | 'shear' | 'connection' | 'support' | 'impact' | 'foundation' | 'bearing' | 'story' | 'overpressure' | 'facade' | 'removed';
+export const FAIL_CAUSES: readonly FailCause[] = ['drift', 'axial', 'bending', 'shear', 'connection', 'support', 'impact', 'foundation', 'bearing', 'story', 'overpressure', 'facade', 'removed'];
 
 /** Ratio of expected (mean) to characteristic strength: a member fails at u ≥ OVERLOAD. */
 export const OVERLOAD = 1.25;

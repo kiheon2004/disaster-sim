@@ -177,6 +177,25 @@ export const MODELS: Record<string, ModelInfo> = {
     assumptions: ['model.as.knifeEdge', 'model.as.maekawa'], units: ['dB', 's'],
     validRange: 'single dominant edge (terrain ridge / building), ≤ 20 dB', limitations: ['model.lim.noUrbanReflection'], reference: 'docs/BLAST.md §9',
   }),
+  structureLoadPath: m({
+    id: 'structureLoadPath', labelKey: 'model.structureLoadPath', level: 'empirical',
+    assumptions: ['model.as.tributary', 'model.as.supportTiers', 'model.as.memberChecks', 'model.as.gsaDif', 'model.as.overstrength'], units: ['N', 'N·m', '—'],
+    validRange: 'Phase 17 modular buildings (1–40 stories); gravity load paths; members as boxes', limitations: ['model.lim.noFea', 'model.lim.noCatenary', 'model.lim.noJointDetail', 'model.lim.notEngineering'], reference: 'docs/STRUCTURAL_DESTRUCTION.md §3–9',
+  }),
+  structureCollapse: m({
+    id: 'structureCollapse', labelKey: 'model.structureCollapse', level: 'empirical',
+    assumptions: ['model.as.freeFall', 'model.as.inelasticImpact', 'model.as.rigidPlastic', 'model.as.crushInPlace'], units: ['J', 'm/s', 'kg'],
+    validRange: 'floors falling onto floors inside the plan; rigid blocks without rotation', limitations: ['model.lim.noRotation', 'model.lim.noCrushUp', 'model.lim.notEngineering'], reference: 'docs/STRUCTURAL_DESTRUCTION.md §9–13',
+  }),
+  rubblePile: m({
+    id: 'rubblePile', labelKey: 'model.rubblePile', level: 'empirical',
+    assumptions: ['model.as.bulking', 'model.as.repose'], units: ['kg', 'm³', 'm'],
+    validRange: 'mass exact; mound shape approximate', limitations: ['model.lim.pileShape', 'model.lim.noWaterObstacle'], reference: 'docs/STRUCTURAL_DESTRUCTION.md §16–17',
+  }),
+  collapseDust: m({
+    id: 'collapseDust', labelKey: 'model.collapseDust', level: 'visual',
+    assumptions: [], units: [], validRange: '—', limitations: ['model.lim.visualOnly'], reference: 'docs/STRUCTURAL_DESTRUCTION.md §24',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

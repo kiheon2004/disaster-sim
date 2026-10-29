@@ -277,6 +277,48 @@ export function OverlayToggles() {
           </div>
         </>
       )}
+      <StructureToggles />
     </div>
+  );
+}
+
+/** Structural destruction views (Phase 25): shown when the run has modular buildings. */
+function StructureToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.structure);
+  const viz = useViewStore((s) => s.structureViz);
+  const set = useViewStore.getState().setStructureViz;
+  if (!live) return null;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#c9b8ff', marginTop: 2 }}>{t('overlay.struct')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="structure-overlay">
+        <Segmented
+          size="small"
+          value={viz.color}
+          onChange={(c) => set({ color: c })}
+          options={(['normal', 'demand', 'failure', 'sequence'] as const).map((c) => ({ value: c, label: t(`overlay.struct.color.${c}`) }))}
+        />
+        {viz.color === 'demand' && (
+          <div>
+            <div style={{ height: 6, borderRadius: 3, background: 'linear-gradient(90deg, #3fbf7f, #f2c94c 50%, #e0443a)' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+              <span>0</span><span>{t('overlay.struct.demandMid')}</span><span>{t('overlay.struct.demandFail')}</span>
+            </div>
+          </div>
+        )}
+        {viz.color === 'sequence' && <span style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{t('overlay.struct.sequenceNote')}</span>}
+        <Toggle checked={viz.loadPath} onChange={(b) => set({ loadPath: b })} label={t('overlay.struct.loadPath')} />
+        <Toggle checked={viz.connections} onChange={(b) => set({ connections: b })} label={t('overlay.struct.connections')} />
+        <Toggle checked={viz.support} onChange={(b) => set({ support: b })} label={t('overlay.struct.support')} />
+        <Toggle checked={viz.debris} onChange={(b) => set({ debris: b })} label={t('overlay.struct.debris')} />
+        <Toggle checked={viz.rubble} onChange={(b) => set({ rubble: b })} label={t('overlay.struct.rubble')} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.struct.dust')}</span>
+          <Segmented size="small" value={viz.dust} onChange={(d) => set({ dust: d })} options={[0, 1, 2].map((d) => ({ value: d, label: d === 0 ? t('overlay.struct.off') : `${d}×` }))} />
+        </div>
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.struct.note')}</span>
+      </div>
+    </>
   );
 }

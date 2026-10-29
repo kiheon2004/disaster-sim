@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocale, useT, type MessageKey, type TFunction } from '@/i18n/i18n';
 import type { ObjectType } from '@/core/types';
 import { useSimStore } from '@/simulation/simStore';
+import { simulationController } from '@/simulation/SimulationController';
 import type { DamageEventRecord, DamageEventType, Hazard } from '@/simulation/analysis/DamageEvent';
 import type { EarthquakeMetrics, SeismicSeries } from '@/simulation/analysis/SeismicRecorder';
 import type { FloodMetrics, FloodSeries } from '@/simulation/analysis/FloodRecorder';
@@ -91,7 +92,8 @@ function ResultsDialog() {
   const hazards = useMemo(() => [...new Set(events.map((e) => e.hazard))], [events]);
 
   const exportCsv = () => {
-    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state', 'origin', 'damage_wind', 'damage_earthquake', 'damage_flood', 'damage_ground', 'source'];
+    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state', 'origin', 'damage_wind', 'damage_earthquake', 'damage_flood', 'damage_ground', 'source',
+      'failure', 'chain_trigger', 'chain_root', 'chain_depth', 'secondary_striker', 'secondary_source', 'secondary_member'];
     const rows = events.map((e) => [
       e.time.toFixed(2), e.objectId, objects[e.objectId] ? displayName(objects[e.objectId], t) : '', e.objectType, e.componentId ?? '', e.eventType, e.cause,
       ...e.worldPosition.map((v) => v.toFixed(2)), e.localWindSpeed.toFixed(2), e.globalWindSpeed.toFixed(2), e.force.toFixed(0),
@@ -99,6 +101,7 @@ function ResultsDialog() {
       e.hazard, (e.groundAcceleration / 9.81).toFixed(3), e.response.toFixed(4),
       (e.waterDepth ?? 0).toFixed(3), (e.flowSpeed ?? 0).toFixed(3), (e.exposure ?? 0).toFixed(1), DAMAGE_STATE_IDS[e.state ?? 0] ?? '',
       e.origin ?? e.hazard, ...(['wind', 'earthquake', 'flood', 'ground'] as const).map((h) => (e.contributors?.[h] ?? 0).toFixed(3)), e.source ?? '',
+      e.failure ?? '', e.chain?.trigger ?? '', e.chain?.root ?? '', e.chain?.depth ?? '', e.secondary?.striker ?? '', e.secondary?.source ?? '', e.secondary?.member ?? '',
     ].map((v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(','));
     download(`${name || 'simulation'}-damage-events.csv`, [head.join(','), ...rows].join('\n'), 'text/csv');
   };
@@ -106,6 +109,7 @@ function ResultsDialog() {
     model: 'approximate', groundMotion: metrics?.earthquake ? 'synthetic' : undefined,
     floodModel: metrics?.flood ? 'local-inertial shallow-water approximation (educational, not a validated hydraulic model)' : undefined,
     metrics, seismicSeries: series ?? undefined, floodSeries: floodSeries ?? undefined, events,
+    structure: useSimStore.getState().structure ?? undefined, collapseSequences: collapseSequences(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -133,6 +137,7 @@ function ResultsDialog() {
           <ExperimentSummary t={t} />
           {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
+          <StructureSummary t={t} name={name} />
           {m ? (
             <div className={styles.cards}>
               <Card label={t('results.maxWind')} value={`${fmt(m.maxWindSpeed, 1)}`} unit="m/s" sub={`${t('results.avgWind')} ${fmt(m.averageWindSpeed, 1)} m/s`} />
@@ -470,6 +475,51 @@ function ExperimentSummary({ t }: { t: TFunction }) {
             {modelsUsed(events.map((e) => e.type), interactions).map((id) => <ModelBadge key={id} id={id} />)}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Full collapse sequences of every building with a collapse model (Phase 25): one row per member failure. */
+function collapseSequences() {
+  const rt = simulationController.getRuntime();
+  const out: Record<string, { time: number; member: string; type: string; cause: string; trigger: string | null; root: string; depth: number; round: number; hazard: string; u: number; striker?: string }[]> = {};
+  for (const e of rt?.structures?.all ?? []) {
+    const m = e.modular!.structure!.model;
+    const ids = e.modular!.design.members;
+    out[e.id] = m.records.map((r) => ({
+      time: +r.time.toFixed(4), member: ids[r.i].id, type: ids[r.i].type, cause: r.cause, trigger: r.trigger >= 0 ? ids[r.trigger].id : null, root: ids[r.root].id,
+      depth: r.depth, round: r.round, hazard: r.hazard || 'original', u: +r.u.toFixed(4), ...(r.secondary ? { striker: r.secondary.striker } : {}),
+    }));
+  }
+  return out;
+}
+
+/** Structural destruction results (Phase 25): building collapse classes, members, debris, roads, secondary damage. */
+function StructureSummary({ t, name }: { t: TFunction; name: string }) {
+  const s = useSimStore((x) => x.structure);
+  if (!s || s.models === 0) return null;
+  const debris = s.mass.bodies + s.mass.rubble + s.mass.resting + s.mass.fines + s.mass.left;
+  const exportSequence = () => {
+    const seq = collapseSequences();
+    const rows = Object.entries(seq).flatMap(([id, list]) => list.map((r) => [id, r.time, r.member, r.type, r.cause, r.trigger ?? '', r.root, r.depth, r.round, r.hazard, r.u, r.striker ?? ''].join(',')));
+    download(`${name || 'simulation'}-collapse-sequence.csv`, ['building,time_s,member,type,cause,trigger,root,depth,round,primary_hazard,utilization,striker', ...rows].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="structure-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.struct.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportSequence}><Icon name="save" size={13} /> {t('results.struct.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.struct.damaged')} value={String(s.damaged + s.local)} sub={`${t('struct.level.local')} ${s.local}`} />
+        <Card label={t('results.struct.partial')} value={String(s.partial)} />
+        <Card label={t('results.struct.global')} value={String(s.global)} />
+        <Card label={t('results.struct.members')} value={String(s.failedMembers)} sub={`${t('struct.connectionsFailed')} ${s.connectionsFailed}`} />
+        <Card label={t('results.struct.debris')} value={fmt(debris / 1000, 1)} unit="t" sub={t('results.struct.debrisSub', { bodies: fmt(s.mass.bodies / 1000, 1), rubble: fmt(s.mass.rubble / 1000, 1), resting: fmt(s.mass.resting / 1000, 1) })} />
+        <Card label={t('results.struct.roads')} value={String(s.roadsBlocked)} />
+        <Card label={t('results.struct.secondary')} value={String(s.secondary)} />
+        <Card label={t('results.struct.residual')} value={s.residual.toExponential(1)} unit="kg" sub={t('results.struct.residualSub')} />
       </div>
     </div>
   );

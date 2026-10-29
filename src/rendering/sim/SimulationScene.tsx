@@ -5,6 +5,8 @@ import { useSimStore } from '@/simulation/simStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { SimRenderLayer } from './SimRenderLayer';
 import { DebrisLayer } from './DebrisLayer';
+import { RubbleLayer } from './RubbleLayer';
+import { StructureOverlay } from './StructureOverlay';
 import { ParticleLayer } from './ParticleLayer';
 import { WindStreaks } from './WindStreaks';
 import { WindArrows } from './WindArrows';
@@ -73,6 +75,8 @@ export function SimulationScene() {
         <DamageOverlay entities={entities} />
         {runtime && <RoadDamageOverlay runtime={runtime} />}
         <DebrisLayer />
+        <RubbleLayer />
+        <StructureOverlay />
         <ParticleLayer />
       </group>
       <WindStreaks />

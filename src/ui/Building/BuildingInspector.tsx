@@ -15,6 +15,7 @@ import { MEMBER_TYPES } from '@/buildings/types';
 import { Section } from '@/ui/common/Panel';
 import { fmt } from '@/ui/format';
 import { AnalysisRows, WarningList } from './AnalysisSummary';
+import { StructureSection } from './StructureInspector';
 import styles from './Building.module.css';
 
 /** Building Inspector sections of a modular building (Phase 17). */
@@ -57,6 +58,7 @@ export function BuildingInspector({ obj }: { obj: WorldObject }) {
         <WarningList warnings={a.warnings} />
       </Section>
       {inSim && <LiveBuildingSection obj={obj} a={a} />}
+      {inSim && <StructureSection obj={obj} />}
       <Section title={t('building.assumptions.title')} defaultOpen={false}>
         <ul className={styles.assumptions} data-testid="building-assumptions">
           {(['model', 'loadPath', 'stiffness', 'period', 'materials', 'damage', 'limits'] as const).map((k) => (

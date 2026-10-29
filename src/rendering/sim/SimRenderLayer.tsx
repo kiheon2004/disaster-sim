@@ -79,6 +79,8 @@ export function SimRenderLayer({ runtime }: { runtime: SimulationRuntime }) {
         if (ev.delta > 5) return;
         const id = adapter?.pick(ev.object, ev.batchId ?? ev.instanceId);
         if (id) useEditorStore.getState().select(id);
+        // Phase 25: the member under the cursor of a modular building (structural inspector).
+        useViewStore.getState().setSimMember(adapter?.pickMember(ev.object, ev.batchId ?? ev.instanceId) ?? null);
       },
       onPointerOver: (ev: ThreeEvent<PointerEvent>) => {
         ev.stopPropagation();

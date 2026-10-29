@@ -44,10 +44,20 @@ import {
   signParts, streetLightParts, treeParts, wallParts, type BoxPart, type FacadeKind, type PartMat,
 } from '../parts/objectParts';
 import { MATERIAL_LOOKS } from '@/buildings/materials';
-import { MemberLayer, interiorMask, type MemberSet } from './MemberLayer';
+import { MemberLayer, interiorMask, type MemberOffset, type MemberSet } from './MemberLayer';
+import { MS, OVERLOAD } from '@/structure/types';
+import { hashString } from '@/core/math';
+import { useViewStore, type StructureColorMode } from '../viewStore';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
 export const LOD_FAR = 110;
+/** Structural view colors (Phase 25). */
+const DEMAND_LOW = new THREE.Color('#3fbf7f');
+const DEMAND_MID = new THREE.Color('#f2c94c');
+const FAILED_RED = new THREE.Color('#e0443a');
+const SEVERE_ORANGE = new THREE.Color('#f08a24');
+const DEMAND_NONE = new THREE.Color('#9aa1a8');
+const SEQ_EARLY = new THREE.Color('#3a7bd5');
 const LOD_HYST = 6;
 /** Beyond this distance visual-only animation is refreshed every ANIM_STRIDE frames. */
 export const ANIM_FAR = 70;
@@ -480,15 +490,43 @@ export class SimRenderAdapter {
     const e = v.e;
     const mr = e.modular;
     const comp = v.memberComp!;
-    if (v.userHidden || v.hidden) return () => true;
+    const model = mr?.structure?.model;
+    if (v.userHidden || (v.hidden && !model)) return () => true;
     const ms = v.members!.design.members;
     const far = v.far;
+    // Phase 25: members are drawn from the collapse model — fallen members stay visible where they
+    // came to rest; only what the physics engine / rubble field / fines took over is hidden.
+    if (model) return (i: number) => model.external[i] === 1 || model.state[i] === MS.ABSENT || (far && (ms[i].type === 'window' || ms[i].type === 'door'));
     return (i: number) => (mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition === 'detached')
       || (far && (ms[i].type === 'window' || ms[i].type === 'door'));
   }
 
+  private offsetOut: MemberOffset = { dx: 0, dy: 0, dz: 0, sy: 1, tilt: 0, tiltAxis: 0 };
+
+  /** Displacement of fallen members from the collapse model (unscaled local frame); tilt visual only. */
+  private memberOffset(v: EntityView): ((i: number) => MemberOffset | null) | undefined {
+    const model = v.e.modular?.structure?.model;
+    if (!model) return undefined;
+    const k = v.scale, o = this.offsetOut;
+    return (i: number) => {
+      const st = model.state[i];
+      if (st <= MS.SEVERE || st === MS.ABSENT) return null;
+      o.dx = model.dx[i] / k.x;
+      o.dy = model.dy[i] / k.y;
+      o.dz = model.dz[i] / k.z;
+      o.sy = model.sy[i];
+      // Broken pieces at rest are drawn slightly askew (deterministic per member; visual only).
+      if (st === MS.RESTING || st === MS.SETTLED) {
+        const h = hashString(`${v.e.id}/${i}`) >>> 0;
+        o.tilt = (((h & 1023) / 1023) - 0.5) * 0.5;
+        o.tiltAxis = (h >> 10) & 1 ? 1 : 0;
+      } else o.tilt = 0;
+      return o;
+    };
+  }
+
   private writeMembers(v: EntityView, root: THREE.Matrix4) {
-    this.memberLayer!.writeMatrices(v.members!, root, this.memberGone(v));
+    this.memberLayer!.writeMatrices(v.members!, root, this.memberGone(v), this.memberOffset(v));
     this.memberLayer!.markDirty(false);
   }
 
@@ -497,13 +535,61 @@ export class SimRenderAdapter {
     const mr = e.modular;
     const comp = v.memberComp!;
     const ms = v.members!.design.members;
+    const model = mr?.structure?.model;
     this.memberLayer!.writeColors(
       v.members!,
-      (i) => (mr ? mr.damage[i] : ms[i].initialDamage ?? 0),
+      (i) => (model && model.state[i] > MS.SEVERE ? 2 : mr ? mr.damage[i] : ms[i].initialDamage ?? 0),
       (i) => ms[i].type === 'window' && ((mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition !== 'intact')),
       mul,
+      this.structureColor(v),
     );
     this.memberLayer!.markDirty(true);
+  }
+
+  private colorMode: StructureColorMode = 'normal';
+
+  /**
+   * Member colors of the structural views (Phase 25) — all from computed state: demand / capacity
+   * (green → yellow → red at the failure utilization), member state (damaged / severe / failed), the
+   * collapse sequence (failure time, early blue → late red). Null for the normal look.
+   */
+  private structureColor(v: EntityView): ((i: number, out: THREE.Color) => boolean) | undefined {
+    const mode = this.colorMode;
+    if (mode === 'normal') return undefined;
+    const mr = v.e.modular;
+    const model = mr?.structure?.model;
+    const g = model?.g;
+    if (mode === 'demand') {
+      const a = mr?.initial;
+      return (i, out) => {
+        const structural = g ? g.structural[i] : a ? a.members[i].bearing : false;
+        if (!structural) { out.copy(DEMAND_NONE); return true; }
+        if (model && model.state[i] > MS.SEVERE) { out.copy(FAILED_RED).multiplyScalar(0.6); return true; }
+        const u = Math.min(1, (model ? model.s.util[i] : a?.members[i].utilization ?? 0) / OVERLOAD);
+        if (u < 0.5) out.copy(DEMAND_LOW).lerp(DEMAND_MID, u / 0.5);
+        else out.copy(DEMAND_MID).lerp(FAILED_RED, (u - 0.5) / 0.5);
+        return true;
+      };
+    }
+    if (!model) return undefined;
+    if (mode === 'failure') {
+      return (i, out) => {
+        const st = model.state[i];
+        if (st > MS.SEVERE && st !== MS.ABSENT) { out.copy(FAILED_RED); return true; }
+        if (st === MS.SEVERE) { out.copy(SEVERE_ORANGE); return true; }
+        if (st === MS.DAMAGED) { out.copy(DEMAND_MID); return true; }
+        return false;
+      };
+    }
+    const recs = model.records;
+    const t0 = recs.length ? recs[0].time : 0, t1 = recs.length ? recs[recs.length - 1].time : 1;
+    return (i, out) => {
+      const t = model.failTime[i];
+      if (!(t === t)) { out.copy(DEMAND_NONE); return true; }
+      const f = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
+      out.copy(SEQ_EARLY).lerp(FAILED_RED, f);
+      return true;
+    };
   }
 
   stats(): AdapterStats {
@@ -521,6 +607,11 @@ export class SimRenderAdapter {
    */
   update(camera: THREE.Camera, elapsed: number, storm: number, quake: QuakeRenderOptions | null = null) {
     this.frame++;
+    const mode = useViewStore.getState().structureViz.color;
+    if (mode !== this.colorMode) {
+      this.colorMode = mode;
+      if (this.memberLayer) for (const v of this.views) if (v.members) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
+    }
     camera.getWorldPosition(this.camPos);
     // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).
     this.quake = quake && this.runtime.seismic ? quake : null;

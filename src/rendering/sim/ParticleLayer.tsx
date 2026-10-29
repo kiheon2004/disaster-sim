@@ -5,6 +5,7 @@ import { useDisposable } from '../useDisposable';
 import { simulationController } from '@/simulation/SimulationController';
 import { MAX_PARTICLES } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
+import { useViewStore } from '../viewStore';
 
 const dummy = new THREE.Object3D();
 /** Parsed colors cached by hex string (avoids re-parsing every particle every frame). */
@@ -30,6 +31,8 @@ export function ParticleLayer() {
     const n = Math.min(ps.length, MAX_PARTICLES);
     // Particles are integrated at a lower rate than physics: extrapolate to the current time.
     const ahead = Math.max(-0.05, Math.min(0.05, simulationController.getTime() - rt.particlesTime));
+    // Dust is visual only (Phase 25): its amount slider scales it (0 hides) — never a result.
+    const dust = useViewStore.getState().structureViz.dust;
     for (let i = 0; i < n; i++) {
       const p = ps[i];
       const fade = Math.min(1, p.life / 1.5);
@@ -40,7 +43,7 @@ export function ParticleLayer() {
       if (p.kind === 'leaf') dummy.scale.set(s * 1.6, s * 0.15, s);
       else if (p.kind === 'dust') {
         // Visual only: a puff that grows as it disperses.
-        const g = p.size * (1 + 2.5 * (1 - p.life / p.maxLife)) * Math.min(1, p.life / 2);
+        const g = p.size * (1 + 2.5 * (1 - p.life / p.maxLife)) * Math.min(1, p.life / 2) * dust;
         dummy.scale.set(g, g * 0.7, g);
       }
       else dummy.scale.set(s, s, s * 0.3);

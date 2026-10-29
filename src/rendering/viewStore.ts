@@ -78,6 +78,26 @@ export interface BlastViz {
 export const FRONT_GLOWS = [1, 3] as const;
 
 /** Ground tool in the 3D view: set a point (sinkhole / landslide circle) or draw a polygon. */
+/**
+ * Structural destruction views (Phase 25, render-only — never read by the simulation):
+ *  - color: members colored by their computed demand / capacity, their state (failed / severe /
+ *    damaged), or the collapse sequence (failure time); 'normal' = materials + damage tone;
+ *  - overlays of the selected building: load paths (member → support, share / capacity), connections
+ *    (failed ones), lost foundation support, falling blocks;
+ *  - debris: fragments colored by state (moving / at rest), rubble piles;
+ *  - dust: visual-only dust amount (0 hides it; never changes a result).
+ */
+export type StructureColorMode = 'normal' | 'demand' | 'failure' | 'sequence';
+export interface StructureViz {
+  color: StructureColorMode;
+  loadPath: boolean;
+  connections: boolean;
+  support: boolean;
+  debris: boolean;
+  rubble: boolean;
+  dust: number;
+}
+
 export interface GroundPick {
   id: string;
   mode: 'point' | 'polygon';
@@ -136,6 +156,11 @@ interface ViewState {
   setImpactViz: (patch: Partial<ImpactViz>) => void;
   blastViz: BlastViz;
   setBlastViz: (patch: Partial<BlastViz>) => void;
+  structureViz: StructureViz;
+  setStructureViz: (patch: Partial<StructureViz>) => void;
+  /** Member picked in simulation mode (structural inspector, Phase 25). */
+  simMember: { owner: string; member: number } | null;
+  setSimMember: (m: { owner: string; member: number } | null) => void;
   groundPick: GroundPick | null;
   setGroundPick: (p: GroundPick | null) => void;
   /** Experiment instance (sinkhole / landslide) whose predicted outcome is drawn on the ground. */
@@ -181,6 +206,10 @@ export const useViewStore = create<ViewState>((set) => ({
   setImpactViz: (patch) => set((s) => ({ impactViz: { ...s.impactViz, ...patch } })),
   blastViz: { field: 'current', front: true, vectors: false, objects: true, flash: true, frontGlow: 1 },
   setBlastViz: (patch) => set((s) => ({ blastViz: { ...s.blastViz, ...patch } })),
+  structureViz: { color: 'normal', loadPath: false, connections: false, support: true, debris: false, rubble: true, dust: 1 },
+  setStructureViz: (patch) => set((s) => ({ structureViz: { ...s.structureViz, ...patch } })),
+  simMember: null,
+  setSimMember: (simMember) => set({ simMember }),
   groundPick: null,
   setGroundPick: (groundPick) => set({ groundPick }),
   groundPreview: null,

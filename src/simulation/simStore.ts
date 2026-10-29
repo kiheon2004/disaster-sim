@@ -133,6 +133,34 @@ export interface ImpactLive {
 }
 
 /** Live air-pressure wave summary (Phase 24) for the HUD / inspector. */
+/** Live structural destruction summary (Phase 25). */
+export interface StructureLive {
+  /** Modular buildings in the run (the structural views apply). */
+  modular: number;
+  /** Buildings with a collapse model / doing work now. */
+  models: number;
+  active: number;
+  fallingBlocks: number;
+  /** Collapse classification counts. */
+  damaged: number;
+  local: number;
+  partial: number;
+  global: number;
+  failedMembers: number;
+  connectionsFailed: number;
+  /** Mass accounts summed over buildings (kg). */
+  mass: { structure: number; falling: number; resting: number; bodies: number; rubble: number; fines: number; left: number; unresolved: number };
+  residual: number;
+  fragments: number;
+  fragmentsMoving: number;
+  aggregated: number;
+  heaps: number;
+  rubbleMass: number;
+  roadsBlocked: number;
+  secondary: number;
+  /** Simulation cost of the engine (ms per step, last profiled). */
+}
+
 export interface BlastLive {
   id: string;
   name: string;
@@ -210,6 +238,7 @@ export interface SimState {
   ground: GroundLive | null;
   impacts: ImpactLive[] | null;
   blasts: BlastLive[] | null;
+  structure: StructureLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -244,6 +273,7 @@ export const useSimStore = create<SimState>((set) => ({
   ground: null,
   impacts: null,
   blasts: null,
+  structure: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

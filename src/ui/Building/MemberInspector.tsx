@@ -15,6 +15,7 @@ import { SelectField, SliderField, Vec3Field } from '@/ui/common/fields';
 import { Icon } from '@/ui/common/Icon';
 import { displayName, fmt } from '@/ui/format';
 import { AnalysisRows, WarningList } from './AnalysisSummary';
+import { StructurePreview } from './StructurePreview';
 import styles from './Building.module.css';
 
 /**
@@ -102,6 +103,7 @@ function OneMember({ buildingId, index }: { buildingId: string; index: number })
         )}
         <div className={styles.note} style={{ marginTop: 6 }}>{t('building.members.modelNote')}</div>
       </Section>
+      <StructurePreview design={d} ids={[m.id]} />
       <Actions />
     </>
   );
@@ -129,6 +131,7 @@ function ManyMembers({ indices }: { indices: number[] }) {
         )}
         <SliderField label={t('building.members.initialDamage')} value={0} min={0} max={1} step={0.05} precision={2} onChange={(v) => setSelectedInitialDamage(v)} />
       </Section>
+      <StructurePreview design={d} ids={indices.map((i) => d.members[i].id)} />
       <Actions />
     </>
   );

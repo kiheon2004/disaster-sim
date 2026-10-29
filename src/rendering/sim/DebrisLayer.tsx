@@ -4,11 +4,16 @@ import * as THREE from 'three';
 import { useDisposable } from '../useDisposable';
 import { simulationController } from '@/simulation/SimulationController';
 import { MAX_DEBRIS } from '@/simulation/damage/spawn';
+import { FRAGMENT_LIMITS } from '@/simulation/structure/fragments';
 import { UNIT_BOX } from '../geometry/primitives';
 import { createGroundMotionSample } from '@/simulation/seismic/GroundMotionField';
 import { useViewStore } from '../viewStore';
 
 const ground = createGroundMotionSample();
+/** Phase 0–24 pieces + structural fragments (Phase 25) — allocated once. */
+const CAPACITY = MAX_DEBRIS + FRAGMENT_LIMITS.total + 64;
+const MOVING = new THREE.Color('#f08a24');
+const RESTING = new THREE.Color('#6d8fb0');
 
 const m = new THREE.Matrix4();
 const pos = new THREE.Vector3();
@@ -29,15 +34,21 @@ function cachedColor(hex: string) {
 export function DebrisLayer() {
   const ref = useRef<THREE.InstancedMesh>(null);
   const rev = useRef(-1);
+  const mode = useRef(false);
+  const frame = useRef(0);
   const material = useDisposable(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, metalness: 0, flatShading: true }), []);
   useFrame(() => {
     const mesh = ref.current;
     const rt = simulationController.getRuntime();
     if (!mesh || !rt) return;
     const list = rt.debris;
-    const n = Math.min(list.length, MAX_DEBRIS);
-    const colors = rt.debrisRev !== rev.current;
+    const n = Math.min(list.length, CAPACITY);
+    // Debris-state view (Phase 25): fragments colored moving / at rest (re-colored every 15 frames).
+    const byState = useViewStore.getState().structureViz.debris;
+    frame.current++;
+    const colors = rt.debrisRev !== rev.current || byState !== mode.current || (byState && frame.current % 15 === 0);
     rev.current = rt.debrisRev;
+    mode.current = byState;
     // Earthquake: debris moves with the (exaggerated) ground like every other object (visual).
     const gm = simulationController.getEnvironment().groundMotion;
     const k = gm.active ? useViewStore.getState().quakeViz.exaggeration : 0;
@@ -55,11 +66,11 @@ export function DebrisLayer() {
       }
       m.compose(pos, quat.set(q[0], q[1], q[2], q[3]), scale.set(d.size[0], d.size[1], d.size[2]));
       mesh.setMatrixAt(i, m);
-      if (colors) mesh.setColorAt(i, cachedColor(d.color));
+      if (colors) mesh.setColorAt(i, byState && d.structural ? (d.structural.settled ? RESTING : MOVING) : cachedColor(d.color));
     }
     mesh.count = n;
     mesh.instanceMatrix.needsUpdate = true;
     if (colors && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
-  return <instancedMesh ref={ref} args={[UNIT_BOX, material, MAX_DEBRIS]} frustumCulled={false} castShadow receiveShadow raycast={() => null} />;
+  return <instancedMesh ref={ref} args={[UNIT_BOX, material, CAPACITY]} frustumCulled={false} castShadow receiveShadow raycast={() => null} />;
 }

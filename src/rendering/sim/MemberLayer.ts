@@ -33,6 +33,7 @@ const LOOK_MAT: Record<MaterialLook, { roughness?: number; metalness?: number; e
 
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 const CRACKED = new THREE.Color('#4a3f38');
+const RUBBLE = new THREE.Color('#6f675e');
 const BROKEN_GLASS = new THREE.Color(0.1, 0.11, 0.13);
 const mLocal = new THREE.Matrix4();
 const mWorld = new THREE.Matrix4();
@@ -51,6 +52,31 @@ export { memberColor };
 /** Local matrix of a member box (building space, before the object's own transform). */
 export function memberMatrix(m: BuildingMember, out: THREE.Matrix4): THREE.Matrix4 {
   return out.compose(vP.set(m.position[0], m.position[1], m.position[2]), qR.setFromEuler(eR.set(m.rotation[0], m.rotation[1], m.rotation[2])), vS.set(m.size[0], m.size[1], m.size[2]));
+}
+
+/**
+ * Displacement of a fallen member (Phase 25, collapse model): offset in the building's UNSCALED local
+ * frame, vertical scale (compaction into rubble) and a visual-only tilt.
+ */
+export interface MemberOffset {
+  dx: number;
+  dy: number;
+  dz: number;
+  sy: number;
+  /** Tilt about a horizontal axis (rad), visual only (broken pieces). */
+  tilt: number;
+  tiltAxis: 0 | 1;
+}
+
+const qT = new THREE.Quaternion();
+const vX = new THREE.Vector3(1, 0, 0);
+const vZ = new THREE.Vector3(0, 0, 1);
+
+/** Local matrix of a displaced / compacted member. */
+export function displacedMatrix(m: BuildingMember, o: MemberOffset, out: THREE.Matrix4): THREE.Matrix4 {
+  qR.setFromEuler(eR.set(m.rotation[0], m.rotation[1], m.rotation[2]));
+  if (o.tilt !== 0) qR.premultiply(qT.setFromAxisAngle(o.tiltAxis ? vZ : vX, o.tilt));
+  return out.compose(vP.set(m.position[0] + o.dx, m.position[1] + o.dy, m.position[2] + o.dz), qR, vS.set(m.size[0], m.size[1] * o.sy, m.size[2]));
 }
 
 /** A building's member instances in the layer. */
@@ -179,26 +205,33 @@ export class MemberLayer {
    * Write a building's member matrices with `root` (static placement or the earthquake shear),
    * hiding failed / detached members and culled interior members.
    */
-  writeMatrices(set: MemberSet, root: THREE.Matrix4, gone: (i: number) => boolean) {
+  writeMatrices(set: MemberSet, root: THREE.Matrix4, gone: (i: number) => boolean, offset?: (i: number) => MemberOffset | null) {
     set.root.copy(root);
     const ms = set.design.members;
     for (let i = 0; i < ms.length; i++) {
       const mesh = this.meshes[set.look[i]];
-      if (gone(i) || (set.interior[i] && !set.revealed)) mesh.setMatrixAt(set.inst[i], HIDDEN);
-      else mesh.setMatrixAt(set.inst[i], mWorld.multiplyMatrices(root, memberMatrix(ms[i], mLocal)));
+      if (gone(i) || (set.interior[i] && !set.revealed)) { mesh.setMatrixAt(set.inst[i], HIDDEN); continue; }
+      const o = offset?.(i);
+      mesh.setMatrixAt(set.inst[i], mWorld.multiplyMatrices(root, o ? displacedMatrix(ms[i], o, mLocal) : memberMatrix(ms[i], mLocal)));
     }
   }
 
-  /** Per-member colors: damage darkens toward a cracked tone; broken glass goes dark; `mul` tints. */
-  writeColors(set: MemberSet, damage: (i: number) => number, broken: (i: number) => boolean, mul?: THREE.Color) {
+  /**
+   * Per-member colors: damage darkens toward a cracked tone; broken glass goes dark; `mul` tints.
+   * `override` (Phase 25 structural views): a color for the member instead (demand / capacity,
+   * failure state, collapse sequence) — or null for the normal look.
+   */
+  writeColors(set: MemberSet, damage: (i: number) => number, broken: (i: number) => boolean, mul?: THREE.Color, override?: (i: number, out: THREE.Color) => boolean) {
     const ms = set.design.members;
     const b = set.base;
     for (let i = 0; i < ms.length; i++) {
+      if (override && override(i, cTmp)) { this.meshes[set.look[i]].setColorAt(set.inst[i], cTmp); continue; }
       if (broken(i)) cTmp.copy(BROKEN_GLASS);
       else {
         cTmp.setRGB(b[3 * i], b[3 * i + 1], b[3 * i + 2]);
         const d = damage(i);
-        if (d > 0.02) cTmp.lerp(CRACKED, Math.min(0.75, 0.15 + 0.6 * d));
+        if (d > 1.5) cTmp.lerp(RUBBLE, 0.55); // fallen / crushed (Phase 25: damage code 2)
+        else if (d > 0.02) cTmp.lerp(CRACKED, Math.min(0.75, 0.15 + 0.6 * Math.min(1, d)));
       }
       if (mul) cTmp.multiply(mul);
       this.meshes[set.look[i]].setColorAt(set.inst[i], cTmp);

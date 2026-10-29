@@ -22,6 +22,9 @@ interface MemberState {
   snap: { grid: boolean; floor: boolean; structure: boolean };
   /** Grid step for member moves (m). */
   gridStep: number;
+  /** Removal preview of the building being edited (Phase 25) — for this design object only. */
+  preview: { design: import('@/buildings/types').BuildingDesign; result: import('@/structure/preview').RemovalPreview } | null;
+  setPreview: (p: MemberState['preview']) => void;
   /** Heading (rad) of the member being added (R turns it 90°). */
   addYaw: number;
   rotateAdd: () => void;
@@ -47,6 +50,8 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   snap: { grid: true, floor: true, structure: true },
   gridStep: 0.5,
   addYaw: 0,
+  preview: null,
+  setPreview: (preview) => set({ preview }),
   rotateAdd: () => set({ addYaw: (get().addYaw + Math.PI / 2) % (Math.PI * 2) }),
   select: (selected) => set({ selected: [...new Set(selected)] }),
   toggle: (id) => {
@@ -60,5 +65,5 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   setCut: (cut) => set({ cut }),
   setSnap: (patch) => set({ snap: { ...get().snap, ...patch } }),
   setGridStep: (gridStep) => set({ gridStep }),
-  reset: () => set({ selected: [], adding: null, cut: null }),
+  reset: () => set({ selected: [], adding: null, cut: null, preview: null }),
 }));
