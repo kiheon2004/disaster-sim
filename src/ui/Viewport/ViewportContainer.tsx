@@ -2,6 +2,7 @@ import { Viewport } from '@/rendering/Viewport';
 import { EditorScene } from '@/editor/EditorScene';
 import { SimulationScene } from '@/rendering/sim/SimulationScene';
 import { useEditorStore } from '@/editor/editorStore';
+import { useRoadStore } from '@/editor/roadStore';
 import { useSimStore } from '@/simulation/simStore';
 import { getPaletteItem } from '@/objects/palette';
 import { BuildingEditBar } from './BuildingEditBar';
@@ -22,6 +23,7 @@ export function ViewportContainer() {
   const t = useT();
   const mode = useEditorStore((s) => s.mode);
   const tool = useEditorStore((s) => s.tool);
+  const roadMode = useRoadStore((s) => s.mode);
   const loading = useSimStore((s) => s.status === 'loading');
   const placeItem = getPaletteItem(useEditorStore((s) => s.placeItemId));
   const terrainTool = useEditorStore((s) => s.terrainTool);
@@ -57,6 +59,8 @@ export function ViewportContainer() {
             ? t('viewport.hint.sim')
             : tool === 'building'
               ? t('viewport.hint.building')
+              : tool === 'road'
+                ? t('viewport.hint.road', { mode: t(`road.mode.${roadMode}`), hint: t(`road.hint.${roadMode}`) })
               : tool === 'terrain'
                 ? t(terrainTool === 'inspect' ? 'viewport.hint.terrainInspect' : 'viewport.hint.terrain', { tool: t(`terrain.tool.${terrainTool}`) })
                 : <BuildHint fallback={tool === 'place' && placeItem ? t('viewport.hint.place', { name: t(placeItem.labelKey) }) : t('viewport.hint.camera')} />}

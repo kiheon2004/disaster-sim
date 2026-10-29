@@ -16,6 +16,7 @@ import { clickSelect } from '@/app/buildActions';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
 import { TerrainTool } from './tools/TerrainTool';
+import { RoadTool } from './tools/RoadTool';
 import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
 import { PasteTool } from './tools/PasteTool';
 import { TransformGizmo } from './TransformGizmo';
@@ -212,6 +213,7 @@ export function EditorScene() {
       {tool === 'area' && <AreaTool />}
       {tool === 'paste' && <PasteTool />}
       {tool === 'terrain' && <TerrainTool />}
+      {tool === 'road' && <RoadTool />}
       {editingBuilding && <BuildingEditor />}
       {interactive && single && <TransformGizmo />}
       {multi && <GroupSelection ids={selectedIds} />}

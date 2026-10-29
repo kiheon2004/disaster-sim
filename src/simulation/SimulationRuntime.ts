@@ -163,4 +163,6 @@ export interface SimulationRuntime {
   seismic?: SeismicRuntime;
   /** Flood bookkeeping (lazily created when the water model activates, Phase 14). */
   flood?: FloodRuntime;
+  /** Road network state (Phase 18): surface damage, inundation, drain inlets. */
+  roads?: import('./roads/RoadRuntime').RoadRuntime;
 }

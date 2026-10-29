@@ -20,6 +20,7 @@
 import type { EntityId } from '@/core/types';
 import type { TerrainData, WaterSettings } from '@/core/model';
 import { groundMaterial } from '@/terrain/GroundMaterials';
+import type { Inlet } from '../roads/RoadRuntime';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import {
   FLOOD_DEPTH, INFIL_RATE_FULL, MANNING_BY_GROUND, ROAD_MANNING, ROAD_PERMEABILITY, SOIL_STORAGE_FULL, WET_DEPTH, mmPerHour,
@@ -148,7 +149,7 @@ export class WaterField {
   rev = 0;
   readonly obstacles: Footprint[];
 
-  constructor(readonly terrain: TerrainSampler, settings: WaterSettings, obstacles: Footprint[] = [], roads: Footprint[] = []) {
+  constructor(readonly terrain: TerrainSampler, settings: WaterSettings, obstacles: Footprint[] = [], roads: Footprint[] = [], inlets: readonly Inlet[] = []) {
     const t: TerrainData = terrain.data;
     this.nx = t.nx - 1;
     this.nz = t.nz - 1;
@@ -181,8 +182,21 @@ export class WaterField {
       this.blocked[i] = 1;
       this.owner[i] = k;
     }));
+    // Storm-drain inlets of network roads (Phase 18): sub-grid point sinks. An inlet's capacity
+    // (m³/s) becomes extra drainage depth rate on the 1 m cell that contains it; the solver
+    // limits it to the water present, so the budget (drainage term) stays exact.
+    for (const inlet of inlets) {
+      const i = this.indexAt(inlet.x, inlet.z);
+      if (i >= 0 && !this.blocked[i]) {
+        this.drainRate[i] += inlet.capacity / this.cellArea;
+        this.inletCells++;
+      }
+    }
     this.computeRedirects();
   }
+
+  /** Cells carrying a storm-drain inlet (Phase 18). */
+  inletCells = 0;
 
   private buildLayers(t: TerrainData, s: WaterSettings) {
     const vx = t.nx;

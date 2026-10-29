@@ -27,6 +27,15 @@ import { createDesign } from '@/buildings/design';
 import { presetSpec, BUILDING_PRESETS } from '@/buildings/spec';
 import { analyzeBuilding } from '@/buildings/analysis';
 import { foundationContact } from '@/buildings/foundation';
+import * as roadActions from './roadActions';
+import { useRoadStore } from '@/editor/roadStore';
+import { getRoadBatches } from '@/rendering/roads/RoadLayer';
+import { roadStats } from '@/roads/stats';
+import * as roadNetwork from '@/roads/network';
+import * as roadCity from '@/roads/city';
+import { blocksOf } from '@/roads/blocks';
+import { intersectionsOf } from '@/roads/intersections';
+import { emptyNetwork, defaultProfile, PROFILE_PRESETS } from '@/roads/types';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -40,6 +49,12 @@ export function installDevtools() {
     buildLib: { areaFill, planPlacement, acceptedInputs, DEFAULT_PLACEMENT, FootprintIndex, parseDocument, serializeDocument, stressScene, createEmptyDocument, samplerFor },
     /** Phase 17 modular buildings (benchmarks / browser verification). */
     buildingLib: { createDesign, presetSpec, BUILDING_PRESETS, analyzeBuilding, foundationContact, deriveFields, withDesign },
+    /** Phase 18 roads (benchmarks / browser verification). */
+    roadActions,
+    roads: useRoadStore,
+    roadBatches: getRoadBatches,
+    roadStats,
+    roadLib: { ...roadNetwork, ...roadCity, blocksOf, intersectionsOf, emptyNetwork, defaultProfile, PROFILE_PRESETS },
     locale: useLocaleStore,
     /** Translate a key in the current locale (browser verification finds buttons by label). */
     tr: (key: MessageKey) => translate(useLocaleStore.getState().locale, key),

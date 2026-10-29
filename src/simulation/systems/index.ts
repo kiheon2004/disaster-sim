@@ -12,6 +12,7 @@ import { WaterSolverSystem } from './WaterSolverSystem';
 import { WaterForceSystem } from './WaterForceSystem';
 import { GroundContactSystem } from './GroundContactSystem';
 import { FloodDamageSystem } from './FloodDamageSystem';
+import { RoadSystem } from './RoadSystem';
 import { ExposureSystem } from '../response/exposure';
 
 /**
@@ -33,6 +34,7 @@ export function createDefaultSystems(): SimulationSystem[] {
     new StructuralResponseSystem(),
     new SeismicDamageSystem(),
     new FloodDamageSystem(),
+    new RoadSystem(),
     new SwaySystem(),
     new DamageSystem(),
     new DebrisSystem(),

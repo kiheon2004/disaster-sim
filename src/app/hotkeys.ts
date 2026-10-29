@@ -8,6 +8,8 @@ import { applyAreaSession } from '@/editor/tools/BulkTools';
 import { useViewStore } from '@/rendering/viewStore';
 import { degToRad } from '@/core/math';
 import { useMemberStore } from '@/editor/memberStore';
+import { deleteRoadSegments, finishDraft } from '@/app/roadActions';
+import { useRoadStore, EMPTY_SELECTION } from '@/editor/roadStore';
 import { deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, modularBuilding } from '@/app/buildingActions';
 
 /** Building Edit Mode keys. Returns true when the key was handled. */
@@ -66,6 +68,45 @@ function isTyping(e: KeyboardEvent) {
 function hasTextSelection() {
   const s = typeof window !== 'undefined' ? window.getSelection() : null;
   return !!s && !s.isCollapsed && s.toString().length > 0;
+}
+
+/** Road Editing Mode keys (Phase 18). Returns true when the key was handled. */
+function roadKeys(e: KeyboardEvent, key: string): boolean {
+  const rs = useRoadStore.getState();
+  switch (key) {
+    case 'enter':
+      if (rs.draft.length >= 2) {
+        e.preventDefault();
+        finishDraft();
+        return true;
+      }
+      return false;
+    case 'escape':
+      if (rs.hood) rs.setHood(null);
+      else if (rs.draft.length) rs.clearDraft();
+      else if (rs.selection.segments.length || rs.selection.node) rs.select(EMPTY_SELECTION);
+      else if (rs.block) rs.setBlock(null);
+      else useEditorStore.getState().setRoadEdit(false);
+      return true;
+    case 'backspace':
+      if (rs.draft.length) {
+        e.preventDefault();
+        rs.popPoint();
+        return true;
+      }
+      if (rs.mode === 'edit' && rs.selection.segments.length) {
+        deleteRoadSegments(rs.selection.segments);
+        return true;
+      }
+      return false;
+    case 'delete':
+      if (rs.mode === 'edit' && rs.selection.segments.length) {
+        deleteRoadSegments(rs.selection.segments);
+        return true;
+      }
+      return false;
+  }
+  return false;
 }
 
 /** Tool keys (Phase 16). Chosen not to collide with W/E/R/F/G/T, Space, [ ], Shift+P. */
@@ -159,7 +200,9 @@ export function useEditorHotkeys() {
         return;
       }
 
-      if (ed.tool !== 'terrain' && TOOL_KEYS[key] && !e.altKey) {
+      // Road Editing Mode (Phase 18): draft / selection keys.
+      if (ed.tool === 'road' && roadKeys(e, key)) return;
+      if (ed.tool !== 'terrain' && ed.tool !== 'road' && TOOL_KEYS[key] && !e.altKey) {
         ed.setTool(TOOL_KEYS[key]);
         return;
       }

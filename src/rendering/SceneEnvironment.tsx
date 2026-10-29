@@ -1,4 +1,5 @@
 import { TerrainLayer } from './terrain/TerrainLayer';
+import { RoadLayer } from './roads/RoadLayer';
 
 export const SKY_COLOR = '#9fc3e6';
 
@@ -26,6 +27,7 @@ export function SceneEnvironment({ showGrid = true }: { showGrid?: boolean }) {
       />
 
       <TerrainLayer showGrid={showGrid} />
+      <RoadLayer />
     </>
   );
 }

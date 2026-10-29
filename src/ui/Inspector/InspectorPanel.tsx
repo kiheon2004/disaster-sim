@@ -14,6 +14,8 @@ import { FloodLiveSection, FloodProbeSection } from './FloodInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
 import { MemberInspector } from '@/ui/Building/MemberInspector';
+import { RoadInspector } from '@/ui/Roads/RoadInspector';
+import { RoadSimSection } from '@/ui/Roads/RoadSimSection';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -26,6 +28,7 @@ export function InspectorPanel() {
   const inSim = mode === 'simulation';
   const terrainMode = useEditorStore((s) => s.tool === 'terrain');
   const buildingMode = useEditorStore((s) => s.tool === 'building');
+  const roadMode = useEditorStore((s) => s.tool === 'road');
 
   return (
     <Panel title={t('panel.inspector')}>
@@ -33,6 +36,8 @@ export function InspectorPanel() {
         <TerrainInspector />
       ) : buildingMode && !inSim ? (
         <MemberInspector />
+      ) : roadMode && !inSim ? (
+        <RoadInspector />
       ) : selectedIds.length > 1 && !inSim ? (
         <MultiInspector ids={selectedIds} readOnly={inSim} />
       ) : obj ? (
@@ -47,6 +52,7 @@ export function InspectorPanel() {
         <>
           <FloodProbeSection />
           <SimSummary />
+          <RoadSimSection />
         </>
       ) : (
         <NoSelection />

@@ -150,7 +150,7 @@ export function ToolOptions() {
   const bulk = tool === 'brush' || tool === 'line' || tool === 'area';
   return (
     <div className={styles.options} data-testid="tool-options">
-      <Section title={`${t('opts.title')} · ${t(`build.tool.${tool === 'terrain' ? 'select' : tool}`)}`}>
+      <Section title={`${t('opts.title')} · ${t(`build.tool.${tool === 'terrain' || tool === 'road' ? 'select' : tool}`)}`}>
         <div className={styles.optBody}>
           {tool === 'select' && <div className={styles.hint}>{t('opts.select.info')}</div>}
           {tool === 'paste' && <PasteInfo />}

@@ -17,6 +17,7 @@ import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
 import type { EntityId } from '@/core/types';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { WaterField, type Footprint } from './WaterField';
+import type { Inlet } from '../roads/RoadRuntime';
 import { WaterForcing } from './WaterForcing';
 import { WaterSolver } from './WaterSolver';
 import { applyWaterState, type WaterStateSnapshot } from './waterStateCodec';
@@ -27,6 +28,7 @@ export class FloodEnvironment {
   solver: WaterSolver | null = null;
   private obstacles: Footprint[] = [];
   private roads: Footprint[] = [];
+  private inlets: Inlet[] = [];
   /** Optional initial water state (mid-simulation snapshot) applied at activation. */
   initialState: WaterStateSnapshot | null = null;
   /** Simulation time of activation (s). */
@@ -38,9 +40,10 @@ export class FloodEnvironment {
   ) {}
 
   /** Solid footprints that block the flow, and road surfaces (set by the controller at load). */
-  setFeatures(obstacles: Footprint[], roads: Footprint[]) {
+  setFeatures(obstacles: Footprint[], roads: Footprint[], inlets: Inlet[] = []) {
     this.obstacles = obstacles;
     this.roads = roads;
+    this.inlets = inlets;
   }
 
   get active(): boolean {
@@ -51,7 +54,7 @@ export class FloodEnvironment {
   activate(time: number): WaterField {
     if (this.field) return this.field;
     const t: TerrainData = this.terrain.data;
-    const field = new WaterField(this.terrain, this.settings, this.obstacles, this.roads);
+    const field = new WaterField(this.terrain, this.settings, this.obstacles, this.roads, this.inlets);
     const forcing = new WaterForcing(this.settings, t);
     if (this.initialState) applyWaterState(field, this.initialState);
     else if (this.settings.initialFromReference) fillFromBoundaries(field, forcing);

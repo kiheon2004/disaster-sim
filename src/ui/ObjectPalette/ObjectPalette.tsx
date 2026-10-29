@@ -19,9 +19,10 @@ import { StateDot } from '@/ui/common/StateBadge';
 import { useEntityStates } from '@/ui/useEntityStates';
 import { TerrainPanel } from '@/ui/Terrain/TerrainPanel';
 import { BuildingPanel } from '@/ui/Building/BuildingPanel';
+import { RoadPanel } from '@/ui/Roads/RoadPanel';
 import styles from './ObjectPalette.module.css';
 
-type Tab = 'objects' | 'building' | 'terrain' | 'scene';
+type Tab = 'objects' | 'building' | 'terrain' | 'roads' | 'scene';
 
 export function ObjectPalette() {
   countRender('ObjectPalette');
@@ -36,9 +37,13 @@ export function ObjectPalette() {
     const ed = useEditorStore.getState();
     if (next === 'terrain' && ed.mode === 'editor') ed.setTerrainTool(ed.terrainTool);
     else if (ed.tool === 'terrain') ed.setTerrainTool(null);
+    // The Roads tab is Road Editing Mode (Phase 18), like the Terrain tab.
+    if (next === 'roads' && ed.mode === 'editor') ed.setRoadEdit(true);
+    else if (ed.tool === 'road') ed.setRoadEdit(false);
   };
   const buildingActive = useEditorStore((s) => s.tool === 'building');
-  const shown: Tab = terrainActive ? 'terrain' : buildingActive ? 'building' : tab;
+  const roadActive = useEditorStore((s) => s.tool === 'road');
+  const shown: Tab = terrainActive ? 'terrain' : buildingActive ? 'building' : roadActive ? 'roads' : tab;
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs} role="tablist">
@@ -51,11 +56,14 @@ export function ObjectPalette() {
         <button role="tab" aria-selected={shown === 'terrain'} className={`${styles.tab} ${shown === 'terrain' ? styles.active : ''}`} onClick={() => setTab('terrain')}>
           {t('panel.terrain')}
         </button>
+        <button role="tab" aria-selected={shown === 'roads'} data-testid="tab-roads" className={`${styles.tab} ${shown === 'roads' ? styles.active : ''}`} onClick={() => setTab('roads')}>
+          {t('panel.roads')}
+        </button>
         <button role="tab" aria-selected={shown === 'scene'} className={`${styles.tab} ${shown === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
           {t('panel.scene')} ({count})
         </button>
       </div>
-      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : <OutlinerTab />}
+      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : shown === 'roads' ? <RoadPanel /> : <OutlinerTab />}
     </div>
   );
 }

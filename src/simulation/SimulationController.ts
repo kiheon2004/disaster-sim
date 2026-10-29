@@ -27,6 +27,7 @@ import { EarthquakeEvent } from '@/events/earthquake/EarthquakeEvent';
 import { GRAVITY } from '@/core/units';
 import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
 import { isWaterEvent } from '@/events/specs';
+import { RoadRuntime } from './roads/RoadRuntime';
 import { floodFeatures } from './water/floodFeatures';
 import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
 import type { FloodLive } from './simStore';
@@ -129,7 +130,10 @@ export class SimulationController {
     this.env.windField.setObstacles(obstacles);
     // Water model inputs (used only if a water event starts): solid footprints + road surfaces.
     const features = floodFeatures(this.runtime);
-    this.env.flood.setFeatures(features.obstacles, features.roads);
+    // Network roads (Phase 18): their surface is in the terrain; the runtime adds damage state
+    // and the storm-drain inlets the water model uses as sub-grid sinks.
+    if (this.snapshot.roads && Object.keys(this.snapshot.roads.segments).length) this.runtime.roads = new RoadRuntime(this.snapshot.roads);
+    this.env.flood.setFeatures(features.obstacles, features.roads, this.runtime.roads?.inlets ?? []);
     this.env.flood.initialState = this.initialWater;
     this.rng = new Rng(sim.seed).fork('core');
     this.fxRng = new Rng(sim.seed).fork('fx');
@@ -596,7 +600,10 @@ export function snapshotDocument(doc: WorldDocument): WorldDocument {
       objects[id] = rest as WorldDocument['objects'][string];
     } else objects[id] = o;
   }
-  const copy = structuredClone({ ...doc, objects });
+  // The road network is an immutable value too (edits create new networks): referenced.
+  const { roads, ...rest } = doc;
+  const copy = structuredClone({ ...rest, objects }) as WorldDocument;
+  copy.roads = roads;
   for (const [id, d] of designs) copy.objects[id].building = d;
   return copy;
 }

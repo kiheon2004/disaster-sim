@@ -4,6 +4,7 @@ import { enFlood } from './en.flood';
 import { enPhenomena } from './en.phenomena';
 import { enBuild } from './en.build';
 import { enBuilding } from './en.building';
+import { enRoads } from './en.roads';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -584,4 +585,5 @@ export const en: Record<MessageKey, string> = {
   ...enPhenomena,
   ...enBuild,
   ...enBuilding,
+  ...enRoads,
 };

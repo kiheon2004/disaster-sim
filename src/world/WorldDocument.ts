@@ -50,6 +50,8 @@ export interface CreateObjectInput {
   building?: BuildingDesign;
   /** Slope alignment chosen at placement (Phase 17). */
   terrainAlign?: number;
+  /** Link to a road (Phase 18). */
+  roadLink?: import('@/roads/types').RoadLink;
 }
 
 export function nextSerial(objects: Record<EntityId, WorldObject>, type: ObjectType): number {
@@ -73,6 +75,7 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
     };
     if (input.group) obj.group = input.group;
     if (input.terrainAlign !== undefined) obj.terrainAlign = input.terrainAlign;
+    if (input.roadLink) obj.roadLink = { ...input.roadLink };
     return obj;
   }
   const params = { ...def.defaultParams, ...(input.params ?? {}) };
@@ -91,6 +94,7 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
   if (seismic) obj.seismic = structuredClone(seismic);
   if (input.group) obj.group = input.group;
   if (input.terrainAlign !== undefined) obj.terrainAlign = input.terrainAlign;
+  if (input.roadLink) obj.roadLink = { ...input.roadLink };
   return obj;
 }
 

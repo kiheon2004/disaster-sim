@@ -10,6 +10,7 @@ import { WindStreaks } from './WindStreaks';
 import { WindArrows } from './WindArrows';
 import { TyphoonEnvironment } from './environment/TyphoonEnvironment';
 import { DamageOverlay } from './DamageOverlay';
+import { RoadDamageOverlay } from '../roads/RoadDamageOverlay';
 import { GroundMotionLayer } from './seismic/GroundMotionLayer';
 import { EpicenterMarker } from './seismic/EpicenterMarker';
 import { CameraShake } from './seismic/CameraShake';
@@ -61,6 +62,7 @@ export function SimulationScene() {
       <group key={version}>
         {runtime && <SimRenderLayer runtime={runtime} />}
         <DamageOverlay entities={entities} />
+        {runtime && <RoadDamageOverlay runtime={runtime} />}
         <DebrisLayer />
         <ParticleLayer />
       </group>
