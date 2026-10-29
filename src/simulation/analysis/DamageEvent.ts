@@ -92,8 +92,17 @@ export interface DamageEventRecord {
   exposure: number;
   /** Damage state of the object right after the event. */
   state: number;
+  /**
+   * Damage index 0–1 each hazard had caused to the object at that moment (Phase 22). `hazard`
+   * is what triggered THIS event; `origin` is the hazard that had done the most damage so far —
+   * e.g. a building cracked by an earthquake and finished by wind: hazard wind, origin earthquake.
+   */
+  contributors: Record<Hazard, number>;
+  origin: Hazard;
+  /** Phenomenon kind that produced it when more specific than the hazard (sinkhole, landslide …). */
+  source?: string;
 }
 
-type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state';
+type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source';
 
-export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;
+export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'contributors' | 'origin' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

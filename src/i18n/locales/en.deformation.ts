@@ -149,4 +149,5 @@ export const enDeformation: Record<keyof typeof koDeformation, string> = {
   'deformHud.cost': "Last update",
   'deformHud.collider': "collider",
   'toast.waterDeformed': "Water over deformed ground cannot be saved (unsupported) — a water state only reloads on the original terrain; the deformation itself is reproduced from the experiment setup.",
+  'log.ground.collapsed': "The building collapsed (ground failure)",
 };

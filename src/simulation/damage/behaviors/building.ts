@@ -4,7 +4,7 @@ import { buildingHeight, type BuildingParams } from '@/objects/definitions/build
 import type { SystemContext } from '../../systems/SimulationSystem';
 import type { RuntimeComponent, RuntimeEntity } from '../../SimulationRuntime';
 import { DamageState, worst } from '../DamageState';
-import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
+import { applyFatigue, FATIGUE_ONSET, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris, spawnParticles } from '../spawn';
 import { heightFactor } from '../windLoad';
 import { createLocalWind, createSampleCache, type LocalWind } from '../../wind/SpatialWindField';
@@ -131,6 +131,14 @@ export function downhill(g: [number, number]): Vec3 {
   return n > 1e-9 ? [-g[0] / n, 0, -g[1] / n] : [1, 0, 0];
 }
 
+/** Collapse attributed to the hazard whose health governed (undefined = wind, the classic path). */
+function governingCollapse(e: RuntimeEntity, governing: 'wind' | 'earthquake' | 'flood' | 'ground', flow: Vec3): QuakeCollapse | undefined {
+  if (governing === 'ground' && e.ground) return { dir: downhill(e.ground.gradient), speed: 0.3, cause: 'foundation', response: e.ground.peakBeta, hazard: 'ground' };
+  if (governing === 'earthquake') return { dir: [flow[0], 0, flow[2]], speed: 0.3, cause: 'drift', response: e.loadRatio, hazard: 'earthquake' };
+  if (governing === 'flood') return { dir: [flow[0], 0, flow[2]], speed: 0.3, cause: 'hydrostatic', response: e.flood?.depth ?? 0, hazard: 'flood' };
+  return undefined;
+}
+
 /** Earthquake / flood collapse: debris falls along the building's response, not downwind. */
 export interface QuakeCollapse {
   /** Horizontal unit direction the structure was swaying / leaning toward (flood: the flow). */
@@ -187,7 +195,7 @@ export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeColl
   ctx.env.flood?.removeObstacle(e.id);
   if (quake) {
     const hazard = quake.hazard ?? 'earthquake';
-    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : 'log.quake.collapsed' });
+    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : 'log.quake.collapsed' });
     ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard, response: quake.response, damageAfter: 1, ...quake.extra });
     return;
   }
@@ -303,6 +311,11 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
     if (e.flood && e.flood.health < structure.health) { structure.health = e.flood.health; governing = 'flood'; }
     if (e.ground && e.ground.health < structure.health) { structure.health = e.ground.health; governing = 'ground'; }
     e.health = structure.health;
+    // The trigger of a structural failure: wind whenever its fatigue is acting on the structure
+    // this step (as before Phase 22 — then the other channel is the ORIGIN, kept in the record's
+    // contributors); otherwise the channel that ran the health out. A calm-air failure is never
+    // attributed to wind.
+    if (e.loadRatio > FATIGUE_ONSET) governing = 'wind';
     if (e.modular !== undefined) {
       // Failure of a modular building = collapse of its weakest story (and above).
       if (modularWindStructure(e, ctx, structure.health, governing)) {
@@ -315,7 +328,7 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
         if (e.integrity) e.integrity.windHealth = 0.5;
       }
     } else if (structure.health <= 0) {
-      collapse(e, ctx, governing === 'ground' && e.ground ? { dir: downhill(e.ground.gradient), speed: 0.3, cause: 'foundation', response: e.ground.peakBeta, hazard: 'ground' } : undefined);
+      collapse(e, ctx, governingCollapse(e, governing, flow));
       e.state = DamageState.DESTROYED;
       return;
     }

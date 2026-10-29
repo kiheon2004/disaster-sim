@@ -2,7 +2,8 @@ import type { EntityId } from '@/core/types';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { DamageState } from '../damage/DamageState';
-import type { DamageEventInput, DamageEventRecord } from './DamageEvent';
+import { HAZARDS, type DamageEventInput, type DamageEventRecord } from './DamageEvent';
+import { hazardDamage } from '../interactions/integrity';
 import { SeismicRecorder, type EarthquakeMetrics } from './SeismicRecorder';
 import { FloodRecorder, type FloodMetrics } from './FloodRecorder';
 import { MilestoneRecorder } from './MilestoneRecorder';
@@ -91,7 +92,14 @@ export class MetricsRecorder {
       flowSpeed: ev.flowSpeed ?? (ev.hazard === 'flood' && e.flood ? e.flood.speed : 0),
       exposure: ev.exposure ?? (ev.hazard === 'flood' && e.flood ? e.flood.exposure : 0),
       state: ev.state ?? e.state,
+      contributors: hazardDamage(e),
+      origin: ev.hazard ?? 'wind',
+      source: ev.source,
     };
+    // The origin: the channel that had done the most damage (ties and undamaged → the trigger).
+    let best = rec.contributors[rec.hazard];
+    for (const h of HAZARDS) if (rec.contributors[h] > best + 1e-12) { best = rec.contributors[h]; rec.origin = h; }
+    if (best <= 0) rec.origin = rec.hazard;
     this.events.push(rec);
     this.noteMilestone(rec);
     if (this.firstDamage === null) this.firstDamage = time;

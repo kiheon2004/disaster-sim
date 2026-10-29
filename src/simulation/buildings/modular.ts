@@ -590,13 +590,17 @@ export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, healt
     }
   }
   if (health > 0) return false;
-  // Attributed to the hazard whose health governed (ground: foundation failure, Phase 21).
+  // Attributed to the hazard whose health governed (Phase 21 / 22): a building whose structural
+  // health ran out because of the earthquake, the water or the ground is not a wind failure.
   if (governing === 'ground' && e.ground) {
     collapseFrom(e, ctx, weak, { hazard: 'ground', cause: 'foundation', response: e.ground.peakBeta, dir: downhill(e.ground.gradient) });
     return true;
   }
   const flow = ctx.env.wind.flow();
-  collapseFrom(e, ctx, weak, { hazard: 'wind', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', response: e.loadRatio, dir: [flow[0], 0, flow[2]] });
+  const dir: Vec3 = [flow[0], 0, flow[2]];
+  if (governing === 'earthquake') collapseFrom(e, ctx, weak, { hazard: 'earthquake', cause: 'drift', response: e.loadRatio, dir });
+  else if (governing === 'flood') collapseFrom(e, ctx, weak, { hazard: 'flood', cause: 'hydrostatic', response: e.flood?.depth ?? 0, dir });
+  else collapseFrom(e, ctx, weak, { hazard: 'wind', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', response: e.loadRatio, dir });
   return true;
 }
 

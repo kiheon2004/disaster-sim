@@ -91,13 +91,14 @@ function ResultsDialog() {
   const hazards = useMemo(() => [...new Set(events.map((e) => e.hazard))], [events]);
 
   const exportCsv = () => {
-    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state'];
+    const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state', 'origin', 'damage_wind', 'damage_earthquake', 'damage_flood', 'damage_ground', 'source'];
     const rows = events.map((e) => [
       e.time.toFixed(2), e.objectId, objects[e.objectId] ? displayName(objects[e.objectId], t) : '', e.objectType, e.componentId ?? '', e.eventType, e.cause,
       ...e.worldPosition.map((v) => v.toFixed(2)), e.localWindSpeed.toFixed(2), e.globalWindSpeed.toFixed(2), e.force.toFixed(0),
       e.damageBefore.toFixed(3), e.damageAfter.toFixed(3), e.shadowSource ?? '',
       e.hazard, (e.groundAcceleration / 9.81).toFixed(3), e.response.toFixed(4),
       (e.waterDepth ?? 0).toFixed(3), (e.flowSpeed ?? 0).toFixed(3), (e.exposure ?? 0).toFixed(1), DAMAGE_STATE_IDS[e.state ?? 0] ?? '',
+      e.origin ?? e.hazard, ...(['wind', 'earthquake', 'flood', 'ground'] as const).map((h) => (e.contributors?.[h] ?? 0).toFixed(3)), e.source ?? '',
     ].map((v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(','));
     download(`${name || 'simulation'}-damage-events.csv`, [head.join(','), ...rows].join('\n'), 'text/csv');
   };
