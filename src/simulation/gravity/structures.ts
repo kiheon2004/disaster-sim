@@ -26,7 +26,7 @@ import type { Vec3 } from '@/core/types';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 import { structureOf, activate, type StructureState } from '../structure/state';
-import { memberGy } from './memberField';
+import { memberGy, memberRef, changeBound, type MemberRef } from './memberField';
 import { simProfiler as P } from '../profiling/SimProfiler';
 import type { GravityField } from '@/gravity/field';
 import type { GravitySourceSpec } from '@/gravity/types';
@@ -45,6 +45,8 @@ interface Applied {
   kM: Float64Array | null;
   /** Step of the last application. */
   step: number;
+  /** Member field at that application (Phase 32.1: bounds the change since — memberField.changeBound). */
+  ref?: MemberRef | null;
 }
 
 /** Canonical order of buildings: by place (x, z, y), id only for coincident ones. */
@@ -123,6 +125,9 @@ export class GravityStructures {
         if (!st0) { if (budget <= 0) continue; budget--; this.created++; }
         const st = structureOf(e, ctx);
         const g = st.model.g;
+        // Phase 32.1: no member can have moved by K_QUANTUM since the last application (bound of the change of the
+        // field's μ / uniform part, half the quantum as margin) — the comparison below would find nothing to re-apply.
+        if (a?.kM && a.ref && changeBound(e, st, f, a.ref) / this.g0 < 0.5 * K_QUANTUM) continue;
         const kM = a?.kM ?? new Float64Array(g.n).fill(a && !a.kM ? a.k : 1);
         let changed = !a?.kM;
         const next = new Float64Array(g.n);
@@ -143,7 +148,7 @@ export class GravityStructures {
         const ta = P.now();
         this.applyMembers(st, next, sudden || (cel && a !== undefined && jump > SUDDEN_RATIO) || (cel && !a && jump > SUDDEN_RATIO && this.celestialSudden), cel);
         P.add('gravity.apply', ta);
-        this.applied.set(e, { k: NaN, kM: next, step });
+        this.applied.set(e, { k: NaN, kM: next, step, ref: memberRef(e, st, f) });
       }
       this.applications++;
       activate(e, ctx);

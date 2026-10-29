@@ -201,6 +201,10 @@ export class GravityField {
   /** Bumped whenever the field is re-evaluated (prepare at a new time, experiments added) — with points.epoch the key
    *  of caches of field samples (Phase 32.1, simulation/gravity/memberField.ts). */
   epoch = 0;
+  /** Local (Phase 31) sources in force this step — the base part of the field varies in space (Phase 32.1 bounds). */
+  get hasLocalSources(): boolean {
+    return this.nLive > 0;
+  }
   private sorted: GravityExperiment[] = [];
   private from: Vec3[] = [];
   private live: Live[] = [];

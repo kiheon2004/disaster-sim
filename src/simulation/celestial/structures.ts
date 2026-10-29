@@ -31,7 +31,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { GravityField } from '@/gravity/field';
 import { ensureSeismicRuntime } from '../seismic/SeismicState';
 import { structureOf, activate } from '../structure/state';
-import { memberGy } from '../gravity/memberField';
+import { memberGy, upBound } from '../gravity/memberField';
 import { simProfiler as P } from '../profiling/SimProfiler';
 import { spawnFragment } from '../structure/fragments';
 import { memberMaterial, MT_BEAM, MT_COLUMN, MT_DOOR, MT_ROOF, MT_WALL, MT_WINDOW, type StructuralGraph } from '@/structure/graph';
@@ -139,6 +139,10 @@ export class CelestialStructures {
     const m = st.model, g = m.g, n = g.n;
     if (this.N.length < n) this.N = new Float64Array(n);
     const N = this.N;
+    // Phase 32.1: no member can be pulled upward (bound of the largest g_y, margin 10⁻⁹ of the field's scale) — the
+    // scan below would find none and return.
+    const ub = upBound(e, st, f);
+    if (ub && ub.up < -1e-9 * ub.scale) return;
     let any = false;
     const gyM = memberGy(e, st, f);
     for (let i = 0; i < n; i++) {
