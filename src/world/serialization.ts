@@ -193,6 +193,8 @@ export function parseDocument(json: string): LoadResult {
   const objects: Record<string, WorldObject> = {};
   let skipped = 0;
   const designs: DesignLoadReport = { invalidDesigns: 0, droppedMembers: 0, repairedMembers: 0 };
+  // Identical designs in the file (copies of one preset) become one shared, immutable object.
+  const sharedDesigns = new Map<string, NonNullable<WorldObject['building']>>();
   for (const [id, o] of Object.entries(res.data.objects)) {
     if (!hasDefinition(o.type)) {
       skipped++;
@@ -217,9 +219,12 @@ export function parseDocument(json: string): LoadResult {
       designs.droppedMembers += r.dropped;
       designs.repairedMembers += r.repaired;
       if (r.design) {
+        const key = JSON.stringify(r.design);
+        const design = sharedDesigns.get(key) ?? r.design;
+        sharedDesigns.set(key, design);
         // Derived fields follow the design; saved physics (incl. manual overrides) are kept.
-        const d = deriveFields(r.design, o.seed, obj.seismic);
-        obj.building = r.design;
+        const d = deriveFields(design, o.seed, obj.seismic);
+        obj.building = design;
         obj.params = d.params;
         obj.components = d.components;
         obj.seismic = d.seismic;

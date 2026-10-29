@@ -3,6 +3,8 @@ import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { useBuildStore } from '@/editor/buildStore';
 import * as buildActions from './buildActions';
+import * as buildingActions from './buildingActions';
+import { deriveFields, withDesign } from '@/buildings/design';
 import { getEditorBatches } from '@/rendering/editor/editorRenderStats';
 import { translate, useLocaleStore, type MessageKey } from '@/i18n/i18n';
 import * as actions from './actions';
@@ -32,11 +34,12 @@ export function installDevtools() {
     editor: useEditorStore,
     build: useBuildStore,
     buildActions,
+    buildingActions,
     editorBatches: getEditorBatches,
     /** Phase 16 benchmarks (scripts/bench-build.mjs). */
     buildLib: { areaFill, planPlacement, acceptedInputs, DEFAULT_PLACEMENT, FootprintIndex, parseDocument, serializeDocument, stressScene, createEmptyDocument, samplerFor },
     /** Phase 17 modular buildings (benchmarks / browser verification). */
-    buildingLib: { createDesign, presetSpec, BUILDING_PRESETS, analyzeBuilding, foundationContact },
+    buildingLib: { createDesign, presetSpec, BUILDING_PRESETS, analyzeBuilding, foundationContact, deriveFields, withDesign },
     locale: useLocaleStore,
     /** Translate a key in the current locale (browser verification finds buttons by label). */
     tr: (key: MessageKey) => translate(useLocaleStore.getState().locale, key),

@@ -26,6 +26,7 @@ import type { WorldObject } from '@/core/model';
 import { hashString, qRotate, seededRandom, vAdd, vScale } from '@/core/math';
 import { GRAVITY } from '@/core/units';
 import { analyzeBuilding, type BuildingAnalysis } from '@/buildings/analysis';
+import { analysisOf } from '@/buildings/design';
 import { MATERIALS, material } from '@/buildings/materials';
 import { lumpStories, type ModularUnit } from '@/buildings/structuralAdapter';
 import { isLateralRole, type BuildingDesign } from '@/buildings/types';
@@ -101,7 +102,8 @@ const scatterOf = (seed: number, id: string) => 1 + (seededRandom((seed ^ hashSt
 export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
   const design = o.building!;
   const scale: Vec3 = [...o.transform.scale] as Vec3;
-  const initial = analyzeBuilding(design, { scale });
+  const unscaled = scale[0] === 1 && scale[1] === 1 && scale[2] === 1;
+  const initial = unscaled ? analysisOf(design) : analyzeBuilding(design, { scale });
   const n = design.members.length;
   const floors = Math.max(1, design.spec.floors);
   const comp = new Int32Array(n).fill(-1);

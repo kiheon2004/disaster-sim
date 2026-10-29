@@ -96,7 +96,7 @@ export class SimulationController {
   async load(doc: WorldDocument): Promise<void> {
     const token = ++this.loadToken;
     this.disposeRuntime();
-    this.snapshot = structuredClone(doc);
+    this.snapshot = snapshotDocument(doc);
     this.scenario = [];
     this.setStatus('loading');
     await this.rebuild(token);
@@ -579,3 +579,25 @@ export class SimulationController {
 }
 
 export const simulationController = new SimulationController();
+
+/**
+ * The simulation's private copy of the document. Modular building designs (Phase 17) are
+ * immutable values — every edit creates a new design object and the simulation keeps its own
+ * member state in typed arrays — so the snapshot REFERENCES them instead of deep-cloning
+ * hundreds of members per building (they were the bulk of the snapshot's memory).
+ */
+export function snapshotDocument(doc: WorldDocument): WorldDocument {
+  const designs = new Map<string, NonNullable<WorldDocument['objects'][string]['building']>>();
+  const objects: WorldDocument['objects'] = {};
+  for (const [id, o] of Object.entries(doc.objects)) {
+    if (o.building) {
+      designs.set(id, o.building);
+      const { building: _shared, ...rest } = o;
+      objects[id] = rest as WorldDocument['objects'][string];
+    } else objects[id] = o;
+  }
+  const copy = structuredClone({ ...doc, objects });
+  for (const [id, d] of designs) copy.objects[id].building = d;
+  return copy;
+}
+

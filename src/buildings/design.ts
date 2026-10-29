@@ -27,9 +27,23 @@ import { defaultOptions, DESIGN_VERSION, type BuildingDesign, type BuildingMembe
  * values inside the world document (every edit makes a new one).
  */
 const cache = new WeakMap<BuildingDesign, BuildingAnalysis>();
+/**
+ * Equal designs held by different objects (a loaded file, pasted copies of one preset) share
+ * one analysis through a small content-keyed cache (analyses are read-only values).
+ */
+const byContent = new Map<string, BuildingAnalysis>();
+const CONTENT_CACHE = 48;
 export function analysisOf(design: BuildingDesign): BuildingAnalysis {
   let a = cache.get(design);
-  if (!a) cache.set(design, (a = analyzeBuilding(design)));
+  if (a) return a;
+  const key = JSON.stringify(design.members) + JSON.stringify(design.spec);
+  a = byContent.get(key);
+  if (!a) {
+    a = analyzeBuilding(design);
+    if (byContent.size >= CONTENT_CACHE) byContent.delete(byContent.keys().next().value!);
+    byContent.set(key, a);
+  }
+  cache.set(design, a);
   return a;
 }
 
@@ -174,7 +188,7 @@ export function designComponents(design: BuildingDesign, seed: number, a: Buildi
       wind = vary(panelWind(mat.facadePressure), 0.12, m.id);
       durability = 40;
     } else if (kind === 'roof') {
-      const edge = isEdge(m, design);
+      const edge = isEdge(m, e);
       wind = vary(panelWind(m.material === 'timber' ? 1900 : 1300) * (edge ? 0.88 : 1), 0.1, m.id);
       durability = 60;
     } else if (kind === 'wall') {
@@ -213,9 +227,8 @@ export function designComponents(design: BuildingDesign, seed: number, a: Buildi
 }
 
 /** Roof panel on the outer ring (higher suction at edges and corners). */
-function isEdge(m: BuildingMember, d: BuildingDesign): boolean {
+function isEdge(m: BuildingMember, ex: { width: number; depth: number }): boolean {
   const b = memberBounds(m);
-  const ex = designExtent(d);
   return b.min[0] <= -ex.width / 2 + 0.5 || b.max[0] >= ex.width / 2 - 0.5 || b.min[2] <= -ex.depth / 2 + 0.5 || b.max[2] >= ex.depth / 2 - 0.5;
 }
 

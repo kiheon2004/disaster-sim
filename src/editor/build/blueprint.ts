@@ -130,7 +130,7 @@ export function instantiateBlueprint(bp: Blueprint, x: number, z: number, yaw: n
       transform: { position, rotation, scale: [...o.scale] as Vec3 },
     };
     if (o.seismic) input.seismic = structuredClone(o.seismic);
-    if (o.building) input.building = structuredClone(o.building);
+    if (o.building) input.building = o.building; // immutable value, shared by every paste
     if (o.terrainAlign !== undefined) input.terrainAlign = o.terrainAlign;
     if (o.group) {
       if (!groups.has(o.group)) groups.set(o.group, createId('grp'));

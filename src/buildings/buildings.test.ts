@@ -327,6 +327,54 @@ describe('member editing', () => {
   });
 });
 
+describe('designs are immutable values (shared between copies, the simulation snapshot)', () => {
+  const freeze = <T>(o: T): T => {
+    if (o && typeof o === 'object') {
+      Object.freeze(o);
+      for (const v of Object.values(o as object)) freeze(v);
+    }
+    return o;
+  };
+  it('no edit operation mutates its input design', () => {
+    const d = freeze(createDesign(presetSpec('apartment')!, 'apartment'));
+    const edited = freeze(setRole(d, ['c0-0-0'], 'secondary')); // edits > 0 → copy paths
+    for (const x of [d, edited]) {
+      expect(() => {
+        addFloor(x); removeFloor(x);
+        moveMembers(x, ['w0-s-0', 'c1-1-1'], [0.5, 0, 0]);
+        rotateMembers(x, ['w0-s-0'], Math.PI / 2, [0, 0]);
+        duplicateMembers(x, ['w0-s-0'], [0, 0, 2]);
+        removeMembers(x, ['w0-s-0']);
+        setMaterial(x, ['c0-0-0'], 'structuralSteel');
+        setRole(x, ['bx0-0-0'], 'secondary');
+        addMembers(x, [newMember(x, 'column', [1, 0, 1], 'u77')]);
+        regenerate(x, { ...x.spec, floors: 3 });
+        withDesign(object(x), x);
+        analyzeBuilding(x, { failed: new Set(['c0-0-0']) });
+      }).not.toThrow();
+    }
+  });
+
+  it('copies placed from one preset share the design object; the simulation snapshot references it', async () => {
+    const d = createDesign(presetSpec('house')!, 'house');
+    const a = object(d, 0, 0, 1), b = object(d, 20, 0, 2);
+    expect(a.building).toBe(b.building);
+    const { snapshotDocument } = await import('@/simulation/SimulationController');
+    const doc = createEmptyDocument('s');
+    doc.objects[a.id] = a;
+    const snap = snapshotDocument(doc);
+    expect(snap.objects[a.id].building).toBe(a.building);
+    expect(snap.objects[a.id]).not.toBe(a);
+    expect(snap.objects[a.id].components).not.toBe(a.components);
+    // A file with many copies of one design loads them as one shared object.
+    const file = createEmptyDocument('f');
+    file.objects[a.id] = a;
+    file.objects[b.id] = { ...b, serial: 2 };
+    const res = parseDocument(serializeDocument(file));
+    expect(res.ok && res.doc.objects[a.id].building).toBe(res.ok && res.doc.objects[b.id].building);
+  });
+});
+
 describe('derived fields, save / load and blueprints', () => {
   const docWith = (objs: WorldObject[]): WorldDocument => {
     const doc = createEmptyDocument('p17');

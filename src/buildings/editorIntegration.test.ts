@@ -88,6 +88,32 @@ describe('rendering (member layer)', () => {
   });
 });
 
+describe('render LOD of modular buildings', () => {
+  it('far away: windows / doors are not drawn; close again: back (hysteresis)', () => {
+    const o = modular('apartment');
+    const a = new SimRenderAdapter(staticRuntime([o]), flatSampler());
+    const glass = () => a.root.children.find((c) => c.name === 'members:glass') as THREE.InstancedMesh;
+    const visibleGlass = () => {
+      const m = new THREE.Matrix4();
+      let n = 0;
+      for (let i = 0; i < glass().count; i++) { glass().getMatrixAt(i, m); if (m.elements[0] !== 0) n++; }
+      return n;
+    };
+    const near = cam();
+    a.update(near, 0, 0);
+    const before = visibleGlass();
+    expect(before).toBeGreaterThan(50);
+    const far = new THREE.PerspectiveCamera();
+    far.position.set(0, 50, 400);
+    far.updateMatrixWorld();
+    a.updateLodOnly(far);
+    expect(visibleGlass()).toBe(0);
+    a.updateLodOnly(near);
+    expect(visibleGlass()).toBe(before);
+    a.dispose();
+  });
+});
+
 describe('per-story structural model', () => {
   it('per-story input equal to a uniform chain behaves like the uniform chain', () => {
     const mk = (stories: boolean) => {

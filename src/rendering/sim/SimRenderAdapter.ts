@@ -479,7 +479,10 @@ export class SimRenderAdapter {
     const mr = e.modular;
     const comp = v.memberComp!;
     if (v.userHidden || v.hidden) return () => true;
-    return (i: number) => (mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition === 'detached');
+    const ms = v.members!.design.members;
+    const far = v.far;
+    return (i: number) => (mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition === 'detached')
+      || (far && (ms[i].type === 'window' || ms[i].type === 'door'));
   }
 
   private writeMembers(v: EntityView, root: THREE.Matrix4) {
@@ -527,6 +530,7 @@ export class SimRenderAdapter {
       if (v.hidden || v.userHidden) continue;
       if (flood && v.e.flood) this.updateWet(v);
       if (v.type === 'building') {
+        if (v.members) this.updateMemberLod(v);
         if (this.quake && v.e.seismic && this.updateBuildingQuake(v)) cracksDirty = true;
         continue;
       }
@@ -573,7 +577,8 @@ export class SimRenderAdapter {
     const sz = ((st.top[1] - st.base[1]) * k) / H;
     const tilt = st.tiltMag;
     // Stress tint: current drift / slight-damage drift → white … yellow … red.
-    const tint = q.stress ? Math.min(3, st.stress) : 0;
+    // (Modular buildings recolor hundreds of member instances per change: 0.05 steps.)
+    const tint = q.stress ? (v.members ? Math.round(Math.min(3, st.stress) * 20) / 20 : Math.min(3, st.stress)) : 0;
     const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k;
     const crackCount = Math.ceil(st.crack * CRACKS_PER_BUILDING);
     // Distant buildings refresh every ANIM_STRIDE frames (visual only).
@@ -799,7 +804,27 @@ export class SimRenderAdapter {
   /** Distance LOD only — for static scenes whose transforms were written by one update(). */
   updateLodOnly(camera: THREE.Camera) {
     camera.getWorldPosition(this.camPos);
-    for (const v of this.views) if (v.type !== 'building' && !v.hidden) this.updateLod(v);
+    for (const v of this.views) {
+      if (v.hidden) continue;
+      if (v.type !== 'building') this.updateLod(v);
+      else if (v.members) this.updateMemberLod(v);
+    }
+  }
+
+  /**
+   * Modular buildings far away (render-only LOD, same distance / hysteresis as other objects):
+   * windows and doors are not drawn — the facade reads the same at that size and they are a
+   * third of a building's instances. Rewritten only when the threshold is crossed.
+   */
+  private updateMemberLod(v: EntityView) {
+    const p = v.e.pose.position;
+    const dx = p[0] - this.camPos.x, dy = p[1] - this.camPos.y, dz = p[2] - this.camPos.z;
+    const d2 = dx * dx + dy * dy + dz * dz;
+    const r = v.e.dims[1] / 2 + Math.max(v.e.dims[0], v.e.dims[2]) / 2;
+    const far = v.far ? d2 > (LOD_FAR + r - LOD_HYST) ** 2 : d2 > (LOD_FAR + r + LOD_HYST) ** 2;
+    if (far === v.far) return;
+    v.far = far;
+    this.writeMembers(v, v.members!.root);
   }
 
   /** Draw every part with one material (placement ghosts), without shadows. */

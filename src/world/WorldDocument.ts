@@ -65,7 +65,8 @@ export function createWorldObject(input: CreateObjectInput, serial: number): Wor
     const obj: WorldObject = {
       id: createId(input.type), type: input.type, name: input.name ?? '', serial, seed, transform: input.transform,
       physics: { ...d.physics, ...(input.physics ?? {}) }, params: d.params, components: d.components, seismic: d.seismic,
-      building: structuredClone(input.building),
+      // Designs are immutable values (edits make new ones): copies of a preset share one object.
+      building: input.building,
     };
     if (input.group) obj.group = input.group;
     if (input.terrainAlign !== undefined) obj.terrainAlign = input.terrainAlign;

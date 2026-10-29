@@ -73,6 +73,8 @@ export interface MemberSet {
   revealed: boolean;
   /** Current object root matrix (static or earthquake-deformed). */
   root: THREE.Matrix4;
+  /** Base color per member (rgb), computed once (no per-frame color parsing). */
+  base: Float32Array;
 }
 
 /** Interior / underground members of a design (culled in batched views). */
@@ -138,8 +140,15 @@ export class MemberLayer {
   /** Add a building's members (pass 2). `root`: object matrix. */
   add(owner: EntityId, design: BuildingDesign, root: THREE.Matrix4, interior: Uint8Array): MemberSet {
     const n = design.members.length;
-    const set: MemberSet = { owner, design, look: new Int8Array(n), inst: new Int32Array(n), interior, bounds: new THREE.Box3(), revealed: false, root: root.clone() };
+    const set: MemberSet = { owner, design, look: new Int8Array(n), inst: new Int32Array(n), interior, bounds: new THREE.Box3(), revealed: false, root: root.clone(), base: new Float32Array(3 * n) };
+    const colors = new Map<string, THREE.Color>();
     design.members.forEach((m, i) => {
+      const hex = memberColor(m, design);
+      let c = colors.get(hex);
+      if (!c) colors.set(hex, (c = new THREE.Color(hex)));
+      set.base[3 * i] = c.r;
+      set.base[3 * i + 1] = c.g;
+      set.base[3 * i + 2] = c.b;
       const li = MATERIAL_LOOKS.indexOf(MATERIAL_LOOK[m.material]);
       const id = this.next[li]++;
       set.look[i] = li;
@@ -148,7 +157,7 @@ export class MemberLayer {
       this.members[li][id] = i;
       const mesh = this.meshes[li];
       mesh.setMatrixAt(id, interior[i] ? HIDDEN : mWorld.multiplyMatrices(root, memberMatrix(m, mLocal)));
-      mesh.setColorAt(id, cTmp.set(memberColor(m, design)));
+      mesh.setColorAt(id, cTmp.setRGB(set.base[3 * i], set.base[3 * i + 1], set.base[3 * i + 2]));
       if (!interior[i]) {
         const b = memberBounds(m);
         set.bounds.union(new THREE.Box3(new THREE.Vector3(...b.min), new THREE.Vector3(...b.max)));
@@ -189,11 +198,11 @@ export class MemberLayer {
   /** Per-member colors: damage darkens toward a cracked tone; broken glass goes dark; `mul` tints. */
   writeColors(set: MemberSet, damage: (i: number) => number, broken: (i: number) => boolean, mul?: THREE.Color) {
     const ms = set.design.members;
+    const b = set.base;
     for (let i = 0; i < ms.length; i++) {
-      const m = ms[i];
       if (broken(i)) cTmp.copy(BROKEN_GLASS);
       else {
-        cTmp.set(memberColor(m, set.design));
+        cTmp.setRGB(b[3 * i], b[3 * i + 1], b[3 * i + 2]);
         const d = damage(i);
         if (d > 0.02) cTmp.lerp(CRACKED, Math.min(0.75, 0.15 + 0.6 * d));
       }
