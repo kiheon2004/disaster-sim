@@ -4,12 +4,15 @@
  * is recomposed locally, roads re-graded, objects re-seated, ONE undo step; on error nothing
  * changes and a toast explains why.
  */
-import type { WorldObject } from '@/core/model';
+import type { TerrainData, WorldObject } from '@/core/model';
+import type { RoadNetwork } from '@/roads/types';
 import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { useNatureStore, type ForestSettings } from '@/editor/natureStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { toast } from '@/ui/common/toast';
+import { t } from '@/i18n/i18n';
+import { buildEnvironment, type EnvironmentPreset } from '@/landscape/presets';
 import { Rng } from '@/core/random';
 import { foundationContact } from '@/buildings/foundation';
 import { featureBounds, landformDelta, polygonDistance, riverProfile } from '@/landscape/features';
@@ -235,15 +238,22 @@ export function forestDab(x: number, z: number): P2[] {
  * Plan trees at the stroke's points: species by share (seeded), elevation band, slope limit,
  * no trees in standing water, on roads or on other objects. Returns the accepted inputs.
  */
-export function planForest(points: readonly P2[], f: ForestSettings = N().forest): { inputs: CreateObjectInput[]; rejected: number } {
-  const doc = W().doc;
+export interface ForestContext {
+  terrain: TerrainData;
+  roads: RoadNetwork;
+  features: readonly Feature[];
+  objects: Record<string, WorldObject>;
+}
+
+export function planForest(points: readonly P2[], f: ForestSettings = N().forest, ctx?: ForestContext): { inputs: CreateObjectInput[]; rejected: number } {
+  const doc: ForestContext = ctx ?? { terrain: W().doc.terrain, roads: W().doc.roads, features: W().doc.landscape.features, objects: W().doc.objects };
   const sampler = samplerFor(doc.terrain);
   const existing = new FootprintIndex();
   for (const o of Object.values(doc.objects).sort((a, b) => (a.id < b.id ? -1 : 1))) { const fp = footprintOf(o); if (fp) existing.add(fp, o.id); }
   const own = new FootprintIndex();
   const inputs: CreateObjectInput[] = [];
   let rejected = 0;
-  const lakes = doc.landscape.features.filter((g) => g.kind === 'lake');
+  const lakes = doc.features.filter((g) => g.kind === 'lake');
   points.forEach(([x, z], i) => {
     const rng = new Rng(subSeed(f.seed, `forest${strokeIndex}`, i));
     const conifer = rng.next() < f.coniferShare;
@@ -267,4 +277,31 @@ export function commitForest(points: readonly P2[]) {
   const { inputs, rejected } = planForest(points);
   if (inputs.length) W().applyEdit({ add: inputs });
   toast(inputs.length ? 'success' : 'warn', { key: 'nature.forest.placed', params: { n: inputs.length, skipped: rejected } });
+}
+
+// ── Environment presets ────────────────────────────────────────────────────────
+
+/**
+ * Replace the world by an environment preset (confirmation first): terrain layers, roads,
+ * buildings and trees in ONE undo step. Every part stays editable afterwards.
+ */
+export function applyEnvironment(kind: EnvironmentPreset, seed: number): boolean {
+  if (locked()) return false;
+  if (Object.keys(W().doc.objects).length && !window.confirm(t('nature.env.confirm'))) return false;
+  const t0 = performance.now();
+  const r = buildEnvironment(kind, seed);
+  try {
+    W().applyEdit({
+      remove: Object.keys(W().doc.objects),
+      roads: r.roads,
+      landscape: { base: r.base, features: r.features, next: r.next },
+      add: r.inputs,
+    });
+  } catch (e) {
+    toast('error', { key: 'nature.error' }, (e as Error).message);
+    return false;
+  }
+  N().select(null);
+  toast('success', { key: 'nature.env.done', params: { name: t(`nature.env.${kind}`), n: r.inputs.length, ms: Math.round(performance.now() - t0) } });
+  return true;
 }

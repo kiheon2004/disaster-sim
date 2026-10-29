@@ -11,7 +11,7 @@ import { Icon } from '@/ui/common/Icon';
 import { NumberField, ToggleField } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
 import { applyTerrainPreset } from '@/app/actions';
-import { TerrainToolSections } from './NatureSections';
+import { EnvironmentSection, TerrainToolSections } from './NatureSections';
 import styles from './TerrainPanel.module.css';
 
 /** Left-panel tab of the Terrain Editing Mode: tools, brush, ground paint, presets, view. */
@@ -47,6 +47,8 @@ export function TerrainPanel() {
           </button>
           <div className={styles.note}>{t('terrain.preset.note')}</div>
         </div>
+
+        <EnvironmentSection editing={editing} />
 
         <div className={styles.section}>
           <div className={styles.title}>{t('terrain.view')}</div>

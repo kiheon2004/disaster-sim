@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useT } from '@/i18n/i18n';
 import { randomSeed } from '@/core/random';
 import { useEditorStore, BRUSH_RADIUS_RANGE, type TerrainToolId } from '@/editor/editorStore';
@@ -11,7 +11,8 @@ import { Icon, type IconName } from '@/ui/common/Icon';
 import { NumberField, SelectField, ToggleField } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
 import { LIMITS, MIN_RIVER_WIDTH, type Feature } from '@/landscape/types';
-import { deleteFeature, featureWarnings, landformPeak, updateFeature } from '@/app/natureActions';
+import { applyEnvironment, deleteFeature, featureWarnings, landformPeak, updateFeature } from '@/app/natureActions';
+import { ENVIRONMENT_PRESETS, type EnvironmentPreset } from '@/landscape/presets';
 import styles from './TerrainPanel.module.css';
 
 type Category = 'brush' | 'landform' | 'water' | 'vegetation' | 'edit';
@@ -248,7 +249,21 @@ function ForestSection({ editing }: { editing: boolean }) {
         <button className={styles.linkBtn} onClick={() => set({ seed: randomSeed() })}><Icon name="dice" size={13} /></button>
       </div>
       <div className={styles.note}>{t('nature.forest.note')}</div>
+      <VegetationOptions editing={editing} />
     </div>
+  );
+}
+
+/** Project-level vegetation responses (opt-in, saved with the project). */
+function VegetationOptions({ editing }: { editing: boolean }) {
+  const t = useT();
+  const veg = useWorldStore((s) => s.doc.settings.simulation.vegetation);
+  const set = (patch: { canopyShelter?: boolean; floodResponse?: boolean }) => useWorldStore.getState().updateSimulationSettings({ vegetation: patch });
+  return (
+    <>
+      <ToggleField label={t('nature.veg.canopy')} checked={!!veg?.canopyShelter} disabled={!editing} hint={t('nature.veg.canopy.hint')} onChange={(b) => set({ canopyShelter: b })} />
+      <ToggleField label={t('nature.veg.flood')} checked={!!veg?.floodResponse} disabled={!editing} hint={t('nature.veg.flood.hint')} onChange={(b) => set({ floodResponse: b })} />
+    </>
   );
 }
 
@@ -279,6 +294,26 @@ function FeatureEditor({ editing }: { editing: boolean }) {
           <div className={styles.note}>{t(f.kind === 'lake' ? 'nature.delete.lakeNote' : 'nature.delete.note')}</div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Environment presets (Phase 19): whole editable landscapes, one undo step. */
+export function EnvironmentSection({ editing }: { editing: boolean }) {
+  const t = useT();
+  const [kind, setKind] = useState<EnvironmentPreset>('mountainValley');
+  const [seed, setSeed] = useState(1);
+  return (
+    <div className={styles.section}>
+      <div className={styles.title}>{t('nature.env')}</div>
+      <SelectField label={t('nature.env.kind')} value={kind} disabled={!editing} onChange={setKind}
+        options={ENVIRONMENT_PRESETS.map((k) => ({ value: k, label: t(`nature.env.${k}`) }))} />
+      <div className={styles.row}>
+        <NumberField label={t('terrain.seed')} value={seed} min={0} max={999999} step={1} precision={0} disabled={!editing} onChange={(v) => setSeed(Math.round(v))} />
+        <button className={styles.linkBtn} disabled={!editing} onClick={() => setSeed(randomSeed())}><Icon name="dice" size={13} /></button>
+      </div>
+      <button className={styles.apply} disabled={!editing} data-testid="env-apply" onClick={() => applyEnvironment(kind, seed)}>{t('nature.env.apply')}</button>
+      <div className={styles.note}>{t('nature.env.note')}</div>
     </div>
   );
 }

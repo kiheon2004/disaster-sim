@@ -121,7 +121,7 @@ interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>> }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -495,6 +495,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
               wind: { ...cur.wind, ...(patch.wind ?? {}) },
               water: { ...(cur.water ?? defaultWaterSettings()), ...(patch.water ?? {}) },
               interactions: { enabled: patch.interactions ?? cur.interactions?.enabled ?? true },
+              ...(patch.vegetation || cur.vegetation ? { vegetation: { canopyShelter: false, floodResponse: false, ...(cur.vegetation ?? {}), ...(patch.vegetation ?? {}) } } : {}),
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },

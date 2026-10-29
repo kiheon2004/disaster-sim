@@ -29,6 +29,7 @@ import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
 import { isWaterEvent } from '@/events/specs';
 import { RoadRuntime } from './roads/RoadRuntime';
 import { hydrologyPlan } from '@/landscape/hydrology';
+import { computeCanopy } from './vegetation/vegetation';
 import { floodFeatures } from './water/floodFeatures';
 import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
 import type { FloodLive } from './simStore';
@@ -122,6 +123,9 @@ export class SimulationController {
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     const terrain = new TerrainSampler(this.snapshot.terrain);
     this.runtime = buildRuntime(this.snapshot, physics, terrain);
+    // Phase 19 vegetation options (opt-in per project).
+    if (sim.vegetation?.canopyShelter) computeCanopy(this.runtime);
+    if (sim.vegetation?.floodResponse) this.runtime.vegetation = { flood: true };
     // Phase 19: water of the natural features (initial depth, river inflows, outlets). Edge
     // overrides apply to this run only — the document's settings are never written.
     const water = sim.water ?? defaultWaterSettings();

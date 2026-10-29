@@ -182,6 +182,11 @@ export interface SimulationSettings {
    * New projects: on. Projects saved before schema v5: off (their results stay reproducible).
    */
   interactions: { enabled: boolean };
+  /**
+   * Vegetation responses (Phase 19, simulation/vegetation): canopy shelter of trees inside a
+   * forest and tree toppling by flood flow. Absent / off = Phase 18 behavior (bit-identical).
+   */
+  vegetation?: { canopyShelter: boolean; floodResponse: boolean };
 }
 
 // ── Flood: water model settings (Phase 14, approximate model parameters) ─────

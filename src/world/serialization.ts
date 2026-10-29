@@ -138,6 +138,8 @@ const documentSchema = z.object({
         water: waterSchema.optional().catch(undefined),
         // Phase 15: multi-hazard interactions (absent before v5 → off, see parseDocument).
         interactions: z.object({ enabled: z.boolean() }).optional().catch(undefined),
+        // Phase 19: vegetation options (absent = off).
+        vegetation: z.object({ canopyShelter: z.boolean(), floodResponse: z.boolean() }).partial().optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -316,6 +318,7 @@ export function parseDocument(json: string): LoadResult {
       wind: { ...DEFAULT_WIND_MODEL, ...(sim?.wind ?? {}) },
       water: normalizeWater(sim?.water),
       interactions: { enabled: sim?.interactions?.enabled ?? res.data.schemaVersion >= 5 },
+      ...(sim?.vegetation ? { vegetation: { canopyShelter: !!sim.vegetation.canopyShelter, floodResponse: !!sim.vegetation.floodResponse } } : {}),
     },
   };
   const rawFlood = res.data.scenario?.flood;

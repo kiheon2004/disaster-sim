@@ -69,6 +69,8 @@ export interface RuntimeEntity {
   windAtCop: number;
   /** Full local-wind sample at the center of pressure (from the spatial wind field). */
   localWind: LocalWind;
+  /** Canopy shelter factors per wind direction (Phase 19, trees in a forest; opt-in). */
+  canopy?: Float32Array;
   /** Current aerodynamic load magnitude (N). */
   windLoad: number;
   /** Worst state reached so far. */
@@ -165,4 +167,6 @@ export interface SimulationRuntime {
   flood?: FloodRuntime;
   /** Road network state (Phase 18): surface damage, inundation, drain inlets. */
   roads?: import('./roads/RoadRuntime').RoadRuntime;
+  /** Vegetation options of this run (Phase 19). */
+  vegetation?: { flood: boolean };
 }

@@ -3,13 +3,19 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { Section } from '@/ui/common/Panel';
+import { INFIL_RATE_FULL } from '@/simulation/water/waterParams';
+import { initialWater } from '@/landscape/hydrology';
+import { layerBreakdown } from '@/landscape/inspect';
 import styles from './Inspector.module.css';
+
+const sign = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`;
 
 /** Values of the terrain at the point picked with the inspect tool (Terrain Editing Mode). */
 export function TerrainInspector() {
   const t = useT();
   const probe = useEditorStore((s) => s.terrainProbe);
   const terrain = useWorldStore((s) => s.doc.terrain);
+  const doc = useWorldStore((s) => s.doc);
   if (!probe) {
     return (
       <div className={styles.empty}>
@@ -39,6 +45,34 @@ export function TerrainInspector() {
     [t('terrain.soil.bearing'), `${soil.bearingCapacity} kPa *`],
   );
   if (terrain.settings.waterLevel !== null) rows.push([t('terrain.waterDepth'), `${s.sampleWaterDepth(probe.x, probe.z).toFixed(2)} m`]);
+  // Phase 19: infiltration capacity of the surface (water model), approximate.
+  const water = doc.settings.simulation.water;
+  const infil = g.permeability * INFIL_RATE_FULL * (water.infiltration ? water.infiltrationScale : 0);
+  rows.push([t('nature.insp.infiltration'), `${infil.toFixed(0)} mm/h *`], [t('nature.insp.erodibility'), `${g.erodibility.toFixed(2)} *`]);
+  // Initial water from the natural features (lakes / rivers) at this cell.
+  const iw = initialWater(doc.landscape, terrain);
+  if (iw) {
+    const cx = Math.floor((probe.x - terrain.originX) / terrain.cellSize), cz = Math.floor((probe.z - terrain.originZ) / terrain.cellSize);
+    const d = cx >= 0 && cz >= 0 && cx < terrain.nx - 1 && cz < terrain.nz - 1 ? iw[cz * (terrain.nx - 1) + cx] : 0;
+    rows.push([t('nature.insp.initialWater'), `${d.toFixed(2)} m`]);
+  }
+  const b = layerBreakdown(doc.landscape, doc.roads, terrain, probe.x, probe.z);
+  const layers: [string, string][] = [
+    [t('nature.insp.base'), `${b.base.toFixed(2)} m`],
+    [t('nature.insp.sculpt'), `${sign(b.sculpt)} m`],
+    ...b.landforms.map((l): [string, string] => [`${t(`nature.kind.${l.kind}` as 'nature.kind.mountain')} ${l.id}`, `${sign(l.dh)} m`]),
+    ...(b.carve ? [[`${t(`nature.kind.${b.carve.kind}` as 'nature.kind.river')} ${b.carve.id}`, `${sign(b.carve.dh)} m`] as [string, string]] : []),
+    [t('nature.insp.natural'), `${b.natural.toFixed(2)} m`],
+    [t('nature.insp.road'), `${sign(b.road)} m`],
+    [t('nature.insp.final'), `${b.final.toFixed(2)} m`],
+  ];
+  const n = b.nearest;
+  const nearby: [string, string][] = [
+    [t('nature.insp.nearRoad'), n.road ? `${n.road.id} · ${n.road.dist.toFixed(1)} m` : '—'],
+    [t('nature.insp.nearRiver'), n.river ? `${n.river.id} · ${n.river.dist.toFixed(1)} m` : '—'],
+    [t('nature.insp.nearLake'), n.lake ? `${n.lake.id} · ${n.lake.inside ? t('nature.insp.inside') : `${n.lake.dist.toFixed(1)} m`}` : '—'],
+    [t('nature.insp.nearCoast'), n.coast ? `${n.coast.id} · ${n.coast.dist >= 0 ? t('nature.insp.seaSide') : t('nature.insp.landSide')} ${Math.abs(n.coast.dist).toFixed(1)} m` : '—'],
+  ];
   return (
     <Section title={t('terrain.inspector.title')}>
       <div className={styles.liveGrid} data-testid="terrain-inspector">
@@ -47,6 +81,15 @@ export function TerrainInspector() {
         ))}
       </div>
       <div className={styles.note}>{t('terrain.approx')}</div>
+      <div className={styles.liveGrid} data-testid="terrain-layers" style={{ marginTop: 8 }}>
+        <span style={{ gridColumn: '1 / -1', fontWeight: 600 }}>{t('nature.insp.layers')}</span>
+        {layers.map(([k, v]) => <FragmentRow key={k} label={k} value={v} />)}
+      </div>
+      <div className={styles.liveGrid} style={{ marginTop: 8 }}>
+        <span style={{ gridColumn: '1 / -1', fontWeight: 600 }}>{t('nature.insp.nearby')}</span>
+        {nearby.map(([k, v]) => <FragmentRow key={k} label={k} value={v} />)}
+      </div>
+      <div className={styles.note}>{t('nature.insp.note')}</div>
     </Section>
   );
 }

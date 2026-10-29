@@ -3,6 +3,7 @@
  * dispatch through here; wind damage still lives in DamageSystem (Phase 3–11 code, unchanged —
  * see docs/PHENOMENA.md §8 for the migration path).
  */
+import { updateTreeFlood } from '../vegetation/vegetation';
 import { ResponseRegistry } from './ObjectResponse';
 import { updateBuildingQuake, updateInfraQuake, updatePersonQuake } from '../damage/behaviors/seismic';
 import {
@@ -52,5 +53,6 @@ responses.register({
 });
 responses.register({
   channel: 'water', target: { category: 'tree' }, kinds: ['exposure'], model: 'floodDamage',
-  update: (e, ctx, dt) => updateExposureOnly(e, ctx.env.flood.field!, dt),
+  // Phase 19 (opt-in): flow overturning vs root-plate capacity; otherwise exposure only.
+  update: (e, ctx, dt) => (ctx.runtime.vegetation?.flood ? updateTreeFlood(e, ctx, ctx.env.flood.field!, dt) : updateExposureOnly(e, ctx.env.flood.field!, dt)),
 });

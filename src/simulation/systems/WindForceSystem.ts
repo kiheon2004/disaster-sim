@@ -1,3 +1,4 @@
+import { canopyFactor } from '../vegetation/vegetation';
 import type { Quat, Vec3 } from '@/core/types';
 import { qRotate, qRotateInto, vLen, vScale, vSub } from '@/core/math';
 import { AIR_DENSITY, WIND_FORCE_SCALE } from '@/core/units';
@@ -65,6 +66,15 @@ export class WindForceSystem implements SimulationSystem {
       // Local wind from the spatial field (an object never sits in its own wake), written into
       // the entity's own LocalWind. Static objects reuse their obstacle effect until it changes.
       const lw = field.sample(cop, time, e.id, e.dynamic ? undefined : e.windCache, e.localWind);
+      // Phase 19 (opt-in): trees inside a forest feel the canopy-sheltered wind.
+      if (e.canopy) {
+        const k = canopyFactor(e, lw.velocity[0], lw.velocity[2]);
+        if (k < 1) {
+          lw.velocity[0] *= k; lw.velocity[1] *= k; lw.velocity[2] *= k;
+          lw.speed *= k;
+          lw.shelter *= k;
+        }
+      }
       const v = lw.velocity;
       const speed = lw.speed;
       e.windAtCop = speed;
