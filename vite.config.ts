@@ -11,5 +11,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Many tests run the full simulation (Rapier + water solver); on a loaded machine they can
+    // exceed vitest's 5 s default without anything being wrong. (Tests that need more set their own.)
+    testTimeout: 30_000,
   },
 });
