@@ -269,4 +269,5 @@ export const enThermal: Record<keyof typeof koThermal, string> = {
   "results.thermal.note": "Computed by a reduced heat-transfer model. Not for fire resistance or safety assessment.",
   "thermal.tools.inside": "Source inside a building: it heats that story's room and members (not the ground outside the walls).",
   "thermal.tools.legend": "Absorbed ground heat flux at peak output (log scale). Yellow dashed: 1 W/m² reach. Orange: source extent.",
+  "thermal.inspect.lodNote": "Thermal LOD: this building is still one whole-building node (envelope / interior). It is refined into member nodes once it warms by more than 2 K or enters a strong-heating zone (energy conserved).",
 };

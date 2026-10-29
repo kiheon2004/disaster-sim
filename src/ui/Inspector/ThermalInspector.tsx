@@ -108,6 +108,7 @@ export function ThermalObjectSection({ id }: { id: EntityId }) {
       <Section title={t('thermal.inspect.title')}>
         <Rows testId="thermal-object" rows={bodyRows(te.body)} />
         {te.kind === 'building' && <div className={styles.note}>{t('thermal.inspect.legacyNote')}</div>}
+        {te.kind === 'modular' && <div className={styles.note} data-testid="thermal-lod">{t('thermal.inspect.lodNote')}</div>}
         {te.kind === 'tree' && <div className={styles.note}>{t('thermal.inspect.treeNote')}</div>}
         <div className={styles.note}>{t('thermal.inspect.note')}</div>
       </Section>

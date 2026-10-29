@@ -91,6 +91,8 @@ interface EntityThermal {
   b: BuildingThermal | null;
   dynamic: boolean;
   active: boolean;
+  /** Modular buildings: whole-building node until refined into member bodies (thermal LOD). */
+  coarse: boolean;
 }
 
 interface SourceGeom {
@@ -150,7 +152,7 @@ export class ThermalRuntime {
       if (t === 'human') { this.humans.push(e); continue; }
       const kind: EntityThermal['kind'] | null = e.modular ? 'modular' : t === 'building' ? 'building' : t === 'car' ? 'car' : t === 'tree' ? 'tree' : t === 'wall' ? 'wall' : t === 'streetLight' || t === 'sign' ? 'pole' : null;
       if (!kind) continue;
-      const te: EntityThermal = { e, kind, body: -1, b: null, dynamic: e.dynamic || t === 'car', active: false };
+      const te: EntityThermal = { e, kind, body: -1, b: null, dynamic: e.dynamic || t === 'car', active: false, coarse: false };
       this.ents.push(te);
       this.byEntity.set(e.id, te);
       // Ground covered by a building footprint: no exchange with the air (contacts only).
@@ -200,9 +202,51 @@ export class ThermalRuntime {
   activate(ctx: SystemContext, te: EntityThermal) {
     if (te.active) return;
     te.active = true;
-    if (te.kind === 'modular') this.createBuilding(ctx, te);
-    else this.createObject(ctx, te);
+    if (te.kind === 'modular') {
+      // Thermal LOD: a modular building joins as ONE envelope / interior node (like a legacy building)
+      // and is refined into member bodies only where member temperatures can matter (refine()).
+      te.coarse = true;
+      this.createObject(ctx, te);
+    } else this.createObject(ctx, te);
   }
+
+  /**
+   * Coarse → member bodies (thermal LOD). The whole-building node's energy is distributed over the
+   * members in proportion to their heat capacity (one common temperature rise — exact in energy, and
+   * the building is still within LOD_REFINE of the ambient, so the uniform split is a small
+   * approximation); the coarse node and its contacts are removed. Never coarsened back.
+   */
+  refine(ctx: SystemContext, te: EntityThermal) {
+    if (!te.coarse) return;
+    te.coarse = false;
+    const w = this.world, B = w.bodies;
+    const old = te.body;
+    const E = B.ES[old] + B.EC[old];
+    B.ES[old] = B.EC[old] = 0;
+    B.alive[old] = 0;
+    B.dropContacts(old);
+    this.createBuilding(ctx, te);
+    const bt = te.b!;
+    let Csum = 0;
+    for (let i = 0; i < bt.g.n; i++) { const b = bt.body[i]; if (b >= 0) Csum += B.capacity(b, false) + B.capacity(b, true); }
+    if (Csum > 0 && E !== 0) {
+      for (let i = 0; i < bt.g.n; i++) {
+        const b = bt.body[i];
+        if (b < 0) continue;
+        const cs = B.capacity(b, false), cc = B.capacity(b, true);
+        B.ES[b] += (E * cs) / Csum;
+        B.EC[b] += (E * cc) / Csum;
+        B.refresh(b);
+      }
+    } else if (E !== 0) w.deposit(TK.ground, Math.max(0, w.terrain.index(te.e.pose.position[0], te.e.pose.position[2])), E);
+    te.body = -1;
+    this.refined++;
+  }
+  /** Modular buildings refined to member bodies so far. */
+  refined = 0;
+
+  /** Coarse building warmer / colder than this (K) gets its members (structural effects start far above). */
+  static readonly LOD_REFINE = 2;
 
   private createObject(ctx: SystemContext, te: EntityThermal) {
     const e = te.e, w = this.world;
@@ -214,7 +258,23 @@ export class ThermalRuntime {
       sx: W, sy: Hh, sz: D, x: 0, y: 0, z: 0, yg: 0, ref: this.ents.indexOf(te), sub: -1,
     };
     let init: BodyInit;
-    switch (te.kind) {
+    switch (te.kind === 'modular' ? 'modularCoarse' : te.kind) {
+      case 'modularCoarse': {
+        // Whole modular building: its members' mass (envelope shell 0.1 m + interior), constant mixture c.
+        const mr = e.modular!;
+        const g = graphOf(mr.design, mr.scale);
+        let M = 0, MC = 0;
+        for (let i = 0; i < g.n; i++) {
+          if (g.absent[i]) continue;
+          const tm = STRUCTURAL_THERMAL[MATERIAL_KEYS[g.mat[i]]] ?? TM.concrete;
+          M += g.mass[i];
+          MC += g.mass[i] * THERMAL_MATERIALS[tm].c(this.world.Tref - 273.15);
+        }
+        const A = Av + Atop;
+        const mS = Math.min(0.5 * M, A * 0.1 * 2300);
+        init = { ...base, mSkin: mS, mCore: Math.max(0, M - mS), matSkin: TM.debris, matCore: TM.debris, cOverride: M > 0 ? MC / M : 880, tSkin: 0.1, Asc: A, Lsc: 0.2 + Math.min(W, D) / 4 };
+        break;
+      }
       case 'building': {
         // Envelope: a 0.1 m concrete / masonry shell over the facades and the roof; the rest is the interior.
         const A = Av + Atop;
@@ -247,7 +307,7 @@ export class ThermalRuntime {
     const i = w.bodies.add(init);
     te.body = i;
     this.placeObject(ctx, te);
-    if (te.kind === 'building') this.rasterize(e, (c) => w.bodies.addContact(i, c, w.terrain.area, 0.1));
+    if (te.kind === 'building' || te.kind === 'modular') this.rasterize(e, (c) => w.bodies.addContact(i, c, w.terrain.area, 0.1));
   }
 
   private placeObject(ctx: SystemContext, te: EntityThermal) {
@@ -415,6 +475,12 @@ export class ThermalRuntime {
     // Activation by surroundings, placement of moving bodies, state of building members.
     for (const te of this.ents) {
       if (!te.active) { if (this.envDeviation(ctx, te)) this.activate(ctx, te); continue; }
+      if (te.coarse) {
+        const B = this.world.bodies, b = te.body;
+        // Something happened to the building (a collapse model exists) or it warmed: member detail.
+        if (te.e.modular!.structure || Math.max(Math.abs(B.TS[b] - this.world.Tref), Math.abs(B.TC[b] - this.world.Tref)) > ThermalRuntime.LOD_REFINE) this.refine(ctx, te);
+        continue;
+      }
       if (te.b) this.scanBuilding(ctx, te.b);
       else if (te.dynamic || te.e.dynamic) this.placeObject(ctx, te);
     }
@@ -616,10 +682,13 @@ export class ThermalRuntime {
     let aboveLayer = 0;
     // Bring every object in reach into the network first (so it can receive).
     const reach = sourceReach(spec, w.Tref);
+    const strong = strongReach(spec, w.Tref);
     for (const te of this.ents) {
-      if (te.active) continue;
       const p = te.e.pose.position;
-      if (Math.hypot(p[0] - P[0], p[2] - P[2]) <= reach + Math.hypot(te.e.dims[0], te.e.dims[2]) / 2) this.activate(ctx, te);
+      const d = Math.hypot(p[0] - P[0], p[2] - P[2]) - Math.hypot(te.e.dims[0], te.e.dims[2]) / 2;
+      if (!te.active && d <= reach) this.activate(ctx, te);
+      // Buildings in the strong-heating zone get member detail before the receivers are listed.
+      if (te.coarse && d <= strong) this.refine(ctx, te);
     }
     const inside = this.buildingContaining(P);
     const shield = this.shields(P, reach);
@@ -770,20 +839,34 @@ export class ThermalRuntime {
     return null;
   }
 
-  /** Building footprints near a source that can shade objects from it. */
-  private shields(P: Vec3, reach: number) {
-    const out: { e: RuntimeEntity; top: number }[] = [];
+  /**
+   * Buildings that can shade objects, indexed on an 8 m grid (by their bounding circle). A ray only
+   * tests the buildings of the cells it passes — the same answer as testing every building.
+   */
+  private shields(P: Vec3, reach: number): ShieldGrid {
+    void P; void reach;
+    if (this.shieldGrid) return this.shieldGrid;
+    const list: { e: RuntimeEntity; top: number }[] = [];
+    const cells = new Map<number, number[]>();
+    const S = SHIELD_CELL;
     for (const te of this.ents) {
       if (te.kind !== 'building' && te.kind !== 'modular') continue;
-      const p = te.e.pose.position;
-      if (Math.hypot(p[0] - P[0], p[2] - P[2]) > reach + Math.hypot(te.e.dims[0], te.e.dims[2])) continue;
-      out.push({ e: te.e, top: p[1] + te.e.dims[1] });
+      const p = te.e.pose.position, r = Math.hypot(te.e.dims[0], te.e.dims[2]) / 2;
+      const k = list.length;
+      list.push({ e: te.e, top: p[1] + te.e.dims[1] });
+      for (let bx = Math.floor((p[0] - r) / S); bx <= Math.floor((p[0] + r) / S); bx++)
+        for (let bz = Math.floor((p[2] - r) / S); bz <= Math.floor((p[2] + r) / S); bz++) {
+          const key = bx * 100003 + bz;
+          (cells.get(key) ?? cells.set(key, []).get(key)!).push(k);
+        }
     }
-    return out;
+    this.shieldGrid = { list, cells, stamp: new Int32Array(list.length), pass: 0 };
+    return this.shieldGrid;
   }
+  private shieldGrid: ShieldGrid | null = null;
 
   /** Visibility (0 / 1) of a body from a point source. */
-  private visible(i: number, P: Vec3, inside: { bt: BuildingThermal; comp: number } | null, shields: { e: RuntimeEntity; top: number }[]): number {
+  private visible(i: number, P: Vec3, inside: { bt: BuildingThermal; comp: number } | null, shields: ShieldGrid): number {
     const B = this.world.bodies;
     if (B.kind[i] === BK.member && B.sub[i] >= 0) {
       const bt = this.buildings[B.ref[i]];
@@ -803,9 +886,28 @@ export class ThermalRuntime {
     }
     // Other objects: shaded when the straight path crosses another building below its roof.
     const own = B.kind[i] === BK.entity ? this.ents[B.ref[i]]?.e : null;
-    for (const s of shields) {
-      if (s.e === own) continue;
-      if (segmentHitsBox(P, [B.x[i], B.y[i], B.z[i]], s.e, s.top)) return 0;
+    const Q: Vec3 = [B.x[i], B.y[i], B.z[i]];
+    const pass = ++shields.pass;
+    const len = Math.hypot(Q[0] - P[0], Q[2] - P[2]);
+    const n = Math.max(1, Math.ceil(len / (SHIELD_CELL / 2)));
+    let lastKey = NaN;
+    for (let s = 0; s <= n; s++) {
+      const x = P[0] + ((Q[0] - P[0]) * s) / n, z = P[2] + ((Q[2] - P[2]) * s) / n;
+      const key = Math.floor(x / SHIELD_CELL) * 100003 + Math.floor(z / SHIELD_CELL);
+      if (key === lastKey) continue;
+      lastKey = key;
+      // The cells beside the sampled one too (a ray can clip a corner between samples).
+      for (const dk of [0, 1, -1, 100003, -100003]) {
+        const list = shields.cells.get(key + dk);
+        if (!list) continue;
+        for (const k of list) {
+          if (shields.stamp[k] === pass) continue;
+          shields.stamp[k] = pass;
+          const sh = shields.list[k];
+          if (sh.e === own) continue;
+          if (segmentHitsBox(P, Q, sh.e, sh.top)) return 0;
+        }
+      }
     }
     return 1;
   }
@@ -1059,6 +1161,22 @@ function canonical(s: SourceRecord): string {
     canonKeys.set(s, k);
   }
   return k;
+}
+
+const SHIELD_CELL = 8;
+interface ShieldGrid { list: { e: RuntimeEntity; top: number }[]; cells: Map<number, number[]>; stamp: Int32Array; pass: number }
+
+/**
+ * Reach of STRONG heating (m): where a source delivers ≥ 1 kW/m² (point / temperature sphere), or its
+ * own extent — buildings inside it are refined to member bodies at once (thermal LOD).
+ */
+export function strongReach(spec: SourceRecord['spec'], Tref: number): number {
+  if (spec.kind === 'point') {
+    const P0 = spec.profile === 'instant' ? (spec.energy ?? 0) / 1 : amplitude(spec);
+    return Math.sqrt((radiativeFraction(spec) * P0) / (4 * Math.PI * 1000));
+  }
+  if (spec.kind === 'temperature') return spec.radius * Math.sqrt(SIGMA * Math.abs((spec.temperature ?? Tref) ** 4 - Tref ** 4) / 1000) + spec.radius;
+  return spec.radius + 2;
 }
 
 /** Does the segment P→Q cross the box of a building (footprint) below its top? */

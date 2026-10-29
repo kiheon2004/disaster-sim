@@ -558,8 +558,16 @@ export class SimRenderAdapter {
   /** Member colors from the computed thermal state (render-only): temperature, thermal stress, strength. */
   private thermalColor(v: EntityView, mode: StructureColorMode): ((i: number, out: THREE.Color) => boolean) | undefined {
     const rt = this.thermal?.();
-    const bt = rt?.entity(v.e.id)?.b;
-    if (!rt || !bt) return (_i, out) => { out.copy(DEMAND_NONE); return true; };
+    const te = rt?.entity(v.e.id);
+    const bt = te?.b;
+    if (!rt || !te || !bt) {
+      // Whole-building node (thermal LOD, not yet refined): every member shows the envelope temperature.
+      if (rt && te?.coarse && te.body >= 0 && mode === 'temperature') {
+        const T = rt.world.bodies.TS[te.body];
+        return (_i, out) => { if (Math.abs(T - rt.world.Tref) < 1) return false; temperatureColor(T - 273.15, this.thermalScale, out); return true; };
+      }
+      return (_i, out) => { out.copy(DEMAND_NONE); return true; };
+    }
     const B = rt.world.bodies, scale = this.thermalScale;
     const model = v.e.modular?.structure?.model;
     return (i, out) => {
@@ -643,7 +651,7 @@ export class SimRenderAdapter {
       this.colorMode = mode;
       this.thermalScale = vs.thermalViz.scale;
       const rt = this.thermal?.();
-      if (this.memberLayer) for (const v of this.views) if (v.members && (!thermalRefresh || rt?.entity(v.e.id)?.b)) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
+      if (this.memberLayer) for (const v of this.views) if (v.members && (!thermalRefresh || rt?.entity(v.e.id)?.active)) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
     }
     camera.getWorldPosition(this.camPos);
     // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).

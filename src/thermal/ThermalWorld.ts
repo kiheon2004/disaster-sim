@@ -318,6 +318,11 @@ export class ThermalWorld {
     const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc };
     const evaluate = () => {
       let r = tr.fluxes(env);
+      // Ground contacts (foundations, slabs on grade, rubble heaps, whole-building nodes): slow
+      // conduction, evaluated with the ground (the body side is applied with the same step).
+      this.bodies.contactFluxes(tr, acc);
+      const rb = this.bodies.stability();
+      if (rb > r) r = rb;
       this.sphereExchanges(sources, true);
       for (let a = 0; a < air.count; a++) { const q = air.gS[a] / air.C; if (q > r) r = q; air.gS[a] = 0; }
       return r;
@@ -328,6 +333,7 @@ export class ThermalWorld {
     for (let k = 0; k < n; k++) {
       if (k > 0) { const r = evaluate(); if (r > maxRate) maxRate = r; }
       tr.apply(h, this.water);
+      this.bodies.apply(h);
       air.apply(h);
       this.book(h);
     }
@@ -376,7 +382,6 @@ export class ThermalWorld {
       closed, acc, airT: (a) => air.T(a), toAir, compT: (c) => this.compT(c),
       toComp: (c, W, G) => this.toComp(c, W, G),
     });
-    this.bodies.contactFluxes(this.terrain, acc);
     // Rooms: ventilation with the outdoors.
     for (const cp of this.comps) {
       if (!cp.alive) continue;
@@ -408,7 +413,6 @@ export class ThermalWorld {
   private commitFast(h: number) {
     this.bodies.apply(h);
     this.air.apply(h);
-    this.terrain.applyPending(h);
     for (const cp of this.comps) { if (cp.alive) cp.E += cp.dE * h; cp.dE = 0; }
     this.book(h);
   }

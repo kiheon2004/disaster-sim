@@ -267,4 +267,5 @@ export const koThermal = {
   "results.thermal.note": "축약 열전달 모델의 계산값입니다. 내화 성능·안전성 판단에 쓸 수 없습니다.",
   "thermal.tools.inside": "건물 안의 열원: 그 층의 실내 공기·부재를 데웁니다(벽 밖 지면은 직접 가열하지 않음).",
   "thermal.tools.legend": "최대 출력 때 지면에 흡수되는 열유속 (로그 눈금). 노란 점선: 1 W/m² 도달 반경. 주황 원: 열원 범위.",
+  "thermal.inspect.lodNote": "열 LOD: 이 건물은 아직 건물 전체 1개 노드(외피/내부)로 계산됩니다. 2 K 이상 데워지거나 강한 가열 영역에 들어가면 부재별 노드로 세분됩니다(에너지 보존).",
 } as const;

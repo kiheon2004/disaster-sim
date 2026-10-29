@@ -355,17 +355,6 @@ export class TerrainThermal {
     return maxRate;
   }
 
-  /** Rates (W) into surface layers from the fast operator (body contacts), applied with its step. */
-  private pend = new Map<number, number>();
-  addPending(c: number, W: number) {
-    this.pend.set(c, (this.pend.get(c) ?? 0) + W);
-  }
-  applyPending(h: number) {
-    if (!this.pend.size) return;
-    for (const [c, W] of this.pend) this.E[c * this.nl] += W * h;
-    this.pend.clear();
-  }
-
   /** Apply the accumulated rates over dt and clear them. Water heat applies to the link. */
   apply(dt: number, water: WaterLink | null) {
     const { nl, E, dE, dW, nx } = this;

@@ -311,7 +311,7 @@ export class ThermalBodies {
   }
 
   /** Ground contacts: skin ↔ terrain surface layer. */
-  contactFluxes(ground: { E: Float64Array; C: Float64Array; k: Float64Array; nl: number; layers: readonly number[]; Tref: number; activateCell(c: number): void; addPending(c: number, W: number): void }, acc: ThermalRates) {
+  contactFluxes(ground: { E: Float64Array; C: Float64Array; k: Float64Array; nl: number; layers: readonly number[]; Tref: number; dE: Float64Array; activateCell(c: number): void }, acc: ThermalRates) {
     for (let i = 0; i < this.n; i++) this.qGround[i] = 0;
     for (let k = 0; k < this.cN; k++) {
       const b = this.cBody[k];
@@ -324,7 +324,7 @@ export class ThermalBodies {
       const q = G * (this.TS[b] - Tg);
       if (q !== 0) ground.activateCell(c);
       this.dS[b] -= q;
-      ground.addPending(c, q);
+      ground.dE[j] += q;
       acc.conduction += Math.abs(q);
       this.qGround[b] -= q;
       this.gS[b] += G;

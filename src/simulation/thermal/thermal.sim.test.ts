@@ -255,6 +255,31 @@ describe('buildings', () => {
   });
 });
 
+describe('thermal LOD', () => {
+  it('modular buildings join as one node and get member bodies only where heating can matter; refinement conserves energy', async () => {
+    const d = doc([B(design('house'), 6, 0), B(design('house'), 60, 0, 8), B(design('house'), -70, 40, 9)]);
+    const c = new SimulationController({ headless: true });
+    await c.load(d);
+    c.addEvent(heat({ power: 3e6, height: 2, duration: 120 }));
+    c.addEvent({ event: 'wind', speed: 6, direction: 'W', duration: 120, gustStrength: 0 } as EventSpec);
+    let refinedAt = -1;
+    for (let k = 0; k < 40; k++) {
+      c.advance(1);
+      const rt = c.getEnvironment().thermal.rt;
+      if (rt && rt.refined > 0 && refinedAt < 0) refinedAt = k;
+      if (rt) expect(rt.world.ledger.relativeResidual()).toBeLessThan(1e-9);
+    }
+    const rt = rtOf(c);
+    const ents = [...c.getRuntime()!.entities.values()].map((e) => rt.entity(e.id)!);
+    // The house next to the source (strong-heating zone) has member bodies; the far ones stay whole-building nodes.
+    expect(ents[0].b).not.toBeNull();
+    expect(ents[0].coarse).toBe(false);
+    expect(ents.slice(1).filter((te) => te.active).every((te) => te.coarse)).toBe(true);
+    expect(rt.buildings.length).toBe(1);
+    c.unload();
+  }, 120000);
+});
+
 describe('progressive collapse and ambient', () => {
   it('a heated RC slab fails in bending at its reduced capacity and the collapse engine carries it to a partial collapse attributed to heat', async () => {
     const des = design('apartment');
