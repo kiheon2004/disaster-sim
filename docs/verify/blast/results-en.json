@@ -1,0 +1,336 @@
+{
+  "lang": "en",
+  "url": "http://localhost:4191/",
+  "results": [
+    {
+      "name": "1 pressure-wave phenomenon added from the menu; its fields are shown",
+      "ok": true,
+      "detail": {
+        "fields": [
+          "x",
+          "z",
+          "height",
+          "energy",
+          "model",
+          "waveform",
+          "ambientPressure",
+          "ambientDensity"
+        ]
+      }
+    },
+    {
+      "name": "2 source position set by a world click (no selection, no world edit)",
+      "ok": true,
+      "detail": {
+        "position": [
+          -4,
+          2
+        ]
+      }
+    },
+    {
+      "name": "3 energy set in MJ, stored in J; no explosive type / composition / mass / TNT field or number offered",
+      "ok": true,
+      "detail": {
+        "energy": 1000000000,
+        "opts3": [
+          "Weak shock (nonlinear, dissipative)",
+          "Linear acoustic (upper bound)",
+          "N-wave (positive + negative)",
+          "Positive phase only",
+          "At experiment time"
+        ]
+      }
+    },
+    {
+      "name": "4 ambient pressure changes the sound speed and the Sachs length (auto restores the standard atmosphere)",
+      "ok": true,
+      "detail": {
+        "p": 90000,
+        "c": 320.71349029490926,
+        "R0": 28.115593635387558,
+        "R0std": 27.02646367250301
+      }
+    },
+    {
+      "name": "5 preview drawn (field, contours, validity radii); the world is unchanged",
+      "ok": true,
+      "detail": {
+        "n": 1,
+        "mesh": 1
+      }
+    },
+    {
+      "name": "6 arrival grows with distance at the computed shock speed (far field ≈ c); symmetric on flat ground",
+      "ok": true,
+      "detail": {
+        "t30": 0.05319675803184509,
+        "t60": 0.13530468940734863,
+        "t90": 0.22027800977230072,
+        "c": 340.29399054347107,
+        "mono": true,
+        "sym": 0
+      }
+    },
+    {
+      "name": "7 single wave: no blast force before the computed arrival; the car is pushed away from the source after it; HUD shows the wave",
+      "ok": true,
+      "detail": {
+        "first7": {
+          "stepStart": 1.016666666666668,
+          "ta": 1.0181952291499798,
+          "movedBefore": 0.030713637139228592
+        },
+        "after": [
+          -14.132885932922363,
+          12.481947898864746
+        ],
+        "hud7": [
+          "passed"
+        ]
+      }
+    },
+    {
+      "name": "8 building exterior: windows break / panels detach under the computed face pressure (cause overpressure, hazard blast)",
+      "ok": true,
+      "detail": {
+        "n": 58,
+        "kinds": [
+          "exterior",
+          "sign",
+          "window",
+          "cladding",
+          "door",
+          "roof"
+        ]
+      }
+    },
+    {
+      "name": "9 building structure: walls out of plane / drift / collapse recorded separately from the exterior, attributed to the blast",
+      "ok": true,
+      "detail": {
+        "kinds": [
+          "CRACKED:drift:null",
+          "COLLAPSED:blast:null",
+          "FAILED:overpressure:wall",
+          "FAILED:drift:wall",
+          "COLLAPSED:drift:null",
+          "COLLAPSED:overpressure:null"
+        ]
+      }
+    },
+    {
+      "name": "10 vehicle: moved by the wave, recorded as blast",
+      "ok": true,
+      "detail": {
+        "d": 0.4999324438249536,
+        "moved": []
+      }
+    },
+    {
+      "name": "11 people: the person near the source falls (blast), the one far away stands",
+      "ok": true,
+      "detail": {
+        "near": {
+          "peak": 237091.2209677698,
+          "arrival": 1.00800204557434,
+          "exposure": "direct",
+          "J": 871.3909258063214,
+          "broken": 0
+        },
+        "far": {
+          "peak": 4767.699252340552,
+          "arrival": 1.3069052770963971,
+          "exposure": "direct",
+          "J": 14.424451084125092,
+          "broken": 0
+        }
+      }
+    },
+    {
+      "name": "12 street light, sign, wall: topple / collapse near the source (blast)",
+      "ok": true,
+      "detail": [
+        [
+          "streetLight",
+          true,
+          263719
+        ],
+        [
+          "sign",
+          true,
+          298497
+        ],
+        [
+          "wall",
+          true,
+          411674
+        ],
+        [
+          "tree",
+          true,
+          28627
+        ]
+      ]
+    },
+    {
+      "name": "13 every damage record of the run is the blast's (no wind)",
+      "ok": true,
+      "detail": {
+        "hazards": [
+          "blast"
+        ]
+      }
+    },
+    {
+      "name": "14 ridge shielding: exposure \"terrain\", lower and later peak, never zero",
+      "ok": true,
+      "detail": [
+        {
+          "peak": 1757.1153083686,
+          "arrival": 0.15243447970043406,
+          "exposure": "terrain",
+          "J": 146.85455511785025,
+          "broken": 0
+        },
+        {
+          "peak": 7400.309358230712,
+          "arrival": 0.1325017415477049,
+          "exposure": "direct",
+          "J": 605.6852984516582,
+          "broken": 0
+        }
+      ]
+    },
+    {
+      "name": "15 pressure map (current / peak / arrival / impulse) and the probe: ambient, relative pressure, arrival, impulse, source, exposure, zone",
+      "ok": true,
+      "detail": {
+        "layer15": {
+          "mesh": 7,
+          "vis": 3
+        },
+        "probe": "Position-39.8, -39.9 (1.5 m above ground)Relative pressure now+0.000 kPaSource phenomenonp1 · blast:p1Ambient pressure101.33 kPaArrival time136 ms (absolute 0.136 s)Peak overpressure7.188 kPa (0.071 p"
+      }
+    },
+    {
+      "name": "16 multiple waves: two sources, objects loaded by both; timeline: release, first arrival, peak, impulse, damage (no unfilled labels)",
+      "ok": true,
+      "detail": {
+        "ms16": [
+          "start",
+          "blastSource",
+          "blastArrival",
+          "firstDamage",
+          "firstFall",
+          "collapse",
+          "start",
+          "blastSource",
+          "blastArrival",
+          "blastPeak",
+          "blastImpulse"
+        ]
+      }
+    },
+    {
+      "name": "17 impact: one pressure wave with exactly the air-coupled share (no overlap with seismic / ejecta); ground shock and blast recorded as separate hazards",
+      "ok": true,
+      "detail": {
+        "W17": [
+          {
+            "id": "evt_4835cff43k:air",
+            "t": 0.19409037197393703,
+            "E": 1106349127.9584801,
+            "kind": "surface",
+            "src": "impact:p1",
+            "exit": 0.7467279591186009,
+            "peak": 463934.2090256877
+          }
+        ],
+        "plan17": {
+          "blast": 1106349127.9584801,
+          "impact": 55317456397.924,
+          "seismic": 5531745.6397924,
+          "ej": 1898298030.0412161,
+          "un": 52307277494.284515
+        },
+        "hazards": [
+          "blast",
+          "impact"
+        ]
+      }
+    },
+    {
+      "name": "18 pressure wave + water: the water mass is unchanged (momentum only)",
+      "ok": true,
+      "detail": {
+        "v18a": 17314.741370479347,
+        "v18b": 17314.74137047736
+      }
+    },
+    {
+      "name": "19 earthquake + pressure wave: both act on one clock, damage attributed per governing load, no duplicated force",
+      "ok": true,
+      "detail": {
+        "hazards": [
+          "blast"
+        ],
+        "dup19": 0
+      }
+    },
+    {
+      "name": "20 pressure-wave experiment saved and reloaded (schema 7, timing kept)",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "version": 7,
+        "inst": [
+          [
+            "earthquake",
+            null,
+            {
+              "at": 0
+            }
+          ],
+          [
+            "blast",
+            300000000,
+            {
+              "at": 3
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "name": "21 reset restores the original world (positions, no wave / response state); the document is unchanged",
+      "ok": true,
+      "detail": {
+        "waves": 0,
+        "blast": 0,
+        "events": 0
+      }
+    },
+    {
+      "name": "22 the same conditions reproduce the same damage records and positions at the same step",
+      "ok": true,
+      "detail": {
+        "t": [
+          3.9999999999999907,
+          3.9999999999999907
+        ],
+        "n": 100
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    28,
+    45.2
+  ],
+  "geometries": [
+    17,
+    8
+  ],
+  "crashed": false
+}

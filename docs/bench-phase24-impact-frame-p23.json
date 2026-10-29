@@ -1,0 +1,589 @@
+{
+  "date": "2026-10-14T01:49:57.829Z",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "load": [
+    5,
+    16.2,
+    17.4
+  ],
+  "plain": [
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 44.13,
+          "parts": {
+            "sys.impact": 0.51,
+            "sys.groundFailure": 3.19,
+            "sys.deformation": 1.25,
+            "dispatch": 7.75,
+            "physics": 0.61,
+            "sys.poseSync": 0.09,
+            "sys.sway": 0.27,
+            "sys.damage": 1.83,
+            "sys.particles": 0.1,
+            "sys.metrics": 0.25
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 40.06,
+          "parts": {
+            "sys.impact": 0.7,
+            "sys.groundFailure": 1.8,
+            "sys.deformation": 12.81,
+            "sys.groundMotion": 10.82,
+            "dispatch": 39.83,
+            "physics": 0.22,
+            "sys.structural": 5.67,
+            "sys.seismicDamage": 3.87,
+            "sys.damage": 3.76,
+            "sys.debris": 0.05,
+            "sys.exposure": 0.1,
+            "sys.metrics": 0.11
+          }
+        },
+        {
+          "step": 36,
+          "t": 0.617,
+          "ms": 11.37,
+          "parts": {
+            "sys.impact": 4.22,
+            "sys.groundFailure": 1.66,
+            "sys.deformation": 1.15,
+            "sys.groundMotion": 0.1,
+            "sys.sedimentForce": 0.12,
+            "dispatch": 8.02,
+            "physics": 3.32,
+            "sys.structural": 0.22,
+            "sys.seismicDamage": 0.32,
+            "sys.damage": 0.12
+          }
+        },
+        {
+          "step": 42,
+          "t": 0.717,
+          "ms": 8.86,
+          "parts": {
+            "sys.impact": 3.59,
+            "sys.groundFailure": 1.19,
+            "sys.deformation": 0.89,
+            "dispatch": 6.21,
+            "physics": 2.65,
+            "sys.structural": 0.26,
+            "sys.seismicDamage": 0.08,
+            "sys.damage": 0.08
+          }
+        },
+        {
+          "step": 132,
+          "t": 2.217,
+          "ms": 7.22,
+          "parts": {
+            "sys.impact": 0.61,
+            "sys.groundFailure": 0.88,
+            "sys.deformation": 2.62,
+            "dispatch": 4.76,
+            "physics": 2.46,
+            "sys.structural": 0.24,
+            "sys.seismicDamage": 0.09,
+            "sys.damage": 0.22
+          }
+        },
+        {
+          "step": 18,
+          "t": 0.317,
+          "ms": 7.14,
+          "parts": {
+            "sys.groundFailure": 0.75,
+            "sys.deformation": 2.35,
+            "sys.groundMotion": 0.15,
+            "dispatch": 5.74,
+            "physics": 1.39,
+            "sys.structural": 0.28,
+            "sys.seismicDamage": 0.52,
+            "sys.damage": 1.52
+          }
+        }
+      ],
+      "totalMs": 590.4,
+      "debris": 48
+    },
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 17.59,
+          "parts": {
+            "sys.groundFailure": 2.02,
+            "sys.deformation": 0.16,
+            "dispatch": 2.67,
+            "physics": 2.56,
+            "sys.sway": 0.08,
+            "sys.damage": 0.29
+          }
+        },
+        {
+          "step": 36,
+          "t": 0.617,
+          "ms": 12.08,
+          "parts": {
+            "sys.impact": 1.05,
+            "sys.groundFailure": 0.39,
+            "sys.deformation": 0.8,
+            "sys.groundMotion": 0.06,
+            "dispatch": 2.96,
+            "physics": 9.1,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 0.23,
+            "sys.damage": 0.11
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 10.22,
+          "parts": {
+            "sys.impact": 0.25,
+            "sys.groundFailure": 0.33,
+            "sys.deformation": 2.61,
+            "sys.groundMotion": 3.74,
+            "dispatch": 10.1,
+            "physics": 0.11,
+            "sys.structural": 0.29,
+            "sys.seismicDamage": 2,
+            "sys.damage": 0.81
+          }
+        },
+        {
+          "step": 90,
+          "t": 1.517,
+          "ms": 5.15,
+          "parts": {
+            "sys.impact": 1.32,
+            "sys.groundFailure": 0.43,
+            "sys.deformation": 0.7,
+            "dispatch": 2.87,
+            "physics": 2.27,
+            "sys.structural": 0.2,
+            "sys.seismicDamage": 0.05,
+            "sys.damage": 0.09
+          }
+        },
+        {
+          "step": 30,
+          "t": 0.517,
+          "ms": 5.01,
+          "parts": {
+            "sys.groundFailure": 0.29,
+            "sys.deformation": 0.92,
+            "sys.groundMotion": 0.1,
+            "dispatch": 2.07,
+            "physics": 2.91,
+            "sys.structural": 0.23,
+            "sys.seismicDamage": 0.3,
+            "sys.damage": 0.1
+          }
+        },
+        {
+          "step": 42,
+          "t": 0.717,
+          "ms": 4.93,
+          "parts": {
+            "sys.impact": 0.77,
+            "sys.groundFailure": 0.41,
+            "sys.deformation": 0.72,
+            "dispatch": 2.35,
+            "physics": 2.58,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 0.05,
+            "sys.damage": 0.09
+          }
+        }
+      ],
+      "totalMs": 447,
+      "debris": 48
+    },
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 19.95,
+          "parts": {
+            "sys.groundFailure": 8.46,
+            "sys.deformation": 0.12,
+            "dispatch": 9.15,
+            "physics": 0.33,
+            "sys.sway": 0.06,
+            "sys.damage": 0.42
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 11.01,
+          "parts": {
+            "sys.impact": 0.2,
+            "sys.groundFailure": 0.62,
+            "sys.deformation": 3.3,
+            "sys.groundMotion": 4.3,
+            "dispatch": 10.91,
+            "physics": 0.09,
+            "sys.structural": 0.19,
+            "sys.seismicDamage": 1.77,
+            "sys.damage": 0.47
+          }
+        },
+        {
+          "step": 96,
+          "t": 1.617,
+          "ms": 6.53,
+          "parts": {
+            "sys.impact": 2.25,
+            "sys.groundFailure": 0.52,
+            "sys.deformation": 0.84,
+            "dispatch": 4,
+            "physics": 2.52,
+            "sys.structural": 0.18,
+            "sys.seismicDamage": 0.05,
+            "sys.damage": 0.08
+          }
+        },
+        {
+          "step": 204,
+          "t": 3.417,
+          "ms": 5.32,
+          "parts": {
+            "sys.impact": 1.52,
+            "sys.groundFailure": 0.42,
+            "sys.deformation": 0.61,
+            "dispatch": 2.89,
+            "physics": 2.43,
+            "sys.structural": 0.17,
+            "sys.damage": 0.07
+          }
+        },
+        {
+          "step": 126,
+          "t": 2.117,
+          "ms": 5.15,
+          "parts": {
+            "sys.impact": 0.65,
+            "sys.groundFailure": 0.35,
+            "sys.deformation": 1.71,
+            "dispatch": 3,
+            "physics": 2.15,
+            "sys.structural": 0.18,
+            "sys.damage": 0.06
+          }
+        },
+        {
+          "step": 90,
+          "t": 1.517,
+          "ms": 4.97,
+          "parts": {
+            "sys.impact": 0.96,
+            "sys.groundFailure": 0.46,
+            "sys.deformation": 0.96,
+            "dispatch": 2.85,
+            "physics": 2.11,
+            "sys.structural": 0.22,
+            "sys.seismicDamage": 0.08,
+            "sys.damage": 0.09
+          }
+        }
+      ],
+      "totalMs": 436.2,
+      "debris": 48
+    }
+  ],
+  "prepared": [
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 22.13,
+          "parts": {
+            "sys.impact": 0.08,
+            "sys.groundFailure": 1,
+            "sys.deformation": 0.42,
+            "dispatch": 1.99,
+            "physics": 0.43,
+            "sys.sway": 0.05,
+            "sys.damage": 0.37
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 10.83,
+          "parts": {
+            "sys.impact": 0.24,
+            "sys.groundFailure": 0.6,
+            "sys.deformation": 3.01,
+            "sys.groundMotion": 4.39,
+            "dispatch": 10.64,
+            "physics": 0.18,
+            "sys.structural": 0.23,
+            "sys.seismicDamage": 1.49,
+            "sys.damage": 0.59
+          }
+        },
+        {
+          "step": 204,
+          "t": 3.417,
+          "ms": 8.19,
+          "parts": {
+            "sys.impact": 0.83,
+            "sys.groundFailure": 0.82,
+            "sys.deformation": 1.68,
+            "dispatch": 3.92,
+            "physics": 4.27,
+            "sys.structural": 0.26,
+            "sys.seismicDamage": 0.08,
+            "sys.damage": 0.13
+          }
+        },
+        {
+          "step": 222,
+          "t": 3.717,
+          "ms": 5.82,
+          "parts": {
+            "sys.impact": 0.75,
+            "sys.groundFailure": 0.44,
+            "sys.deformation": 0.79,
+            "dispatch": 2.49,
+            "physics": 3.33,
+            "sys.structural": 0.22,
+            "sys.seismicDamage": 0.09,
+            "sys.damage": 0.11
+          }
+        },
+        {
+          "step": 210,
+          "t": 3.517,
+          "ms": 5.8,
+          "parts": {
+            "sys.impact": 0.7,
+            "sys.groundFailure": 0.66,
+            "sys.deformation": 1.09,
+            "dispatch": 2.86,
+            "physics": 2.94,
+            "sys.structural": 0.19,
+            "sys.seismicDamage": 0.07,
+            "sys.damage": 0.1
+          }
+        },
+        {
+          "step": 132,
+          "t": 2.217,
+          "ms": 5.58,
+          "parts": {
+            "sys.impact": 0.59,
+            "sys.groundFailure": 0.39,
+            "sys.deformation": 1.81,
+            "dispatch": 3.1,
+            "physics": 2.47,
+            "sys.structural": 0.17,
+            "sys.damage": 0.07
+          }
+        }
+      ],
+      "totalMs": 448.2,
+      "debris": 48
+    },
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 10.58,
+          "parts": {
+            "sys.groundFailure": 0.5,
+            "sys.deformation": 0.12,
+            "dispatch": 1.03,
+            "physics": 0.21,
+            "sys.damage": 0.31
+          }
+        },
+        {
+          "step": 48,
+          "t": 0.817,
+          "ms": 9.07,
+          "parts": {
+            "sys.impact": 0.68,
+            "sys.groundFailure": 0.43,
+            "sys.deformation": 2.52,
+            "dispatch": 5.46,
+            "physics": 3.52,
+            "sys.structural": 0.27,
+            "sys.seismicDamage": 0.11,
+            "sys.damage": 1.15,
+            "sys.metrics": 0.07
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 8.29,
+          "parts": {
+            "sys.groundFailure": 0.23,
+            "sys.deformation": 2.25,
+            "sys.groundMotion": 3.38,
+            "dispatch": 8.19,
+            "physics": 0.1,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 1.42,
+            "sys.damage": 0.58
+          }
+        },
+        {
+          "step": 168,
+          "t": 2.817,
+          "ms": 8.11,
+          "parts": {
+            "sys.impact": 3.64,
+            "sys.groundFailure": 0.57,
+            "sys.deformation": 1.08,
+            "dispatch": 5.71,
+            "physics": 2.4,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 0.06,
+            "sys.damage": 0.1
+          }
+        },
+        {
+          "step": 60,
+          "t": 1.017,
+          "ms": 8.1,
+          "parts": {
+            "sys.impact": 3.47,
+            "sys.groundFailure": 0.59,
+            "sys.deformation": 0.63,
+            "dispatch": 5.2,
+            "physics": 2.89,
+            "sys.structural": 0.24,
+            "sys.seismicDamage": 0.08,
+            "sys.damage": 0.1
+          }
+        },
+        {
+          "step": 36,
+          "t": 0.617,
+          "ms": 4.85,
+          "parts": {
+            "sys.impact": 1.01,
+            "sys.groundFailure": 0.28,
+            "sys.deformation": 0.56,
+            "sys.groundMotion": 0.06,
+            "dispatch": 2.3,
+            "physics": 2.54,
+            "sys.structural": 0.18,
+            "sys.seismicDamage": 0.1,
+            "sys.damage": 0.07
+          }
+        }
+      ],
+      "totalMs": 431.4,
+      "debris": 48
+    },
+    {
+      "worst": [
+        {
+          "step": 0,
+          "t": 0.017,
+          "ms": 11.37,
+          "parts": {
+            "sys.groundFailure": 0.54,
+            "sys.deformation": 0.1,
+            "dispatch": 1.06,
+            "physics": 0.19,
+            "sys.damage": 0.32
+          }
+        },
+        {
+          "step": 12,
+          "t": 0.217,
+          "ms": 7.89,
+          "parts": {
+            "sys.groundFailure": 0.21,
+            "sys.deformation": 2.18,
+            "sys.groundMotion": 3.28,
+            "dispatch": 7.79,
+            "physics": 0.1,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 1.39,
+            "sys.damage": 0.44
+          }
+        },
+        {
+          "step": 132,
+          "t": 2.217,
+          "ms": 5.62,
+          "parts": {
+            "sys.impact": 0.6,
+            "sys.groundFailure": 0.44,
+            "sys.deformation": 1.78,
+            "dispatch": 3.18,
+            "physics": 2.44,
+            "sys.structural": 0.21,
+            "sys.damage": 0.07
+          }
+        },
+        {
+          "step": 54,
+          "t": 0.917,
+          "ms": 5.15,
+          "parts": {
+            "sys.impact": 0.84,
+            "sys.groundFailure": 0.52,
+            "sys.deformation": 0.76,
+            "dispatch": 2.81,
+            "physics": 2.33,
+            "sys.structural": 0.34,
+            "sys.seismicDamage": 0.17,
+            "sys.damage": 0.09
+          }
+        },
+        {
+          "step": 192,
+          "t": 3.217,
+          "ms": 5.01,
+          "parts": {
+            "sys.impact": 0.63,
+            "sys.groundFailure": 0.35,
+            "sys.deformation": 1.41,
+            "dispatch": 2.74,
+            "physics": 2.27,
+            "sys.structural": 0.21,
+            "sys.damage": 0.06
+          }
+        },
+        {
+          "step": 36,
+          "t": 0.617,
+          "ms": 4.94,
+          "parts": {
+            "sys.impact": 1,
+            "sys.groundFailure": 0.27,
+            "sys.deformation": 0.65,
+            "sys.groundMotion": 0.05,
+            "dispatch": 2.41,
+            "physics": 2.52,
+            "sys.structural": 0.21,
+            "sys.seismicDamage": 0.12,
+            "sys.damage": 0.06
+          }
+        }
+      ],
+      "totalMs": 418.4,
+      "debris": 48
+    }
+  ]
+}

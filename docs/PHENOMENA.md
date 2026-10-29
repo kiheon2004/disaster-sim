@@ -25,7 +25,7 @@
 |---|---|---|
 | `PhenomenonDefinition` | `src/phenomena/types.ts`, `definitions.ts` | 현상 유형별 **고유 타입의 파라미터**(zod 스키마), 편집 필드(단위·범위·배율), 기본값, 가정, 효과 채널, 사용 모델, 이벤트 생성, 지속시간, 설명 |
 | `PhenomenonInstance` | `types.ts` | 실험 속 한 번의 발생: id, type, spec, enabled, start(절대 시각 또는 다른 현상의 시작/종료 + 간격), seed, visualize |
-| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) |
+| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종 |
 | Lifecycle | 기존 `SimulationEvent` | onStart → update(고정 스텝) → onEnd(finished / superseded), 채널별 대체 규칙 유지 |
 | `PhenomenonContext` | `types.ts` | 시드, 고정 지형, 물 설정(기본값 해석용) |
 | Output | 효과 채널(§3) | 현상은 채널만 쓰고, 시스템이 힘·피해·노출로 바꿈 |
@@ -210,15 +210,15 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 - 잔여 강도는 지진 시작 시점의 손상으로 항복강도를 한 번 축소(지진 중 생긴 바람 손상은 health `min()`으로만 반영).
 - 바람 피해 응답은 아직 응답 레지스트리가 아닌 기존 DamageSystem 경로.
 - 비교 실행은 메인 스레드에서 양보하며 실행(Web Worker 아님) — 큰 장면은 시나리오당 수 초~수십 초.
-- 인터페이스만 있는 채널(압력·온도·대기·공간 중력)은 동작하지 않습니다. 지형 변형(Phase 21)과 지반 지지·토사(Phase 22) 채널은 구현됨 — TERRAIN_DEFORMATION.md, GROUND_FAILURE.md.
+- 인터페이스만 있는 채널(온도·대기·공간 중력)은 동작하지 않습니다. 압력 채널은 Phase 24에서 구현(BLAST.md). 지형 변형(Phase 21)과 지반 지지·토사(Phase 22) 채널은 구현됨 — TERRAIN_DEFORMATION.md, GROUND_FAILURE.md.
 
 ## 19. Phase 16 이후 확장 (필요 시스템 vs 재사용)
 
 | 현상 | 새로 필요한 시스템 | 재사용 가능한 시스템 |
 |---|---|---|
 | Sinkhole | **구현됨(Phase 22)** — 실행 중 지형 변형은 Phase 21 엔진, 공동·플러그 파괴·벽 붕괴 모델, 산사태(무한사면·Newmark·Voellmy 흐름)와 함께 [GROUND_FAILURE.md](GROUND_FAILURE.md) | — |
-| Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 남은 것: 압력파 장(과압·충격량)·열 — Phase 24 | — |
-| Explosion | 압력파 장(Friedlander 파형), 열 플럭스 | 외장재 피해(압력 대 용량 — 홍수 창문과 같은 구조), ForceLedger, 파편, 사람 넘어짐 |
+| Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 대기 압력파는 Phase 24(공중 폭발·대기 결합 몫 → 압력 채널). 남은 것: 열 | — |
+| Explosion | **대기 압력파 구현됨(Phase 24)** — 가상 에너지 방출, Sedov–Taylor + 약충격 N파, 지면 반사·차폐, 압력 채널(`pressure` active), ForceLedger `blast`, 구조 외부 횡하중·외장 SDOF·외벽 면외·사람 전도 기준, `blast` 해저드, [BLAST.md](BLAST.md). 남은 것: 열·연소(Phase 26–27) | — |
 | Volcano | 열·온도장, 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
 | Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |
 | Gravity Change | 공간 중력장(오브젝트별 힘, Rapier 전역 중력은 기준 유지) | `GravityField` 인터페이스, ForceLedger(`gravityField` 출처 예약), 구조 모델 gravity 입력 |

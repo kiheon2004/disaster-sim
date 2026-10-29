@@ -83,7 +83,7 @@ async function heapMB() {
 
 async function simRun(name, which) {
   const t0 = await ev((n) => window.__scenes[n].t0, name);
-  await ev(async (name, which) => {
+  await ev(async (name, which, t0) => {
     const ds = window.__ds, sc = window.__scenes[name];
     await ds.actions.enterSimulation();
     window.__view(...(sc.at ?? [0, 0]));
@@ -91,7 +91,7 @@ async function simRun(name, which) {
     const events = which === 'B' ? [...sc.base(), ...sc.extra()] : sc.A ? sc.A() : sc.base();
     await ds.actions.runSimulation(events);
     if (t0 > 1) ds.sim.setSpeed?.(4);
-  }, name, which);
+  }, name, which, t0);
   await page.waitForFunction((t) => window.__ds.sim.getTime() >= t, { timeout: 300_000, polling: 20 }, Math.max(0, t0 - 0.3));
   await ev(() => { window.__ds.sim.setSpeed?.(1); const P = window.__ds.profiler; P.enabled = true; P.snapshot(); window.__calls = []; const gl = window.__r3f.get().gl; const f = () => { window.__calls.push(gl.info.render.calls); if (window.__calls.length < 400) requestAnimationFrame(f); }; requestAnimationFrame(f); });
   const fps = await ev((ms) => window.__fps(ms), SIM_MS);

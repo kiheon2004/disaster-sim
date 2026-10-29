@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-14T02:02:28.528Z",
+  "url": "http://localhost:4191/",
+  "cycles": 12,
+  "crashed": false,
+  "errors": [],
+  "rows": [
+    {
+      "cycle": 0,
+      "label": "start",
+      "heapMB": 17.7,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 17,
+      "textures": 17,
+      "programs": 12,
+      "rapierLive": 0,
+      "rapierCreated": 0,
+      "rss": {
+        "renderer": 450,
+        "gpu": 138,
+        "browser": 186,
+        "other": 209
+      },
+      "load": 7.5
+    },
+    {
+      "cycle": 1,
+      "label": "blastTown",
+      "heapMB": 30.3,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 2,
+      "rss": {
+        "renderer": 185,
+        "gpu": 72,
+        "browser": 58,
+        "other": 74
+      },
+      "load": 8.7
+    },
+    {
+      "cycle": 2,
+      "label": "impactBlast",
+      "heapMB": 30.4,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 4,
+      "rss": {
+        "renderer": 178,
+        "gpu": 63,
+        "browser": 59,
+        "other": 56
+      },
+      "load": 16.2
+    },
+    {
+      "cycle": 3,
+      "label": "blastTown",
+      "heapMB": 32.7,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 6,
+      "rss": {
+        "renderer": 194,
+        "gpu": 75,
+        "browser": 79,
+        "other": 64
+      },
+      "load": 15.9
+    },
+    {
+      "cycle": 4,
+      "label": "impactBlast",
+      "heapMB": 31.3,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 8,
+      "rss": {
+        "renderer": 170,
+        "gpu": 59,
+        "browser": 58,
+        "other": 58
+      },
+      "load": 16
+    },
+    {
+      "cycle": 5,
+      "label": "blastTown",
+      "heapMB": 33.5,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 10,
+      "rss": {
+        "renderer": 198,
+        "gpu": 68,
+        "browser": 71,
+        "other": 57
+      },
+      "load": 17.4
+    },
+    {
+      "cycle": 6,
+      "label": "impactBlast",
+      "heapMB": 31.7,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 15,
+      "rapierLive": 0,
+      "rapierCreated": 12,
+      "rss": {
+        "renderer": 237,
+        "gpu": 89,
+        "browser": 71,
+        "other": 53
+      },
+      "load": 30.1
+    },
+    {
+      "cycle": 7,
+      "label": "blastTown",
+      "heapMB": 33.8,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 14,
+      "rss": {
+        "renderer": 198,
+        "gpu": 70,
+        "browser": 59,
+        "other": 44
+      },
+      "load": 24
+    },
+    {
+      "cycle": 8,
+      "label": "impactBlast",
+      "heapMB": 32,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 16,
+      "rss": {
+        "renderer": 171,
+        "gpu": 59,
+        "browser": 53,
+        "other": 42
+      },
+      "load": 21.8
+    },
+    {
+      "cycle": 9,
+      "label": "blastTown",
+      "heapMB": 30.1,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 18,
+      "rss": {
+        "renderer": 201,
+        "gpu": 81,
+        "browser": 72,
+        "other": 50
+      },
+      "load": 26.4
+    },
+    {
+      "cycle": 10,
+      "label": "impactBlast",
+      "heapMB": 28.2,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 20,
+      "rss": {
+        "renderer": 244,
+        "gpu": 92,
+        "browser": 89,
+        "other": 55
+      },
+      "load": 20
+    },
+    {
+      "cycle": 11,
+      "label": "blastTown",
+      "heapMB": 30.2,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 8,
+      "textures": 5,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 22,
+      "rss": {
+        "renderer": 188,
+        "gpu": 66,
+        "browser": 56,
+        "other": 42
+      },
+      "load": 19.6
+    },
+    {
+      "cycle": 12,
+      "label": "impactBlast",
+      "heapMB": 28.3,
+      "nodes": 800,
+      "listeners": 358,
+      "geometries": 7,
+      "textures": 3,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 24,
+      "rss": {
+        "renderer": 201,
+        "gpu": 75,
+        "browser": 54,
+        "other": 42
+      },
+      "load": 27.7
+    }
+  ]
+}

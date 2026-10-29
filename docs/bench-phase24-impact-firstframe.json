@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-14",
+  "scene": "scripts/probe-first-frame.mjs impact (town of 121 houses + direct 1 m stony impact landing 0.3 s after the start), production build, Chrome headless (Metal) 1600x900",
+  "note": "Alternating builds: Phase 23 (5352309, port 4192) and Phase 24 (port 4191). Load average 3.9-6.7 (macOS background services). The impact frame is frame index 14-15; frame index 2 is the run's start frame (both builds: 27-29 ms GC inside).",
+  "phase23": [
+    { "run": 1, "impactFrameMs": 60, "tickMs": 24.8, "deformationMs": 10.6, "framesOver50": [60] },
+    { "run": 2, "impactFrameMs": 60, "tickMs": 25.4, "deformationMs": 10.8, "framesOver50": [60] },
+    { "run": 3, "startFrameMs": 118, "startGcMs": 28.7, "framesOver50": [118, 93] },
+    { "run": 4, "impactFrameMs": 58, "tickMs": 24.9, "deformationMs": 10.2, "framesOver50": [58] }
+  ],
+  "phase24": [
+    { "run": 1, "impactFrameMs": 48, "tickMs": 17.6, "deformationMs": 9.8, "framesOver50": [] },
+    { "run": 2, "impactFrameMs": 49, "tickMs": 17.2, "deformationMs": 9.7, "framesOver50": [] },
+    { "run": 3, "startFrameMs": 95, "startGcMs": 27.6, "framesOver50": [95, 63] },
+    { "run": 4, "impactFrameMs": 46, "tickMs": 18.1, "deformationMs": 10.1, "framesOver50": [] }
+  ]
+}
