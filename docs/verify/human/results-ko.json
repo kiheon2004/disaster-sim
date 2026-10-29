@@ -1,0 +1,401 @@
+{
+  "lang": "ko",
+  "url": "http://localhost:4199/",
+  "results": [
+    {
+      "name": "1 settings: the \"extended human model\" switch in the simulation settings writes settings.simulation.humans = { model: extended }",
+      "ok": true,
+      "detail": {
+        "before1": null,
+        "after1": {
+          "model": "extended"
+        }
+      }
+    },
+    {
+      "name": "2 risk scale: the advanced field (0.5–2) appears with the switch and stores riskScale = 1.5",
+      "ok": true,
+      "detail": {
+        "model": "extended",
+        "riskScale": 1.5
+      }
+    },
+    {
+      "name": "3 other settings edits keep the human setting (seed changed, humans unchanged)",
+      "ok": true,
+      "detail": {
+        "model": "extended",
+        "riskScale": 1.5
+      }
+    },
+    {
+      "name": "4 switching off deletes the key (legacy) and hides the risk scale; on again restores { model: extended }",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "5 people placed: four people, one of them 6 m above the ground",
+      "ok": true,
+      "detail": [
+        0,
+        0,
+        0,
+        6
+      ]
+    },
+    {
+      "name": "6 extended run: every person carries the human model state (4 people, all standing at t = 0)",
+      "ok": true,
+      "detail": [
+        "upright",
+        "upright",
+        "upright",
+        "upright"
+      ]
+    },
+    {
+      "name": "7 inspector (standing person): extended model, mass · height, posture upright, balance margin, 8 segment rows, the limitation line",
+      "ok": true,
+      "detail": {
+        "insp7": "모델확장 인체 모델질량 · 키70.0 kg · 1.75 m자세직립균형서 있음 · 여유 1.00넘어짐없음속도0.00 m/s각속도0.00 rad/s마지막 충격량없음위험 지수 (누적 / 최대)0.00 / 0.00이동성이동 가능행동 불가아니오매몰아니오",
+        "segRows7": 8
+      }
+    },
+    {
+      "name": "8 drop from 6 m: the person falls / lands — impact episodes, drop height ≥ 4 m, a risk index > 0, a first-fall or landing recorded",
+      "ok": true,
+      "detail": {
+        "impacts": 1,
+        "drop": 6.002043783796712,
+        "risk": 1.0756461650953886,
+        "falls": 1,
+        "posture": "resting"
+      }
+    },
+    {
+      "name": "9 posture shown live in the inspector: the dropped person's posture text changed and matches the model",
+      "ok": true,
+      "detail": {
+        "posture": "resting",
+        "insp": "모델확장 인체 모델질량 · 키70.0 kg · 1.75 m자세정지균형넘어짐 (자세 제어 없음)넘어짐1회 · 처음 0.23 s · 원인 지지 상실속도0.00 m/s각속도0.00 rad/s마지막 충격량764.4 N·s "
+      }
+    },
+    {
+      "name": "10 segment rows: 8 translated segments with a level name, cumulative / peak index and hits; at least one segment struck",
+      "ok": true,
+      "detail": [
+        "머리|없음|0.00|0.00|0",
+        "목|없음|0.00|0.00|0",
+        "몸통|없음|0.00|0.00|0",
+        "골반|없음|0.00|0.00|0",
+        "왼팔|없음|0.00|0.00|0",
+        "오른팔|없음|0.00|0.00|0",
+        "왼다리|심각|1.08|1.08|1",
+        "오른다리|심각|1.08|1.08|1"
+      ]
+    },
+    {
+      "name": "11 the people standing on flat ground with no load stay upright (no fall)",
+      "ok": true,
+      "detail": [
+        "upright",
+        "upright",
+        "upright"
+      ]
+    },
+    {
+      "name": "12 advanced sub-section (collapsed by default): balance demand, release energy, tidal load (\"not measured\" without a source), lower-bound deceleration",
+      "ok": true,
+      "detail": "균형 요구도 (≥ 1 포화)서 있지 않음기울기서 있지 않음넘어질 때 에너지0.0 J조석 하중측정 안 됨마지막 접근 속도10.65 m/s마지막 대표 감속도 (하한)655 m/s²최대 낙하 높이6.00 m다시 섬 / 주저앉음0회 / 1회"
+    },
+    {
+      "name": "13 overlay on (toggle in the overlay panel): the human layer draws COM / segment / contact markers and arrows / trail lines; 7 sub-toggles",
+      "ok": true,
+      "detail": {
+        "L13": {
+          "found": true,
+          "markers": 40,
+          "lines": 30
+        },
+        "subs13": 7
+      }
+    },
+    {
+      "name": "14 sub-toggle: segment markers off → 8 fewer markers per person",
+      "ok": true,
+      "detail": {
+        "on": 40,
+        "off": 8
+      }
+    },
+    {
+      "name": "15 overlay off: the layer is unmounted (nothing computed or drawn)",
+      "ok": true,
+      "detail": {
+        "found": false,
+        "markers": 0,
+        "lines": 0
+      }
+    },
+    {
+      "name": "16 repeated toggling (10×): GPU geometries / textures do not grow (buffers disposed on unmount)",
+      "ok": true,
+      "detail": {
+        "glA": {
+          "geometries": 18,
+          "textures": 5
+        },
+        "glB": {
+          "geometries": 18,
+          "textures": 5
+        }
+      }
+    },
+    {
+      "name": "17 results block: aggregate cards (people, fallen, first fall, impacts, closing, deceleration lower bound, drop, spin, buried, incapacitated, impulse), a segment × level table (8 rows)",
+      "ok": true,
+      "detail": {
+        "cards17": 38,
+        "lv17": 8
+      }
+    },
+    {
+      "name": "18 people table: one row per person (4)",
+      "ok": true,
+      "detail": {
+        "tab18": 4
+      }
+    },
+    {
+      "name": "19 charts: the dropped person's series drawn (speed, height, spin, margin, impulse, risk, contact, posture)",
+      "ok": true,
+      "detail": {
+        "charts": 8,
+        "lines": 7
+      }
+    },
+    {
+      "name": "20 unmeasured ≠ 0: the balance margin of the released body is NaN in the series and left out of the chart (gap, not a line at 0)",
+      "ok": true,
+      "detail": {
+        "n": 20,
+        "nan": 19,
+        "pts": 0
+      }
+    },
+    {
+      "name": "21 human CSV (button): schema version line, model note, units, the columns (time, object, model, posture, speed, angular speed, partner, contact point, impulse, dv, risk index, level, cause, limits)",
+      "ok": true,
+      "detail": [
+        "# schema: disaster-sim.human v1",
+        "# model: Educational reduced model (rigid single body, 8-segment mass model, inv",
+        "# units: time s, speed m/s, angular speed rad/s, impulse N·s, dv m/s, decelerati",
+        "# rows: one per fall / impact episode / risk-level rise (damage events), then th",
+        "time_s,object_id,model,event,posture,speed_ms,angular_speed_rads,partner,contact"
+      ]
+    },
+    {
+      "name": "22 CSV rows: impact / risk events of the drop with impulse and Δv, a final row per person (4), every row full width, deceleration named a lower bound, series section",
+      "ok": true,
+      "detail": {
+        "ev": 4,
+        "fin": 4,
+        "sample": "0.233,human_73a89ab12q,extended,FALLEN,falling,0.163364,0,none,none,none,none,none,none,none,none,none,none,noSupport,none"
+      }
+    },
+    {
+      "name": "23 results JSON (main export): a humans block with schemaVersion 1, model extended, units (N·s, m/s, rad/s, lower-bound deceleration), aggregate, 4 people with segments and series",
+      "ok": true,
+      "detail": {
+        "v": 1,
+        "people": 4
+      }
+    },
+    {
+      "name": "24 JSON series: unmeasured samples are null (not 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "25 damage-events CSV carries the human detail columns (segment, impulse, Δv, deceleration lower bound, index, level, partner, posture)",
+      "ok": true,
+      "detail": "ndary_member,human_segment,human_impulse_Ns,human_dv_ms,human_decel_lower_bound_ms2,human_risk_index,human_level,human_partner,human_posture"
+    },
+    {
+      "name": "26 reset: back to t = 0 — every person standing again, no falls, no impacts, zero risk",
+      "ok": true,
+      "detail": [
+        "upright",
+        "upright",
+        "upright",
+        "upright"
+      ]
+    },
+    {
+      "name": "27 original world: leaving the run shows the untouched world (fingerprint equal, setting kept)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "28 save → reload → load: the extended model and riskScale 1.5 survive (project file)",
+      "ok": true,
+      "detail": {
+        "model": "extended",
+        "riskScale": 1.5
+      }
+    },
+    {
+      "name": "29 serialization round trip of the setting (schema validated, riskScale in range)",
+      "ok": true,
+      "detail": {
+        "model": "extended",
+        "riskScale": 1.5
+      }
+    },
+    {
+      "name": "30 language survives the reload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "31 strong wind (35 m/s, gusts): people blown over, fall cause wind",
+      "ok": true,
+      "detail": [
+        "supine/wind",
+        "supine/wind",
+        "supine/wind"
+      ]
+    },
+    {
+      "name": "32 inspector after a fall: count, first time and the translated cause",
+      "ok": true,
+      "detail": "모델확장 인체 모델질량 · 키70.0 kg · 1.75 m자세누움 (등)균형넘어짐 (자세 제어 없음)넘어짐1회 · 처음 2.78 s · 원인 바람속도0.23 m/s각속도1.04 rad/s마지막 충격량249.6 N·s · Δv 6.77 m/s · 3.55 s · 지면위험 지수 (누적 / 최대)1.13 / 1.13이동성이동 불가행동 불가예매몰아니오"
+    },
+    {
+      "name": "33 reversed gravity: people lose their support (released, a fall recorded with its cause)",
+      "ok": true,
+      "detail": [
+        "airborne/noSupport",
+        "airborne/noSupport",
+        "airborne/noSupport"
+      ]
+    },
+    {
+      "name": "34 earthquake (M7, 0.8 g): balance lost to the ground motion (fall cause groundMotion), all values finite",
+      "ok": true,
+      "detail": [
+        "prone/groundMotion",
+        "sideLying/groundMotion",
+        "sideLying/groundMotion"
+      ]
+    },
+    {
+      "name": "35 aggregate after the earthquake: falls counted, first fall time set",
+      "ok": true,
+      "detail": {
+        "falls": 3,
+        "first": 3.3333333333333264
+      }
+    },
+    {
+      "name": "36 celestial tidal scene: a tidal load index computed for the people (body weights > 0)",
+      "ok": true,
+      "detail": [
+        0.028201423981456607,
+        0.02149457370507722,
+        0.0003163704416347506
+      ]
+    },
+    {
+      "name": "37 inspector advanced: the tidal load line (body weights, tension / compression, peak)",
+      "ok": true,
+      "detail": "균형 요구도 (≥ 1 포화)0.00기울기0.0°넘어질 때 에너지0.0 J조석 하중체중의 0.028배 (인장) · 최대 0.028마지막 접근 속도없음마지막 대표 감속도 (하한)없음최대 낙하 높이0.00 m다시 섬 / 주저앉음0회 / 0회"
+    },
+    {
+      "name": "38 combined hazard (drop + wind + earthquake): every pose finite, export valid with falls counted",
+      "ok": true,
+      "detail": {
+        "falls": 5
+      }
+    },
+    {
+      "name": "39 legacy run: the inspector shows \"legacy model\" only (plus the limitation line), no segment table",
+      "ok": true,
+      "detail": "모델기본 모델 (legacy)"
+    },
+    {
+      "name": "40 legacy run: no human overlay toggle, no human results block (the fallen-people card stays)",
+      "ok": true,
+      "detail": {
+        "ov40": false,
+        "res40": false
+      }
+    },
+    {
+      "name": "41 legacy export: model legacy, people counted, no extended fields",
+      "ok": true,
+      "detail": {
+        "schemaVersion": 1,
+        "model": "legacy",
+        "people": 4
+      }
+    },
+    {
+      "name": "42 presets: 20 human presets, each builds a world with the extended model and people; names translated",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "43 drop presets: the risk index grows with the height (1 m < 3 m < 10 m)",
+      "ok": true,
+      "detail": {
+        "drop1m": 0.44070019833743573,
+        "drop3m": 0.7608133867383003,
+        "drop10m": 1.3852670699357987
+      }
+    },
+    {
+      "name": "44 10 m drop: severe or worse at the worst segment (the documented anchor of the index)",
+      "ok": true,
+      "detail": {
+        "level": "severe",
+        "risk": 1.3852670699357987
+      }
+    },
+    {
+      "name": "45 standing still: nobody falls, no risk (the model is quiet at rest)",
+      "ok": true,
+      "detail": [
+        "upright",
+        "upright",
+        "upright"
+      ]
+    },
+    {
+      "name": "46 no raw i18n keys of the human model visible anywhere checked (settings, inspector, overlay, results, wind, celestial, legacy)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "47 resources: GPU geometries back to the start after all runs",
+      "ok": true,
+      "detail": {
+        "geo0": 17,
+        "geo1": 8
+      }
+    },
+    {
+      "name": "48 whole run: no page / console errors, the tab alive",
+      "ok": true,
+      "detail": {
+        "errors": 0
+      }
+    }
+  ],
+  "errors": [],
+  "geometries": [
+    17,
+    8
+  ],
+  "crashed": false
+}

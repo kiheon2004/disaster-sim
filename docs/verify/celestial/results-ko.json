@@ -227,7 +227,7 @@
       "name": "58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34)",
       "ok": true,
       "detail": {
-        "id": "human_b37e25743n",
+        "id": "human_f06c47763n",
         "p": [
           -1.7573533058166504,
           10.54411792755127,
@@ -319,7 +319,7 @@
       "ok": true,
       "detail": {
         "flying": 1500,
-        "pts27": null,
+        "pts27": 1500,
         "disc27": 1
       }
     },
@@ -337,7 +337,7 @@
         "uplifted": 76,
         "loadedUnits": 1,
         "peakLateral": 81.4715849438937,
-        "failures": 165
+        "failures": 167
       }
     },
     {
@@ -411,7 +411,7 @@
       "ok": true,
       "detail": {
         "status": "paused",
-        "t": 0.49999999999999994,
+        "t": 0.016666666666666666,
         "stop": {
           "time": 0,
           "reason": "accel"
@@ -471,8 +471,8 @@
       "name": "46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate",
       "ok": true,
       "detail": {
-        "fps": 36.6,
-        "worst": 50,
+        "fps": 20.5,
+        "worst": 183.3,
         "pend46": 0
       }
     },
@@ -518,7 +518,7 @@
       "ok": true,
       "detail": {
         "capped": 0,
-        "captured": 83
+        "captured": 85
       }
     },
     {
@@ -548,8 +548,8 @@
   ],
   "errors": [],
   "heap": [
-    30.6,
-    56
+    30.8,
+    56.7
   ],
   "geometries": [
     17,

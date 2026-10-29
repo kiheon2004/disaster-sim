@@ -1,0 +1,50 @@
+PASS 1 settings: the "extended human model" switch in the simulation settings writes settings.simulation.humans = { model: extended } {"before1":null,"after1":{"model":"extended"}}
+PASS 2 risk scale: the advanced field (0.5–2) appears with the switch and stores riskScale = 1.5 {"model":"extended","riskScale":1.5}
+PASS 3 other settings edits keep the human setting (seed changed, humans unchanged) {"model":"extended","riskScale":1.5}
+PASS 4 switching off deletes the key (legacy) and hides the risk scale; on again restores { model: extended } 
+PASS 5 people placed: four people, one of them 6 m above the ground [0,0,0,6]
+PASS 6 extended run: every person carries the human model state (4 people, all standing at t = 0) ["upright","upright","upright","upright"]
+PASS 7 inspector (standing person): extended model, mass · height, posture upright, balance margin, 8 segment rows, the limitation line {"insp7":"ModelExtended human modelMass · height70.0 kg · 1.75 mPostureUprightBalancestanding · margin 1.00FallsnoneSpeed0.00 m/sAngular speed0.00 rad/sLast impulsenoneRi","segRows7":8}
+PASS 8 drop from 6 m: the person falls / lands — impact episodes, drop height ≥ 4 m, a risk index > 0, a first-fall or landing recorded {"impacts":1,"drop":6.002043783796712,"risk":1.0756461650953886,"falls":1,"posture":"resting"}
+PASS 9 posture shown live in the inspector: the dropped person's posture text changed and matches the model {"posture":"resting","insp":"ModelExtended human modelMass · height70.0 kg · 1.75 mPostureRestingBalancefallen (no posture control)Falls1 · first at "}
+PASS 10 segment rows: 8 translated segments with a level name, cumulative / peak index and hits; at least one segment struck ["Head|none|0.00|0.00|0","Neck|none|0.00|0.00|0","Torso|none|0.00|0.00|0","Pelvis|none|0.00|0.00|0","Left arm|none|0.00|0.00|0","Right arm|none|0.00|0.00|0","Left leg|severe|1.08|1.08|1","Right leg|severe|1.08|1.08|1"]
+PASS 11 the people standing on flat ground with no load stay upright (no fall) ["upright","upright","upright"]
+PASS 12 advanced sub-section (collapsed by default): balance demand, release energy, tidal load ("not measured" without a source), lower-bound deceleration Balance demand (≥ 1 saturated)not standingLeannot standingEnergy at the fall0.0 JTidal loadnot measuredLast closing speed10.65 m/sLast representative decelerati
+PASS 13 overlay on (toggle in the overlay panel): the human layer draws COM / segment / contact markers and arrows / trail lines; 7 sub-toggles {"L13":{"found":true,"markers":40,"lines":30},"subs13":7}
+PASS 14 sub-toggle: segment markers off → 8 fewer markers per person {"on":40,"off":8}
+PASS 15 overlay off: the layer is unmounted (nothing computed or drawn) {"found":false,"markers":0,"lines":0}
+PASS 16 repeated toggling (10×): GPU geometries / textures do not grow (buffers disposed on unmount) {"glA":{"geometries":18,"textures":5},"glB":{"geometries":18,"textures":5}}
+PASS 17 results block: aggregate cards (people, fallen, first fall, impacts, closing, deceleration lower bound, drop, spin, buried, incapacitated, impulse), a segment × level table (8 rows) {"cards17":38,"lv17":8}
+PASS 18 people table: one row per person (4) {"tab18":4}
+PASS 19 charts: the dropped person's series drawn (speed, height, spin, margin, impulse, risk, contact, posture) {"charts":8,"lines":7}
+PASS 20 unmeasured ≠ 0: the balance margin of the released body is NaN in the series and left out of the chart (gap, not a line at 0) {"n":20,"nan":19,"pts":0}
+PASS 21 human CSV (button): schema version line, model note, units, the columns (time, object, model, posture, speed, angular speed, partner, contact point, impulse, dv, risk index, level, cause, limits) ["# schema: disaster-sim.human v1","# model: Educational reduced model (rigid single body, 8-segment mass model, inv","# units: time s, speed m/s, angular speed rad/s, impulse N·s, dv m/s, decelerati","# rows: one per fall / impact episode / risk-level rise (damage events), then th","time_s,object_id,model,event,posture,speed_ms,angular_speed_rads,partner,contact"]
+PASS 22 CSV rows: impact / risk events of the drop with impulse and Δv, a final row per person (4), every row full width, deceleration named a lower bound, series section {"ev":4,"fin":4,"sample":"0.233,human_0d098fa12q,extended,FALLEN,falling,0.163364,0,none,none,none,none,none,none,none,none,none,none,noSupport,none"}
+PASS 23 results JSON (main export): a humans block with schemaVersion 1, model extended, units (N·s, m/s, rad/s, lower-bound deceleration), aggregate, 4 people with segments and series {"v":1,"people":4}
+PASS 24 JSON series: unmeasured samples are null (not 0) 
+PASS 25 damage-events CSV carries the human detail columns (segment, impulse, Δv, deceleration lower bound, index, level, partner, posture) ndary_member,human_segment,human_impulse_Ns,human_dv_ms,human_decel_lower_bound_ms2,human_risk_index,human_level,human_partner,human_posture
+PASS 26 reset: back to t = 0 — every person standing again, no falls, no impacts, zero risk ["upright","upright","upright","upright"]
+PASS 27 original world: leaving the run shows the untouched world (fingerprint equal, setting kept) 
+PASS 28 save → reload → load: the extended model and riskScale 1.5 survive (project file) {"model":"extended","riskScale":1.5}
+PASS 29 serialization round trip of the setting (schema validated, riskScale in range) {"model":"extended","riskScale":1.5}
+PASS 30 language survives the reload 
+PASS 31 strong wind (35 m/s, gusts): people blown over, fall cause wind ["supine/wind","supine/wind","supine/wind"]
+PASS 32 inspector after a fall: count, first time and the translated cause ModelExtended human modelMass · height70.0 kg · 1.75 mPostureSupineBalancefallen (no posture control)Falls1 · first at 2.78 s · cause windSpeed0.23 m/sAngular speed1.04 rad/sLast impulse249.6 N·s · Δv
+PASS 33 reversed gravity: people lose their support (released, a fall recorded with its cause) ["airborne/noSupport","airborne/noSupport","airborne/noSupport"]
+PASS 34 earthquake (M7, 0.8 g): balance lost to the ground motion (fall cause groundMotion), all values finite ["prone/groundMotion","sideLying/groundMotion","sideLying/groundMotion"]
+PASS 35 aggregate after the earthquake: falls counted, first fall time set {"falls":3,"first":3.3333333333333264}
+PASS 36 celestial tidal scene: a tidal load index computed for the people (body weights > 0) [0.028201423981456607,0.02149457370507722,0.0003163704416347506]
+PASS 37 inspector advanced: the tidal load line (body weights, tension / compression, peak) Balance demand (≥ 1 saturated)0.00Lean0.0°Energy at the fall0.0 JTidal load0.028 body weights (tension) · peak 0.028Last closing speednoneLast representative deceleration (lower bound)noneLargest drop
+PASS 38 combined hazard (drop + wind + earthquake): every pose finite, export valid with falls counted {"falls":5}
+PASS 39 legacy run: the inspector shows "legacy model" only (plus the limitation line), no segment table ModelLegacy model
+PASS 40 legacy run: no human overlay toggle, no human results block (the fallen-people card stays) {"ov40":false,"res40":false}
+PASS 41 legacy export: model legacy, people counted, no extended fields {"schemaVersion":1,"model":"legacy","people":4}
+PASS 42 presets: 20 human presets, each builds a world with the extended model and people; names translated []
+PASS 43 drop presets: the risk index grows with the height (1 m < 3 m < 10 m) {"drop1m":0.44070019833743573,"drop3m":0.7608133867383003,"drop10m":1.3852670699357987}
+PASS 44 10 m drop: severe or worse at the worst segment (the documented anchor of the index) {"level":"severe","risk":1.3852670699357987}
+PASS 45 standing still: nobody falls, no risk (the model is quiet at rest) ["upright","upright","upright"]
+PASS 46 no raw i18n keys of the human model visible anywhere checked (settings, inspector, overlay, results, wind, celestial, legacy) []
+PASS 47 resources: GPU geometries back to the start after all runs {"geo0":17,"geo1":8}
+PASS 48 whole run: no page / console errors, the tab alive {"errors":0}
+
+48/48 passed; 0 page errors; geometries 17 → 8; crashed false
