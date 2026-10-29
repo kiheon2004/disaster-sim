@@ -62,6 +62,8 @@ export interface LavaSurroundings {
   /** Water depth (m) and temperature (K) over a vertex. */
   waterDepth(i: number): number;
   waterT(i: number): number;
+  /** Phase 29 (atmosphere experiments only): pressure ratio to the standard pressure over a vertex. */
+  pr?(i: number): number;
 }
 
 export const stillSurroundings = (Tref: number): LavaSurroundings => ({
@@ -593,7 +595,7 @@ export class LavaField {
       return { rad: 0, conv: 0, water: H_WATER * (Ts - Tw) * A * dt, sink: Tw, source: Tw };
     }
     const Ta = env.airT(i), Tsky = env.Tref;
-    const hc = hGround(Math.max(this.Ts[i], Ta), Ta, env.wind(i));
+    const hc = env.pr ? hGround(Math.max(this.Ts[i], Ta), Ta, env.wind(i), 1, env.pr(i)) : hGround(Math.max(this.Ts[i], Ta), Ta, env.wind(i));
     const Ts = surfaceTemperature(Ti, d, k, eps, Tsky, hc, Ta, this.Ts[i]);
     this.Ts[i] = Ts;
     const q = eps * SIGMA * (Ts ** 4 - Tsky ** 4);

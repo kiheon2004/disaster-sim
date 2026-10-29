@@ -31,11 +31,15 @@ export interface AirProps {
   Pr: number;
 }
 
-/** Air at temperature T (K), standard pressure (Sutherland's laws for μ and k; White, Viscous Fluid Flow). */
-export function airProps(T: number, out: AirProps = { rho: 0, mu: 0, nu: 0, k: 0, alpha: 0, Pr: 0 }): AirProps {
+/**
+ * Air at temperature T (K) and pressure pr × the standard pressure (Sutherland's laws for μ and k;
+ * White, Viscous Fluid Flow). Phase 29: μ, k, c_p and Pr of an ideal gas do not depend on pressure;
+ * ρ ∝ p, so ν and α ∝ 1/p (Ra ∝ p², Re ∝ p). pr = 1 (default) is the Phase 26 standard state exactly.
+ */
+export function airProps(T: number, out: AirProps = { rho: 0, mu: 0, nu: 0, k: 0, alpha: 0, Pr: 0 }, pr = 1): AirProps {
   const t = Math.max(150, Math.min(2500, T));
   const r = t / 273.15;
-  out.rho = STANDARD_PRESSURE / (R_AIR * t);
+  out.rho = (STANDARD_PRESSURE * pr) / (R_AIR * t);
   out.mu = 1.716e-5 * r * Math.sqrt(r) * (273.15 + 110.4) / (t + 110.4);
   out.k = 0.02414 * r * Math.sqrt(r) * (273.15 + 194) / (t + 194);
   out.nu = out.mu / out.rho;
@@ -55,18 +59,18 @@ function rayleigh(Ts: number, Ta: number, L: number, p: AirProps): number {
 }
 
 /** Natural convection on a vertical surface of height L (W/(m²·K)). */
-export function hNaturalVertical(Ts: number, Ta: number, L: number): number {
+export function hNaturalVertical(Ts: number, Ta: number, L: number, pr = 1): number {
   if (Ts === Ta) return 0;
-  const p = airProps(0.5 * (Ts + Ta), props);
+  const p = airProps(0.5 * (Ts + Ta), props, pr);
   const Ra = rayleigh(Ts, Ta, L, p);
   const nu = 0.825 + (0.387 * Ra ** (1 / 6)) / CC_VERT(p.Pr);
   return (nu * nu * p.k) / L;
 }
 
 /** Natural convection on a horizontal surface; `up` = the surface faces up. L = A/P (W/(m²·K)). */
-export function hNaturalHorizontal(Ts: number, Ta: number, L: number, up: boolean): number {
+export function hNaturalHorizontal(Ts: number, Ta: number, L: number, up: boolean, pr = 1): number {
   if (Ts === Ta) return 0;
-  const p = airProps(0.5 * (Ts + Ta), props);
+  const p = airProps(0.5 * (Ts + Ta), props, pr);
   const Ra = rayleigh(Ts, Ta, L, p);
   const unstable = (Ts > Ta) === up;
   const Nu = unstable ? (Ra <= 1e7 ? 0.54 * Ra ** 0.25 : 0.15 * Math.cbrt(Ra)) : 0.52 * Ra ** 0.2;
@@ -74,17 +78,17 @@ export function hNaturalHorizontal(Ts: number, Ta: number, L: number, up: boolea
 }
 
 /** Natural convection around a sphere of diameter D. */
-export function hNaturalSphere(Ts: number, Ta: number, D: number): number {
+export function hNaturalSphere(Ts: number, Ta: number, D: number, pr = 1): number {
   if (Ts === Ta) return 0;
-  const p = airProps(0.5 * (Ts + Ta), props);
+  const p = airProps(0.5 * (Ts + Ta), props, pr);
   const Ra = rayleigh(Ts, Ta, D, p);
   return ((2 + (0.589 * Ra ** 0.25) / CC_SPHERE(p.Pr)) * p.k) / D;
 }
 
 /** Forced convection along a flat surface of length L in a stream of speed U (m/s). */
-export function hForcedPlate(Ts: number, Ta: number, U: number, L: number): number {
+export function hForcedPlate(Ts: number, Ta: number, U: number, L: number, pr = 1): number {
   if (U <= 0) return 0;
-  const p = airProps(0.5 * (Ts + Ta), props);
+  const p = airProps(0.5 * (Ts + Ta), props, pr);
   const Re = (U * L) / p.nu;
   const pr3 = Math.cbrt(p.Pr);
   const Nu = Re <= 5e5 ? 0.664 * Math.sqrt(Re) * pr3 : (0.037 * Re ** 0.8 - 871) * pr3;
@@ -92,8 +96,8 @@ export function hForcedPlate(Ts: number, Ta: number, U: number, L: number): numb
 }
 
 /** Forced convection around a sphere of diameter D. */
-export function hForcedSphere(Ts: number, Ta: number, U: number, D: number): number {
-  const p = airProps(0.5 * (Ts + Ta), props);
+export function hForcedSphere(Ts: number, Ta: number, U: number, D: number, pr = 1): number {
+  const p = airProps(0.5 * (Ts + Ta), props, pr);
   const Re = (Math.max(0, U) * D) / p.nu;
   return ((2 + (0.4 * Math.sqrt(Re) + 0.06 * Re ** (2 / 3)) * p.Pr ** 0.4) * p.k) / D;
 }
@@ -118,14 +122,18 @@ for (let i = 0; i < TABN; i++) {
   TAB_RA[i] = GRAVITY / ((TAB0 + i) * p.nu * p.alpha);
 }
 
-/** Outdoor ground / water surface facing up: natural (L = 1 m cell) + wind function. */
-export function hGround(Ts: number, Ta: number, U2: number, L = 1): number {
-  const hF = WIND_SLOPE * (U2 > 0 ? U2 : 0);
+/**
+ * Outdoor ground / water surface facing up: natural (L = 1 m cell) + wind function. Phase 29: at a
+ * pressure ratio pr the Rayleigh number scales with pr² and the wind function — a bulk transfer
+ * ρ·c_p·C_H·U — with the density, pr (pr = 1: Phase 26 exactly).
+ */
+export function hGround(Ts: number, Ta: number, U2: number, L = 1, pr = 1): number {
+  const hF = WIND_SLOPE * (U2 > 0 ? U2 : 0) * pr;
   const dT = Ts - Ta;
   if (dT === 0) return hF;
   const i = Math.max(0, Math.min(TABN - 1, Math.round(0.5 * (Ts + Ta)) - TAB0));
   const k = TAB_K[i];
-  const Ra = TAB_RA[i] * (dT > 0 ? dT : -dT) * L * L * L;
+  const Ra = TAB_RA[i] * (dT > 0 ? dT : -dT) * L * L * L * (pr * pr);
   // Heated face up: 0.54·Ra^¼ / 0.15·Ra^⅓; cooled face up (stable): 0.52·Ra^⅕.
   const Nu = dT > 0 ? (Ra <= 1e7 ? 0.54 * Math.sqrt(Math.sqrt(Ra)) : 0.15 * Math.cbrt(Ra)) : 0.52 * Math.pow(Ra, 0.2);
   const hN = (Nu * k) / L;
@@ -136,20 +144,20 @@ export function hGround(Ts: number, Ta: number, U2: number, L = 1): number {
  * Box-shaped body: area-weighted coefficient of its vertical faces (height Lv), its top and bottom
  * (L = Lh), each combined with forced flow along the body (Lf) — W/(m²·K) over the total area.
  */
-export function hBox(Ts: number, Ta: number, U: number, Av: number, Atop: number, Abot: number, Lv: number, Lh: number, Lf: number): number {
+export function hBox(Ts: number, Ta: number, U: number, Av: number, Atop: number, Abot: number, Lv: number, Lh: number, Lf: number, pr = 1): number {
   const A = Av + Atop + Abot;
   if (A <= 0 || (Ts === Ta && U <= 0)) return 0;
-  const hF = hForcedPlate(Ts, Ta, U, Math.max(0.05, Lf));
+  const hF = hForcedPlate(Ts, Ta, U, Math.max(0.05, Lf), pr);
   let sum = 0;
-  if (Av > 0) sum += Av * mixed(hNaturalVertical(Ts, Ta, Math.max(0.05, Lv)), hF);
-  if (Atop > 0) sum += Atop * mixed(hNaturalHorizontal(Ts, Ta, Math.max(0.05, Lh), true), hF);
-  if (Abot > 0) sum += Abot * mixed(hNaturalHorizontal(Ts, Ta, Math.max(0.05, Lh), false), hF);
+  if (Av > 0) sum += Av * mixed(hNaturalVertical(Ts, Ta, Math.max(0.05, Lv), pr), hF);
+  if (Atop > 0) sum += Atop * mixed(hNaturalHorizontal(Ts, Ta, Math.max(0.05, Lh), true, pr), hF);
+  if (Abot > 0) sum += Abot * mixed(hNaturalHorizontal(Ts, Ta, Math.max(0.05, Lh), false, pr), hF);
   return sum / A;
 }
 
 /** Sphere (prescribed-temperature source body): natural + forced. */
-export function hSphere(Ts: number, Ta: number, U: number, D: number): number {
-  return mixed(hNaturalSphere(Ts, Ta, D), U > 0 ? hForcedSphere(Ts, Ta, U, D) : 0);
+export function hSphere(Ts: number, Ta: number, U: number, D: number, pr = 1): number {
+  return mixed(hNaturalSphere(Ts, Ta, D, pr), U > 0 ? hForcedSphere(Ts, Ta, U, D, pr) : 0);
 }
 
 /** Water side of a wet bed / submerged surface: turbulent natural convection 0.15·Ra^(1/3) (W/(m²·K), L-free). */

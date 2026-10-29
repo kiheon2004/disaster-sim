@@ -30,12 +30,18 @@ export const ASH_CLASSES = [
 
 const MU_AIR = 1.81e-5;
 
-/** Terminal settling velocity (m/s) of a sphere of diameter d (m), density ρp, in air of density ρa. */
-export function settlingVelocity(d: number, rhoP = ASH_PARTICLE_DENSITY, rhoA = 1.2): number {
-  let v = ((rhoP - rhoA) * GRAVITY * d * d) / (18 * MU_AIR); // Stokes start
+/**
+ * Terminal settling velocity (m/s) of a sphere of diameter d (m), density ρp, in air of density ρa.
+ * Phase 29: viscosity μ (Pa·s) and the Cunningham slip correction Cc (rarefied air: the drag of the
+ * Stokes regime divided by Cc) as optional inputs — the defaults are the Phase 28 values exactly.
+ */
+export function settlingVelocity(d: number, rhoP = ASH_PARTICLE_DENSITY, rhoA = 1.2, mu = MU_AIR, slip = 1): number {
+  const MU = mu;
+  if (!(rhoA > 0)) return Infinity;
+  let v = ((rhoP - rhoA) * GRAVITY * d * d * slip) / (18 * MU); // Stokes start
   for (let it = 0; it < 60; it++) {
-    const Re = (rhoA * v * d) / MU_AIR;
-    const Cd = Re < 1000 ? (24 / Math.max(Re, 1e-9)) * (1 + 0.15 * Re ** 0.687) : 0.44;
+    const Re = (rhoA * v * d) / MU;
+    const Cd = (Re < 1000 ? (24 / Math.max(Re, 1e-9)) * (1 + 0.15 * Re ** 0.687) : 0.44) / slip;
     const next = Math.sqrt((4 * (rhoP - rhoA) * GRAVITY * d) / (3 * Cd * rhoA));
     if (Math.abs(next - v) < 1e-7 * v) { v = next; break; }
     v = 0.5 * (v + next);

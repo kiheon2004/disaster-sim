@@ -133,11 +133,14 @@ export function generateParcels(i: EjectaInput): Parcel[] {
 
 export interface WorldBox { x0: number; z0: number; x1: number; z1: number }
 
-/** Integrate a parcel's flight (gravity + drag on its fragment size) until it meets the ground or leaves the world. */
-export function fly(p: Parcel, ground: (x: number, z: number) => number, box: WorldBox, fragmentDensity: number) {
+/**
+ * Integrate a parcel's flight (gravity + drag on its fragment size) until it meets the ground or leaves
+ * the world. `rhoAir`: air density of the flight (Phase 29 atmosphere; default the sea-level value).
+ */
+export function fly(p: Parcel, ground: (x: number, z: number) => number, box: WorldBox, fragmentDensity: number, rhoAir = RHO0) {
   let [x, y, z] = p.p0;
   let [vx, vy, vz] = p.v0;
-  const kd = (3 * CD_FRAG * RHO0) / (4 * fragmentDensity * p.size);
+  const kd = (3 * CD_FRAG * rhoAir) / (4 * fragmentDensity * p.size);
   const path: number[] = [x, y, z];
   let t = 0, sinceSample = 0;
   for (let k = 0; k < 200_000; k++) {

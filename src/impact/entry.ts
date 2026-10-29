@@ -72,7 +72,10 @@ interface State { x: number; z: number; v: number; g: number; m: number; L: numb
  * Integrate the entry of a projectile at speed v0 (m/s) and angle θ (deg above horizontal) from
  * ENTRY_ALTITUDE down to `stopAltitude` (m).
  */
-export function integrateEntry(p: ResolvedProjectile, v0: number, angleDeg: number, stopAltitude = HANDOVER_ALTITUDE): EntryResult {
+export function integrateEntry(p: ResolvedProjectile, v0: number, angleDeg: number, stopAltitude = HANDOVER_ALTITUDE, rho0 = RHO0): EntryResult {
+  // Phase 29 (opt-in): the whole exponential atmosphere scaled to a sea-level density rho0 (the column
+  // mass of an atmosphere experiment); the default is the Phase 23 atmosphere exactly.
+  const airDensity = (z: number) => rho0 * Math.exp(-Math.max(0, z) / SCALE_HEIGHT);
   const L0 = p.diameter, rhoI = p.density;
   let st: State = { x: 0, z: ENTRY_ALTITUDE, v: v0, g: (angleDeg * Math.PI) / 180, m: p.mass, L: L0, dL: 0 };
   let t = 0;

@@ -304,7 +304,7 @@ export class TerrainThermal {
             const qb = Gwb * (Tw - T0);
             dE[j] += qb; dW[c] -= qb;
             cond += Math.abs(qb);
-            const hc = hGround(Tw, Ta, env.u2);
+            const hc = env.pr ? hGround(Tw, Ta, env.u2, 1, env.pr(air)) : hGround(Tw, Ta, env.u2);
             const eps = 0.96;
             const qc = hc * area * (Tw - Ta);
             const qr = closed ? 0 : eps * SIGMA * area * (Tw * Tw * Tw * Tw - Tref * Tref * Tref * Tref);
@@ -315,7 +315,7 @@ export class TerrainThermal {
             gS[j] += Gwb * (4 / 3);
             gW[c] = (Gwb * (4 / 3) + (4 / 3) * hc * area + (closed ? 0 : 4 * eps * SIGMA * Tw * Tw * Tw * area)) / Cw;
           } else {
-            const hc = hGround(T0, Ta, env.u2);
+            const hc = env.pr ? hGround(T0, Ta, env.u2, 1, env.pr(air)) : hGround(T0, Ta, env.u2);
             if (hc === 0 && T0 === Tref) continue;
             const eps = this.emiss[c];
             const hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tref * Tref) * (T0 + Tref);
@@ -391,6 +391,8 @@ export interface TerrainEnv {
   noSurface?: boolean;
   /** Wind speed 2 m above the ground (m/s). */
   u2: number;
+  /** Phase 29: pressure ratio to the standard pressure at an air column (absent: 1). */
+  pr?: (a: number) => number;
   water: WaterLink | null;
   airIndex(ix: number, iz: number): number;
   airT(a: number): number;

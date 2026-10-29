@@ -258,7 +258,7 @@ export class ThermalBodies {
       if (fo > 0 && A > 0) {
         const a = this.air[i];
         const Ta = env.airT(a);
-        const hc = hBox(Ts, Ta, this.wind[i], this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
+        const hc = env.pr ? hBox(Ts, Ta, this.wind[i], this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i], env.pr(a)) : hBox(Ts, Ta, this.wind[i], this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
         const eps = THERMAL_MATERIALS[matS].emissivity;
         const hr = env.closed ? 0 : eps * SIGMA * (Ts * Ts + Tref * Tref) * (Ts + Tref);
         // Surface temperature of the linearized balance through the half-skin resistance.
@@ -278,7 +278,7 @@ export class ThermalBodies {
         const cmp = k === 0 ? this.comp1[i] : this.comp2[i];
         if (f <= 0 || cmp < 0 || A <= 0) continue;
         const Tc = env.compT(cmp);
-        let hc = hBox(Ts, Tc, 0, this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
+        let hc = env.pr ? hBox(Ts, Tc, 0, this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i], env.pr(this.air[i])) : hBox(Ts, Tc, 0, this.Av[i], this.Atop[i], this.Abot[i], this.Lv[i], this.Lh[i], this.Lf[i]);
         // Phase 27: a smoky room radiates to its surfaces (gray gas ε_g, surface ε), linearized like the outdoor radiation.
         const eg = env.compEps ? env.compEps(cmp) : 0;
         if (eg > 0) {
@@ -381,4 +381,6 @@ export interface BodyEnv {
   toComp(c: number, W: number, G: number): void;
   /** Phase 27: gas emissivity of a room (absent / 0: no gas radiation). */
   compEps?(c: number): number;
+  /** Phase 29: pressure ratio to the standard pressure at an air column (absent: 1). */
+  pr?(a: number): number;
 }

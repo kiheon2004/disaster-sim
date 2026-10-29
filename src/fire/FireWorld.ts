@@ -27,6 +27,7 @@ import {
   ftpCritical, type ContentsFire,
 } from './materials';
 import { buoyantVelocity, gasEmissivity, ventInflow } from './relations';
+import { advectFaces, courant, substepsFor } from '@/atmosphere/grid';
 
 /** Combustion state of a fuel item. */
 export const FS = { unheated: 0, heating: 1, pyrolysis: 2, ignited: 3, burning: 4, decaying: 5, extinguished: 6, burnedOut: 7 } as const;
@@ -195,6 +196,19 @@ export class FireWorld {
   /** Rooms that became oxygen-limited / reached flashover this step. */
   readonly roomEvents: [number, 'ventLimited' | 'flashover' | 'o2out'][] = [];
   time = 0;
+  /**
+   * Phase 29 (atmosphere experiments only): outdoor burning is limited by the O₂ the air column holds
+   * above the limiting fraction (its MASS falls with the air density); an item whose O₂-limited rate stays
+   * below 1 % of its fuel-controlled rate for 2 s is put out (oxygen starvation — a reduced criterion).
+   */
+  o2Limit = false;
+  /** Phase 29: items O₂-limited this step / so far; O₂ deficit carried out through the edges (kg). */
+  o2LimitedNow = 0;
+  o2LimitedEver = 0;
+  o2DeficitOut = 0;
+  /** Phase 29: O₂ deficit vented above the layer (the O₂-poor air is still in the atmosphere, kg). */
+  o2DeficitVented = 0;
+  private o2Low: Float64Array | null = null;
 
   constructor(tw: ThermalWorld) {
     this.tw = tw;
@@ -368,7 +382,7 @@ export class FireWorld {
       const cp = tw.comps[R.tc];
       if (!cp.alive) { R.inflow = 0; R.eps = 0; continue; }
       const Tg = tw.compT(R.tc);
-      const rho = tw.air.rho;
+      const rho = tw.air.rhoAt(R.air);
       const vent = ventInflow(R.Ao, R.Ho, Tg, Tinf, rho);
       const inflow = vent + R.leak;
       R.inflow = inflow;
@@ -412,7 +426,7 @@ export class FireWorld {
         const S = this.rooms[o];
         if (!tw.comps[R.tc].alive || !tw.comps[S.tc].alive) continue;
         const dT = Math.abs(tw.compT(R.tc) - tw.compT(S.tc));
-        const mx = 0.5 * tw.air.rho * A * buoyantVelocity(Math.cbrt(R.V), dT, Tinf);
+        const mx = 0.5 * tw.air.rhoAt(R.air) * A * buoyantVelocity(Math.cbrt(R.V), dT, Tinf);
         const f = Math.min(0.5, (mx * dt) / Math.min(R.gas, S.gas));
         const dO = (R.o2 / R.gas - S.o2 / S.gas) * f * Math.min(R.gas, S.gas);
         R.o2 -= dO; S.o2 += dO;
@@ -423,6 +437,7 @@ export class FireWorld {
     // 5. Apply: mass loss, energies, O₂ / smoke, ledgers.
     const L = this.ledger;
     let total = 0;
+    if (this.o2Limit) this.o2LimitedNow = 0;
     for (let i = 0; i < this.n; i++) {
       let md = this.mdot[i];
       if (md <= 0) { this.hrr[i] = 0; continue; }
@@ -430,6 +445,10 @@ export class FireWorld {
       if (r >= 0) md *= scale[r];
       const mt = FUEL_MATERIALS[this.mat[i]];
       md = Math.min(md, this.m[i] / dt);
+      if (this.o2Limit && r < 0) {
+        md = this.o2Supply(i, md, mt.dHc, dt);
+        if (md <= 0) { this.hrr[i] = 0; continue; }
+      }
       const dm = md * dt;
       const J = dm * mt.dHc;
       // The water of the burning part leaves with it: its latent heat comes out of the flame's heat
@@ -495,11 +514,65 @@ export class FireWorld {
     this.tally();
   }
 
+  /**
+   * Phase 29: the burning rate an outdoor item can keep with the O₂ its column holds above the limiting
+   * fraction (items in index order — deterministic); starvation below 1 % of the fuel-controlled rate.
+   */
+  private o2Supply(i: number, md: number, dHc: number, dt: number): number {
+    const a = this.airOf(i);
+    if (a < 0) return md;
+    const air = this.tw.air;
+    const m = air.rhoAt(a) * air.H * air.cellArea;
+    const avail = Math.max(0, (this.outdoorY(a) - Y_O2_LIMIT) * m);
+    const need = (md * dt * dHc) / E_O2;
+    if (need <= avail) { if (this.o2Low) this.o2Low[i] = 0; return md; }
+    const capped = (avail * E_O2) / (dHc * dt);
+    this.o2LimitedNow++;
+    this.o2LimitedEver++;
+    if (!this.o2Low || this.o2Low.length < this.n) { const o = new Float64Array(Math.max(64, this.n)); if (this.o2Low) o.set(this.o2Low); this.o2Low = o; }
+    if (capped < 0.01 * md) {
+      this.o2Low[i] += dt;
+      if (this.o2Low[i] >= 2) { this.set(i, FS.extinguished); this.o2Low[i] = 0; return 0; }
+    } else this.o2Low[i] = 0;
+    return capped;
+  }
+
+  /**
+   * Phase 29: a room's gas follows the outdoor density through its leaks (constant volume): gas that
+   * leaves takes its O₂ / soot share outdoors, gas that enters is outdoor air.
+   */
+  rescaleRoom(r: number, rho: number) {
+    const R = this.rooms[r];
+    const target = rho * R.V;
+    if (!(R.gas > 0) || target === R.gas) return;
+    if (target < R.gas) {
+      const f = 1 - target / R.gas;
+      const o = R.o2 * f, sk = R.soot * f;
+      R.o2 -= o; R.soot -= sk;
+      // Room gas leaving at its own O₂ fraction: the outdoor deficit changes by (Y_air·dm − O₂ out).
+      if (R.air >= 0) this.o2def[R.air] = Math.max(0, this.o2def[R.air] + Y_O2_AIR * (R.gas - target) - o);
+      this.toOutdoorSoot(R.air, sk);
+    } else {
+      const dm = target - R.gas;
+      R.o2 += this.outdoorY(R.air) * dm;
+      // The outdoor air that entered took its share of the column's deficit.
+      if (R.air >= 0) { const air = this.tw.air; this.o2def[R.air] *= Math.max(0, 1 - dm / (air.rhoAt(R.air) * air.H * air.cellArea)); }
+    }
+    R.gas = target;
+  }
+
+  /** Phase 29: the removed share of a column's air took its O₂ deficit with it (kg returned). */
+  removeAirShare(a: number, share: number): number {
+    const d = this.o2def[a] * share;
+    this.o2def[a] -= d;
+    return d;
+  }
+
   /** Outdoor O₂ mass fraction at an air column (−1: ambient). */
   outdoorY(a: number): number {
     if (a < 0) return Y_O2_AIR;
     const air = this.tw.air;
-    const m = air.rho * air.H * air.cellArea;
+    const m = air.rhoAt(a) * air.H * air.cellArea;
     return Math.max(0, Y_O2_AIR - this.o2def[a] / m);
   }
 
@@ -673,17 +746,27 @@ export class FireWorld {
    * Outdoor smoke and O₂ deficit after the thermal step: buoyant venting of warm columns (the same
    * velocity scale as the air layer's heat) and transport by the mean wind (donor cell, CFL steps).
    */
-  transportOutdoor(dt: number, u: number, w: number) {
+  transportOutdoor(dt: number, u: number, w: number, faces?: { fx: Float64Array; fz: Float64Array }) {
     const air = this.tw.air, L = this.ledger;
     for (let a = 0; a < air.count; a++) {
       if (this.soot[a] === 0 && this.o2def[a] === 0) continue;
-      const v = buoyantVelocity(air.H, air.T(a) - air.Tref, air.Tref);
+      const v = buoyantVelocity(air.H, air.excess(a), air.Tref);
       const f = 1 - Math.exp((-v * dt) / air.H);
       if (f <= 0) continue;
       const s = this.soot[a] * f;
       this.soot[a] -= s;
       L.smokeVented += s;
+      this.o2DeficitVented += this.o2def[a] * f;
       this.o2def[a] -= this.o2def[a] * f;
+    }
+    if (faces) {
+      // Phase 29: the atmosphere's layer flow (background wind + column flow + convergence).
+      const g = { nx: air.nx, nz: air.nz, dx: 5 };
+      const n = substepsFor(courant(g, faces.fx, faces.fz, dt));
+      L.smokeAdvected += advectFaces(g, this.soot, faces.fx, faces.fz, dt, n, this.tmp).out;
+      this.o2DeficitOut += advectFaces(g, this.o2def, faces.fx, faces.fz, dt, n, this.tmp).out;
+      this.tally();
+      return;
     }
     L.smokeAdvected += this.advect(this.soot, u, w, dt);
     this.advect(this.o2def, u, w, dt);

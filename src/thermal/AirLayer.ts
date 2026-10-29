@@ -16,8 +16,16 @@
  * The temperature field is the air TEMPERATURE; surfaces have their own (they are never confused).
  * No 3-D flow, no compressibility, no stratification inside the layer, no horizontal eddy diffusion
  * beyond the numerical diffusion of the upwind scheme.
+ *
+ * Phase 29 (atmosphere experiments only — all null otherwise, so every Phase 26–28 path is unchanged):
+ * the layer's mass, hence its heat capacity, follows the atmosphere's column mass per column (`Ca`),
+ * with its density (`rhoA`) and pressure ratio to the standard pressure (`prA`, convection); buoyant
+ * venting compares the layer with the free atmosphere above it (`ventRef`, cooled by an atmospheric
+ * removal), and the transport uses the atmosphere's face velocities (advectFaces). The temperature
+ * field stays owned here.
  */
 import { GRAVITY } from '@/core/units';
+import { advectFaces, courant, substepsFor } from '@/atmosphere/grid';
 import { CP_AIR } from './units';
 
 export const AIR_CELL = 5;
@@ -37,6 +45,16 @@ export class AirLayer {
   private readonly tmp: Float64Array;
   /** Peak temperature per column (K). */
   readonly Tpeak: Float64Array;
+  /** Phase 29: per-column heat capacity (J/K), density (kg/m³), pressure ratio — null without an atmosphere. */
+  Ca: Float64Array | null = null;
+  rhoA: Float64Array | null = null;
+  prA: Float64Array | null = null;
+  /** Phase 29: mean pressure ratio (columns outside the layer / world). */
+  prMean = 1;
+  /** Phase 29: temperature of the free atmosphere above the layer (buoyant venting), null = Tref. */
+  ventRef: number | null = null;
+  /** Phase 29: temperature excess (K) of the background air entering through the edges (null = ambient = 0). */
+  inflowExcess: number | null = null;
 
   constructor(
     readonly originX: number, readonly originZ: number, width: number, depth: number, readonly H: number,
@@ -63,7 +81,27 @@ export class AirLayer {
   }
 
   T(a: number): number {
-    return a < 0 ? this.Tref : this.Tref + this.E[a] / this.C;
+    return a < 0 ? this.Tref : this.Tref + this.E[a] / (this.Ca ? this.Ca[a] : this.C);
+  }
+
+  /** Heat capacity of a column (J/K). */
+  cap(a: number): number {
+    return this.Ca ? this.Ca[a] : this.C;
+  }
+
+  /** Air density of a column (kg/m³) — the constructor's density without an atmosphere. */
+  rhoAt(a: number): number {
+    return this.rhoA && a >= 0 ? this.rhoA[a] : this.rho;
+  }
+
+  /** Pressure ratio to the standard pressure at a column (convection), 1 without an atmosphere. */
+  prAt(a: number): number {
+    return this.prA ? (a >= 0 ? this.prA[a] : this.prMean) : 1;
+  }
+
+  /** Temperature excess over the air the layer vents into (buoyancy), K. */
+  excess(a: number): number {
+    return this.T(a) - (this.ventRef ?? this.Tref);
   }
 
   /**
@@ -71,6 +109,7 @@ export class AirLayer {
    * returns the largest rate of the columns including what their surfaces couple (1/s).
    */
   vent(closed: boolean): { lost: number; maxRate: number } {
+    if (this.Ca) return this.ventAtmos(closed);
     let lost = 0, maxRate = 0;
     const A = this.cellArea, k = this.rho * CP_AIR * A, gH = GRAVITY * this.H / this.Tref;
     for (let a = 0; a < this.count; a++) {
@@ -87,6 +126,47 @@ export class AirLayer {
       this.gS[a] = 0;
     }
     return { lost, maxRate };
+  }
+
+  /** Phase 29 venting: per-column density and capacity, relative to the free atmosphere above. */
+  private ventAtmos(closed: boolean): { lost: number; maxRate: number } {
+    let lost = 0, maxRate = 0;
+    const A = this.cellArea, gH = GRAVITY * this.H / this.Tref, Ca = this.Ca!, rho = this.rhoA!;
+    const ref = (this.ventRef ?? this.Tref) - this.Tref;
+    for (let a = 0; a < this.count; a++) {
+      const dT = this.E[a] / Ca[a] - ref;
+      if (!closed && dT > 0) {
+        const k = rho[a] * CP_AIR * A;
+        const w = Math.sqrt(gH * dT);
+        const q = k * w * dT;
+        this.dE[a] -= q;
+        lost += q;
+        this.gS[a] += 1.5 * k * w;
+      }
+      const r = this.gS[a] / Ca[a];
+      if (r > maxRate) maxRate = r;
+      this.gS[a] = 0;
+    }
+    return { lost, maxRate };
+  }
+
+  /** Buoyant updraft velocity of a column (m/s, 0 when not warmer than the air above) — the venting's w. */
+  updraft(a: number): number {
+    const dT = this.excess(a);
+    return dT > 0 ? Math.sqrt((GRAVITY * this.H * dT) / this.Tref) : 0;
+  }
+
+  /**
+   * Phase 29: donor-cell transport by the atmosphere's face velocities (m/s; x-faces (nx+1)·nz,
+   * z-faces nx·(nz+1)) with CFL sub-steps. Inflow is ambient air (no perturbation); returns the
+   * energy that left through the edges (J).
+   */
+  advectFaces(fx: Float64Array, fz: Float64Array, dt: number): { out: number; moved: number; substeps: number } {
+    const g = { nx: this.nx, nz: this.nz, dx: AIR_CELL };
+    const n = substepsFor(courant(g, fx, fz, dt));
+    const ex = this.inflowExcess, Ca = this.Ca;
+    const r = advectFaces(g, this.E, fx, fz, dt, n, this.tmp, ex && Ca ? (a) => Ca[a] * ex : undefined);
+    return { ...r, substeps: n };
   }
 
   apply(dt: number) {

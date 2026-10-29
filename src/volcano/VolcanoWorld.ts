@@ -65,6 +65,16 @@ export interface VolcanoEnv {
   rain(x: number, z: number): number;
   /** Ground height of the runtime terrain (m). */
   ground(x: number, z: number): number;
+  /**
+   * Phase 29 (atmosphere experiments only): the local air for ash and bombs — computed flow added to the
+   * wind profile, settling in the local density / viscosity with slip, bombs' drag in the local density.
+   */
+  atmos?: {
+    velocity(x: number, z: number, h: number, out: [number, number]): [number, number];
+    /** Terminal velocity of an ash size class at a point (m/s), age-limited by free fall. */
+    settling(cls: number, x: number, z: number, h: number): number;
+    density(x: number, z: number, h: number): number;
+  };
 }
 
 /** Things that can intercept falling material before it reaches the ground (adapter: roofs, objects). */
@@ -98,6 +108,7 @@ export class VolcanoWorld {
   private tot = { bombsLaunched: 0, bombEnergyLaunched: 0, ashReleased: 0, plumeHeat: 0, bombsCaught: 0, bombCaughtEnergy: 0, ashCaught: 0, outBombs: 0, outBombEnergy: 0, outAsh: 0, gas: 0, latentSupplied: 0, potentialSupplied: 0 };
   catchers: Catchers = {};
   private nextBomb = 1;
+  private readonly uv: [number, number] = [0, 0];
   time = 0;
   /** Cost of the last step (ms) by part. */
   readonly cost = { flow: 0, cool: 0, ash: 0, bombs: 0 };
@@ -186,7 +197,7 @@ export class VolcanoWorld {
         const tl = e.start + Math.min(e.launches * LAUNCH_PERIOD, Math.max(b, 0));
         e.vents.forEach((v, k) => {
           if (v.bombMass <= 0) return;
-          const list = launch(k + 97 * this.eruptions.indexOf(e), e.launches, v.bombMass, v.bombEnergy, v.P, tl, env.ground, this.box, () => this.nextBomb++);
+          const list = launch(k + 97 * this.eruptions.indexOf(e), e.launches, v.bombMass, v.bombEnergy, v.P, tl, env.ground, this.box, () => this.nextBomb++, env.atmos?.density(v.P[0], v.P[2], 10));
           for (const bmb of list) this.bombs.push(bmb);
           this.tot.bombsLaunched += v.bombMass;
           this.tot.bombEnergyLaunched += v.bombEnergy;
@@ -246,12 +257,20 @@ export class VolcanoWorld {
   private stepAsh(t: number, dt: number, env: VolcanoEnv) {
     const f = this.field;
     let w = 0;
+    const at = env.atmos;
     for (const p of this.puffs) {
       const yg = env.ground(p.x, p.z);
       const U = windAt(env.u10, p.y - yg);
       p.x += U * env.flowX * dt;
       p.z += U * env.flowZ * dt;
-      p.y -= VS[p.cls] * dt;
+      if (at) {
+        const h = p.y - yg;
+        at.velocity(p.x, p.z, h, this.uv);
+        p.x += this.uv[0] * dt;
+        p.z += this.uv[1] * dt;
+        // Free fall bounds the fall speed shortly after release (thin air: terminal speed is large).
+        p.y -= Math.min(at.settling(p.cls, p.x, p.z, h), GRAVITY * Math.max(dt, t - p.born)) * dt;
+      } else p.y -= VS[p.cls] * dt;
       p.sigma = Math.sqrt(p.sigma * p.sigma + 2 * EDDY_K * dt);
       const outside = p.x < this.box.x0 || p.x > this.box.x1 || p.z < this.box.z0 || p.z > this.box.z1 || p.y > CEILING;
       if (outside) { this.tot.outAsh += p.mass; continue; }

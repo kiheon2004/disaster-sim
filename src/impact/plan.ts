@@ -56,7 +56,13 @@ export function profileAtPoint(t: TerrainData, x: number, z: number): Mechanical
   return mechanicalOf(t.soil[iz * t.nx + ix]);
 }
 
-export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number, withEjecta = true): ImpactPlan {
+/**
+ * Phase 29 (opt-in coupling of an atmosphere experiment): `air.rho0` scales the entry atmosphere (its
+ * sea-level density), `air.rhoGround` is the density the ejecta fly through. Absent: Phase 23 exactly.
+ */
+export interface PlanAir { rho0: number; rhoGround: number }
+
+export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number, withEjecta = true, air?: PlanAir): ImpactPlan {
   const s = samplerFor(terrain);
   const ground = (x: number, z: number) => s.sampleHeight(x, z);
   const projectile = resolveProjectile(spec);
@@ -65,7 +71,7 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
   let entry: EntryResult | null = null;
   let speed = spec.speed, mass = projectile.mass, swarm = projectile.diameter, entryTime = 0, angle = spec.angle;
   if (spec.entry === 'atmosphere') {
-    entry = integrateEntry(projectile, spec.speed, spec.angle, HANDOVER_ALTITUDE);
+    entry = air ? integrateEntry(projectile, spec.speed, spec.angle, HANDOVER_ALTITUDE, air.rho0) : integrateEntry(projectile, spec.speed, spec.angle, HANDOVER_ALTITUDE);
     speed = entry.speed; mass = entry.mass; swarm = entry.diameter; entryTime = entry.time; angle = entry.angle;
     if (entry.ablated) warnings.push({ key: 'impact.warn.ablated' });
     if (entry.breakup) warnings.push({ key: 'impact.warn.breakup', params: { z: (entry.breakup.altitude / 1000).toFixed(1) } });
@@ -98,7 +104,8 @@ export function planImpact(spec: ImpactSpec, terrain: TerrainData, seed: number,
     if (withEjecta) {
       parcels = generateParcels({ crater, center: [px, py, pz], delta: projectile.density, rho: target.density, rock: target.id === 'rock', angle: arc.angle, azimuth: spec.azimuth, seed: spec.seed ?? seed });
       for (const p of parcels) {
-        fly(p, ground, b, target.density);
+        if (air) fly(p, ground, b, target.density, air.rhoGround);
+        else fly(p, ground, b, target.density);
         ejectaKE += 0.5 * p.mass * p.speed * p.speed;
         ejectaMass += p.mass;
         if (p.outflow) ejectaOut += p.mass;

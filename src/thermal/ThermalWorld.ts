@@ -143,6 +143,11 @@ export class ThermalWorld {
   flowZ = 0;
   /** Adiabatic world (tests): no boundary exchange of any kind. */
   readonly closed: boolean;
+  /**
+   * Phase 29: the atmosphere's total layer face velocities (m/s) for the air transport — null without
+   * an atmosphere experiment (the uniform mean-wind advection of Phase 26 is used).
+   */
+  flow: { fx: Float64Array; fz: Float64Array } | null = null;
   private readonly insulated: boolean;
   time = 0;
   steps = 0;
@@ -195,7 +200,7 @@ export class ThermalWorld {
 
   // ── Targets ────────────────────────────────────────────
 
-  addCompartment(volume: number, air: number, ach: number, airDensity = this.air.rho): number {
+  addCompartment(volume: number, air: number, ach: number, airDensity = this.air.rhoAt(air)): number {
     const C = airDensity * CP_AIR * volume;
     this.comps.push({ E: 0, C, air, Gv: (C * ach) / 3600, alive: true, dE: 0, gS: 0, Gx: 0, eps: 0 });
     return this.comps.length - 1;
@@ -340,9 +345,9 @@ export class ThermalWorld {
     if (rate > maxRate) maxRate = rate;
     n = Math.max(n, m);
     if (n > this.maxSubsteps) this.maxSubsteps = n;
-    // Air advection by the mean wind at mid-layer.
+    // Air advection by the mean wind at mid-layer (Phase 29: by the atmosphere's layer flow, which includes it).
     const U = this.u10 * Math.pow(Math.max(0.5, this.air.H / 2) / 10, 0.14);
-    const adv = this.closed ? { out: 0, moved: 0, substeps: 0 } : this.air.advect(U * this.flowX, U * this.flowZ, dt);
+    const adv = this.closed ? { out: 0, moved: 0, substeps: 0 } : this.flow ? this.air.advectFaces(this.flow.fx, this.flow.fz, dt) : this.air.advect(U * this.flowX, U * this.flowZ, dt);
     L.lost.airAdvection += adv.out;
     L.transfers.airAdvection += adv.moved;
     this.time += dt;
@@ -362,7 +367,7 @@ export class ThermalWorld {
     const tr = this.terrain;
     const cx = tr.originX + 0.5 * tr.cell, cz = tr.originZ + 0.5 * tr.cell;
     const ix2a = (ix: number, iz: number) => air.index(cx + ix * tr.cell, cz + iz * tr.cell);
-    const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc };
+    const env = { closed: this.closed, noSurface: this.insulated, u2, water: this.water, airIndex: ix2a, airT: (a: number) => air.T(a), toAir, acc, pr: air.prA ? (a: number) => air.prAt(a) : undefined };
     const evaluate = () => {
       let r = tr.fluxes(env);
       // Ground contacts (foundations, slabs on grade, rubble heaps, whole-building nodes): slow
@@ -371,7 +376,7 @@ export class ThermalWorld {
       const rb = this.bodies.stability();
       if (rb > r) r = rb;
       this.sphereExchanges(sources, true);
-      for (let a = 0; a < air.count; a++) { const q = air.gS[a] / air.C; if (q > r) r = q; air.gS[a] = 0; }
+      for (let a = 0; a < air.count; a++) { const q = air.gS[a] / air.cap(a); if (q > r) r = q; air.gS[a] = 0; }
       return r;
     };
     let maxRate = evaluate();
@@ -406,7 +411,8 @@ export class ThermalWorld {
         }
         if (x.aConv > 0) {
           const gas = x.kind === TK.air || x.kind === TK.comp;
-          const h = gas ? hSphere(Ts, T, x.kind === TK.air ? this.u10 : 0, 2 * x.L) : x.kind === TK.body ? hBox(T, Ts, 0, x.aConv, 0, 0, x.L, x.L, x.L) : hGround(T, Ts, 0);
+          const pr = this.air.prA ? this.air.prAt(x.kind === TK.air ? x.index : x.kind === TK.body ? this.bodies.air[x.index] : -1) : 1;
+          const h = gas ? hSphere(Ts, T, x.kind === TK.air ? this.u10 : 0, 2 * x.L, pr) : x.kind === TK.body ? hBox(T, Ts, 0, x.aConv, 0, 0, x.L, x.L, x.L, pr) : hGround(T, Ts, 0, 1, pr);
           const qc = h * x.aConv * (Ts - T);
           q += qc;
           G += (4 / 3) * h * x.aConv;
@@ -429,6 +435,7 @@ export class ThermalWorld {
       closed, acc, airT: (a) => air.T(a), toAir, compT: (c) => this.compT(c),
       toComp: (c, W, G) => this.toComp(c, W, G),
       compEps: this.hasGasRadiation ? (c) => (c >= 0 && this.comps[c].alive ? this.comps[c].eps : 0) : undefined,
+      pr: air.prA ? (a) => air.prAt(a) : undefined,
     });
     // Rooms: ventilation with the outdoors.
     for (const cp of this.comps) {
@@ -548,6 +555,50 @@ export class ThermalWorld {
     else this.ledger.lost.aboveLayer += cp.E;
     cp.E = 0;
     cp.alive = false;
+  }
+
+  // ── Phase 29: atmospheric mass changes ─────────────────
+
+  /**
+   * Set an air column to a new heat capacity (its new mass, J/K) and absolute temperature (K) from the
+   * atmosphere's mass change / pressure work; the change of its heat is booked `airMass`.
+   */
+  setAirColumn(a: number, C: number, T: number) {
+    const air = this.air;
+    const E = C * (T - this.Tref);
+    this.ledger.airMass += E - air.E[a];
+    air.E[a] = E;
+    air.Ca![a] = C;
+  }
+
+  /**
+   * A room's air follows the outdoor pressure through its leaks (no overpressure in a room): its mass
+   * becomes `C` (J/K of heat capacity). Air that leaves takes its share of the room's heat to the
+   * outdoor column, air that enters brings the outdoor column's; the air that stays is expanded /
+   * compressed adiabatically by `q` = p'/p (factor q^(R/c_p) on its absolute temperature) — booked `airMass`.
+   */
+  rescaleCompartment(c: number, C: number, q: number, kappa: number) {
+    const cp = this.comps[c];
+    if (!cp.alive || C === cp.C) return;
+    if (C < cp.C) {
+      const moved = cp.E * (1 - C / cp.C);
+      cp.E -= moved;
+      if (cp.air >= 0) this.air.E[cp.air] += moved; else this.ledger.lost.aboveLayer += moved;
+    } else if (cp.air >= 0) {
+      const Ta = this.air.T(cp.air);
+      const moved = (C - cp.C) * (Ta - this.Tref);
+      this.air.E[cp.air] -= moved;
+      cp.E += moved;
+    }
+    const scaleG = C / cp.C;
+    cp.C = C;
+    cp.Gv *= scaleG;
+    if (q !== 1) {
+      const T = this.Tref + cp.E / C;
+      const E2 = C * (T * Math.pow(q, kappa) - this.Tref);
+      this.ledger.airMass += E2 - cp.E;
+      cp.E = E2;
+    }
   }
 
   /** Phase 27: room gas radiation is evaluated (set when a fire exists). */
