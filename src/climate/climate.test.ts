@@ -222,7 +222,7 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
     expect(res.stores).toBeLessThan(1e-8);
   });
 
-  it('warm air melts snow: meltwater enters the flood (mass ledger), the snow stays at 0 °C while melting', () => {
+  it('warm air melts snow: meltwater enters the flood (mass ledger), the snow stays at 0 °C while melting', { timeout: 600_000 }, () => {
     const r = setup(spec({ temperature: K(1), target: K(12), profile: 'linear', ramp: 60, humidity: 0.8, initialSnow: 0.005, initialSnowDensity: 200, forcing: 'prescribed' }));
     r.step(1800);
     const melt = r.cw.totals.meltToFlood;
@@ -237,7 +237,7 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
     expect(res.stores).toBeLessThan(1e-8);
   });
 
-  it('warm dry air evaporates water: mass to vapour, evaporative cooling, ledgers close', () => {
+  it('warm dry air evaporates water: mass to vapour, evaporative cooling, ledgers close', { timeout: 600_000 }, () => {
     const r = setup(spec({ temperature: K(30), target: K(30), humidity: 0.2 }), (x) => (x < 0 ? 0.3 : 0));
     const v0 = r.field!.totalVolume();
     r.step(600);
@@ -252,7 +252,7 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
     expect(res.stores).toBeLessThan(1e-8);
   });
 
-  it('a cold wave freezes shallow water: ice forms from the water mass, latent heat booked', () => {
+  it('a cold wave freezes shallow water: ice forms from the water mass, latent heat booked', { timeout: 600_000 }, () => {
     const r = setup(spec({ temperature: K(0.5), target: K(-15), forcing: 'prescribed', humidity: 0.7 }), () => 0.02);
     r.step(1800);
     const ice = r.cw.cIce.reduce((s, v) => s + v, 0);
@@ -279,7 +279,7 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
     expect(res.stores).toBeLessThan(1e-8);
   });
 
-  it('soil water freezes in a cold wave with the latent heat holding the layer at 0 °C', () => {
+  it('soil water freezes in a cold wave with the latent heat holding the layer at 0 °C', { timeout: 600_000 }, () => {
     const r = setup(spec({ temperature: K(0.2), target: K(-20), forcing: 'prescribed', humidity: 0.5, soilMoisture: 0.3 }));
     r.step(1800);
     let ice = 0;

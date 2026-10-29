@@ -28,7 +28,7 @@ import type { ThermalWorld } from '@/thermal/ThermalWorld';
 import type { SurfaceClimate } from '@/thermal/TerrainThermal';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
 import { hWaterSide, hGround } from '@/thermal/convection';
-import { CROWN_BREAK, C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
+import { CROWN_BREAK, FROST_BAND, C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
 import { ClimateForcing, type BackgroundState } from './forcing';
 import type { ClimateSpec } from './types';
 import { boilingPointWater, humidityFromRH, qSat, relativeHumidity, saturationAdjust, wetBulb } from './psychro';
@@ -855,8 +855,8 @@ export class ClimateWorld {
         const m = -dm;
         const vapAvail = a >= 0 ? this.vap[a] : Infinity;
         const got = Math.min(m, Math.max(0, vapAvail));
-        if (T0 < T_MELT) {
-          // Frost: deposition onto the bare surface (a thin ice cover).
+        if (T0 < T_MELT - FROST_BAND) {
+          // Frost: deposition onto a bare surface clearly below 0 °C (a thin ice cover); at the melting point: dew.
           const hs = C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (T0 - T_MELT);
           this.addFrozen(c, got, T0, true, RHO_ICE);
           this.water.transfers.deposition += got;
@@ -1116,7 +1116,9 @@ export class ClimateWorld {
       this.water.transfers.sublimation += m; this.last.sublimation += m;
     } else {
       const got = Math.min(-m, a >= 0 ? Math.max(0, this.vap[a]) : Infinity);
-      const hs = C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (Math.min(T, T_MELT) - T_MELT);
+      // On a wet (melting) cover the vapour condenses as liquid at 0 °C; on a frozen one it deposits as ice.
+      const wetC = this.cLiqOf(c) > 0;
+      const hs = wetC ? C_WATER * (T_MELT - this.Tref) : C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (Math.min(T, T_MELT) - T_MELT);
       this.cM[c] += got;
       this.cU[c] += got * (hs - C_WATER * (T_MELT - this.Tref));
       this.vaporExchangeStore(a, -got, hs, latentJ * (got / -m));
@@ -1361,7 +1363,7 @@ export class ClimateWorld {
           this.water.transfers.sublimation += m;
         } else {
           const got = Math.min(-em, a >= 0 ? Math.max(0, this.vap[a]) : Infinity);
-          const hs = C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (Math.min(r.T, T_MELT) - T_MELT);
+          const hs = liq0 > 0 ? C_WATER * (T_MELT - this.Tref) : C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (Math.min(r.T, T_MELT) - T_MELT);
           this.sM[k] += got;
           this.sU[k] += got * (hs - C_WATER * (T_MELT - this.Tref));
           this.vaporExchangeStore(a, -got, hs, r.qLatent * dtg * (got / -em));

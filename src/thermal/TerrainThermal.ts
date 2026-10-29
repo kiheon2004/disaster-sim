@@ -26,7 +26,7 @@ import { GROUND_EMISSIVITY, GROUND_THERMAL, SOIL_THERMAL, THERMAL_MATERIALS } fr
 import { hGround, hWaterSide } from './convection';
 import { SIGMA, C_WATER, RHO_WATER, CP_AIR } from './units';
 import { dqSatdT, qSat } from '@/climate/psychro';
-import { L_S, L_V, LEWIS, T_MELT } from '@/climate/constants';
+import { FROST_BAND, L_S, L_V, LEWIS, T_MELT } from '@/climate/constants';
 
 export const LAYERS = [0.02, 0.06, 0.18, 0.54] as const;
 export const NL = LAYERS.length;
@@ -477,7 +477,7 @@ export class TerrainThermal {
             let hr = closed ? 0 : eps * SIGMA * (T0 * T0 + Tsky * Tsky) * (T0 + Tsky);
             // Latent: evaporation of soil water through the soil resistance (soilWet), condensation (dew / frost)
             // on the surface without it; L_s for frost below 0 °C.
-            const ice = T0 < T_MELT;
+            const ice = T0 < T_MELT - FROST_BAND;
             const qs0 = qSat(T0, pa, ice);
             const cond0 = qs0 < qa;
             const k = hc * kLe * (cond0 ? 1 : cl.soilWet[c]);

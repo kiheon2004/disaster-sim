@@ -65,3 +65,10 @@ export const PAVEMENT_FILM = 0.0005;
 
 /** Snow + ice on a crown (kg per m² of crown projection) from which stems / large branches break — indicative (Nykänen et al. 1997: ≈ 20–30 kg/m²). */
 export const CROWN_BREAK = 20;
+
+/**
+ * Width of the melting band of a bare surface (K): a surface within it is at the melting point (frozen soil holding
+ * water and ice) and condenses DEW (liquid); frost needs a surface clearly below 0 °C. Without it, frost formed on
+ * thawing ground in warm humid air and its few grams kept the cell covered — cut off from the air, never thawing.
+ */
+export const FROST_BAND = 0.05;
