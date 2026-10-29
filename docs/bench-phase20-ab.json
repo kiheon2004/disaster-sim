@@ -1,0 +1,316 @@
+{
+ "date": "2026-10-11",
+ "note": "Phase 19 build = 2e76580 (vite preview :4184), Phase 20 build = this branch (:4183), runs alternated P19, P20, P19, P20 on the same machine; load = os.loadavg at start / end of each run. Headless: src/bench/natureTick.bench.test.ts in both checkouts, 3 runs each, ms per 1/60 s step after 2 s warm-up.",
+ "browser": [
+  {
+   "label": "P19",
+   "url": "http://localhost:4184/",
+   "load": [
+    39.4,
+    26.2,
+    14.1
+   ],
+   "scenes": [
+    {
+     "scene": "mixedCity",
+     "objects": 164,
+     "editorFps": 60.1,
+     "drawCalls": 55,
+     "heapMB": 34.4,
+     "saveMs": 13,
+     "loadMs": 133,
+     "fileKB": 647,
+     "simLoadMs": 529,
+     "simFps": 58.7,
+     "tickMs": 2.17,
+     "waterMs": 0.31,
+     "simSpeed": 1,
+     "simHeapMB": 59.3
+    },
+    {
+     "scene": "mountain",
+     "objects": 290,
+     "editorFps": 60,
+     "drawCalls": 18,
+     "heapMB": 52.6,
+     "saveMs": 29,
+     "loadMs": 181,
+     "fileKB": 502,
+     "simLoadMs": 279,
+     "simFps": 60.1,
+     "tickMs": 1.91,
+     "waterMs": 0.31,
+     "simSpeed": 1,
+     "simHeapMB": 60.1
+    },
+    {
+     "scene": "phase18RoadsBuildings1000",
+     "objects": 1000,
+     "editorFps": 60,
+     "drawCalls": 29,
+     "heapMB": 62.1,
+     "saveMs": 10,
+     "loadMs": 248,
+     "fileKB": 744,
+     "simLoadMs": 513,
+     "simFps": 30.5,
+     "tickMs": 20.91,
+     "waterMs": 0,
+     "simSpeed": 0.51,
+     "simHeapMB": 80.6
+    }
+   ],
+   "loadEnd": [
+    23.6,
+    23.7,
+    13.7
+   ]
+  },
+  {
+   "label": "P20",
+   "url": "http://localhost:4183/",
+   "load": [
+    19.2,
+    22.7,
+    13.5
+   ],
+   "scenes": [
+    {
+     "scene": "mixedCity",
+     "objects": 164,
+     "editorFps": 60.3,
+     "drawCalls": 55,
+     "heapMB": 35.1,
+     "saveMs": 12,
+     "loadMs": 138,
+     "fileKB": 647,
+     "simLoadMs": 661,
+     "simFps": 56.7,
+     "tickMs": 4.06,
+     "waterMs": 0.56,
+     "simSpeed": 1,
+     "simHeapMB": 60.1
+    },
+    {
+     "scene": "mountain",
+     "objects": 290,
+     "editorFps": 59.7,
+     "drawCalls": 18,
+     "heapMB": 53.2,
+     "saveMs": 27,
+     "loadMs": 307,
+     "fileKB": 502,
+     "simLoadMs": 547,
+     "simFps": 54.5,
+     "tickMs": 5.85,
+     "waterMs": 0.82,
+     "simSpeed": 0.92,
+     "simHeapMB": 61
+    },
+    {
+     "scene": "phase18RoadsBuildings1000",
+     "objects": 1000,
+     "editorFps": 60,
+     "drawCalls": 29,
+     "heapMB": 62.7,
+     "saveMs": 10,
+     "loadMs": 260,
+     "fileKB": 744,
+     "simLoadMs": 462,
+     "simFps": 43.5,
+     "tickMs": 17.35,
+     "waterMs": 0,
+     "simSpeed": 0.63,
+     "simHeapMB": 81.8
+    }
+   ],
+   "loadEnd": [
+    20.3,
+    22.5,
+    13.9
+   ]
+  },
+  {
+   "label": "P19",
+   "url": "http://localhost:4184/",
+   "load": [
+    18.2,
+    22,
+    13.8
+   ],
+   "scenes": [
+    {
+     "scene": "mixedCity",
+     "objects": 164,
+     "editorFps": 60.3,
+     "drawCalls": 55,
+     "heapMB": 34.5,
+     "saveMs": 28,
+     "loadMs": 284,
+     "fileKB": 647,
+     "simLoadMs": 3634,
+     "simFps": 57.8,
+     "tickMs": 3.19,
+     "waterMs": 0.46,
+     "simSpeed": 1,
+     "simHeapMB": 59.5
+    },
+    {
+     "scene": "mountain",
+     "objects": 290,
+     "editorFps": 60.1,
+     "drawCalls": 18,
+     "heapMB": 52.5,
+     "saveMs": 11,
+     "loadMs": 142,
+     "fileKB": 502,
+     "simLoadMs": 198,
+     "simFps": 46.9,
+     "tickMs": 4.42,
+     "waterMs": 0.67,
+     "simSpeed": 0.99,
+     "simHeapMB": 60
+    },
+    {
+     "scene": "phase18RoadsBuildings1000",
+     "objects": 1000,
+     "editorFps": 60.1,
+     "drawCalls": 29,
+     "heapMB": 62.1,
+     "saveMs": 10,
+     "loadMs": 241,
+     "fileKB": 744,
+     "simLoadMs": 510,
+     "simFps": 42.6,
+     "tickMs": 17.39,
+     "waterMs": 0,
+     "simSpeed": 0.62,
+     "simHeapMB": 81.2
+    }
+   ],
+   "loadEnd": [
+    13.3,
+    20.3,
+    13.5
+   ]
+  },
+  {
+   "label": "P20",
+   "url": "http://localhost:4183/",
+   "load": [
+    12.9,
+    20.1,
+    13.5
+   ],
+   "scenes": [
+    {
+     "scene": "mixedCity",
+     "objects": 164,
+     "editorFps": 60.2,
+     "drawCalls": 55,
+     "heapMB": 35.1,
+     "saveMs": 18,
+     "loadMs": 211,
+     "fileKB": 647,
+     "simLoadMs": 911,
+     "simFps": 52.1,
+     "tickMs": 6.1,
+     "waterMs": 0.77,
+     "simSpeed": 0.95,
+     "simHeapMB": 60
+    },
+    {
+     "scene": "mountain",
+     "objects": 290,
+     "editorFps": 60,
+     "drawCalls": 18,
+     "heapMB": 53.1,
+     "saveMs": 24,
+     "loadMs": 186,
+     "fileKB": 502,
+     "simLoadMs": 314,
+     "simFps": 50.3,
+     "tickMs": 5.91,
+     "waterMs": 0.76,
+     "simSpeed": 0.96,
+     "simHeapMB": 60.4
+    },
+    {
+     "scene": "phase18RoadsBuildings1000",
+     "objects": 1000,
+     "editorFps": 60.1,
+     "drawCalls": 29,
+     "heapMB": 62.7,
+     "saveMs": 20,
+     "loadMs": 368,
+     "fileKB": 744,
+     "simLoadMs": 794,
+     "simFps": 40.4,
+     "tickMs": 17.07,
+     "waterMs": 0,
+     "simSpeed": 0.69,
+     "simHeapMB": 81.3
+    }
+   ],
+   "loadEnd": [
+    14.3,
+    19.6,
+    13.6
+   ]
+  }
+ ],
+ "headless": {
+  "P20": {
+   "mixedUrbanNatural": [
+    [
+     4.13,
+     2.27,
+     2.18
+    ],
+    [
+     4.47,
+     3.59,
+     2.48
+    ]
+   ],
+   "mountainValley": [
+    [
+     2.17,
+     2.07,
+     2.93
+    ],
+    [
+     2.13,
+     2.44,
+     2.09
+    ]
+   ]
+  },
+  "P19": {
+   "mixedUrbanNatural": [
+    [
+     4.69,
+     2.21,
+     2.58
+    ],
+    [
+     3.39,
+     2.36,
+     2.31
+    ]
+   ],
+   "mountainValley": [
+    [
+     5.64,
+     2.11,
+     2.04
+    ],
+    [
+     2.12,
+     2.13,
+     5.02
+    ]
+   ]
+  }
+ }
+}
