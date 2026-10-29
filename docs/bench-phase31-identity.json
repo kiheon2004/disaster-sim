@@ -483,6 +483,6 @@
   }
  ],
  "base": "4d8da10 (audit/phase30 worktree)",
- "new": "main 2fac595..8c967cc working tree (Phase 31)",
+ "new": "main 02ed918 (Phase 31 final code; rerun gave the same comparison as the first run at ca8d8a6)",
  "note": "commonDiff = leaves present in both builds with different values (timing leaves excluded); onlyNew = new keys (gravity channel, kM, roofCap, carried, contributors.gravity, solver g/tilt). p31 scenes 17/19: 8 diffs each = roof panel util/uM arrays (roof check under roof snow). p31i: intended R1 change."
 }
