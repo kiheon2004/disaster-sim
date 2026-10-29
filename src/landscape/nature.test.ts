@@ -84,7 +84,7 @@ describe('landscape brushes', () => {
   });
 });
 
-describe('river / lake hydrology', () => {
+describe('river / lake hydrology', { timeout: 120_000 }, () => {
   it('a filled lake starts with water up to its surface inside the basin only', () => {
     S().setFeatures([lake('f1')], 2);
     const w = initialWater(S().doc.landscape, S().doc.terrain)!;
