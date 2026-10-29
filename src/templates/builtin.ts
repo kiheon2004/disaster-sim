@@ -151,9 +151,8 @@ export function buildTemplate(kind: BuiltinTemplate, seed: number, opts: Templat
       break;
     }
   }
-  const s = st.getState();
-  s.updateSimulationSettings({ seed });
+  st.getState().updateSimulationSettings({ seed });
   const now = opts.now ?? new Date().toISOString();
-  const doc = normalizeIds(s.doc, kind, seed);
+  const doc = normalizeIds(st.getState().doc, kind, seed);
   return { ...doc, meta: { name: opts.name ?? '', createdAt: now, updatedAt: now } };
 }

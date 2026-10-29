@@ -256,7 +256,7 @@ export const enBlueprints: Record<keyof typeof koBlueprints, string> = {
   'bp.tpl.save': 'Save',
   'bp.tpl.seed': 'Seed',
   'bp.tpl.applyNew.confirm': 'Close the current world and open “{name}” as a new world? Unsaved changes remain only in the autosave.',
-  'bp.tpl.applyReplace.confirm': 'Replace the terrain, roads, nature and objects of the current world with “{name}”? One undo step reverts this. The environment settings (and an included experiment setup) are replaced too and are NOT part of the undo history.',
+  'bp.tpl.applyReplace.confirm': 'Replace the terrain, roads, nature, objects and environment settings (and the template’s experiment setup, if any) of the current world with “{name}”? One undo reverts all of it together.',
   'tpl.builtin.emptyFlat.name': 'Empty flat world',
   'tpl.builtin.emptyFlat.desc': 'A flat, empty world to build from scratch.',
   'tpl.builtin.smallTown.name': 'Small town',

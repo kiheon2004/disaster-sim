@@ -262,7 +262,7 @@ export const koBlueprints = {
   'bp.tpl.save': '저장',
   'bp.tpl.seed': '시드',
   'bp.tpl.applyNew.confirm': '현재 월드를 닫고 “{name}”을(를) 새 월드로 엽니다. 저장하지 않은 변경은 자동 저장본에만 남습니다. 계속할까요?',
-  'bp.tpl.applyReplace.confirm': '현재 월드의 지형·도로·자연·오브젝트를 “{name}”(으)로 바꿉니다 — 실행 취소 1단계로 되돌릴 수 있습니다. 환경 설정(과 포함된 실험 설정)도 바뀌며 이것은 실행 취소 대상이 아닙니다. 계속할까요?',
+  'bp.tpl.applyReplace.confirm': '현재 월드의 지형·도로·자연·오브젝트와 환경 설정(및 템플릿에 포함된 실험 설정)을 “{name}”(으)로 바꿉니다. 실행 취소 한 번으로 이 모두가 함께 되돌아갑니다. 계속할까요?',
   'tpl.builtin.emptyFlat.name': '빈 평지',
   'tpl.builtin.emptyFlat.desc': '아무것도 없는 평평한 월드. 처음부터 직접 만듭니다.',
   'tpl.builtin.smallTown.name': '작은 마을',

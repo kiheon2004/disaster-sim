@@ -90,6 +90,43 @@ describe('world template files', () => {
     expect(S().doc.meta.name).toBe('New');
     expect(S().past.length).toBe(0);
   });
+
+  it('template applied over the current world: geometry, environment AND experiment setup are one undo step', () => {
+    S().setLocked(false);
+    S().newDocument();
+    const before = serializeDocument(S().doc);
+    const tdoc = buildTemplate('riverValley', 4, { now: NOW });
+    expect(tdoc.scenario.flood.rain).not.toBeNull();
+    const d = templateDocument(createTemplate(tdoc, { name: 'rv' }, true, { now: NOW, id: 'tpl_rv' }));
+    S().applyEdit({
+      remove: Object.keys(S().doc.objects), roads: d.roads,
+      landscape: { base: { heights: d.landscape.base.heights, ground: d.landscape.base.ground, soil: d.terrain.soil, settings: d.terrain.settings }, features: d.landscape.features, next: d.landscape.next },
+      add: Object.values(d.objects).map((o) => ({ type: o.type, seed: o.seed, params: o.params, building: o.building, transform: o.transform })),
+      settings: d.settings, scenario: d.scenario,
+    });
+    expect(S().past.length).toBe(1);
+    expect(S().doc.scenario.flood.rain?.intensity).toBe(80);
+    expect(S().doc.settings.simulation.seed).toBe(4);
+    const after = serializeDocument(S().doc);
+    S().undo();
+    const meta = (j: string) => JSON.stringify({ ...JSON.parse(j), meta: null });
+    expect(meta(serializeDocument(S().doc))).toBe(meta(before));
+    expect(S().doc.scenario.flood.rain).toBeNull();
+    S().redo();
+    expect(meta(serializeDocument(S().doc))).toBe(meta(after));
+  });
+
+  it('a settings-only edit is an undo step of its own', () => {
+    S().setLocked(false);
+    S().newDocument();
+    const s0 = S().doc.settings;
+    S().applyEdit({ settings: { ...s0, simulation: { ...s0.simulation, seed: 99 } } });
+    expect(S().doc.settings.simulation.seed).toBe(99);
+    S().undo();
+    expect(S().doc.settings.simulation.seed).toBe(s0.simulation.seed);
+    S().redo();
+    expect(S().doc.settings.simulation.seed).toBe(99);
+  });
 });
 
 describe('blueprint library', { timeout: 300_000 }, () => {

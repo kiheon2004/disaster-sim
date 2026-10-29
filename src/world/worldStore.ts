@@ -47,6 +47,12 @@ export interface HistoryEntry {
   roads: RoadNetwork;
   /** Terrain layers (Phase 19): features as they were + the layer arrays' patch (if any). */
   landscape: LandscapeEntry;
+  /**
+   * Phase 21: environment settings and the saved scenario (experiment / hazard setup) as they
+   * were — present only on steps that changed them (template applied to the current world), so
+   * undo / redo restore the whole world configuration together with its geometry.
+   */
+  config?: { settings: WorldDocument['settings']; scenario: WorldDocument['scenario'] };
 }
 
 export interface LandscapeEntry {
@@ -102,6 +108,12 @@ export interface WorldEdit {
    * Without it, objects are created where given and only follow ground they stood on before.
    */
   addSeat?: (number | null)[];
+  /**
+   * Phase 21: replace the environment settings (wind / water / simulation seed …) and / or the
+   * saved scenario (earthquake, flood, experiment plan) in the SAME undo step.
+   */
+  settings?: WorldDocument['settings'];
+  scenario?: WorldDocument['scenario'];
 }
 
 export interface MutationOptions {
@@ -303,9 +315,10 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     const l = entry.landscape;
     if (l.patch) applyLayerPatch(doc.landscape, doc.terrain.nx, l.patch, side);
     const landscape = { ...doc.landscape, features: l.features, next: l.next };
-    if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads, landscape };
+    const config = entry.config ? { settings: entry.config.settings, scenario: entry.config.scenario } : {};
+    if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads, landscape, ...config };
     applyPatch(doc.terrain, entry.terrain, side);
-    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads, landscape };
+    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads, landscape, ...config };
   };
 
   /**
@@ -416,28 +429,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     }
   };
 
-  const patchObject = (id: EntityId, fn: (o: WorldObject) => WorldObject, opts?: MutationOptions) => {
-    const objects = get().doc.objects;
-    const obj = objects[id];
-    if (!obj) return;
-    commit({ ...objects, [id]: fn(obj) }, opts);
-  };
-
-  return {
-    doc: createEmptyDocument(),
-    past: [],
-    future: [],
-    docVersion: 0,
-    terrainRect: null,
-
-    locked: false,
-    setLocked: (locked) => set({ locked }),
-
-    addObject: (input) => get().addObjects([input])[0],
-
-    addObjects: (inputs) => get().applyEdit({ add: inputs }),
-
-    applyEdit: (edit, opts) => {
+  /** The geometric part of an atomic edit (objects, roads, terrain layers) — see applyEdit. */
+  const applyGeometry = (edit: WorldEdit, opts?: MutationOptions): EntityId[] => {
       if (get().locked) return [];
       const objects = { ...get().doc.objects };
       let changed = false;
@@ -489,6 +482,46 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
         return ids;
       }
       if (changed) commit(seat ? seat(objects, samplerFor(get().doc.terrain)) : objects, opts);
+      return ids;
+      };
+
+  const patchObject = (id: EntityId, fn: (o: WorldObject) => WorldObject, opts?: MutationOptions) => {
+    const objects = get().doc.objects;
+    const obj = objects[id];
+    if (!obj) return;
+    commit({ ...objects, [id]: fn(obj) }, opts);
+  };
+
+  return {
+    doc: createEmptyDocument(),
+    past: [],
+    future: [],
+    docVersion: 0,
+    terrainRect: null,
+
+    locked: false,
+    setLocked: (locked) => set({ locked }),
+
+    addObject: (input) => get().addObjects([input])[0],
+
+    addObjects: (inputs) => get().applyEdit({ add: inputs }),
+
+    applyEdit: (edit, opts) => {
+      if (get().locked) return [];
+      if (!edit.settings && !edit.scenario) return applyGeometry(edit, opts);
+      // Configuration travels in the same undo step as the geometry (Phase 21).
+      const before = get().doc;
+      const lastBefore = get().past[get().past.length - 1];
+      const ids = applyGeometry(edit, opts);
+      const d = get().doc;
+      const doc: WorldDocument = { ...d, settings: edit.settings ? structuredClone(edit.settings) : d.settings, scenario: edit.scenario ? structuredClone(edit.scenario) : d.scenario };
+      const config = { settings: before.settings, scenario: before.scenario };
+      const past = get().past;
+      const last = past[past.length - 1];
+      const nextPast = last && last !== lastBefore
+        ? [...past.slice(0, -1), { ...last, config }]
+        : [...past, { objects: d.objects, terrain: null, roads: d.roads, landscape: landEntry(d, null), config }].slice(-HISTORY_LIMIT);
+      set({ doc, past: nextPast, future: [] });
       return ids;
     },
 
@@ -678,6 +711,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const prev = past[past.length - 1];
       if (!prev || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
+      if (prev.config) current.config = { settings: doc.settings, scenario: doc.scenario };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future], terrainRect: prev.terrain?.rect ?? null });
     },
 
@@ -686,6 +720,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const next = future[0];
       if (!next || stroke || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
+      if (next.config) current.config = { settings: doc.settings, scenario: doc.scenario };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });
     },
   };

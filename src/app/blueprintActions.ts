@@ -408,9 +408,8 @@ export async function templateWorld(id: string, seed: number): Promise<{ templat
 
 /**
  * Apply a template. 'new': the current world is closed and the template opens as a new world
- * (history starts empty). 'replace': terrain, roads, nature and objects of the current world are
- * replaced in ONE undo step; the template's environment settings and experiment setup are
- * applied too (settings are not part of the undo history — the confirmation says so).
+ * (history starts empty). 'replace': terrain, roads, nature, objects, the environment settings
+ * and (if the template has one) the experiment setup are replaced in ONE undo step.
  */
 export async function applyTemplate(id: string, seed: number, mode: 'new' | 'replace', name?: string): Promise<boolean> {
   if (!editable()) return false;
@@ -422,6 +421,8 @@ export async function applyTemplate(id: string, seed: number, mode: 'new' | 'rep
     W().replaceDocument({ ...doc, meta: { ...doc.meta, name: name ?? doc.meta.name } });
   } else {
     try {
+      // ONE undo step: geometry, objects, roads, nature AND the environment settings / experiment
+      // setup (Phase 21: undoing a template never leaves its hazard configuration behind).
       W().applyEdit({
         remove: Object.keys(W().doc.objects),
         roads: doc.roads,
@@ -431,18 +432,12 @@ export async function applyTemplate(id: string, seed: number, mode: 'new' | 'rep
           layers: { rect: { x0: 0, z0: 0, x1: doc.terrain.nx - 1, z1: doc.terrain.nz - 1 }, sculpt: doc.landscape.sculpt, paint: doc.landscape.paint },
         },
         add: Object.values(doc.objects).map((o) => ({ type: o.type, name: o.name, seed: o.seed, params: o.params, physics: o.physics, seismic: o.seismic, building: o.building, terrainAlign: o.terrainAlign, transform: o.transform, roadLink: o.roadLink, group: o.group })),
+        settings: doc.settings,
+        ...(r.template.includesExperiment ? { scenario: doc.scenario } : {}),
       });
     } catch (e) {
       toast('error', { key: 'bp.toast.placeFailed' }, (e as Error).message);
       return false;
-    }
-    const w = W();
-    const sim = doc.settings.simulation;
-    w.updateSimulationSettings({ seed: sim.seed, wind: sim.wind, water: sim.water, interactions: sim.interactions.enabled, ...(sim.vegetation ? { vegetation: sim.vegetation } : {}) });
-    if (r.template.includesExperiment) {
-      w.setEarthquakeScenario(doc.scenario.earthquake);
-      w.setFloodScenario(doc.scenario.flood);
-      w.setExperiment(doc.scenario.experiment);
     }
   }
   void L().markUsed(id);
