@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide']);
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact']);
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -63,12 +63,14 @@ describe('registration', () => {
       for (const m of d.models) expect(MODELS[m]).toBeDefined();
       for (const c of d.channels) expect(CHANNELS[c].status).not.toBe('interface');
     }
-    for (const type of ['meteor', 'blackHole', 'tornado', 'volcano', 'gravityChange', 'atmosphereLoss']) {
+    // (meteor → implemented as 'impact' since Phase 23)
+    for (const type of ['blackHole', 'tornado', 'volcano', 'gravityChange', 'atmosphereLoss']) {
       const d = phenomena.get(type)!;
       expect(d.status).toBe('planned');
       expect(() => createEvent({ event: type } as unknown as EventSpec, 0, CTX)).toThrow(/Unsupported/);
     }
-    expect(phenomena.matchPlanned('운석이 떨어지게 해줘')?.type).toBe('meteor');
+    expect(phenomena.matchPlanned('운석이 떨어지게 해줘')).toBeFalsy();
+    expect(phenomena.get('impact')?.status).toBe('implemented');
     expect(phenomena.matchPlanned('create a black hole')?.type).toBe('blackHole');
   });
 
@@ -137,7 +139,7 @@ describe('scheduler and pipeline', () => {
     const systems = [...createDefaultSystems(), new MetricsSystem(new MetricsRecorder(1))];
     expect(validatePipeline(systems)).toEqual([]);
     expect(describePipeline(systems).map((s) => `${s.phase === 'prePhysics' ? 'pre' : 'post'}:${s.name}`)).toEqual([
-      'pre:groundFailure', 'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:waterSolver', 'pre:waterForce', 'pre:sedimentForce', 'pre:groundContact',
+      'pre:impact', 'pre:groundFailure', 'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:waterSolver', 'pre:waterForce', 'pre:sedimentForce', 'pre:groundContact',
       'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:debris', 'post:particles', 'post:exposure', 'post:metrics',
     ]);
     // Moving the water solver after the water forces breaks the data flow → reported.
@@ -239,7 +241,7 @@ describe('unified damage and interactions', () => {
     expect(residualStrength(fake({ eq: 0.5 }), 'earthquake')).toBe(1); // own damage is in its own model
     expect(residualStrength(fake({ eq: 0.4, flood: 0.6 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.6, 12);
     expect(residualStrength(fake({ eq: 3 }), 'flood')).toBeCloseTo(1 - STRENGTH_LOSS, 12);
-    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0 });
+    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0, impact: 0 }); // Phase 23: + impact
     expect(residualStrength(fake({ eq: 0.2, ground: 0.5 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.5, 12); // ground joins the envelope
   });
 

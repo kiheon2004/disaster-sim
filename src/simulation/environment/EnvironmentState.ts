@@ -8,6 +8,7 @@ import { GroundMotionField } from '../seismic/GroundMotionField';
 import { FloodEnvironment } from '../water/FloodEnvironment';
 import { DeformationChannel } from '../deformation/DeformationChannel';
 import { GroundFailureChannel } from '../ground/GroundFailureChannel';
+import { ImpactChannel } from '../impact/ImpactChannel';
 
 /**
  * Shared environmental fields. Events WRITE the global values; systems READ local values.
@@ -33,6 +34,8 @@ export interface EnvironmentState {
   deformation: DeformationChannel;
   /** Ground-failure channel (Phase 22): sinkholes, landslides and the shared geotechnical field. */
   groundFailure: GroundFailureChannel;
+  /** Impact channel (Phase 23): impact models, stats, atmospheric-blast sources for Phase 24. */
+  impact: ImpactChannel;
   // Future: fire?: FireField;
 }
 
@@ -51,6 +54,7 @@ export function createEnvironment(
     flood: new FloodEnvironment(terrain, water),
     deformation,
     groundFailure: new GroundFailureChannel(terrain.data, deformation),
+    impact: new ImpactChannel(),
   };
 }
 

@@ -86,6 +86,8 @@ export interface ParamField {
   scale?: number;
   /** May be left undefined (resolved as a documented assumption). */
   optional?: boolean;
+  /** Value the model uses while an optional field is on "auto" (stored units) — shown instead of a placeholder. */
+  autoValue?: (spec: EventSpec) => number;
   /** Shown only when it applies to the spec (e.g. stages only for a staged profile). */
   visible?: (spec: EventSpec) => boolean;
 }

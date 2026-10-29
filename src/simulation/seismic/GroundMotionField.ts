@@ -22,6 +22,7 @@ import type { ResolvedEarthquake } from '@/events/earthquake/resolveEarthquake';
 import { DEFAULT_SOIL, SOIL_COUNT } from '@/terrain/SoilProfiles';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { AXIS_H1, AXIS_H2, AXIS_V, SyntheticWaveform } from './SyntheticWaveform';
+import { addShock, shockWindow, type GroundShock } from '@/impact/shock';
 
 /** P- and S-wave velocities (km/s) of a generic crust. */
 export const VP_KMS = 6.0;
@@ -32,10 +33,13 @@ export interface GroundMotionSample {
   d: Vec3;
   v: Vec3;
   a: Vec3;
+  /** Horizontal acceleration magnitude of the earthquake part and of the impact-shock part (m/s²; attribution). */
+  aQuake: number;
+  aImpact: number;
 }
 
 export function createGroundMotionSample(): GroundMotionSample {
-  return { d: [0, 0, 0], v: [0, 0, 0], a: [0, 0, 0] };
+  return { d: [0, 0, 0], v: [0, 0, 0], a: [0, 0, 0], aQuake: 0, aImpact: 0 };
 }
 
 /** S−P time (s) at a hypocentral distance (km). */
@@ -59,8 +63,34 @@ export function createWaveform(q: ResolvedEarthquake): SyntheticWaveform {
 const loc = { i: -1, f: 0 };
 
 export class GroundMotionField {
-  /** True while an earthquake is shaking (between its start and end). */
-  active = false;
+  /** An earthquake is shaking (between its start and end). */
+  private quakeOn = false;
+  /**
+   * Impact ground shocks (Phase 23): pulses added to the earthquake motion (superposition) — every
+   * consumer (structures, free bodies, water, Newmark slopes) feels them through this one field, so
+   * no force is applied twice.
+   */
+  readonly shocks: GroundShock[] = [];
+  private shockOn = false;
+
+  /** True while an earthquake shakes or an impact shock is passing through the world. */
+  get active(): boolean {
+    return this.quakeOn || this.shockOn;
+  }
+
+  get quakeActive(): boolean {
+    return this.quakeOn;
+  }
+
+  /** Re-evaluate whether a shock is passing at `time` (called every step by the impact system). */
+  updateShocks(time: number, worldHalf: number) {
+    let on = false;
+    for (const s of this.shocks) {
+      const [t0, t1] = shockWindow(s, worldHalf);
+      if (time >= t0 && time <= t1) { on = true; break; }
+    }
+    this.shockOn = on;
+  }
   scenario: ResolvedEarthquake | null = null;
   wave: SyntheticWaveform | null = null;
   startTime = 0;
@@ -78,7 +108,7 @@ export class GroundMotionField {
     this.scenario = q;
     this.wave = wave;
     this.startTime = startTime;
-    this.active = true;
+    this.quakeOn = true;
     const b = (q.direction * Math.PI) / 180;
     // Bearing θ (0 = N, 90 = E) → world (x = E, z = S): (sin θ, −cos θ).
     this.h1[0] = Math.sin(b);
@@ -89,7 +119,7 @@ export class GroundMotionField {
   }
 
   stop() {
-    this.active = false;
+    this.quakeOn = false;
   }
 
   /** Event-local time at the map center. */
@@ -108,9 +138,23 @@ export class GroundMotionField {
   private sampleAt(x: number, z: number, time: number, out: GroundMotionSample, siteSoil: boolean): GroundMotionSample {
     const d = out.d, v = out.v, a = out.a;
     d[0] = d[1] = d[2] = v[0] = v[1] = v[2] = a[0] = a[1] = a[2] = 0;
+    out.aQuake = 0;
+    out.aImpact = 0;
+    this.sampleQuake(x, z, time, out, siteSoil);
+    out.aQuake = Math.hypot(a[0], a[2]);
+    if (this.shockOn) {
+      const ax = a[0], az = a[2];
+      for (const s of this.shocks) addShock(s, x, z, time, d, v, a);
+      out.aImpact = Math.hypot(a[0] - ax, a[2] - az);
+    }
+    return out;
+  }
+
+  private sampleQuake(x: number, z: number, time: number, out: GroundMotionSample, siteSoil: boolean) {
+    const d = out.d, v = out.v, a = out.a;
     const q = this.scenario;
     const wave = this.wave;
-    if (!this.active || !q || !wave) return out;
+    if (!this.quakeOn || !q || !wave) return out;
     this.samples++;
     const dx = x - q.epicenter[0];
     const dz = z - q.epicenter[1];

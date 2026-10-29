@@ -5,7 +5,7 @@ import { updateCar } from '../damage/behaviors/car';
 import { updateBuilding } from '../damage/behaviors/building';
 import { updateAnchoredStructure } from '../damage/behaviors/structure';
 import type { RuntimeEntity } from '../SimulationRuntime';
-import { pushedBySediment } from '../forces/ForceLedger';
+import { pushedByImpact, pushedBySediment } from '../forces/ForceLedger';
 import type { BodyUserData } from '@/physics/PhysicsEngine';
 import type { Hazard } from '../analysis/DamageEvent';
 
@@ -58,13 +58,15 @@ export class DamageSystem implements SimulationSystem {
     if (target?.flood?.dominant) return 'flood';
     if (other.debrisId) {
       // Only earthquakes and ground failure tag debris; wind-only runs never search (unchanged and cheap).
-      if (!ctx.runtime.seismic && !ctx.env.groundFailure.active && !ctx.env.deformation.active) return 'wind';
+      if (!ctx.runtime.seismic && !ctx.env.groundFailure.active && !ctx.env.deformation.active && !ctx.env.impact.active) return 'wind';
       return ctx.runtime.debris.find((d) => d.id === other.debrisId)?.hazard ?? 'wind';
     }
     const striker = ctx.runtime.entities.get(other.entityId);
     if (striker?.lastHazard) return striker.lastHazard;
     // Phase 22: a body carried by a landslide hits something.
     if (striker && pushedBySediment(striker, ctx.forces.step)) return 'ground';
+    // Phase 23: a body thrown by impact ejecta hits something.
+    if (striker && pushedByImpact(striker, ctx.forces.step)) return 'impact';
     return 'wind';
   }
 

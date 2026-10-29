@@ -142,6 +142,26 @@ export const MODELS: Record<string, ModelInfo> = {
     assumptions: ['model.as.baselineAtmosphere'], units: ['m', 'm/s', 'g', 'kPa', '°C'], validRange: '—',
     limitations: ['model.lim.noPhysiology', 'model.lim.noSafety'], reference: 'docs/PHENOMENA.md §8',
   }),
+  impactEntry: m({
+    id: 'impactEntry', labelKey: 'model.impactEntry', level: 'empirical',
+    assumptions: ['model.as.exponentialAtmosphere', 'model.as.pancake', 'model.as.strengthDensity'], units: ['m/s', 'kg', 'km'],
+    validRange: 'bodies ≲ 1 km, 1000–8000 kg/m³ (strength relation)', limitations: ['model.lim.noFragmentCascade', 'model.lim.noCraterField'], reference: 'docs/IMPACT.md §4 (Collins et al. 2005)',
+  }),
+  craterScaling: m({
+    id: 'craterScaling', labelKey: 'model.craterScaling', level: 'empirical',
+    assumptions: ['model.as.pointSource', 'model.as.verticalComponent', 'model.as.minRegime'], units: ['m', 'm³'],
+    validRange: 'hypervelocity impacts; simple craters', limitations: ['model.lim.heightfield', 'model.lim.noElongation', 'model.lim.noMelt'], reference: 'docs/IMPACT.md §6 (Housen & Holsapple 2011)',
+  }),
+  ejectaBallistics: m({
+    id: 'ejectaBallistics', labelKey: 'model.ejectaBallistics', level: 'empirical',
+    assumptions: ['model.as.hh11Ejecta', 'model.as.parcels', 'model.as.fragmentDrag'], units: ['m/s', 'kg', 'm'],
+    validRange: 'aggregated parcels (16 rings × 24 sectors)', limitations: ['model.lim.noCurtainShielding', 'model.lim.dustVisualOnly'], reference: 'docs/IMPACT.md §8',
+  }),
+  groundShock: m({
+    id: 'groundShock', labelKey: 'model.groundShock', level: 'empirical',
+    assumptions: ['model.as.seismicEfficiency', 'model.as.energyFlux', 'model.as.pulseBroadened'], units: ['m/s', 'g'],
+    validRange: 'near field of the world (≤ 200 m)', limitations: ['model.lim.noWaveTypes', 'model.lim.noBlast'], reference: 'docs/IMPACT.md §10',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

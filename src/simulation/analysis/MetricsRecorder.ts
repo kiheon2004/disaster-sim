@@ -4,6 +4,10 @@ import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import { DamageState } from '../damage/DamageState';
 import { HAZARDS, type DamageEventInput, type DamageEventRecord } from './DamageEvent';
 import { hazardDamage } from '../interactions/integrity';
+import { impactGovernsShaking } from '../seismic/SeismicState';
+import { peakAcceleration } from '@/impact/shock';
+import { sourceAt } from '../ground/objects';
+import { footprint } from '../deformation/response';
 import { SeismicRecorder, type EarthquakeMetrics } from './SeismicRecorder';
 import { FloodRecorder, type FloodMetrics } from './FloodRecorder';
 import { MilestoneRecorder } from './MilestoneRecorder';
@@ -65,7 +69,8 @@ export class MetricsRecorder {
     this.stepMarks.clear();
   }
 
-  record(time: number, e: RuntimeEntity, ev: DamageEventInput) {
+  record(time: number, e: RuntimeEntity, evIn: DamageEventInput) {
+    const ev = this.attribute(e, evIn);
     this.stepMarks.add(e.id);
     if (this.events.length >= MAX_EVENTS) return;
     const rec: DamageEventRecord = {
@@ -108,6 +113,50 @@ export class MetricsRecorder {
     this.histogram[b]++;
     e.lastCause = ev.cause;
     e.lastHazard = rec.hazard;
+  }
+
+  /**
+   * Phase 23 attribution: shaking damage (recorded by the seismic paths as 'earthquake') belongs to
+   * an impact where the impact's peak ground acceleration governed at the object; ground damage
+   * (foundations, burial, sediment) whose source is an impact belongs to the impact.
+   */
+  private attribute(e: RuntimeEntity, ev: DamageEventInput): DamageEventInput {
+    if (ev.hazard === 'earthquake' && impactGovernsShaking(e.seismic)) return { ...ev, hazard: 'impact', source: ev.source ?? this.shockSource(e) };
+    if (ev.hazard === 'ground') {
+      // Ground responses of the Phase 21 path carry no source: the phenomenon that owns the field
+      // under the object (a sinkhole, a landslide, an impact crater / rim / deposit).
+      const source = ev.source ?? e.ground?.source ?? this.fieldSource(e);
+      if (source && e.ground && !e.ground.source) e.ground.source = source;
+      if (source?.startsWith('impact:')) return { ...ev, hazard: 'impact', source };
+      return source ? { ...ev, source } : ev;
+    }
+    if (ev.hazard === 'impact' && !ev.source) return { ...ev, source: e.impact?.source ?? this.shockSource(e) };
+    return ev;
+  }
+
+  /** Phenomenon owning the ground-failure field at the object's footprint centre ('impact:p1' …). */
+  private fieldSource(e: RuntimeEntity): string | undefined {
+    const ch = this.env?.groundFailure;
+    if (!ch?.field) return undefined;
+    const p = e.initialPose.position;
+    const { hx, hz, yaw } = footprint(e);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    for (const [u, v] of [[0, 0], [-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      const src = sourceAt(ch, p[0] + u * hx * c + v * hz * s, p[2] - u * hx * s + v * hz * c);
+      if (src) return src;
+    }
+    return undefined;
+  }
+
+  /** The impact whose shock is strongest at the object. */
+  private shockSource(e: RuntimeEntity): string | undefined {
+    const shocks = this.env?.groundMotion.shocks ?? [];
+    let best: string | undefined, max = -1;
+    for (const s of shocks) {
+      const a = peakAcceleration(s, Math.hypot(e.pose.position[0] - s.center[0], e.pose.position[2] - s.center[1]), true);
+      if (a > max) { max = a; best = s.source; }
+    }
+    return best;
   }
 
   private noteMilestone(r: DamageEventRecord) {

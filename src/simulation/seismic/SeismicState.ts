@@ -28,6 +28,12 @@ export interface SeismicEntityState {
   ground: GroundMotionSample;
   /** Peak horizontal ground acceleration seen at the base (m/s²). */
   pga: number;
+  /**
+   * Peak horizontal acceleration of the earthquake part and of impact ground shocks at the base
+   * (Phase 23): shaking damage is attributed to the impact where its peak governs.
+   */
+  pgaQuake: number;
+  pgaImpact: number;
   /** Top / foundation displacement relative to the ground (world x, z; m). */
   top: [number, number];
   base: [number, number];
@@ -91,7 +97,7 @@ export interface SeismicRuntime {
 
 function createState(): SeismicEntityState {
   return {
-    unit: -1, ground: createGroundMotionSample(), pga: 0, top: [0, 0], base: [0, 0], drift: 0, peakDrift: 0, damage: 0,
+    unit: -1, ground: createGroundMotionSample(), pga: 0, pgaQuake: 0, pgaImpact: 0, top: [0, 0], base: [0, 0], drift: 0, peakDrift: 0, damage: 0,
     peakTop: 0, peakFloorAcc: 0, tilt: [0, 0], tiltMag: 0, slip: [0, 0], foundationFailed: false, bearingRatio: 0, stress: 0,
     crack: 0, crackRecorded: 0, balance: 1, shake: 0, shakeDir: [1, 0], capacity: null, partDamage: null, thresholds: null,
     bearing: 0, footprint: [1, 1], failureTilt: Infinity, plinth: 0, period: 0, soil: 1,
@@ -289,3 +295,6 @@ export function ensureSeismicRuntime(runtime: SimulationRuntime, terrain: Terrai
   if (interactions) sr.units.forEach((e, ui) => sr.model.scaleStrength(ui, residualStrength(e, 'earthquake')));
   return (runtime.seismic = sr);
 }
+
+/** Whether impact ground shocks, rather than an earthquake, govern an object's shaking (Phase 23). */
+export const impactGovernsShaking = (st: SeismicEntityState | undefined) => !!st && st.pgaImpact > 0 && st.pgaImpact >= st.pgaQuake;

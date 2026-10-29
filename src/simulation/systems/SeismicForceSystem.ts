@@ -52,6 +52,8 @@ export class SeismicForceSystem implements SimulationSystem {
       const az = g.a[2];
       const ah = Math.sqrt(ax * ax + az * az);
       if (ah > st.pga) st.pga = ah;
+      if (g.aQuake > st.pgaQuake) st.pgaQuake = g.aQuake;
+      if (g.aImpact > st.pgaImpact) st.pgaImpact = g.aImpact;
       st.shake += (Math.min(1, ah / SHAKE_FULL) - st.shake) * ease;
       if (ah > 1e-6) {
         st.shakeDir[0] = ax / ah;

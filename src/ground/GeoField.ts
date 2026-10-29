@@ -24,8 +24,12 @@
  * the collider, the renderer and the water solver all see it).
  *
  * Budget (volume of BULKED material and mass, Float64): released − (mobile + deposited +
- * outflow) = residual (round-off); in-situ volume removed and the volume that went into a
- * cavity are kept separately (a sinkhole plug goes underground, not onto the surface).
+ * outflow + airborne) = residual (round-off); in-situ volume removed and the volume that went into
+ * a cavity are kept separately (a sinkhole plug goes underground, not onto the surface).
+ * Impacts (Phase 23) share the ledger through a different MECHANISM: the crater cut and the rim
+ * uplift change the ground in place (excavated − uplifted = ejected, in situ), the ejected
+ * material is released into the same account as airborne (ballistic flight, not the granular
+ * flow) and lands as ordinary loose deposit — which a later landslide can remobilize.
  */
 import type { TerrainData } from '@/core/model';
 import { MECHANICAL_IDS, MECHANICAL_PROFILES, mechanicalOf, type MechanicalProfile } from './materials';
@@ -52,11 +56,23 @@ export interface SedimentBudget {
   /** Largest mobile volume and its time (peak transport). */
   peakMobile: number;
   peakTime: number;
+  /**
+   * Impact ejecta in flight (Phase 23; m³ bulked, kg) — part of `released` that is neither on the
+   * ground nor moving on it yet. Ballistic transport, not the granular flow.
+   */
+  airborne: number;
+  airborneMass: number;
+  /** Impact sub-ledger (in-situ m³ / kg): crater cavity cut, structural rim uplift, ejected. */
+  excavated: number;
+  uplifted: number;
+  ejectedInSitu: number;
+  ejectedMass: number;
 }
 
 export const emptyBudget = (): SedimentBudget => ({
   releasedInSitu: 0, releasedMass: 0, released: 0, mobile: 0, deposited: 0, outflow: 0, mobileMass: 0, depositedMass: 0, outflowMass: 0,
   intoCavity: 0, intoCavityMass: 0, residual: 0, residualMass: 0, peakMobile: 0, peakTime: 0,
+  airborne: 0, airborneMass: 0, excavated: 0, uplifted: 0, ejectedInSitu: 0, ejectedMass: 0,
 });
 
 export class GeoField {
@@ -239,6 +255,71 @@ export class GeoField {
     this.rest[i] = 0;
   }
 
+  /** Impact crater cut (in place, Phase 23): the ground drops by `depth`, nothing becomes mobile. */
+  excavate(i: number, depth: number) {
+    if (depth <= 0) return;
+    this.bed[i] -= depth;
+    this.thickness[i] = Math.max(0, this.thickness[i] - depth);
+    this.budget.excavated += depth * this.dx * this.dx;
+    this.touchVertex(i);
+    this.rev++;
+  }
+
+  /** Structural rim uplift (in place, Phase 23): target material displaced upward by `h`. */
+  uplift(i: number, h: number) {
+    if (h <= 0) return;
+    this.bed[i] += h;
+    this.thickness[i] += h;
+    this.budget.uplifted += h * this.dx * this.dx;
+    this.touchVertex(i);
+    this.rev++;
+  }
+
+  /** Ejecta leave the ground (in-situ volume m³, mass kg, bulking): released into the air. */
+  launch(volume: number, mass: number, bulking: number) {
+    const b = this.budget;
+    b.releasedInSitu += volume;
+    b.releasedMass += mass;
+    b.released += volume * bulking;
+    b.airborne += volume * bulking;
+    b.airborneMass += mass;
+    b.ejectedInSitu += volume;
+    b.ejectedMass += mass;
+  }
+
+  /** Airborne material lands at vertex i as loose deposit (bulked m³, kg). */
+  land(i: number, volume: number, mass: number) {
+    if (volume <= 0) return;
+    const A = this.dx * this.dx, b = this.budget;
+    this.bed[i] += volume / A;
+    this.loose[i] += volume / A;
+    this.looseMass[i] += mass;
+    b.deposited += volume;
+    b.depositedMass += mass;
+    b.airborne -= volume;
+    b.airborneMass -= mass;
+    this.touchVertex(i);
+    this.rev++;
+  }
+
+  /** Airborne material that leaves the world (bulked m³, kg). */
+  landOutside(volume: number, mass: number) {
+    const b = this.budget;
+    b.airborne -= volume;
+    b.airborneMass -= mass;
+    b.outflow += volume;
+    b.outflowMass += mass;
+  }
+
+  /**
+   * Terrain change the ledgers predict, Σ(bed + h)·A (m³): Phase 22 identity plus the impact terms
+   * (airborne material is not on the ground; excavation − uplift − ejected is zero by construction).
+   */
+  expectedTerrainChange(): number {
+    const b = this.budget;
+    return -b.intoCavity - b.releasedInSitu + b.released - b.outflow - b.airborne - b.excavated + b.uplifted + b.ejectedInSitu;
+  }
+
   grow(i: number) {
     const ix = i % this.nx, iz = (i - ix) / this.nx, a = this.active;
     if (a.x1 < a.x0) {
@@ -265,8 +346,8 @@ export class GeoField {
     }
     b.mobile = v * A;
     b.mobileMass = m;
-    b.residual = b.released - b.mobile - b.deposited - b.outflow;
-    b.residualMass = b.releasedMass - b.mobileMass - b.depositedMass - b.outflowMass;
+    b.residual = b.released - b.mobile - b.deposited - b.outflow - b.airborne;
+    b.residualMass = b.releasedMass - b.mobileMass - b.depositedMass - b.outflowMass - b.airborneMass;
     if (b.mobile > b.peakMobile) {
       b.peakMobile = b.mobile;
       b.peakTime = time;

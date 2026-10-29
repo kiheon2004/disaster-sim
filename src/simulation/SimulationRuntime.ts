@@ -91,6 +91,8 @@ export interface RuntimeEntity {
   flood?: FloodEntityState;
   /** Ground deformation response (Phase 21): settlement, tilt, foundation contact, damage. */
   ground?: import('./deformation/response').GroundEntityState;
+  /** Impact responses (Phase 23): ejecta loads / hits on the object, their damage index, source. */
+  impact?: { damage: number; ejectaRatio: number; hits: number; impulse: number; source: string };
   /** Member-level state of a modular building (Phase 17); absent on every other entity. */
   modular?: import('./buildings/modular').ModularRuntime;
   components: RuntimeComponent[];

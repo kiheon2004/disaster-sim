@@ -43,7 +43,7 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
   },
   groundMotion: {
     id: 'groundMotion', labelKey: 'channel.groundMotion', status: 'active', quantity: 'ground displacement m, velocity m/s, acceleration m/s²',
-    owner: 'env.groundMotion', writers: ['EarthquakeEvent'], readers: ['groundMotion', 'structural', 'seismicDamage', 'waterSolver (inertial load)', 'renderer'],
+    owner: 'env.groundMotion', writers: ['EarthquakeEvent', 'ImpactEvent (ground shock, Phase 23)'], readers: ['groundMotion', 'structural', 'seismicDamage', 'waterSolver (inertial load)', 'renderer'],
   },
   water: {
     id: 'water', labelKey: 'channel.water', status: 'active', quantity: 'depth m, surface m, velocity m/s',
@@ -52,7 +52,7 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
   },
   pressure: {
     id: 'pressure', labelKey: 'channel.pressure', status: 'interface', quantity: 'overpressure Pa (blast / shock wave)',
-    owner: '— (future PressureField)', writers: [], readers: [],
+    owner: '— (future PressureField; impact blast sources are recorded in env.impact.blasts, Phase 23)', writers: [], readers: [],
   },
   temperature: {
     id: 'temperature', labelKey: 'channel.temperature', status: 'interface', quantity: 'air / surface temperature °C, heat flux W/m²',

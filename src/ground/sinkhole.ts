@@ -29,9 +29,9 @@
  */
 import type { GeoField } from './GeoField';
 import type { GroundEnv } from './common';
-import { applyVariability, basalFriction, restartFriction } from './common';
+import { applyVariability, wallFailure } from './common';
 import { DEG, G, GAMMA_W, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight, type MechanicalProfile } from './materials';
-import { fallTime, plugFS, stableCutAngle } from './stability';
+import { fallTime, plugFS } from './stability';
 import type { SinkholeSpec } from './types';
 
 export type SinkholePhase = 'stable' | 'collapsing' | 'collapsed' | 'choked';
@@ -41,8 +41,6 @@ export interface SinkholeEvent {
   time: number;
   value: number;
 }
-
-const NEIGHBOURS: [number, number, number][] = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
 
 export class SinkholeModel {
   phase: SinkholePhase = 'stable';
@@ -184,46 +182,7 @@ export class SinkholeModel {
 
   /** Culmann check of every wall vertex; the unstable part falls into the pit (mobile). */
   private edgeFailure(env: GroundEnv) {
-    const f = this.f, p = this.profile;
-    const gamma = unitWeight(p), phi = p.friction * DEG;
-    for (const i of this.cells) {
-      if (f.h[i] > 0.05) continue;
-      const avail = f.thickness[i] + f.loose[i];
-      if (avail <= 1e-3) continue;
-      const ix = i % f.nx, iz = (i - ix) / f.nx;
-      const gi = env.ground(i);
-      // Steepest descent neighbour.
-      let best = -1, drop = 0, dist = 1;
-      for (const [ox, oz, d] of NEIGHBOURS) {
-        const jx = ix + ox, jz = iz + oz;
-        if (jx < 0 || jz < 0 || jx >= f.nx || jz >= f.nz) continue;
-        const j = jz * f.nx + jx;
-        const dd = gi - (env.ground(j) + f.h[j]);
-        if (dd / d > drop / dist) { best = j; drop = dd; dist = d; }
-      }
-      if (best < 0 || drop <= 0) continue;
-      const tanb = drop / (dist * f.dx);
-      if (tanb <= Math.tan(phi)) continue;
-      // Wall height: follow the descent while it keeps going down (up to 8 cells).
-      let hw = drop, cur = best, cx = best % f.nx, cz = (best - cx) / f.nx;
-      const sx = Math.sign(cx - ix), sz = Math.sign(cz - iz);
-      for (let k = 0; k < 8; k++) {
-        const nx = cx + sx, nz = cz + sz;
-        if (nx < 0 || nz < 0 || nx >= f.nx || nz >= f.nz) break;
-        const n = nz * f.nx + nx;
-        const dn = env.ground(cur) - env.ground(n);
-        if (dn <= 0.01) break;
-        hw += dn; cur = n; cx = nx; cz = nz;
-      }
-      const m = f.water(i);
-      const c = p.cohesion * f.strength[i] + p.apparentCohesion * (1 - m);
-      const bs = stableCutAngle(c, gamma, phi, hw);
-      const tanS = Math.tan(Math.min(bs, 89.9 * DEG));
-      if (tanb <= tanS * (1 + 1e-3)) continue;
-      // Half the excess over the stable line (sand-pile toppling rule) leaves the vertex.
-      const excess = 0.5 * (drop - dist * f.dx * tanS);
-      if (excess > 1e-3) f.release(i, excess, basalFriction(p, m), restartFriction(p, m));
-    }
+    wallFailure(this.f, this.cells, env, () => this.profile);
   }
 
   private trackPit(time: number) {

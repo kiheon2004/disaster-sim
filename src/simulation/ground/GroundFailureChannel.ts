@@ -11,6 +11,7 @@ import type { DeformationChannel } from '../deformation/DeformationChannel';
 import { GeoField } from '@/ground/GeoField';
 import type { SinkholeModel } from '@/ground/sinkhole';
 import type { LandslideModel } from '@/ground/landslide';
+import type { ImpactModel } from '@/impact/ImpactModel';
 
 /** Largest difference between the field and the terrain left unsynchronized (m). */
 export const SYNC_TOLERANCE = 0.001;
@@ -125,6 +126,8 @@ export class GroundFailureChannel {
   source: GroundFailureSource | null = null;
   readonly sinkholes: SinkholeModel[] = [];
   readonly landslides: LandslideModel[] = [];
+  /** Impacts (Phase 23) write the same field (crater, rim, ejecta deposits) and share its owner ids. */
+  readonly impacts: ImpactModel[] = [];
   stats: GroundFailureStats = { updates: 0, stabilityMs: 0, sinkholeMs: 0, flowMs: 0, newmarkMs: 0, objectsMs: 0, totalMs: 0, flowSubsteps: 0, maxSpeed: 0, flowCells: 0 };
   /** Runout boundary (open if any landslide asks for it). */
   boundary: 'closed' | 'open' = 'closed';
@@ -149,11 +152,11 @@ export class GroundFailureChannel {
   }
 
   /** Phenomenon index → its model (owner ids of the field). */
-  modelOf(owner: number): SinkholeModel | LandslideModel | null {
-    return [...this.sinkholes, ...this.landslides].find((m) => m.index === owner) ?? null;
+  modelOf(owner: number): SinkholeModel | LandslideModel | ImpactModel | null {
+    return [...this.sinkholes, ...this.landslides, ...this.impacts].find((m) => m.index === owner) ?? null;
   }
 
   nextIndex(): number {
-    return this.sinkholes.length + this.landslides.length;
+    return this.sinkholes.length + this.landslides.length + this.impacts.length;
   }
 }

@@ -20,6 +20,7 @@ import { LIMITS as DEF_LIMITS, eventDuration as deformEventDuration, validateDef
 import { terrainDeformationSchema } from '@/events/deformation/deformationSchema';
 import { TerrainDeformationEvent } from '@/events/deformation/TerrainDeformationEvent';
 import { landslide, sinkhole } from './groundDefinitions';
+import { impact } from './impactDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -206,7 +207,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -216,10 +217,6 @@ export const PLANNED: PlannedPhenomenon[] = [
   planned({
     type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', channels: ['airflow', 'pressure', 'mechanicalForce'], models: [],
     keywords: /토네이도|회오리|tornado|twister/, missing: ['missing.vortexWind', 'missing.pressureDrop'], reuses: ['reuse.windForce', 'reuse.windDamage', 'reuse.debris'],
-  }),
-  planned({
-    type: 'meteor', labelKey: 'phen.meteor', icon: 'warning', channels: ['mechanicalForce', 'pressure', 'temperature', 'terrainDeformation'], models: [],
-    keywords: /운석|소행성|meteor|asteroid/, missing: ['missing.pressureWave', 'missing.craterFormation', 'missing.thermal'], reuses: ['reuse.deformationEngine', 'reuse.impulse', 'reuse.groundMotion', 'reuse.debris'],
   }),
   planned({
     type: 'explosion', labelKey: 'phen.explosion', icon: 'warning', channels: ['pressure', 'temperature', 'mechanicalForce'], models: [],

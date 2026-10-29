@@ -34,13 +34,14 @@ import { footprint, groundLevel, stateOf } from '../deformation/response';
 import { knockDown } from '../damage/behaviors/human';
 import type { GroundFailureChannel } from './GroundFailureChannel';
 
-const AIR = 1.225;
+export const AIR = 1.225;
 /** Dynamic pressure coefficient of debris impact (lower end of the published range). */
 export const DEBRIS_ALPHA = 1;
-const STRUCT_ONSET = 0.5;
-const STRUCT_RATE = 0.02;
+export const STRUCT_ONSET = 0.5;
+export const STRUCT_RATE = 0.02;
 const BURIAL: Record<string, number> = { human: 0.7, car: 0.6, truck: 0.6, streetLight: 0.8, sign: 0.8, wall: 0.8, tree: 0.8 };
-const PERSON_CD = 1.1, PERSON_MU = 0.5, FOOT_LEVER = 0.15;
+const PERSON_CD = 1.1, PERSON_MU = 0.5;
+export const FOOT_LEVER = 0.15;
 
 /** Flow at a vertex: thickness, velocity (x, z), bulk density, loose deposit. */
 export interface FlowSample { h: number; ux: number; uz: number; rho: number; deposit: number; phi: number }
@@ -86,7 +87,8 @@ export function sourceAt(ch: GroundFailureChannel, x: number, z: number): string
   if (i < 0 || f.owner[i] < 0) return undefined;
   const m = ch.modelOf(f.owner[i]);
   if (!m) return undefined;
-  return `${'cavityHeight' in m.spec ? 'sinkhole' : 'landslide'}:${m.name}`;
+  const kind = 'kind' in m ? m.kind : 'cavityHeight' in m.spec ? 'sinkhole' : 'landslide';
+  return `${kind}:${m.name}`;
 }
 
 /** Responses of every object near moving / deposited sediment (10 Hz, after the flow step). */

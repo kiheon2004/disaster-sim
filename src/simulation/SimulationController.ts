@@ -1,4 +1,4 @@
-import type { DeformLive, GroundLive } from './simStore';
+import type { DeformLive, GroundLive, ImpactLive } from './simStore';
 import { runtimeStateManifest } from './runtimeState';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
@@ -223,6 +223,7 @@ export class SimulationController {
       flood: null,
       deform: null,
       ground: null,
+      impacts: null,
       floodSeries: null,
       milestones: [],
     });
@@ -555,6 +556,7 @@ export class SimulationController {
     patch.flood = this.floodLive();
     patch.deform = this.deformLive();
     patch.ground = this.groundLive();
+    patch.impacts = this.impactLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -623,6 +625,30 @@ export class SimulationController {
   /** What the runtime state of this run consists of (mid-run saving is not supported; see runtimeState.ts). */
   runtimeState() {
     return runtimeStateManifest(this.env, this.runtime, this.time);
+  }
+
+  /** Live impact summary (Phase 23): phase, countdown, entry state, energy, crater, ejecta. */
+  private impactLive(): ImpactLive[] | null {
+    const models = this.env.impact.models;
+    if (!models.length) return null;
+    return models.map((m) => {
+      const p = m.plan, st = m.status();
+      const toImpact = m.impactTime - this.time;
+      let altitude = 0, speed = p.speed;
+      const e = p.entry;
+      if (e && toImpact > 0) {
+        const tl = this.time - m.startTime;
+        const s = e.samples.find((q) => q.t >= tl) ?? e.samples[e.samples.length - 1];
+        if (s) { altitude = s.z; speed = s.v; }
+      }
+      const phase: ImpactLive['phase'] = p.airburst ? 'airburst' : toImpact > 0 ? 'entry' : !st.formed ? 'forming' : st.landed < st.parcels ? 'ejecta' : 'done';
+      return {
+        id: m.id, name: m.name, phase, toImpact, altitude, speed, energy: p.energy, tnt: p.energy / 4.184e9,
+        craterD: 2 * (p.crater?.radius ?? 0), depth: p.crater?.depth ?? 0, regime: p.crater?.regime ?? '',
+        launched: st.launched, landed: st.landed, parcels: st.parcels, ejectaMass: p.ejectaMass, outflowMass: p.ejectaOut,
+        airburstAltitude: e?.airburst?.altitude ?? 0,
+      };
+    });
   }
 
   /** Live ground-failure summary (Phase 22): model states, sediment budget, cost. */

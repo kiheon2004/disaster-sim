@@ -11,13 +11,14 @@ import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from 
 import { compassSchema, windEventSchema } from '@/events/wind/windSchema';
 import { terrainDeformationSchema } from '@/events/deformation/deformationSchema';
 import { landslideSchema, sinkholeSchema } from '@/events/ground/groundSchema';
+import { impactSchema } from '@/events/impact/impactSchema';
 
 export { compassSchema, windEventSchema, earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema };
 
 export const eventSpecSchema = z.discriminatedUnion('event', [windEventSchema, earthquakeEventSchema, rainEventSchema, risingWaterEventSchema, waterSourceEventSchema]);
 
 /** Ground phenomena (Phase 21–22): validated by their own schemas (added to the event union). */
-const groundSpecSchema = z.union([terrainDeformationSchema as unknown as z.ZodTypeAny, sinkholeSchema as unknown as z.ZodTypeAny, landslideSchema as unknown as z.ZodTypeAny]);
+const groundSpecSchema = z.union([terrainDeformationSchema as unknown as z.ZodTypeAny, sinkholeSchema as unknown as z.ZodTypeAny, landslideSchema as unknown as z.ZodTypeAny, impactSchema as unknown as z.ZodTypeAny]);
 
 export const simulationCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('event'), spec: z.union([eventSpecSchema, groundSpecSchema]) as unknown as typeof eventSpecSchema }),

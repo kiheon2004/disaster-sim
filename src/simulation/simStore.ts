@@ -110,6 +110,28 @@ export interface GroundLive {
   blockedRoads: number;
 }
 
+/** Live impact summary (Phase 23) for the HUD / inspector. */
+export interface ImpactLive {
+  id: string;
+  name: string;
+  phase: 'entry' | 'impact' | 'forming' | 'ejecta' | 'done' | 'airburst';
+  /** Seconds to impact (< 0 after), entry altitude (m) and speed (m/s) now (entry stage samples). */
+  toImpact: number;
+  altitude: number;
+  speed: number;
+  energy: number;
+  tnt: number;
+  craterD: number;
+  depth: number;
+  regime: string;
+  launched: number;
+  landed: number;
+  parcels: number;
+  ejectaMass: number;
+  outflowMass: number;
+  airburstAltitude: number;
+}
+
 export interface SimStats {
   byState: [number, number, number, number, number];
   debris: number;
@@ -157,6 +179,7 @@ export interface SimState {
   flood: FloodLive | null;
   deform: DeformLive | null;
   ground: GroundLive | null;
+  impacts: ImpactLive[] | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -189,6 +212,7 @@ export const useSimStore = create<SimState>((set) => ({
   flood: null,
   deform: null,
   ground: null,
+  impacts: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

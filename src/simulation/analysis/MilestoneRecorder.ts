@@ -10,7 +10,9 @@ import type { Hazard } from './DamageEvent';
 
 export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firstFall' | 'floated' | 'floodArea' | 'deformPeak' | 'supportLoss' | 'roadCut'
   // Phase 22 ground failure.
-  | 'sinkholeInit' | 'sinkholeExpansion' | 'slopeInstability' | 'landslideInit' | 'peakSediment' | 'roadBlocked' | 'foundationFailure';
+  | 'sinkholeInit' | 'sinkholeExpansion' | 'slopeInstability' | 'landslideInit' | 'peakSediment' | 'roadBlocked' | 'foundationFailure'
+  // Phase 23 impacts.
+  | 'impactEntry' | 'impactBreakup' | 'airburst' | 'impact' | 'peakGroundShock' | 'craterFormed' | 'ejectaLanding';
 
 export interface Milestone {
   time: number;

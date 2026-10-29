@@ -17,10 +17,10 @@
 import type { Vec3 } from '@/core/types';
 import type { BodyHandle, PhysicsEngine } from '@/physics/PhysicsEngine';
 
-export const FORCE_SOURCES = ['wind', 'groundMotion', 'water', 'gravityField', 'sediment'] as const;
+export const FORCE_SOURCES = ['wind', 'groundMotion', 'water', 'gravityField', 'sediment', 'impact'] as const;
 export type ForceSource = (typeof FORCE_SOURCES)[number];
-const SOURCE_BIT: Record<ForceSource, number> = { wind: 1, groundMotion: 2, water: 4, gravityField: 8, sediment: 16 };
-const SOURCE_INDEX: Record<ForceSource, number> = { wind: 0, groundMotion: 1, water: 2, gravityField: 3, sediment: 4 };
+const SOURCE_BIT: Record<ForceSource, number> = { wind: 1, groundMotion: 2, water: 4, gravityField: 8, sediment: 16, impact: 32 };
+const SOURCE_INDEX: Record<ForceSource, number> = { wind: 0, groundMotion: 1, water: 2, gravityField: 3, sediment: 4, impact: 5 };
 
 /** Per-entity record: [|F| per source …, step of that value per source …]. */
 export type ForceRecord = Float64Array;
@@ -96,7 +96,7 @@ export class ForceLedger {
 
 /** Force magnitudes an owner received in a given step (−1 = none), by source. */
 export function forcesAt(owner: ForceOwner, step: number): Record<ForceSource, number> {
-  const out = { wind: -1, groundMotion: -1, water: -1, gravityField: -1, sediment: -1 } as Record<ForceSource, number>;
+  const out = { wind: -1, groundMotion: -1, water: -1, gravityField: -1, sediment: -1, impact: -1 } as Record<ForceSource, number>;
   const r = owner.forces;
   if (!r) return out;
   FORCE_SOURCES.forEach((s, i) => {
@@ -114,3 +114,10 @@ export function pushedBySediment(owner: ForceOwner, step: number, window = 60): 
   const f = forcesAt(owner, step - window);
   return f.sediment > 0 && f.sediment >= f.wind;
 }
+
+/** Whether impact ejecta hit this body recently (Phase 23): its pushes and impacts are the impact's. */
+export function pushedByImpact(owner: ForceOwner, step: number, window = 120): boolean {
+  const f = forcesAt(owner, step - window);
+  return f.impact > 0 && f.impact >= f.wind;
+}
+

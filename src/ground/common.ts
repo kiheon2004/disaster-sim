@@ -7,6 +7,7 @@ import { ValueNoise } from '@/terrain/TerrainPresets';
 import type { GeoField } from './GeoField';
 import type { GroundArea } from './types';
 import { DEG, GAMMA_W, REPOSE_HYSTERESIS, unitWeight, type MechanicalProfile } from './materials';
+import { stableCutAngle } from './stability';
 
 export interface GroundEnv {
   /** Ground height at vertex i (terrain without the mobile layer; includes the field's bed). */
@@ -108,3 +109,55 @@ export function restartFriction(p: MechanicalProfile, m: number): number {
 }
 
 const poreRatio = (p: MechanicalProfile, m: number) => Math.min(0.9, (m * GAMMA_W) / unitWeight(p));
+
+const NEIGHBOURS: [number, number, number][] = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+
+/**
+ * Wall stability of pits (sinkholes, Phase 22) and craters (Phase 23): every vertex is checked
+ * with Culmann's cut-height criterion against its steepest descent; material above the stable
+ * inclination for the wall height (half the excess per check — sand-pile toppling rule) falls in
+ * and runs out with the granular solver. With `rockStands` (craters), rock walls are not checked
+ * (rock-slope failure is not a soil problem); sinkholes keep their Phase 22 behaviour.
+ */
+export function wallFailure(f: GeoField, cells: readonly number[], env: GroundEnv, profileOf: (i: number) => MechanicalProfile, rockStands = false) {
+  for (const i of cells) {
+    if (f.h[i] > 0.05) continue;
+    const p = profileOf(i);
+    if (rockStands && !p.failureModel) continue;
+    const gamma = unitWeight(p), phi = p.friction * DEG;
+    const avail = f.thickness[i] + f.loose[i];
+    if (avail <= 1e-3) continue;
+    const ix = i % f.nx, iz = (i - ix) / f.nx;
+    const gi = env.ground(i);
+    // Steepest descent neighbour.
+    let best = -1, drop = 0, dist = 1;
+    for (const [ox, oz, d] of NEIGHBOURS) {
+      const jx = ix + ox, jz = iz + oz;
+      if (jx < 0 || jz < 0 || jx >= f.nx || jz >= f.nz) continue;
+      const j = jz * f.nx + jx;
+      const dd = gi - (env.ground(j) + f.h[j]);
+      if (dd / d > drop / dist) { best = j; drop = dd; dist = d; }
+    }
+    if (best < 0 || drop <= 0) continue;
+    const tanb = drop / (dist * f.dx);
+    if (tanb <= Math.tan(phi)) continue;
+    // Wall height: follow the descent while it keeps going down (up to 8 cells).
+    let hw = drop, cur = best, cx = best % f.nx, cz = (best - cx) / f.nx;
+    const sx = Math.sign(cx - ix), sz = Math.sign(cz - iz);
+    for (let k = 0; k < 8; k++) {
+      const nx = cx + sx, nz = cz + sz;
+      if (nx < 0 || nz < 0 || nx >= f.nx || nz >= f.nz) break;
+      const n = nz * f.nx + nx;
+      const dn = env.ground(cur) - env.ground(n);
+      if (dn <= 0.01) break;
+      hw += dn; cur = n; cx = nx; cz = nz;
+    }
+    const m = f.water(i);
+    const c = p.cohesion * f.strength[i] + p.apparentCohesion * (1 - m);
+    const bs = stableCutAngle(c, gamma, phi, hw);
+    const tanS = Math.tan(Math.min(bs, 89.9 * DEG));
+    if (tanb <= tanS * (1 + 1e-3)) continue;
+    const excess = 0.5 * (drop - dist * f.dx * tanS);
+    if (excess > 1e-3) f.release(i, excess, basalFriction(p, m), restartFriction(p, m));
+  }
+}

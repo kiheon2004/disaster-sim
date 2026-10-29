@@ -39,6 +39,8 @@ export interface ShockInput {
 }
 
 export interface GroundShock {
+  /** Phenomenon it belongs to ('impact:p1'), for attribution. */
+  source: string;
   center: [number, number];
   time: number;
   seismicEnergy: number;
@@ -50,10 +52,10 @@ export interface GroundShock {
   radius: number;
 }
 
-export function createShock(i: ShockInput, center: [number, number], time: number): GroundShock {
+export function createShock(i: ShockInput, center: [number, number], time: number, source = 'impact'): GroundShock {
   const Es = SEISMIC_EFFICIENCY * i.energy;
   const tau = (2 * i.radius) / i.c;
-  return { center, time, seismicEnergy: Es, c: i.c, Q: 1 / (2 * Math.max(0.005, i.damping)), tau, tauApplied: Math.max(tau, MIN_PULSE), rho: i.rho, radius: i.radius };
+  return { source, center, time, seismicEnergy: Es, c: i.c, Q: 1 / (2 * Math.max(0.005, i.damping)), tau, tauApplied: Math.max(tau, MIN_PULSE), rho: i.rho, radius: i.radius };
 }
 
 /** Peak horizontal ground velocity at distance r (m/s), physical pulse. */

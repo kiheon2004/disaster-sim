@@ -14,6 +14,7 @@ import { LANDSLIDE_LIMITS, LANDSLIDE_TRIGGERS, SINKHOLE_INITIATIONS, SINKHOLE_LI
 import { SinkholeModel } from '@/ground/sinkhole';
 import { LandslideModel } from '@/ground/landslide';
 import { GeoField } from '@/ground/GeoField';
+import { XI_DEFAULT } from '@/ground/granular';
 import { areaCentroid } from '@/ground/common';
 
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -84,7 +85,7 @@ export const sinkhole = implemented<SinkholeSpec>({
     { visible: (s) => (s as SinkholeSpec).initiation === 'water', key: 'saturation', labelKey: 'sink.saturation', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100 },
     { visible: (s) => (s as SinkholeSpec).initiation === 'load', key: 'surcharge', labelKey: 'sink.surcharge', unit: 'kPa', min: 0, max: 500, step: 5, precision: 0 },
     { key: 'duration', labelKey: 'sink.duration', unit: 's', min: 0, max: SINKHOLE_LIMITS.duration[1], step: 1, precision: 0 },
-    { key: 'variability', labelKey: 'geo.variability', unit: '%', min: 0, max: 50, step: 5, precision: 0, scale: 100, optional: true },
+    { key: 'variability', labelKey: 'geo.variability', unit: '%', min: 0, max: 50, step: 5, precision: 0, scale: 100, optional: true, autoValue: () => 0 },
   ],
   createEvent: (spec, now, ctx) => new SinkholeEvent(spec, now, ctx.seed),
   duration: (spec) => groundEventDuration(spec),
@@ -151,10 +152,10 @@ export const landslide = implemented<LandslideSpec>({
     },
     { visible: (s) => (s as LandslideSpec).trigger === 'saturation', key: 'targetSaturation', labelKey: 'slide.targetSaturation', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100 },
     { visible: (s) => (s as LandslideSpec).trigger === 'saturation', key: 'duration', labelKey: 'sink.duration', unit: 's', min: 0, max: LANDSLIDE_LIMITS.duration[1], step: 1, precision: 0 },
-    { visible: (s) => (s as LandslideSpec).trigger === 'earthquake', key: 'newmarkLimit', labelKey: 'slide.newmarkLimit', unit: 'cm', min: 1, max: 100, step: 1, precision: 0, scale: 100, optional: true },
-    { key: 'turbulence', labelKey: 'slide.turbulence', unit: 'm/s²', min: LANDSLIDE_LIMITS.turbulence[0], max: LANDSLIDE_LIMITS.turbulence[1], step: 50, precision: 0, optional: true },
+    { visible: (s) => (s as LandslideSpec).trigger === 'earthquake', key: 'newmarkLimit', labelKey: 'slide.newmarkLimit', unit: 'cm', min: 1, max: 100, step: 1, precision: 0, scale: 100, optional: true, autoValue: () => 0.1 },
+    { key: 'turbulence', labelKey: 'slide.turbulence', unit: 'm/s²', min: LANDSLIDE_LIMITS.turbulence[0], max: LANDSLIDE_LIMITS.turbulence[1], step: 50, precision: 0, optional: true, autoValue: () => XI_DEFAULT },
     { key: 'boundary', labelKey: 'slide.boundary', unit: '', min: 0, max: 0, step: 0, precision: 0, options: [{ value: 'closed', labelKey: 'slide.boundary.closed' }, { value: 'open', labelKey: 'slide.boundary.open' }], ...nested<LandslideSpec>((s) => s.boundary ?? 'closed', (s, v) => ({ ...s, boundary: v as 'closed' | 'open' })) },
-    { key: 'variability', labelKey: 'geo.variability', unit: '%', min: 0, max: 50, step: 5, precision: 0, scale: 100, optional: true },
+    { key: 'variability', labelKey: 'geo.variability', unit: '%', min: 0, max: 50, step: 5, precision: 0, scale: 100, optional: true, autoValue: () => 0 },
   ],
   createEvent: (spec, now, ctx) => new LandslideEvent(spec, now, ctx.seed),
   duration: (spec) => groundEventDuration(spec),
