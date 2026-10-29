@@ -375,9 +375,18 @@ export class CollapseModel {
 
   // ── Time evolution ─────────────────────────────────────────
 
+  /**
+   * Redistribution rounds per fixed step (Phase 26 residual study, docs/THERMAL_PHYSICS.md §2.1). The
+   * engine's policy is ONE round per step (default, results unchanged); larger values run rounds until
+   * nothing is pending (at most this many) — used only to measure what the one-round policy costs in
+   * timing under gradual (thermal) strength loss.
+   */
+  static roundsPerStep = 1;
+
   /** One fixed step. `kin`: horizontal velocity of the standing structure at a member (local). */
   step(dt: number, time: number, kin?: Kinematics, g = GRAVITY) {
     if (this.s.pending) this.redistribute(time);
+    for (let r = 1; r < CollapseModel.roundsPerStep && this.s.pending; r++) this.redistribute(time);
     if (this.dead.length) this.formBlocks(time, kin, g);
     if (this.activeBlocks) {
       for (const b of this.blocks) if (b.active) this.advance(b, dt, time, g);

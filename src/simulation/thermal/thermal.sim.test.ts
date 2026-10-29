@@ -255,6 +255,41 @@ describe('buildings', () => {
   });
 });
 
+describe('progressive collapse and ambient', () => {
+  it('a heated RC slab fails in bending at its reduced capacity and the collapse engine carries it to a partial collapse attributed to heat', async () => {
+    const des = design('apartment');
+    const m0 = des.members.find((x) => x.type === 'column' && x.level === 0)!;
+    const pos: [number, number] = [m0.position[0] + Math.sign(-m0.position[0] || 1) * 1.8, m0.position[2] + Math.sign(-m0.position[2] || 1) * 1.8];
+    const c = await run(doc([B(des)]), [heat({ kind: 'temperature', position: pos, height: 4, radius: 3.2, temperature: 1373.15, duration: 3000 })], 900);
+    const e = [...c.getRuntime()!.entities.values()][0];
+    const m = e.modular!.structure!.model;
+    expect(m.records.length).toBeGreaterThan(5);
+    expect(m.records[0].hazard).toBe('thermal');
+    expect(['bending', 'axial', 'shear']).toContain(m.records[0].cause);
+    // Before failing, the member carried its load: strength had dropped (factor < 1), the load did not change.
+    expect(m.material![m.records[0].i]).toBeLessThan(1);
+    expect(['partial', 'global']).toContain(m.collapseLevel());
+    expect(c.getMilestones().some((x) => x.kind === 'thermalFailure')).toBe(true);
+    expect(c.getDamageEvents().some((x) => x.hazard === 'thermal' && x.eventType === 'FAILED')).toBe(true);
+    expect(Math.abs(m.ledger.residual())).toBeLessThan(1e-6);
+    expect(rtOf(c).world.ledger.relativeResidual()).toBeLessThan(1e-9);
+    c.unload();
+  }, 300000);
+
+  it('the ambient setting is the reference state: a world at ambient stays exactly there; heat is measured from it', async () => {
+    const d = doc([{ type: 'car', seed: 1, transform: T(30, 30) }]);
+    d.settings.simulation.thermal = { ambient: 308.15, airLayerHeight: 10, restraint: 'frame' };
+    const c = await run(d, [heat({ kind: 'area', position: [0, 0], radius: 2, power: 1e4, duration: 5 })], 10);
+    const w = rtOf(c).world;
+    expect(w.Tref).toBe(308.15);
+    // Far from the source nothing changed (no flux at equal temperatures).
+    expect(w.terrain.T(w.terrain.index(-60.5, -60.5), 0)).toBe(308.15);
+    expect(w.air.T(w.air.index(-60, -60))).toBe(308.15);
+    expect(w.terrain.T(w.terrain.index(0.5, 0.5), 0)).toBeGreaterThan(308.15);
+    c.unload();
+  });
+});
+
 describe('reproducibility and world preservation', () => {
   const scene = () => doc([B(design('house'), 0, 0), { type: 'car', seed: 3, transform: T(8, 3) }, { type: 'tree', seed: 4, transform: T(-7, 2) }]);
   const specs = () => [heat({ power: 8e5, duration: 30 }), heat({ kind: 'area', position: [6, -6], radius: 3, power: 3e5, duration: 30 })];
