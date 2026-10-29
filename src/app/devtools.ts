@@ -1,4 +1,9 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
+import { CELESTIAL_SCENARIOS, type CelestialScenario, type CelestialSpec } from '@/celestial/types';
+import { presetSpec as celestialPresetSpec } from '@/celestial/presets';
+import { celestialDemo } from '@/celestial/demos';
+import { celestialOutlook } from '@/celestial/outlook';
+import { celestialCsv } from '@/ui/Results/CelestialResults';
 import { CLIMATE_PRESETS } from '@/climate/presets';
 import { GRAVITY_SCENARIOS, type GravityScenario, type GravitySpec } from '@/gravity/types';
 import { presetSpec as gravityPresetSpec } from '@/gravity/presets';
@@ -201,6 +206,16 @@ export function installDevtools() {
       scenarios: GRAVITY_SCENARIOS,
       preset: (s: GravityScenario) => gravityPresetSpec(s),
       outlook: (spec: GravitySpec) => gravityOutlook(spec),
+    },
+    /** Phase 32 celestial (benchmarks / browser verification): the runtime, presets, demos and the outlook. */
+    celestialLib: {
+      rt: () => simulationController.getEnvironment().gravity.rt?.celestial ?? null,
+      field: () => simulationController.getEnvironment().gravity.field,
+      scenarios: CELESTIAL_SCENARIOS,
+      preset: (s: CelestialScenario) => celestialPresetSpec(s),
+      demo: (s: CelestialScenario) => celestialDemo(s),
+      outlook: (spec: CelestialSpec, zeroG = false) => celestialOutlook(spec, 9.81, zeroG),
+      csv: () => { const c = simulationController.celestialLive(); return c ? celestialCsv(c) : ''; },
     },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,

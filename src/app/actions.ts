@@ -3,6 +3,8 @@
  * so UI components never wire them together themselves.
  */
 import { gravityDemo } from '@/gravity/demos';
+import { celestialDemo } from '@/celestial/demos';
+import type { CelestialScenario } from '@/celestial/types';
 import type { GravityScenario } from '@/gravity/types';
 import { climatePreset, type ClimatePresetId } from '@/climate/presets';
 import type { EntityId } from '@/core/types';
@@ -243,6 +245,32 @@ export function loadGravityDemo(id: GravityScenario) {
   useWorldStore.getState().addObjects(p.objects);
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'gravity.demo.loaded', params: { name: t(`gravity.scenario.${id}`) } });
+}
+
+/**
+ * Load the demo world of a celestial preset (Phase 32): a block (or town / hill) with the preset's experiment and its
+ * companion phenomena (zero uniform gravity for the orbit laboratories, a meteor, a tower) — replaces the document.
+ */
+export function loadCelestialDemo(id: CelestialScenario) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('celestial.demo.confirm', { name: t(`celestial.scenario.${id}`) }))) return;
+  const p = celestialDemo(id);
+  const doc = createEmptyDocument(t(`celestial.scenario.${id}`));
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  const h = p.height;
+  if (h) {
+    const t0 = useWorldStore.getState().doc.terrain;
+    const heights = new Float32Array(t0.heights.length);
+    for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) heights[iz * t0.nx + ix] = h(t0.originX + ix * t0.cellSize, t0.originZ + iz * t0.cellSize);
+    useWorldStore.getState().applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+  }
+  if (p.lake) useWorldStore.getState().setFeatures([p.lake], 2);
+  useWorldStore.getState().addObjects(h ? p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], h(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })) : p.objects);
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'celestial.demo.loaded', params: { name: t(`celestial.scenario.${id}`) } });
 }
 
 export function loadSampleTown() {

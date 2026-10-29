@@ -21,6 +21,7 @@ import { MODELS } from '@/phenomena/models';
 import { phenomena } from '@/phenomena/registry';
 import { ModelBadge } from '@/ui/common/ModelBadge';
 import styles from './ResultsPanel.module.css';
+import { CelestialSummary, celestialObjects } from './CelestialResults';
 
 const PAGE = 400;
 
@@ -121,6 +122,7 @@ function ResultsDialog() {
     atmosphere: useSimStore.getState().atmosphere ?? undefined,
     climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(), climateRoads: climateRoads(),
     gravity: useSimStore.getState().gravity ?? undefined, gravityObjects: gravityObjects(), gravityBuildings: gravityBuildings(),
+    celestial: useSimStore.getState().celestial ? { ...useSimStore.getState().celestial, model: 'Newtonian softened point masses (real G); educational capture radius; no general relativity', units: { mass: 'kg', length: 'm', time: 's', energy: 'J', impulse: 'N·s' } } : undefined, celestialObjects: celestialObjects(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -152,6 +154,7 @@ function ResultsDialog() {
           <VolcanoSummary t={t} name={name} />
           <AtmosphereSummary t={t} name={name} />
           <GravitySummary t={t} name={name} />
+          <CelestialSummary t={t} name={name} />
           <ClimateSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />

@@ -143,6 +143,8 @@ export class CelestialRuntime {
   failures = 0;
   /** Set when the stop policy halts the run (the controller pauses on it). */
   stopRequest: { time: number; reason: string } | null = null;
+  /** The controller paused on the stop request (playing on continues). */
+  stopAcknowledged = false;
   private readonly started = new Set<number>();
   private readonly f: GravityField;
   private readonly sf: StepField;

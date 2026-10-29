@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive, ClimateLive, GravityLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive, AtmosphereLive, ClimateLive, GravityLive, CelestialLive } from './simStore';
 import { modeOf, supportOf } from '@/gravity/outlook';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
@@ -246,6 +246,7 @@ export class SimulationController {
       atmosphere: null,
       climate: null,
       gravity: null,
+      celestial: null,
       floodSeries: null,
       milestones: [],
     });
@@ -415,6 +416,7 @@ export class SimulationController {
       this.step(FIXED_DT);
       this.accumulator -= FIXED_DT;
       steps++;
+      if (this.celestialStop()) { this.accumulator = 0; break; }
       // Always at least one step; stop early when over budget (fixed steps keep results deterministic).
       if (performance.now() - start > STEP_BUDGET_MS) break;
     }
@@ -449,8 +451,24 @@ export class SimulationController {
   advance(seconds: number) {
     if (!this.runtime || !this.physics) return;
     const n = Math.round(seconds / FIXED_DT);
-    for (let i = 0; i < n; i++) this.step(FIXED_DT);
+    for (let i = 0; i < n; i++) {
+      this.step(FIXED_DT);
+      if (this.celestialStop()) break;
+    }
     this.publish(true);
+  }
+
+  /**
+   * Phase 32 stop policy: a celestial model limit was reached (speed > 0.1 c, substep cap) under an experiment set to
+   * stop — the run pauses once, with the reason in the log; playing on continues with the limit recorded.
+   */
+  private celestialStop(): boolean {
+    const cel = this.env.gravity.rt?.celestial;
+    if (!cel?.stopRequest || cel.stopAcknowledged) return false;
+    cel.stopAcknowledged = true;
+    this.log(null, 'danger', { key: 'log.celestial.stopped', params: { reason: cel.stopRequest.reason, t: cel.stopRequest.time.toFixed(2) } });
+    if (this.status === 'running') this.setStatus('paused');
+    return true;
   }
 
   private step(dt: number) {
@@ -661,6 +679,7 @@ export class SimulationController {
     patch.atmosphere = this.atmosphereLive();
     patch.climate = this.climateLive(force);
     patch.gravity = this.gravityLive();
+    patch.celestial = this.celestialLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -861,7 +880,8 @@ export class SimulationController {
     if (!f || !rt) return null;
     const G = f.G, g0 = ch.g0;
     const s = rt.stats;
-    const first = Math.min(...ch.experiments.map((r) => r.start));
+    // Phase 32: celestial experiments open the field too.
+    const first = Math.min(...ch.experiments.map((r) => r.start), ...ch.celestial.map((r) => r.start));
     const water = this.systems.find((x) => x.name === 'waterSolver') as unknown as { held?: number } | undefined;
     const atm = this.env.atmosphere.rt;
     const step = Math.max(1, Math.ceil(rt.series.length / 600));
@@ -879,6 +899,35 @@ export class SimulationController {
       sources: f.liveSources().map((l) => ({ kind: l.src.kind, center: [...l.src.center] as [number, number, number], radius: l.src.radius, f: l.f, owner: l.owner })),
       series: step === 1 ? rt.series.slice() : rt.series.filter((_, i) => i % step === 0),
       ms: s.ms, msTotal: s.msTotal,
+    };
+  }
+
+  /** Live celestial summary (Phase 32; null without a celestial experiment in force). */
+  celestialLive(): CelestialLive | null {
+    const ch = this.env.gravity, cel = ch.rt?.celestial;
+    if (!cel) return null;
+    const L = cel.ledger;
+    const flying = cel.stats.particles * cel.pmass;
+    const step = Math.max(1, Math.ceil(cel.series.length / 600));
+    return {
+      experiments: ch.celestial.map((r) => ({ name: r.name, scenario: r.spec.scenario, scale: r.spec.scale, start: r.start, duration: r.spec.duration, end: r.spec.end, sources: r.spec.sources.length, probes: r.spec.probes.length, particles: r.spec.accretion.particles, tidal: r.spec.tidal, lensing: r.spec.lensing, disc: r.spec.accretion.visual, limitPolicy: r.spec.limitPolicy })),
+      t: this.time - Math.min(...ch.celestial.map((r) => r.start)),
+      stats: { ...cel.stats, sources: cel.stats.sources.map((s) => ({ ...s })) },
+      ledger: {
+        count: L.count, mass: L.mass, grown: L.grown, stored: L.stored, massResidual: L.massResidual(),
+        momentum: [...L.momentum] as [number, number, number], constraintImpulse: [...L.constraintImpulse] as [number, number, number], constraintWork: L.constraintWork,
+        kinetic: L.kinetic, kineticRel: L.kineticRel, potential: L.potential, unresolved: L.unresolved,
+        byKind: Object.fromEntries(Object.entries(L.byKind).map(([k, v]) => [k, { ...v }])),
+        particles: { placed: L.particlesIn, flying, captured: L.particlesCaptured, landed: L.particlesLanded, left: L.particlesLeft, dissipated: L.particleDissipated, residual: L.particleResidual(flying) },
+        probesLeft: L.left,
+        records: L.records.slice(-50),
+      },
+      probes: cel.probes.map((p) => ({ id: p.id, state: p.state, mass: p.mass, pos: [...p.pos] as [number, number, number], vel: [...p.vel] as [number, number, number], diag: { ...p.diag, l0: [...p.diag.l0] as [number, number, number] } })),
+      structures: { uplifted: cel.structures.uplifted, loadedUnits: cel.structures.loadedUnits, peakLateral: cel.structures.peakLateral, failures: cel.failures },
+      conservative: cel.conservative(),
+      stop: cel.stopRequest ? { ...cel.stopRequest } : null,
+      series: step === 1 ? cel.series.slice() : cel.series.filter((_, i) => i % step === 0),
+      ms: cel.stats.ms,
     };
   }
 

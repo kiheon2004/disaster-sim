@@ -243,6 +243,31 @@ export interface GravityLive {
   msTotal: number;
 }
 
+/** Live celestial summary (Phase 32) for the HUD, inspector, results and verification. SI units. */
+export interface CelestialLive {
+  experiments: { name: string; scenario: string; scale: string; start: number; duration: number; end: string; sources: number; probes: number; particles: number; tidal: boolean; lensing: boolean; disc: boolean; limitPolicy: string }[];
+  /** Time since the first celestial experiment started (s). */
+  t: number;
+  stats: import('./celestial/runtime').CelestialStats;
+  /** Capture ledger totals and the last captures. */
+  ledger: {
+    count: number; mass: number; grown: number; stored: number; massResidual: number;
+    momentum: [number, number, number]; constraintImpulse: [number, number, number]; constraintWork: number;
+    kinetic: number; kineticRel: number; potential: number; unresolved: number;
+    byKind: Record<string, { n: number; m: number }>;
+    particles: { placed: number; flying: number; captured: number; landed: number; left: number; dissipated: number; residual: number };
+    probesLeft: number;
+    records: import('@/celestial/ledger').CaptureRecord[];
+  };
+  probes: { id: string; state: string; mass: number; pos: [number, number, number]; vel: [number, number, number]; diag: import('./celestial/runtime').OrbitDiag }[];
+  structures: { uplifted: number; loadedUnits: number; peakLateral: number; failures: number };
+  /** Field facts of the first source at its current state (reference values). */
+  conservative: boolean;
+  stop: { time: number; reason: string } | null;
+  series: import('./celestial/runtime').CelestialSeriesPoint[];
+  ms: number;
+}
+
 export type ClimateWorldTotals = { snowfall: number; rain: number; melt: number; meltToFlood: number; evaporated: number; condensed: number; frozenWater: number };
 
 /** Live atmosphere summary (Phase 29) for the HUD, results and verification. SI units. */
@@ -426,6 +451,7 @@ export interface SimState {
   atmosphere: AtmosphereLive | null;
   climate: ClimateLive | null;
   gravity: GravityLive | null;
+  celestial: CelestialLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -467,6 +493,7 @@ export const useSimStore = create<SimState>((set) => ({
   atmosphere: null,
   climate: null,
   gravity: null,
+  celestial: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

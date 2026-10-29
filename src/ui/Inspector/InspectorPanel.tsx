@@ -1,5 +1,6 @@
 import { ClimateObjectSection, ClimateProbeSection } from './ClimateInspector';
 import { GravityObjectSection, GravityProbeSection } from './GravityInspector';
+import { CelestialObjectSection, CelestialProbeSection } from './CelestialInspector';
 import { countRender } from '@/utils/renderCounter';
 import { useMemo } from 'react';
 import { useT } from '@/i18n/i18n';
@@ -63,6 +64,7 @@ export function InspectorPanel() {
           {inSim && <AtmosphereObjectSection id={obj.id} />}
           {inSim && <ClimateObjectSection id={obj.id} />}
           {inSim && <GravityObjectSection id={obj.id} />}
+          {inSim && <CelestialObjectSection id={obj.id} />}
           {inSim && <FireObjectSection id={obj.id} />}
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
@@ -73,6 +75,7 @@ export function InspectorPanel() {
           <AtmosphereProbeSection />
           <ClimateProbeSection />
           <GravityProbeSection />
+          <CelestialProbeSection />
           <GroundProbeSection />
           <BlastProbeSection />
           <ThermalProbeSection />

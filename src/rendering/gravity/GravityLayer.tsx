@@ -40,12 +40,13 @@ export function arrow3d(): THREE.BufferGeometry {
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** Orient / scale instance k as an arrow from p along g (length ∝ |g|). */
-export function placeArrow(mesh: THREE.InstancedMesh, k: number, p: readonly number[], g: readonly number[], m4: THREE.Matrix4, q: THREE.Quaternion, v: THREE.Vector3, s: THREE.Vector3, c: THREE.Color) {
+export function placeArrow(mesh: THREE.InstancedMesh, k: number, p: readonly number[], g: readonly number[], m4: THREE.Matrix4, q: THREE.Quaternion, v: THREE.Vector3, s: THREE.Vector3, c: THREE.Color, logLength = false) {
   const mag = Math.hypot(g[0], g[1], g[2]);
   v.set(g[0], g[1], g[2]);
   if (mag > 1e-9) v.multiplyScalar(1 / mag); else v.set(0, -1, 0);
   q.setFromUnitVectors(UP, v);
-  const L = Math.max(0.05, mag * LENGTH_PER_G);
+  // Phase 32: with celestial sources |g| spans decades — the length then follows log₁₀ (Earth 9.81 → 2.5 m as before).
+  const L = logLength ? Math.max(0.05, 2.5 * Math.max(0, 1 + Math.log10(Math.max(1e-9, mag / 9.81)) / 2)) : Math.max(0.05, mag * LENGTH_PER_G);
   s.set(L, L, L);
   m4.compose(v.set(p[0], p[1], p[2]), q, s);
   mesh.setMatrixAt(k, m4);
@@ -94,7 +95,7 @@ function GravityScene() {
       for (const h of [2, 14]) for (let z = t.originZ + SPACING / 2; z < t.originZ + D && n < ARROW_MAX; z += SPACING) for (let x = t.originX + SPACING / 2; x < t.originX + W && n < ARROW_MAX; x += SPACING) {
         const y = env.terrain.sampleHeight(x, z) + h;
         f.sample(x, y, z, tmp.g);
-        placeArrow(arrows, n++, [x, y, z], tmp.g, tmp.m4, tmp.q, tmp.v, tmp.s, tmp.c);
+        placeArrow(arrows, n++, [x, y, z], tmp.g, tmp.m4, tmp.q, tmp.v, tmp.s, tmp.c, f.points.live.length > 0);
       }
     }
     arrows.count = n;

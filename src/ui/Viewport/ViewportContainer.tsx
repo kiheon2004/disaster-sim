@@ -25,6 +25,7 @@ import { VolcanoHud } from './VolcanoHud';
 import { AtmosphereHud } from './AtmosphereHud';
 import { ClimateHud } from './ClimateHud';
 import { GravityHud } from './GravityHud';
+import { CelestialHud } from './CelestialHud';
 import { OverlayToggles } from './OverlayToggles';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
@@ -72,6 +73,7 @@ export function ViewportContainer() {
         {!isEditor && <VolcanoHud />}
         {!isEditor && <AtmosphereHud />}
         {!isEditor && <GravityHud />}
+        {!isEditor && <CelestialHud />}
         {!isEditor && <ClimateHud />}
         {!isEditor && <FireHud />}
         {!isEditor && <ThermalHud />}

@@ -192,6 +192,22 @@ export interface ClimateViz {
   shimmer: boolean;
 }
 
+/**
+ * Celestial views (Phase 32): a field slice through the first source on fixed log legends (|g|, Φ, tidal stretch,
+ * escape speed, model-limit zones), the sources (core, capture / softening / influence spheres), the visual disc and
+ * lens (illustrative), test particles, probe trails, principal-stretch axes.
+ */
+export interface CelestialViz {
+  overlay: import('./celestial/celestialColors').CelestialOverlay;
+  cores: boolean;
+  bounds: boolean;
+  disc: boolean;
+  lens: boolean;
+  particles: boolean;
+  trails: boolean;
+  tidal: boolean;
+}
+
 /** Gravity views (Phase 31): field arrows, a ground / building overlay on fixed SI legends, the local sources. */
 export interface GravityViz {
   overlay: import('./gravity/gravityColors').GravityOverlay;
@@ -279,6 +295,8 @@ interface ViewState {
   setClimateViz: (patch: Partial<ClimateViz>) => void;
   gravityViz: GravityViz;
   setGravityViz: (patch: Partial<GravityViz>) => void;
+  celestialViz: CelestialViz;
+  setCelestialViz: (patch: Partial<CelestialViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -341,6 +359,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setClimateViz: (patch) => set((s) => ({ climateViz: { ...s.climateViz, ...patch } })),
   gravityViz: { overlay: 'off', arrows: true, sources: true },
   setGravityViz: (patch) => set((s) => ({ gravityViz: { ...s.gravityViz, ...patch } })),
+  celestialViz: { overlay: 'off', cores: true, bounds: true, disc: true, lens: true, particles: true, trails: true, tidal: false },
+  setCelestialViz: (patch) => set((s) => ({ celestialViz: { ...s.celestialViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

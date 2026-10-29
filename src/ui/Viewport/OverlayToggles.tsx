@@ -1,8 +1,9 @@
 import { ATMOS_OVERLAYS, CLIMATE_OVERLAYS, type AtmosOverlay, type ClimateOverlay } from '@/rendering/viewStore';
 import { climateGradient, climateLabels } from '@/rendering/climate/climateColors';
 import { GRAVITY_OVERLAYS, gravityGradient, gravityLabels, type GravityOverlay } from '@/rendering/gravity/gravityColors';
+import { CELESTIAL_OVERLAYS, celestialGradient, celestialLabels, type CelestialOverlay } from '@/rendering/celestial/celestialColors';
 import { atmosGradient, atmosLabels } from '@/rendering/atmosphere/atmosColors';
-import { useT } from '@/i18n/i18n';
+import { useT, type MessageKey } from '@/i18n/i18n';
 import { useViewStore } from '@/rendering/viewStore';
 import { WIND_COLOR_STOPS } from '@/rendering/sim/windColors';
 import { DAMAGE_STATE_COLORS, DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
@@ -290,6 +291,7 @@ export function OverlayToggles() {
       <VolcanoToggles />
       <AtmosphereToggles />
       <GravityToggles />
+      <CelestialToggles />
       <ClimateToggles />
       <FireToggles />
       <StructureToggles />
@@ -431,6 +433,38 @@ function AtmosphereToggles() {
         <Toggle checked={viz.arrows} onChange={(b) => set({ arrows: b })} label={t('overlay.atmos.arrows')} />
         <Toggle checked={viz.streamlines} onChange={(b) => set({ streamlines: b })} label={t('overlay.atmos.streamlines')} />
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.atmos.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Celestial views (Phase 32): shown while a celestial experiment runs. Fixed log legends; disc / lens are illustrative. */
+function CelestialToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.celestial !== null);
+  const viz = useViewStore((s) => s.celestialViz);
+  const set = useViewStore.getState().setCelestialViz;
+  if (!live) return null;
+  const o = viz.overlay;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#ffc49a', marginTop: 2 }}>{t('overlay.celestial')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="celestial-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.celestial.overlay')}</span>
+        <select value={o} onChange={(e) => set({ overlay: e.target.value as CelestialOverlay })} aria-label={t('overlay.celestial.overlay')} data-testid="celestial-overlay-select"
+          style={{ fontSize: 11, background: 'var(--surface-2, #1c2128)', color: 'var(--text-1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4, padding: '2px 4px' }}>
+          {CELESTIAL_OVERLAYS.map((v) => <option key={v} value={v}>{t(`overlay.celestial.o.${v}` as MessageKey)}</option>)}
+        </select>
+        {o !== 'off' && <Legend gradient={celestialGradient(o)} labels={o === 'zones' ? [t('overlay.celestial.z.far'), t('overlay.celestial.z.core'), t('overlay.celestial.z.capture'), t('overlay.celestial.z.limit')] : celestialLabels(o)} note={t(`overlay.celestial.ot.${o}` as MessageKey)} />}
+        <Toggle checked={viz.cores} onChange={(b) => set({ cores: b })} label={t('overlay.celestial.cores')} />
+        <Toggle checked={viz.bounds} onChange={(b) => set({ bounds: b })} label={t('overlay.celestial.bounds')} />
+        <Toggle checked={viz.trails} onChange={(b) => set({ trails: b })} label={t('overlay.celestial.trails')} />
+        <Toggle checked={viz.particles} onChange={(b) => set({ particles: b })} label={t('overlay.celestial.particles')} />
+        <Toggle checked={viz.tidal} onChange={(b) => set({ tidal: b })} label={t('overlay.celestial.tidal')} />
+        <Toggle checked={viz.disc} onChange={(b) => set({ disc: b })} label={t('overlay.celestial.disc')} />
+        <Toggle checked={viz.lens} onChange={(b) => set({ lens: b })} label={t('overlay.celestial.lens')} />
+        <span style={{ fontSize: 10.5, color: '#ffb36b', lineHeight: 1.35 }} data-testid="celestial-illustrative">{t('overlay.celestial.illustrative')}</span>
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.celestial.note')}</span>
       </div>
     </>
   );
