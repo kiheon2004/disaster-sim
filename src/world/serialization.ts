@@ -173,6 +173,27 @@ export interface DesignLoadReport {
 
 export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport; roads: RoadLoadReport; landscape: LandscapeLoadReport & { recomposedVertices: number } } | { ok: false; error: string };
 
+/**
+ * A design written with one fixed key order per member (Phase 19): the file then does not
+ * depend on how the design was produced (generator paths, loaded files), so
+ * save → load → save is byte-identical. Values are untouched.
+ */
+const MEMBER_KEYS = ['id', 'type', 'role', 'level', 'position', 'rotation', 'size', 'material', 'host', 'facade', 'initialDamage'] as const;
+const canonicalCache = new WeakMap<BuildingDesign, BuildingDesign>();
+function canonicalDesign(d: BuildingDesign): BuildingDesign {
+  let c = canonicalCache.get(d);
+  if (c) return c;
+  const members = d.members.map((m) => {
+    const out: Record<string, unknown> = {};
+    for (const k of MEMBER_KEYS) if (m[k] !== undefined) out[k] = m[k];
+    for (const k of Object.keys(m)) if (!(k in out)) out[k] = (m as unknown as Record<string, unknown>)[k];
+    return out as unknown as BuildingDesign['members'][number];
+  });
+  c = { ...d, members };
+  canonicalCache.set(d, c);
+  return c;
+}
+
 /** Reference to an entry of the shared design table (v6). */
 const DESIGN_REF = '$design';
 
@@ -195,14 +216,14 @@ export function toSerializable(doc: WorldDocument) {
     if (n < 2) continue;
     const id = `d${refOf.size + 1}`;
     refOf.set(design, id);
-    table[id] = design;
+    table[id] = canonicalDesign(design);
   }
   const objects: Record<string, unknown> = {};
   for (const [id, o] of Object.entries(doc.objects)) {
     const { components: _c, ...rest } = o;
     void _c;
     const ref = o.building ? refOf.get(o.building) : undefined;
-    objects[id] = ref ? { ...rest, building: { [DESIGN_REF]: ref } } : rest;
+    objects[id] = ref ? { ...rest, building: { [DESIGN_REF]: ref } } : o.building ? { ...rest, building: canonicalDesign(o.building) } : rest;
   }
   const out: Record<string, unknown> = { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain), objects, roads: serializeNetwork(doc.roads), landscape: serializeLandscape(adoptTerrain(doc.terrain, doc.roads, doc.landscape), doc.terrain.nx) };
   if (refOf.size) out.designs = table;
@@ -274,7 +295,6 @@ export function parseDocument(json: string): LoadResult {
     if (group) obj.group = group;
     if (terrainAlign !== undefined) obj.terrainAlign = terrainAlign;
     const link = rawLink === undefined ? undefined : parseLink(rawLink);
-    if (link) obj.roadLink = link;
     if (rawBuilding !== undefined && o.type === 'building') {
       const refKey = rawBuilding && typeof rawBuilding === 'object' && DESIGN_REF in rawBuilding ? String((rawBuilding as Record<string, unknown>)[DESIGN_REF]) : null;
       const counted = refKey !== null && tableDesigns.has(refKey);
@@ -300,6 +320,8 @@ export function parseDocument(json: string): LoadResult {
         obj.seismic = d.seismic;
       } else designs.invalidDesigns++;
     }
+    // (After `building`: the key order of a created object, so save → load → save is identical.)
+    if (link) obj.roadLink = link;
     objects[id] = obj;
   }
   // Old (v1) files and missing terrain → flat terrain at 0 m.

@@ -196,13 +196,13 @@
       }
     },
     {
-      "name": "18 save / load round trip identical (schema v6)",
+      "name": "18 save / load round trip identical (current schema)",
       "ok": true,
       "detail": {
         "ok": true,
         "same": true,
-        "schema": 6,
-        "kb": 71,
+        "schema": 7,
+        "kb": 72,
         "report": {
           "droppedNodes": 0,
           "droppedSegments": 0,
@@ -243,7 +243,7 @@
     "roadDrawCalls": 6,
     "roadTriangles": 1930,
     "chunks": 3,
-    "fps": 60.4,
+    "fps": 60,
     "totalCalls": 23
   },
   "errors": []

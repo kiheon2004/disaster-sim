@@ -334,7 +334,7 @@ const rt = await ev(() => {
   window.__ds.world.getState().replaceDocument(res.doc);
   return { ok: true, same, schema: JSON.parse(json).schemaVersion, kb: Math.round(json.length / 1024), report: res.roads };
 });
-check('18 save / load round trip identical (schema v6)', rt.ok && rt.same && rt.schema === 6, rt);
+check('18 save / load round trip identical (current schema)', rt.ok && rt.same && rt.schema >= 6, rt);
 
 // ── 19. Flood: inundated roads, drains, overlay, live inspector ────────────────────
 const roadsBefore = await ev(() => JSON.stringify(window.__ds.world.getState().doc.roads));

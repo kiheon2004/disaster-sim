@@ -1,0 +1,229 @@
+{
+  "results": [
+    {
+      "name": "1 mountain by click",
+      "ok": true,
+      "detail": [
+        {
+          "id": "f1",
+          "kind": "mountain"
+        }
+      ]
+    },
+    {
+      "name": "2 valley drawn (path + double-click)",
+      "ok": true,
+      "detail": {
+        "h": -5.829999923706055
+      }
+    },
+    {
+      "name": "3 brush stroke goes into the sculpt layer; height change shown",
+      "ok": true,
+      "detail": {
+        "sculpt": "62.6",
+        "delta": "이번 획: 최대 +0.49 m / −0.00 m · 면적 352 m²"
+      }
+    },
+    {
+      "name": "4 river drawn; channel carved",
+      "ok": true,
+      "detail": {
+        "h": -1.5
+      }
+    },
+    {
+      "name": "5 river path changed by dragging its handle (one undo step)",
+      "ok": true,
+      "detail": {
+        "before": [
+          -29.9,
+          0.13
+        ],
+        "after": [
+          -29.9,
+          -19.87
+        ]
+      }
+    },
+    {
+      "name": "6 lake: basin carved, water surface below the shore, initial water",
+      "ok": true,
+      "detail": {
+        "surface": -6.31,
+        "water": 3647
+      }
+    },
+    {
+      "name": "7 coastline: sea side drops below sea level",
+      "ok": true,
+      "detail": {
+        "sea": -1.1200000047683716,
+        "land": -5.829999923706055
+      }
+    },
+    {
+      "name": "8 surface material painted (paint layer, rock)",
+      "ok": true,
+      "detail": {
+        "painted": 263
+      }
+    },
+    {
+      "name": "9 forest painted with the forest brush",
+      "ok": true,
+      "detail": {
+        "trees": 19
+      }
+    },
+    {
+      "name": "10 road crosses the river: culvert opening keeps the channel (water passes)",
+      "ok": true,
+      "detail": {
+        "segments": 1,
+        "channelVertices": 14,
+        "keptNatural": 14
+      }
+    },
+    {
+      "name": "11 buildings placed along the road near the river (kept out of the channel)",
+      "ok": true,
+      "detail": {
+        "n": 6,
+        "inChannel": 0
+      }
+    },
+    {
+      "name": "12 terrain change under a building: refit (moved with the ground) and foundation check",
+      "ok": true,
+      "detail": {
+        "y0": 0,
+        "y1": 3.5505001510236047,
+        "warned": true
+      }
+    },
+    {
+      "name": "13 undo all → empty flat world; redo all → identical",
+      "ok": true,
+      "detail": {
+        "steps": 14,
+        "empty": {
+          "f": 0,
+          "flat": true,
+          "o": 0
+        }
+      }
+    },
+    {
+      "name": "14 save / load round trip identical (schema v7, layers recomposed exactly)",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "same": true,
+        "schema": 7,
+        "report": {
+          "droppedFeatures": 0,
+          "rebuilt": false,
+          "recomposedVertices": 0
+        },
+        "kb": 330
+      }
+    },
+    {
+      "name": "15 rain: river / lake water present, mass budget closed",
+      "ok": true,
+      "detail": {
+        "water": 36852,
+        "err": -7.275957614183426e-11,
+        "roads": {
+          "total": 1,
+          "cracked": 0,
+          "severe": 0,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "trees": 0,
+        "events": 4
+      }
+    },
+    {
+      "name": "16 flood: rising sea + rain inundate the low ground",
+      "ok": true,
+      "detail": {
+        "water": 58356,
+        "err": -3.8562575355172157e-10,
+        "roads": {
+          "total": 1,
+          "cracked": 0,
+          "severe": 0,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "trees": 0,
+        "events": 21
+      }
+    },
+    {
+      "name": "17 typhoon: trees respond to the wind",
+      "ok": true,
+      "detail": {
+        "water": 36941,
+        "err": 5.820766091346741e-11,
+        "roads": {
+          "total": 1,
+          "cracked": 0,
+          "severe": 0,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "trees": 19,
+        "events": 155
+      }
+    },
+    {
+      "name": "18 earthquake: roads crack on the natural terrain",
+      "ok": true,
+      "detail": {
+        "water": 36846,
+        "err": 2.6193447411060333e-10,
+        "roads": {
+          "total": 1,
+          "cracked": 1,
+          "severe": 1,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "trees": 0,
+        "events": 129
+      }
+    },
+    {
+      "name": "19 multi-hazard run (wind + earthquake + rain)",
+      "ok": true,
+      "detail": {
+        "water": 36848,
+        "err": 3.2014213502407074e-10,
+        "roads": {
+          "total": 1,
+          "cracked": 0,
+          "severe": 0,
+          "inundated": 1,
+          "impassable": 1,
+          "scoured": 0
+        },
+        "trees": 22,
+        "events": 221
+      }
+    },
+    {
+      "name": "20 original world restored after every run (terrain, layers, roads, objects identical)",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}

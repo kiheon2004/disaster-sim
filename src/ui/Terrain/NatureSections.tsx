@@ -289,7 +289,7 @@ function FeatureEditor({ editing }: { editing: boolean }) {
         <>
           <div className={styles.sub}>{t(`nature.kind.${f.kind}`)} {f.id}{f.kind === 'mountain' || f.kind === 'hill' ? ` · ${t('nature.peak', { v: landformPeak(f).toFixed(1) })}` : ''}</div>
           <FeatureFields kind={f.kind} value={f as unknown as Record<string, unknown>} editing={editing} onChange={(patch) => updateFeature(f.id, patch as Partial<Feature>)} />
-          {warnings.map((w) => <div key={w.code} className={styles.note} data-warning={w.code}>⚠ {t(`nature.warn.${w.code}`, { v: (w.value ?? 0).toFixed(1) })}</div>)}
+          {warnings.map((w) => <div key={w.code} className={styles.note} data-warning={w.code}>⚠ {t(`nature.warn.${w.code}`, { v: Number.isInteger(w.value ?? 0) ? String(w.value ?? 0) : (w.value ?? 0).toFixed(1) })}</div>)}
           <button disabled={!editing} data-testid="feature-delete" onClick={() => deleteFeature(f.id)}>{t('nature.delete')}</button>
           <div className={styles.note}>{t(f.kind === 'lake' ? 'nature.delete.lakeNote' : 'nature.delete.note')}</div>
         </>

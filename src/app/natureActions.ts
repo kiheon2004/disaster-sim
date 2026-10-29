@@ -261,7 +261,7 @@ export function planForest(points: readonly P2[], f: ForestSettings = N().forest
     const h = sampler.sampleHeight(x, z);
     const inLake = lakes.some((l) => l.kind === 'lake' && l.filled && h < l.surface && polygonDistance(l.points, x, z).inside);
     const sea = doc.terrain.settings.waterLevel;
-    if (h < f.minElevation || h > f.maxElevation || inLake || inWater(x, z, 0.5) || (sea !== null && h < sea + 0.2)) { rejected++; return; }
+    if (h < f.minElevation || h > f.maxElevation || inLake || inWater(x, z, 0.5) || (sea !== null && h < sea - 0.05)) { rejected++; return; }
     const params = conifer ? { species: 'conifer', height: 11, canopyRadius: 2.2, trunkRadius: 0.32 } : { species: 'broadleaf', height: 8, canopyRadius: 3, trunkRadius: 0.28 };
     const plan = planPlacement({ type: 'tree', params, randomize: f.variation }, [{ x, z }], { ...DEFAULT_PLACEMENT, seed: subSeed(f.seed, 'tree', i + strokeIndex * 100000), slopeLimit: f.slopeLimit, variation: f.variation }, { terrain: sampler, existing }, 0, own)[0];
     if (!plan.ok) { rejected++; return; }

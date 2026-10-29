@@ -81,12 +81,12 @@ export function TerrainInspector() {
         ))}
       </div>
       <div className={styles.note}>{t('terrain.approx')}</div>
-      <div className={styles.liveGrid} data-testid="terrain-layers" style={{ marginTop: 8 }}>
-        <span style={{ gridColumn: '1 / -1', fontWeight: 600 }}>{t('nature.insp.layers')}</span>
+      <div className={styles.note} style={{ marginTop: 8, fontWeight: 600 }}>{t('nature.insp.layers')}</div>
+      <div className={styles.liveGrid} data-testid="terrain-layers">
         {layers.map(([k, v]) => <FragmentRow key={k} label={k} value={v} />)}
       </div>
-      <div className={styles.liveGrid} style={{ marginTop: 8 }}>
-        <span style={{ gridColumn: '1 / -1', fontWeight: 600 }}>{t('nature.insp.nearby')}</span>
+      <div className={styles.note} style={{ marginTop: 8, fontWeight: 600 }}>{t('nature.insp.nearby')}</div>
+      <div className={styles.liveGrid}>
         {nearby.map(([k, v]) => <FragmentRow key={k} label={k} value={v} />)}
       </div>
       <div className={styles.note}>{t('nature.insp.note')}</div>

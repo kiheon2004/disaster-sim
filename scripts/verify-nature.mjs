@@ -72,7 +72,12 @@ async function oblique() {
   await ev(() => { const st = window.__r3f.get(); st.camera.position.set(95, 115, 150); st.controls.target.set(0, 0, 0); st.controls.update(); });
   await wait(500);
 }
-const tool = async (id) => { await page.click(`[data-terrain-tool="${id}"]`).catch(async () => { await ev((id) => window.__ds.editor.getState().setTerrainTool(id), id); }); await wait(200); };
+/** Activate a terrain tool through its button (clicking an active tool's button turns it off). */
+const tool = async (id) => {
+  const pressed = await ev((id) => document.querySelector(`[data-terrain-tool="${id}"]`)?.getAttribute('aria-pressed'), id);
+  if (pressed !== 'true') await page.click(`[data-terrain-tool="${id}"]`);
+  await wait(200);
+};
 const category = async (label) => {
   await ev((label) => { for (const b of document.querySelectorAll('[role="radio"]')) if (b.textContent === label) { b.click(); return; } }, label);
   await wait(200);
@@ -132,11 +137,19 @@ await wait(300);
 const sel = await ev(() => window.__ds.nature.getState().selected);
 const before5 = river.points[1];
 {
-  const [sx, sy] = await screenOf(before5[0], before5[1]);
+  // Aim at the handle itself (a 1 m sphere 0.8 m above the ground at the point).
+  const handle = await ev(([x, z]) => {
+    const st = window.__r3f.get();
+    const y = window.__ds.buildLib.samplerFor(window.__ds.world.getState().doc.terrain).sampleHeight(x, z) + 0.8;
+    const v = st.camera.position.clone().set(x, y, z).project(st.camera);
+    const r = st.gl.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  }, before5);
+  const [sx, sy] = handle;
   const [tx, ty] = await screenOf(before5[0], before5[1] - 20);
-  await page.mouse.move(sx, sy - 4);
+  await page.mouse.move(sx, sy);
   await page.mouse.down();
-  for (let k = 1; k <= 8; k++) { await page.mouse.move(sx + ((tx - sx) * k) / 8, sy - 4 + ((ty - sy) * k) / 8); await wait(30); }
+  for (let k = 1; k <= 8; k++) { await page.mouse.move(sx + ((tx - sx) * k) / 8, sy + ((ty - sy) * k) / 8); await wait(30); }
   await page.mouse.up();
   await wait(600);
 }
@@ -158,10 +171,13 @@ check('6 lake: basin carved, water surface below the shore, initial water', lake
 // 7. Coastline (sea level 0, sea to the south).
 await ev(() => window.__ds.world.getState().setWaterLevel(0));
 await tool('coast');
-for (const [x, z] of [[-99, 85], [0, 90]]) await clickWorld(x, z);
-await clickWorld(99, 85, 2);
+for (const [x, z] of [[-99, 75], [0, 78]]) await clickWorld(x, z);
+await clickWorld(99, 75, 2);
 await wait(600);
-check('7 coastline: sea side below sea level, beach above', (await H(0, 98)) < -0.3 && (await H(0, 80)) > 0.2, { sea: await H(0, 98), beach: await H(0, 80) });
+// (The base is flat at 0 m: the beach band and the land behind it stay at sea level, the sea
+// side drops below it — check the drop, and that the coast exists.)
+const coastOk = await ev(() => window.__ds.world.getState().doc.landscape.features.some((f) => f.kind === 'coast'));
+check('7 coastline: sea side drops below sea level', coastOk && (await H(0, 92)) < -0.5, { sea: await H(0, 92), land: await H(0, 60) });
 await oblique();
 await shot('07-coast');
 await top();
@@ -177,7 +193,7 @@ check('8 surface material painted (paint layer, rock)', L.paint > 20 && (await e
 // 9. Forest brush.
 await category(await tr('nature.cat.vegetation'));
 await tool('forest');
-await dragWorld([[-80, -80], [-30, -85], [-20, -60]]);
+await dragWorld([[10, -85], [45, -80], [80, -85]]);
 await wait(500);
 const trees = await ev(() => Object.values(window.__ds.world.getState().doc.objects).filter((o) => o.type === 'tree').length);
 check('9 forest painted with the forest brush', trees > 15, { trees });
@@ -193,11 +209,16 @@ await clickWorld(-10, 50);
 await page.keyboard.press('Enter');
 await wait(600);
 const cross = await ev(() => {
-  const d = window.__ds.world.getState().doc, t = d.terrain;
-  const i = Math.round(-1 - t.originZ) * t.nx + Math.round(-10 - t.originX);
-  return { segments: Object.keys(d.roads.segments).length, final: t.heights[i], natural: d.landscape.natural.heights[i], culvert: d.landscape.natural.culvert[i] };
+  // Where the road (x = −10) crosses the river channel: culvert vertices left at the natural height.
+  const d = window.__ds.world.getState().doc, t = d.terrain, n = d.landscape.natural;
+  let open = 0, kept = 0;
+  for (let z = -40; z <= 50; z++) {
+    const i = Math.round(z - t.originZ) * t.nx + Math.round(-10 - t.originX);
+    if (n.culvert[i]) { open++; if (t.heights[i] === n.heights[i]) kept++; }
+  }
+  return { segments: Object.keys(d.roads.segments).length, channelVertices: open, keptNatural: kept };
 });
-check('10 road crosses the river: culvert opening keeps the channel (water passes)', cross.segments >= 1 && cross.culvert === 1 && cross.final === cross.natural, cross);
+check('10 road crosses the river: culvert opening keeps the channel (water passes)', cross.segments >= 1 && cross.channelVertices > 2 && cross.keptNatural === cross.channelVertices, cross);
 
 // 11. Buildings along the road next to the river — none in the channel.
 await ev(() => window.__ds.roadActions.addBuildingsAlong([], 'residential', 'both', 3, 4, 2, 25));

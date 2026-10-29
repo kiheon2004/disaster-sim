@@ -37,6 +37,7 @@ export function NatureTool() {
   useEffect(() => () => lines.dispose(), [lines]);
   const [hover, setHover] = useState<P2 | null>(null);
   const [forestPts, setForestPts] = useState<P2[]>([]);
+  const forestRef = useRef<P2[]>([]);
   const painting = useRef(false);
   const [drag, setDrag] = useState<{ id: string; index: number; x: number; z: number } | null>(null);
   const dragRef = useRef(drag);
@@ -47,10 +48,11 @@ export function NatureTool() {
       if (painting.current) {
         painting.current = false;
         orbit.unlock();
-        setForestPts((pts) => {
-          commitForest(pts);
-          return [];
-        });
+        // Commit outside any React state update (store writes must not run while rendering).
+        const pts = forestRef.current;
+        forestRef.current = [];
+        setForestPts([]);
+        commitForest(pts);
       }
       const d = dragRef.current;
       if (d) {
@@ -104,7 +106,10 @@ export function NatureTool() {
     // Forest painting follows the cursor while the button is held.
     if (painting.current && hover) {
       const add = forestDab(hover[0], hover[1]);
-      if (add.length) setForestPts((pts) => [...pts, ...add]);
+      if (add.length) {
+        forestRef.current = [...forestRef.current, ...add];
+        setForestPts(forestRef.current);
+      }
     }
   });
 
@@ -126,7 +131,8 @@ export function NatureTool() {
     orbit.lock();
     painting.current = true;
     beginForestStroke();
-    setForestPts(forestDab(p[0], p[1]));
+    forestRef.current = forestDab(p[0], p[1]);
+    setForestPts(forestRef.current);
   };
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 5 || drag) return;

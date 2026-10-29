@@ -118,8 +118,9 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
         <lineBasicMaterial color="#f5f8ff" transparent opacity={0.35} />
       </lineSegments>
       <OuterRing />
+      {/* (2 cm below the level: ground lying exactly at the level does not z-fight with a coplanar water plane.) */}
       {water !== null && (
-        <mesh rotation-x={-Math.PI / 2} position-y={water} renderOrder={2} raycast={() => null}>
+        <mesh rotation-x={-Math.PI / 2} position-y={water - 0.02} renderOrder={2} raycast={() => null}>
           <planeGeometry args={[WORLD_SIZE, WORLD_SIZE]} />
           <meshStandardMaterial color="#3f86b8" transparent opacity={0.55} roughness={0.15} metalness={0.1} depthWrite={false} />
         </mesh>
