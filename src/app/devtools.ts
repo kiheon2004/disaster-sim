@@ -1,5 +1,8 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
 import { CLIMATE_PRESETS } from '@/climate/presets';
+import { GRAVITY_SCENARIOS, type GravityScenario, type GravitySpec } from '@/gravity/types';
+import { presetSpec as gravityPresetSpec } from '@/gravity/presets';
+import { gravityOutlook } from '@/gravity/outlook';
 import { climateOutlook } from '@/climate/outlook';
 import type { ClimateSpec } from '@/climate/types';
 import { ATMOS_PRESETS } from '@/atmosphere/presets';
@@ -189,6 +192,15 @@ export function installDevtools() {
       rt: () => simulationController.getEnvironment().climate.rt,
       presets: CLIMATE_PRESETS,
       outlook: (spec: ClimateSpec) => climateOutlook(spec),
+    },
+    /** Phase 31 gravity (benchmarks / browser verification): the run's gravity channel / runtime, presets and the outlook. */
+    gravityLib: {
+      channel: () => simulationController.getEnvironment().gravity,
+      rt: () => simulationController.getEnvironment().gravity.rt,
+      physics: () => simulationController.getPhysics(),
+      scenarios: GRAVITY_SCENARIOS,
+      preset: (s: GravityScenario) => gravityPresetSpec(s),
+      outlook: (spec: GravitySpec) => gravityOutlook(spec),
     },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,

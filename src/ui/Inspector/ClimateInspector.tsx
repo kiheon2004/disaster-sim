@@ -64,9 +64,11 @@ export function ClimateObjectSection({ id }: { id: EntityId }) {
   if (s) {
     const cw = r.cw, st = cw.stores[s.k];
     const M = cw.sM[s.k];
+    // Phase 31: the weight under the gravity acting now (9.81 m/s² without a gravity experiment).
+    const gd = simulationController.getEnvironment().gravity.downUniform(9.81);
     rows.unshift(
       [t('climate.inspect.store'), `${fmt(M, 1)} kg · ${fmt(M / st.area, 1)} kg/m²${cw.sIce[s.k] > 0 ? ` · ${t('climate.inspect.storeIce')} ${fmt(cw.sIce[s.k], 1)} kg` : ''}`],
-      [t('climate.inspect.load'), `${fmt((M * 9.81) / st.area / 1000, 3)} kPa · ${fmt(M * 9.81 / 1000, 2)} kN`],
+      [t('climate.inspect.load'), `${fmt((M * gd) / st.area / 1000, 3)} kPa · ${fmt(M * gd / 1000, 2)} kN`],
     );
     if (M > 0) rows.unshift([t('climate.inspect.storeT'), C(cw.sT[s.k])]);
     if (st.kind === STORE.roof) rows.push([t('climate.inspect.structural'), t(e.climate?.applied ? 'climate.inspect.applied' : e.modular ? 'climate.inspect.screened' : 'climate.inspect.reported')]);

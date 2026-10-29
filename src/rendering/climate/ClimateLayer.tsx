@@ -215,7 +215,7 @@ function ClimateScene() {
           s0.set(ent.dims[0] * 0.98, depth, ent.dims[2] * 0.98);
           m4.compose(v0, q0, s0);
           slabs.setMatrixAt(ns, m4);
-          if (vs.overlay === 'roofLoad' && stI.kind === STORE.roof) climateColor('roofLoad', (M * 9.81) / stI.area / 1000, c0); else c0.set('#f4f8ff');
+          if (vs.overlay === 'roofLoad' && stI.kind === STORE.roof) climateColor('roofLoad', (M * env.gravity.downUniform(9.81)) / stI.area / 1000, c0); else c0.set('#f4f8ff');
           slabs.setColorAt(ns, c0);
           ns++;
         }

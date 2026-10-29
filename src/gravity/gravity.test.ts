@@ -179,3 +179,39 @@ describe('gravity field composition', () => {
     expect(t[0]).toBeCloseTo(-4 / 8, 10);
   });
 });
+
+describe('gravity outlook and presets', () => {
+  it('support rules: Earth full; 2 g scaled; zero g holds the free-surface models; tilt beyond 0.3 limited; uplift limits structures', async () => {
+    const { supportOf, modeOf, gravityOutlook } = await import('./outlook');
+    const st = (down: number, horizontal = 0, local = false) => supportOf({ down, horizontal, magnitude: Math.hypot(down, horizontal), local }, 9.81);
+    expect(Object.values(st(9.81)).every((v) => v === 'full')).toBe(true);
+    expect(st(19.62).structure).toBe('scaled');
+    expect(st(19.62).flood).toBe('scaled');
+    expect(st(0).flood).toBe('unsupported');
+    expect(st(0).rigid).toBe('full');
+    expect(st(9.81, 4).flood).toBe('limited');
+    expect(st(9.81, 2).flood).toBe('scaled');
+    expect(st(-9.81).structure).toBe('limited');
+    expect(modeOf([0, -9.81, 0], 9.81, true)).toBe('earth');
+    expect(modeOf([0, -1.62, 0], 9.81, true)).toBe('low');
+    expect(modeOf([0, 9.81, 0], 9.81, true)).toBe('reverse');
+    expect(modeOf([9.81, 0, 0], 9.81, true)).toBe('sideways');
+    expect(modeOf([0, 0, 0], 9.81, true)).toBe('zero');
+    expect(modeOf([0, -9.81, 0], 9.81, false)).toBe('local');
+    const o = gravityOutlook(presetSpec('reverse'));
+    expect(o.minDown).toBeCloseTo(-9.81, 9);
+    expect(o.limits).toContain('gravity.lim.uplift');
+    expect(gravityOutlook(presetSpec('zero')).limits).toContain('gravity.lim.waterNoDown');
+  });
+  it('every preset has a demo world with a valid gravity experiment (and its companion phenomenon)', async () => {
+    const { gravityDemo } = await import('./demos');
+    for (const s of GRAVITY_SCENARIOS) {
+      if (s === 'custom') continue;
+      const d = gravityDemo(s);
+      const g = d.events.find((e) => e.event === 'gravity') as unknown as GravitySpec;
+      expect(gravityIssues(g), s).toEqual([]);
+      expect(d.objects.length).toBeGreaterThan(10);
+    }
+    expect(gravityDemo('highSnow').events.some((e) => e.event === 'climate')).toBe(true);
+  });
+});

@@ -98,7 +98,7 @@ export function FloodLiveSection({ id }: { id: EntityId }) {
     [t('live.flood.exposure'), `${fmt(st.exposure, 0)} s (≥ ${FLOOD_DEPTH} m)`],
   ];
   if (e.dynamic) {
-    rows.push([t('live.flood.submerged'), `${Math.round(st.submerged * 100)} %`], [t('live.flood.buoyancy'), `${fmt(st.buoyancyRatio, 2)} (${fmt(st.buoyancy / 1000, 2)} kN / ${fmt((e.source.physics.mass * GRAVITY) / 1000, 2)} kN)`]);
+    rows.push([t('live.flood.submerged'), `${Math.round(st.submerged * 100)} %`], [t('live.flood.buoyancy'), `${fmt(st.buoyancyRatio, 2)} (${fmt(st.buoyancy / 1000, 2)} kN / ${fmt((e.source.physics.mass * simulationController.getEnvironment().gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY)) / 1000, 2)} kN)`]);
   }
   if (type === 'building') {
     rows.push(

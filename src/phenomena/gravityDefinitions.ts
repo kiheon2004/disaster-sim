@@ -100,7 +100,8 @@ export const gravity = implemented<GravitySpec>({
       get: (s) => dirName(G(s).direction), set: (s, v) => (v === 'custom' ? put(s, { direction: [0.5, -0.8, 0.3] }) : put(s, { direction: [...DIRECTIONS[v as keyof typeof DIRECTIONS]] as [number, number, number] })),
     },
     ...([0, 1, 2] as const).map((i): ParamField => ({
-      visible: (s) => global(s) && dirName(G(s).direction) === 'custom', key: `d${i}`, labelKey: `gravity.f.d${'xyz'[i]}` as MessageKey, unit: '', min: -1, max: 1, step: 0.05, precision: 2,
+      // Always editable while the global part is on (a named direction is a shortcut; editing a component keeps its field).
+      visible: global, key: `d${i}`, labelKey: `gravity.f.d${'xyz'[i]}` as MessageKey, unit: '', min: -1, max: 1, step: 0.05, precision: 2,
       get: (s) => G(s).direction[i], set: (s, v) => { const d = [...G(s).direction] as [number, number, number]; d[i] = Number(v); return put(s, { direction: d }); },
     })),
     { visible: global, key: 'transition', labelKey: 'gravity.f.transition', unit: '', min: 0, max: 0, step: 0, precision: 0, options: opt('gravity.transition', GRAVITY_TRANSITIONS) },
