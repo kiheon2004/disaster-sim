@@ -32,6 +32,8 @@ import { ZERO_C, C_WATER, K_WATER, RHO_WATER } from './units';
 export const TM = {
   concrete: 0, steel: 1, timber: 2, masonry: 3, glass: 4, cladding: 5, pavingConcrete: 6, asphalt: 7, soil: 8, sand: 9, clay: 10,
   rock: 11, gravel: 12, mud: 13, riverbed: 14, saturatedSand: 15, water: 16, wood: 17, foliage: 18, debris: 19, vehicle: 20,
+  // Phase 28: lava (appended — earlier indices unchanged).
+  basaltLava: 21, andesiteLava: 22,
 } as const;
 export type ThermalMaterialId = keyof typeof TM;
 export const THERMAL_MATERIAL_IDS = Object.keys(TM) as ThermalMaterialId[];
@@ -177,6 +179,50 @@ const WOOD_U = 0.5;
 const FOLIAGE_U = 1.5;
 const T15 = ZERO_C + 15;
 
+/**
+ * Phase 28 — lava as a thermal material (the volcano's lava and its deposits keep their energy in these
+ * enthalpy tables). Latent heat of crystallization released uniformly between liquidus and solidus
+ * (apparent heat capacity; crystal fraction linear in temperature), constant sensible c_p otherwise.
+ *   [FLOWGO] Harris & Rowland (2001) Bull. Volcanol. 63:20–44, Table 1: c_p basalt 1225 J/(kg·K),
+ *            latent heat 3.5 ± 0.7·10⁵ J/kg, emissivity 0.95, dense-rock density 2600 kg/m³,
+ *            conductivity from Peck (1978): k = (1.929 − 1.554·v)² W/(m·K), v = vesicularity;
+ *            "basalt with a liquidus ~1200 °C"
+ *   [WO77]   Wright & Okamura (1977) USGS PP 1004 — Makaopuhi lava lake: solidus ≈ 980 °C
+ * Andesite: the same c_p / L / k relation (WEAK — basalt values kept for want of an equally simple
+ * source), liquidus / solidus 1100 / 900 °C assumed (representative of crystal-bearing andesite lavas).
+ */
+export interface LavaThermal {
+  /** Dense-rock density (kg/m³), vesicularity (–), bulk density (kg/m³). */
+  dre: number;
+  vesicularity: number;
+  bulk: number;
+  cp: number;
+  latent: number;
+  /** Liquidus / solidus (K). */
+  TL: number;
+  TS: number;
+  k: number;
+  emissivity: number;
+}
+const lavaThermal = (dre: number, v: number, TLc: number, TSc: number): LavaThermal => ({
+  dre, vesicularity: v, bulk: dre * (1 - v), cp: 1225, latent: 3.5e5, TL: TLc + ZERO_C, TS: TSc + ZERO_C, k: (1.929 - 1.554 * v) ** 2, emissivity: 0.95,
+});
+export const LAVA_THERMAL = {
+  basaltLava: lavaThermal(2600, 0.2, 1200, 980),
+  andesiteLava: lavaThermal(2600, 0.2, 1100, 900),
+} as const;
+
+function lavaMaterial(id: 'basaltLava' | 'andesiteLava', source: string): ThermalMaterial {
+  const p = LAVA_THERMAL[id];
+  const tl = p.TL - ZERO_C, ts = p.TS - ZERO_C;
+  const peak = p.latent / (tl - ts);
+  return make({
+    id, density: p.bulk, c: (t) => p.cp + (t > ts && t < tl ? peak : 0), k: constant(p.k), emissivity: p.emissivity,
+    strain: linearStrain(8e-6), strength: null, range: [20, 1300], source,
+  });
+}
+
+
 export const THERMAL_MATERIALS: readonly ThermalMaterial[] = [
   make({
     id: 'concrete', density: 2400, c: concreteC, k: concreteK, emissivity: 0.7, strain: concreteStrain, range: [20, 1200],
@@ -215,7 +261,10 @@ export const THERMAL_MATERIALS: readonly ThermalMaterial[] = [
   // Loose rubble: bulked 1.6 (Phase 25) → porosity 0.375, k = 0.039·n^-2.2 (Johansen crushed rock).
   handbook('debris', 2300 / 1.6, 0.039 * 0.375 ** -2.2, 880, 0.9, 1e-5, 'loose rubble, bulking 1.6 (porosity 0.375), Johansen dry crushed rock; c of concrete (heaps use the mass-weighted c of what they hold)'),
   make({ id: 'vehicle', density: 7850, c: steelC, k: steelK, emissivity: 0.9, strain: steelStrain, strength: null, range: [20, 1200], source: 'vehicle body taken as painted steel (EN 1993-1-2 c, λ)' }),
+  lavaMaterial('basaltLava', 'basaltic lava, v = 0.2: FLOWGO (Harris & Rowland 2001) c_p, L, ε, Peck (1978) k; liquidus 1200 °C (FLOWGO), solidus 980 °C (Wright & Okamura 1977)'),
+  lavaMaterial('andesiteLava', 'andesitic lava, v = 0.2: basalt c_p / L / k (weak), liquidus / solidus 1100 / 900 °C assumed'),
 ];
+
 
 export const thermalMaterial = (i: number): ThermalMaterial => THERMAL_MATERIALS[i];
 
