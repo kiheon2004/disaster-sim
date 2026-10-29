@@ -18,7 +18,7 @@ import { applyPatch, makePatch, snapshotLayers, unionRect, type GridRect, type T
 import { applyDab, type DabOptions } from '@/terrain/TerrainEditor';
 import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
-import { isGrounded, reseat } from '@/terrain/groundPlacement';
+import { groundPose, isGrounded, reseat, yawOf } from '@/terrain/groundPlacement';
 import { terrainStats } from '@/terrain/terrainStats';
 import { preserveOnTerrainEdit, releasePlinth } from '@/buildings/foundation';
 import type { RoadNetwork } from '@/roads/types';
@@ -61,8 +61,11 @@ export interface LandscapeEdit {
   next?: number;
   /** Replace the base terrain (environment presets); sculpt and paint are cleared. */
   base?: { heights: Float32Array; ground: Uint8Array; soil?: Uint8Array; settings?: TerrainData['settings'] };
-  /** Sculpt to ADD and paint to SET in a rectangle (nature regions, Phase 20 blueprints). */
-  layers?: { rect: GridRect; sculpt: Float32Array | null; paint: Uint8Array | null };
+  /**
+   * Sculpt to ADD and paint to SET in a rectangle (nature regions, Phase 20 blueprints). `soil`
+   * (Phase 20): soil profile to SET (255 = keep) — a terrain layer, recorded in the same patch.
+   */
+  layers?: { rect: GridRect; sculpt: Float32Array | null; paint: Uint8Array | null; soil?: Uint8Array | null };
 }
 
 /** Live brush stroke (terrain arrays are edited in place; one history entry at the end). */
@@ -91,6 +94,13 @@ export interface WorldEdit {
   roads?: RoadNetwork;
   /** Terrain layer changes (Phase 19), applied before the roads (roads bake on the new natural ground). */
   landscape?: LandscapeEdit;
+  /**
+   * Phase 20 (blueprint placement), parallel to `add`: the ground pose of each added object is
+   * computed on the terrain AFTER this edit's terrain / road changes — `lift` m above the ground
+   * (0 = standing on it), heading kept; null = keep the given transform (rigid placement).
+   * Without it, objects are created where given and only follow ground they stood on before.
+   */
+  addSeat?: (number | null)[];
 }
 
 export interface MutationOptions {
@@ -191,6 +201,27 @@ function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainS
 
 const seaLevel = (t: TerrainData) => t.settings.waterLevel ?? 0;
 
+/** Seat added objects on the (final) terrain: WorldEdit.addSeat (Phase 20 blueprint placement). */
+type Seater = (objects: Objects, terrain: TerrainSampler) => Objects;
+function seater(ids: readonly EntityId[], lifts: readonly (number | null)[] | undefined): Seater | undefined {
+  if (!lifts?.some((l) => l !== null && l !== undefined)) return undefined;
+  return (objects, terrain) => {
+    const out = { ...objects };
+    ids.forEach((id, k) => {
+      const lift = lifts[k];
+      const o = out[id];
+      if (lift === null || lift === undefined || !o) return;
+      const [x, , z] = o.transform.position;
+      const pose = groundPose(o, x, z, yawOf(o.transform.rotation), terrain);
+      out[id] = {
+        ...o,
+        transform: { ...o.transform, position: [x, pose.position[1] + lift, z], rotation: lift === 0 && !terrain.flat ? pose.rotation : o.transform.rotation },
+      };
+    });
+    return out;
+  };
+}
+
 const landEntry = (doc: WorldDocument, patch: LayerPatch | null): LandscapeEntry => ({ features: doc.landscape.features, next: doc.landscape.next, patch });
 
 /** World-space box of a vertex rectangle. */
@@ -243,14 +274,15 @@ export const useWorldStore = create<WorldState>((set, get) => {
   /** Commit after the terrain / layers were changed in place: patches, objects follow, history. */
   const finishLayered = (
     doc: WorldDocument, past: HistoryEntry[], before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | null,
-    finalRect: GridRect, layerRect: GridRect | null, roads: RoadNetwork, objects: Objects, featuresBefore = doc.landscape.features, nextBefore = doc.landscape.next,
+    finalRect: GridRect, layerRect: GridRect | null, roads: RoadNetwork, objects: Objects, featuresBefore = doc.landscape.features, nextBefore = doc.landscape.next, seat?: Seater,
   ) => {
     const t = doc.terrain;
     const land = doc.landscape;
     const patch = makePatch(t, before, finalRect);
     const lpatch = lb && layerRect ? makeLayerPatch(land, t.nx, lb, layerRect) : null;
     const area = rectArea(t, finalRect);
-    const out = followTerrain(objects, samplerOver(t, before), samplerFor(t), area);
+    let out = followTerrain(objects, samplerOver(t, before), samplerFor(t), area);
+    if (seat) out = seat(out, samplerFor(t));
     set({
       doc: { ...touch(doc, out), terrain: { ...t }, roads, landscape: { ...land } },
       terrainRect: finalRect,
@@ -307,7 +339,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
    * the new natural terrain, objects follow. On any error every array is restored and the
    * error is re-thrown — no half-changed terrain.
    */
-  const applyLandscapeEdit = (objects: Objects, e: LandscapeEdit, nextRoads?: RoadNetwork) => {
+  const applyLandscapeEdit = (objects: Objects, e: LandscapeEdit, nextRoads?: RoadNetwork, seat?: Seater) => {
     const { doc, past } = get();
     const t = doc.terrain;
     const land = doc.landscape;
@@ -332,6 +364,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
           const i = iz * t.nx + ix, k = (iz - r.z0) * w + (ix - r.x0);
           if (sculpt && sculpt[k] !== 0) land.sculpt[i] = Math.round((land.sculpt[i] + sculpt[k]) * 100) / 100;
           if (paint && paint[k] !== NO_PAINT) land.paint[i] = paint[k];
+          if (e.layers.soil && e.layers.soil[k] !== NO_PAINT) t.soil[i] = e.layers.soil[k];
         }
         rect = unionRects(rect, r);
       }
@@ -359,7 +392,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
           roads = { ...nextRoads, underlay: res.underlay };
         } else roads = { ...nextRoads, underlay: roads.underlay };
       }
-      finishLayered(doc, past, before, lb, finalRect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }, layerRect, roads, out, featuresBefore, nextBefore);
+      finishLayered(doc, past, before, lb, finalRect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }, layerRect, roads, out, featuresBefore, nextBefore, seat);
     } catch (err) {
       // Roll back every array touched so far.
       t.heights.set(before.heights);
@@ -429,13 +462,15 @@ export const useWorldStore = create<WorldState>((set, get) => {
         }
         changed = true;
       }
+      const seat = seater(ids, edit.addSeat);
       if (edit.landscape) {
-        applyLandscapeEdit(objects, edit.landscape, edit.roads);
+        applyLandscapeEdit(objects, edit.landscape, edit.roads, seat);
         return ids;
       }
       if (edit.roads && edit.roads !== get().doc.roads) {
         const doc = get().doc;
         const r = bakeRoads(doc, objects, edit.roads);
+        if (seat) r.objects = seat(r.objects, samplerFor(doc.terrain));
         const entry: HistoryEntry = { objects: doc.objects, terrain: r.patch, roads: doc.roads, landscape: landEntry(doc, null) };
         set({
           terrainRect: r.patch?.rect ?? null,
@@ -447,7 +482,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
         });
         return ids;
       }
-      if (changed) commit(objects, opts);
+      if (changed) commit(seat ? seat(objects, samplerFor(get().doc.terrain)) : objects, opts);
       return ids;
     },
 

@@ -97,16 +97,26 @@ export function featureBounds(f: Feature): Box {
 
 // ── landforms ──────────────────────────────────────────────────────────────────
 
+/** Noise sample point of a landform (its frame; absent = the world point itself). */
+function noiseAt(f: PeakFeature | LineLandformFeature, x: number, z: number, scale: number): [number, number] {
+  const fr = f.frame;
+  if (!fr) return [x / scale, z / scale];
+  const dx = x - fr.x, dz = z - fr.z, c = Math.cos(fr.yaw), s = Math.sin(fr.yaw);
+  return [(dx * c - dz * s) / scale, (dx * s + dz * c) / scale];
+}
+
 function peakDelta(f: PeakFeature, x: number, z: number): number {
   const t = Math.hypot(x - f.x, z - f.z) / f.radius;
   if (t >= 1) return 0;
   if (f.kind === 'hill') {
     const bell = 0.5 * (1 + Math.cos(Math.PI * t));
-    return f.height * bell * (1 + 0.3 * f.roughness * noiseFor(f.seed).fbm(x / 12, z / 12, 3));
+    const [u, v] = noiseAt(f, x, z, 12);
+    return f.height * bell * (1 + 0.3 * f.roughness * noiseFor(f.seed).fbm(u, v, 3));
   }
   const u = 1 - t * t;
   const bell = u * u * u;
-  return f.height * bell * (1 + 0.5 * f.roughness * noiseFor(f.seed).fbm(x / 9, z / 9, 4));
+  const [nu, nv] = noiseAt(f, x, z, 9);
+  return f.height * bell * (1 + 0.5 * f.roughness * noiseFor(f.seed).fbm(nu, nv, 4));
 }
 
 function lineDelta(f: LineLandformFeature, x: number, z: number): number {
@@ -118,7 +128,8 @@ function lineDelta(f: LineLandformFeature, x: number, z: number): number {
   // Ends taper over the first / last 15 % (at most 15 m) of the path.
   const e = Math.min(15, line.length * 0.15);
   const taper = smoothstep(0, e, hit.s) * smoothstep(0, e, line.length - hit.s);
-  const n = 1 + 0.4 * f.roughness * noiseFor(f.seed).fbm(x / 8, z / 8, 3);
+  const [nu, nv] = noiseAt(f, x, z, 8);
+  const n = 1 + 0.4 * f.roughness * noiseFor(f.seed).fbm(nu, nv, 3);
   if (f.kind === 'canyon') {
     // Flat floor over the middle half, steep walls (smoothstep over the outer half).
     const wall = t <= 0.5 ? 1 : 1 - smoothstep(0.5, 1, t);

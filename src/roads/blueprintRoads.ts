@@ -12,7 +12,7 @@
  */
 import { z } from 'zod';
 import type { P2 } from './curve';
-import { crossings, drawRoad, insertSubnetwork, segmentLine } from './network';
+import { assertValid, crossings, drawRoad, findNode, findSegment, insertSubnetwork, segmentLine, splitSegment, SNAP_NODE, SNAP_SEGMENT } from './network';
 import { defaultProfile, type RoadNetwork, type RoadProfile } from './types';
 import { profileSchema } from './schema';
 
@@ -56,6 +56,8 @@ export interface RoadPasteResult {
   segments: string[][];
   /** Isolate policy: crossings with existing roads that were NOT turned into junctions. */
   unconnectedCrossings: number;
+  /** Existing segments split into pieces by a connected paste (Phase 20 report / guard). */
+  split: string[];
 }
 
 /** Place blueprint roads with the anchor at (x, z), rotated by yaw (same rotation as objects). */
@@ -74,14 +76,16 @@ export function pasteRoads(net: RoadNetwork, bp: BlueprintRoads, x: number, z: n
       const seg = r.network.segments[id];
       unconnected += crossings(before, segmentLine(r.network, seg), seg.a, seg.b).length;
     }
-    return { network: r.network, segments: r.segmentIds.map((id) => [id]), unconnectedCrossings: unconnected };
+    return { network: r.network, segments: r.segmentIds.map((id) => [id]), unconnectedCrossings: unconnected, split: [] };
   }
   let n = net;
   const out: string[][] = [];
+  const split = new Set<string>();
   for (const g of bp.segments) {
     const a = bp.nodes[g.a], b = bp.nodes[g.b];
     const pts: P2[] = [tr(a.x, a.z), ...g.control.map(([u, v]) => tr(u, v)), tr(b.x, b.z)];
     const r = drawRoad(n, pts, { curved: g.control.length > 0, profile: g.profile });
+    for (const id of r.splits) if (net.segments[id]) split.add(id);
     n = r.network;
     // Fixed node elevations travel with the paste (relative to the ground at the anchor).
     for (const [k, id] of [[g.a, r.network.segments[r.segments[0]]?.a], [g.b, r.network.segments[r.segments[r.segments.length - 1]]?.b]] as [number, string | undefined][]) {
@@ -91,7 +95,69 @@ export function pasteRoads(net: RoadNetwork, bp: BlueprintRoads, x: number, z: n
     if (g.condition) for (const id of r.segments) n = { ...n, segments: { ...n.segments, [id]: { ...n.segments[id], condition: g.condition } } };
     out.push(r.segments);
   }
-  return { network: n, segments: out, unconnectedCrossings: 0 };
+  return { network: n, segments: out, unconnectedCrossings: 0, split: [...split].sort() };
+}
+
+/**
+ * "Snap endpoints" (Phase 20): after an isolated insert, only the OPEN ends of the inserted roads
+ * (nodes used by one inserted segment and nothing else) attach to the existing network — to an
+ * existing node within SNAP_NODE, else onto the nearest existing road within its snap reach
+ * (that road is split there: a T-junction). Crossings in the middle of roads are left alone and
+ * no existing road is ever removed. Returns the network, the number of snapped ends and the
+ * existing segments that were split.
+ */
+export function snapEndpoints(net: RoadNetwork, inserted: { nodes: readonly string[]; segments: readonly string[] }): { network: RoadNetwork; snapped: number; split: string[] } {
+  const own = new Set(inserted.segments);
+  const ownNodes = new Set(inserted.nodes);
+  let n = net;
+  let snapped = 0;
+  const split: string[] = [];
+  const existingView = (m: RoadNetwork): RoadNetwork => {
+    const nodes: RoadNetwork['nodes'] = {}, segments: RoadNetwork['segments'] = {};
+    for (const s of Object.values(m.segments)) if (!own.has(s.id)) { segments[s.id] = s; nodes[s.a] = m.nodes[s.a]; nodes[s.b] = m.nodes[s.b]; }
+    for (const nd of Object.values(m.nodes)) if (!ownNodes.has(nd.id)) nodes[nd.id] = nd;
+    return { ...m, nodes, segments };
+  };
+  for (const nodeId of inserted.nodes) {
+    if (!n.nodes[nodeId]) continue;
+    const users = Object.values(n.segments).filter((s) => s.a === nodeId || s.b === nodeId);
+    if (users.length !== 1 || !own.has(users[0].id)) continue;
+    const seg = users[0];
+    const other = seg.a === nodeId ? seg.b : seg.a;
+    const p = n.nodes[nodeId];
+    const view = existingView(n);
+    let target: string | null = findNode(view, p.x, p.z, SNAP_NODE)?.id ?? null;
+    let next = n;
+    if (!target) {
+      const hit = findSegment(view, p.x, p.z, SNAP_SEGMENT);
+      if (!hit) continue;
+      try {
+        const r = splitSegment(n, hit.segment.id, hit.x, hit.z);
+        next = r.network;
+        target = r.node;
+        split.push(hit.segment.id);
+      } catch {
+        // Too close to an end of that road: use its nearer end node when it is in reach.
+        const a = n.nodes[hit.segment.a], b = n.nodes[hit.segment.b];
+        const near = Math.hypot(a.x - p.x, a.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z) ? a : b;
+        if (Math.hypot(near.x - p.x, near.z - p.z) > SNAP_NODE + SNAP_SEGMENT) continue;
+        target = near.id;
+      }
+    }
+    if (target === other || Object.values(next.segments).some((s) => s.id !== seg.id && ((s.a === target && s.b === other) || (s.b === target && s.a === other)))) continue;
+    const segments = { ...next.segments, [seg.id]: { ...next.segments[seg.id], a: seg.a === nodeId ? target : next.segments[seg.id].a, b: seg.b === nodeId ? target : next.segments[seg.id].b } };
+    const nodes = { ...next.nodes };
+    delete nodes[nodeId];
+    const candidate = { ...next, nodes, segments };
+    try {
+      assertValid(candidate);
+    } catch {
+      continue;
+    }
+    n = candidate;
+    snapped++;
+  }
+  return { network: n, snapped, split };
 }
 
 const finite = z.number().refine(Number.isFinite);

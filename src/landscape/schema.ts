@@ -38,10 +38,13 @@ const p2 = z.tuple([finite, finite]);
 const id = z.string().regex(/^f\d{1,9}$/);
 const groundId = z.number().int().refine((g) => GROUND_MATERIALS.some((m) => m.id === g));
 const seed = z.number().int().nonnegative().catch(1);
+// Phase 20: noise frame of a landform moved / turned by a blueprint (optional; v7 readers before
+// Phase 20 drop it and get a differently placed relief — the shape stays a valid landform).
+const frame = z.object({ x: finite, z: finite, yaw: finite }).optional().catch(undefined);
 
-const featureSchema = z.discriminatedUnion('kind', [
-  z.object({ id, kind: z.enum(['mountain', 'hill']), x: finite, z: finite, radius: clamp(LIMITS.peakRadius), height: clamp([0.5, 60]), roughness: clamp(LIMITS.roughness).catch(0), seed }),
-  z.object({ id, kind: z.enum(['ridge', 'valley', 'canyon']), points: z.array(p2).min(2).max(64), width: clamp(LIMITS.lineWidth), height: clamp([0.5, 40]), roughness: clamp(LIMITS.roughness).catch(0), seed }),
+export const featureSchema = z.discriminatedUnion('kind', [
+  z.object({ id, kind: z.enum(['mountain', 'hill']), x: finite, z: finite, radius: clamp(LIMITS.peakRadius), height: clamp([0.5, 60]), roughness: clamp(LIMITS.roughness).catch(0), seed, frame }),
+  z.object({ id, kind: z.enum(['ridge', 'valley', 'canyon']), points: z.array(p2).min(2).max(64), width: clamp(LIMITS.lineWidth), height: clamp([0.5, 40]), roughness: clamp(LIMITS.roughness).catch(0), seed, frame }),
   z.object({
     id, kind: z.literal('river'), points: z.array(p2).min(2).max(64),
     width: clamp([MIN_RIVER_WIDTH, LIMITS.riverWidth[1]]), depth: clamp(LIMITS.riverDepth), bankSlope: clamp(LIMITS.bankSlope),

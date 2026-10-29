@@ -36,6 +36,19 @@ export interface PeakFeature {
   /** 0–1: noise added to the slopes (0 = perfectly smooth). */
   roughness: number;
   seed: number;
+  /** Noise frame (Phase 20 blueprints): where the roughness noise is anchored. Absent = world axes. */
+  frame?: NoiseFrame;
+}
+
+/**
+ * Frame of a landform's roughness noise (Phase 20). The noise is sampled at
+ * q = Rᵀ(yaw) · (p − (x, z)) instead of the world point p, so a landform moved / turned by a
+ * blueprint keeps exactly the same relief. Absent = identity (Phase 19 behavior, bit-identical).
+ */
+export interface NoiseFrame {
+  x: number;
+  z: number;
+  yaw: number;
 }
 
 export interface LineLandformFeature {
@@ -49,6 +62,7 @@ export interface LineLandformFeature {
   height: number;
   roughness: number;
   seed: number;
+  frame?: NoiseFrame;
 }
 
 export type RiverGrading = 'downhill' | 'follow';
