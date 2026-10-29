@@ -1,0 +1,362 @@
+{
+  "lang": "ko",
+  "url": "http://localhost:4196/",
+  "results": [
+    {
+      "name": "1 heat-source phenomenon added from the Experiment tab (default: point source, 500 kW, constant 300 s)",
+      "ok": true,
+      "detail": {
+        "event": "heatSource",
+        "kind": "point",
+        "position": [
+          0,
+          0
+        ],
+        "height": 1.5,
+        "radius": 2,
+        "input": "power",
+        "power": 500000,
+        "profile": "constant",
+        "duration": 300
+      }
+    },
+    {
+      "name": "2 source type chosen; only the fields of that type are shown (radius for an area, radiative share for a point)",
+      "ok": true,
+      "detail": {
+        "fieldsArea": [
+          "kind",
+          "x",
+          "z",
+          "height",
+          "radius",
+          "input",
+          "power",
+          "profile",
+          "duration"
+        ],
+        "fieldsPoint": [
+          "kind",
+          "x",
+          "z",
+          "height",
+          "input",
+          "power",
+          "radiativeFraction",
+          "profile",
+          "duration"
+        ]
+      }
+    },
+    {
+      "name": "3 position picked on the map with a click",
+      "ok": true,
+      "detail": [
+        -14,
+        -6
+      ]
+    },
+    {
+      "name": "4 heat output entered (kW → W stored)",
+      "ok": true,
+      "detail": 1500000
+    },
+    {
+      "name": "5 time profile set (ramp shows its ramp time; an impossible pulse is rejected with the reason)",
+      "ok": true,
+      "detail": {
+        "invalid5": "⚠ 펄스 폭은 0보다 크고 주기보다 짧아야 합니다"
+      }
+    },
+    {
+      "name": "6 preview: source position, coverage (reach), expected flux map from the run's model, limitations listed",
+      "ok": true,
+      "detail": {
+        "out6": {
+          "n": 4904,
+          "reach": 100,
+          "inside": false
+        },
+        "sum6": "위치 (-14.0, -6.0), 지면 위 1.5 m최대 출력 1.50 MW, 총 435.00 MJ, 300 s지면 최대 흡수 열유속 13.05 kW/m² · 도달 반경 100.0 "
+      }
+    },
+    {
+      "name": "7 ground heated under the source; the change stays local (active tiles only)",
+      "ok": true,
+      "detail": {
+        "T0": 296.65318942192926,
+        "T1": 288.1626297417209,
+        "Tref": 288.15,
+        "air": 302.16841685038327,
+        "tiles": 69
+      }
+    },
+    {
+      "name": "8 objects heated by the source radiation (car, tree; received energy recorded); the car behind the house is shaded",
+      "ok": true,
+      "detail": [
+        {
+          "type": "building",
+          "x": 0,
+          "T": 15.01511628682357,
+          "src": 735104.581482194
+        },
+        {
+          "type": "car",
+          "x": -14,
+          "T": 15.37929481809772,
+          "src": 133271.5680775109
+        },
+        {
+          "type": "tree",
+          "x": -24,
+          "T": 15.99156122786718,
+          "src": 954295.9624629718
+        },
+        {
+          "type": "car",
+          "x": 14,
+          "T": 15.000000000055934,
+          "src": 0
+        }
+      ]
+    },
+    {
+      "name": "9 conduction: heat moved down into the ground (second layer warmer than ambient)",
+      "ok": true,
+      "detail": {
+        "T1": 15.0126297417209,
+        "cond": 113236.58822181061
+      }
+    },
+    {
+      "name": "10 convection: the air above warmed, convective transfer booked",
+      "ok": true,
+      "detail": {
+        "air": 29.01841685038329
+      }
+    },
+    {
+      "name": "11 radiation: source radiation absorbed by surfaces, surface radiation to the surroundings booked",
+      "ok": true,
+      "detail": {
+        "sky": 33172.894967076434,
+        "car": 133271.5680775109
+      }
+    },
+    {
+      "name": "20 temperature heatmap drawn with a fixed, labelled °C legend",
+      "ok": true,
+      "detail": {
+        "grid20": 312,
+        "legend20": "0 °C150 °C300 °C고정 범위 — 현재 최고·최저에 맞춰 바꾸지 않음. 주변 기온 ±0.5 K 안은 투명."
+      }
+    },
+    {
+      "name": "21 inspector: ground column at the clicked point, the car's temperatures / capacity / flows / source share, a person's exposure",
+      "ok": true,
+      "detail": {
+        "probe": "위치(-14.0, -5.9)깊이 0–2 cm23.5 °C깊이 2–8 cm15.0 °C깊이 8–26 cm15.",
+        "obj": "표면 온도15.4 °C (+0.4 K)내부 온도15.1 °C (+0.1 K)초기 온도15.0 °C최고 도달 ",
+        "hum": {
+          "airT": 288.1500635287654,
+          "radiant": 799.5817264027582,
+          "peakAirT": 288.1500635287654,
+          "peakRadiant": 799.5822408618963
+        }
+      }
+    },
+    {
+      "name": "22 timeline: heat source activation and heat-flux milestones recorded (temperature milestones: scenario 18)",
+      "ok": true,
+      "detail": [
+        "heatSource",
+        "heatFlux",
+        "heatFlux"
+      ]
+    },
+    {
+      "name": "23 energy ledger: added = held + lost (+ round-off), shown in the HUD and the results",
+      "ok": true,
+      "detail": {
+        "rel": 9.589099274022764e-16,
+        "added": 74999999.99999684,
+        "held": 17912651.096607506,
+        "lost": 57087348.90338921
+      }
+    },
+    {
+      "name": "25a leaving the simulation leaves the original world untouched (fingerprint)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "12 wind carries warm air downstream (air advection booked; no forces from the thermal system)",
+      "ok": true,
+      "detail": {
+        "down": 289.20933187955814,
+        "up": 288.15,
+        "adv": 10817387.67658098,
+        "Tref": 288.15,
+        "dup": 0
+      }
+    },
+    {
+      "name": "13 water temperature rises (heat carried by the water, ledger closed)",
+      "ok": true,
+      "detail": {
+        "water": 15.263021379987379,
+        "rel": 1.3280228501853682e-14
+      }
+    },
+    {
+      "name": "14 building member temperatures tracked per member (a structural member above 400 °C, the room heated)",
+      "ok": true,
+      "detail": {
+        "hottest": "sl0-0-0",
+        "type": "slab",
+        "T": 614.6318976175909,
+        "minF": 0.43488344571778187,
+        "strain": 0.0027596880681812763,
+        "rooms": [
+          48.877812930428206,
+          180.9903295183807,
+          39.391066063090875,
+          15.00122795765293,
+          15.000000000044963,
+          15
+        ],
+        "col": 1,
+        "colT": 15.194032244742516
+      }
+    },
+    {
+      "name": "15 thermal expansion of the hot member (free strain > 0)",
+      "ok": true,
+      "detail": 0.0027596880681812763
+    },
+    {
+      "name": "14b member colors by temperature; the picked member's thermal state (factors, expansion, restraint, force) shown",
+      "ok": true,
+      "detail": "표면 온도614.6 °C (+599.6 K)내부 온도33.6 °C (+18.6 K)초기 온도15.0 °C최고 도달 온도614.6 °C재료철근콘크리트 (EN 1992-1-2)질량23040 kg (표면층 41 %)열용량"
+    },
+    {
+      "name": "17 strength reduced with temperature (EN factors applied through the structural engine)",
+      "ok": true,
+      "detail": 0.43488344571778187
+    },
+    {
+      "name": "18 structural failure from load vs reduced capacity (first cause mechanical, hazard heat), partial collapse; failure and temperature milestones",
+      "ok": true,
+      "detail": {
+        "level": "partial",
+        "recs": [
+          [
+            "bending",
+            "thermal",
+            842.8
+          ],
+          [
+            "impact",
+            "thermal",
+            842.8
+          ],
+          [
+            "impact",
+            "thermal",
+            842.8
+          ],
+          [
+            "impact",
+            "thermal",
+            842.8
+          ]
+        ],
+        "n": 39,
+        "thermalRecs": 39
+      }
+    },
+    {
+      "name": "19 debris keeps its heat: rubble heaps hold the merged members' energy (ledger closed)",
+      "ok": true,
+      "detail": {
+        "heaps": 4,
+        "E": 26095661805.466694,
+        "rel": 4.584162721859071e-16
+      }
+    },
+    {
+      "name": "16 restrained expansion produces thermal force (and earlier failure); free expansion produces none",
+      "ok": true,
+      "detail": {
+        "free16": {
+          "N": 0,
+          "u": 0,
+          "fails": []
+        },
+        "full16": {
+          "N": 16214273.473699382,
+          "u": 1.2517601086904868,
+          "fails": [
+            "axial"
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 heat source and thermal settings saved and reloaded (schema 7)",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "version": 7,
+        "thermal": {
+          "ambient": 298.15,
+          "airLayerHeight": 10,
+          "restraint": "frame"
+        },
+        "spec": {
+          "event": "heatSource",
+          "kind": "point",
+          "position": [
+            5,
+            5
+          ],
+          "height": 2,
+          "radius": 2,
+          "input": "energy",
+          "energy": 50000000,
+          "profile": "pulse",
+          "duration": 30,
+          "pulseWidth": 2,
+          "period": 6
+        }
+      }
+    },
+    {
+      "name": "25 reset clears every thermal state (no thermal runtime at t = 0) and the document is unchanged",
+      "ok": true,
+      "detail": {
+        "rt": true,
+        "t": 0
+      }
+    },
+    {
+      "name": "26 the same conditions reproduce the same thermal state at the same step",
+      "ok": true,
+      "detail": {
+        "h1": "68|169|4.018000550687e+6|4.000000000000e+7",
+        "h2": "68|169|4.018000550687e+6|4.000000000000e+7"
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    28.4,
+    55
+  ],
+  "geometries": [
+    17,
+    7
+  ],
+  "crashed": false
+}
