@@ -1,0 +1,446 @@
+{
+  "results": [
+    {
+      "name": "1 building blueprint (rectangle capture → library)",
+      "ok": true,
+      "detail": {
+        "C": {
+          "counts": {
+            "objects": 2,
+            "buildings": 1,
+            "vegetation": 0,
+            "roads": 1,
+            "features": 0,
+            "water": 0
+          },
+          "deps": [
+            [
+              "roadExternal",
+              "clipped",
+              1
+            ],
+            [
+              "sharedDesign",
+              "copied",
+              1
+            ]
+          ],
+          "mask": false,
+          "category": "mixed"
+        },
+        "L": [
+          {
+            "id": "bp_b872ef7c9q",
+            "name": "Houses / 주택",
+            "kind": "blueprint",
+            "category": "residential",
+            "counts": {
+              "objects": 2,
+              "buildings": 1,
+              "vegetation": 0,
+              "roads": 1,
+              "features": 0,
+              "water": 0
+            },
+            "favorite": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "2 road district blueprint (junction, cut road ends recorded)",
+      "ok": true,
+      "detail": {
+        "counts": {
+          "objects": 10,
+          "buildings": 4,
+          "vegetation": 0,
+          "roads": 4,
+          "features": 0,
+          "water": 0
+        },
+        "deps": [
+          [
+            "roadExternal",
+            "clipped",
+            4
+          ],
+          [
+            "objectCrossesBoundary",
+            "kept",
+            4
+          ],
+          [
+            "sharedDesign",
+            "copied",
+            3
+          ],
+          [
+            "foundationSupport",
+            "info",
+            4
+          ]
+        ],
+        "mask": false,
+        "category": "mixed"
+      }
+    },
+    {
+      "name": "3 nature blueprint (polygon capture: hill + forest, terrain mask)",
+      "ok": true,
+      "detail": {
+        "counts": {
+          "objects": 4,
+          "buildings": 3,
+          "vegetation": 64,
+          "roads": 1,
+          "features": 1,
+          "water": 0
+        },
+        "deps": [
+          [
+            "roadExternal",
+            "clipped",
+            1
+          ],
+          [
+            "objectCrossesBoundary",
+            "kept",
+            10
+          ],
+          [
+            "sharedDesign",
+            "copied",
+            1
+          ],
+          [
+            "landformPartial",
+            "kept",
+            1
+          ],
+          [
+            "foundationSupport",
+            "info",
+            2
+          ]
+        ],
+        "mask": true,
+        "category": "mixed"
+      }
+    },
+    {
+      "name": "4 city + nature blueprint (roads, buildings, river, lake)",
+      "ok": true,
+      "detail": {
+        "counts": {
+          "objects": 39,
+          "buildings": 16,
+          "vegetation": 30,
+          "roads": 7,
+          "features": 2,
+          "water": 2
+        },
+        "deps": [
+          [
+            "roadExternal",
+            "clipped",
+            4
+          ],
+          [
+            "objectCrossesBoundary",
+            "kept",
+            4
+          ],
+          [
+            "sharedDesign",
+            "copied",
+            4
+          ],
+          [
+            "riverInflowOutside",
+            "clipped",
+            1
+          ],
+          [
+            "riverOutletOutside",
+            "clipped",
+            1
+          ],
+          [
+            "lakePartial",
+            "kept",
+            1
+          ]
+        ],
+        "mask": false,
+        "category": "mixed"
+      }
+    },
+    {
+      "name": "5 library search (by name)",
+      "ok": true,
+      "detail": [
+        "bp_986b5b969s"
+      ]
+    },
+    {
+      "name": "6 favorites (star → favorites filter)",
+      "ok": true,
+      "detail": [
+        "bp_986b5b969s"
+      ]
+    },
+    {
+      "name": "7 preview (ghost, nothing written to the world)",
+      "ok": true,
+      "detail": {
+        "ghost": 10,
+        "d": {
+          "objects": 0,
+          "roads": 1,
+          "features": 0,
+          "past": 1,
+          "name": ""
+        }
+      }
+    },
+    {
+      "name": "8 rotation (R = 90°, T = fine step) and position (pin, re-pin)",
+      "ok": true,
+      "detail": {
+        "pinned": [
+          25,
+          0
+        ],
+        "yaw": 1.832595714594046,
+        "options": {
+          "terrain": "offset",
+          "blendWidth": 8,
+          "roads": "separate",
+          "terrainSnap": true,
+          "heightOffset": 0,
+          "preserveRelative": false,
+          "include": {
+            "buildings": true,
+            "objects": true,
+            "vegetation": true,
+            "roads": true,
+            "landforms": true,
+            "water": true,
+            "waterState": true,
+            "terrain": true
+          }
+        },
+        "report": {
+          "errors": [],
+          "warnings": [
+            "roadExternal"
+          ],
+          "terrain": "offset",
+          "snapped": 0,
+          "connections": 1,
+          "counts": {
+            "objects": 10,
+            "vegetation": 0,
+            "roads": 4,
+            "features": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "9 terrain merge policy selection (apply / blend / offset)",
+      "ok": true,
+      "detail": {
+        "pinned": [
+          25,
+          0
+        ],
+        "yaw": 0,
+        "options": {
+          "terrain": "apply",
+          "blendWidth": 8,
+          "roads": "separate",
+          "terrainSnap": true,
+          "heightOffset": 0,
+          "preserveRelative": false,
+          "include": {
+            "buildings": true,
+            "objects": true,
+            "vegetation": true,
+            "roads": true,
+            "landforms": true,
+            "water": true,
+            "waterState": true,
+            "terrain": true
+          }
+        },
+        "report": {
+          "errors": [],
+          "warnings": [
+            "roadExternal"
+          ],
+          "terrain": "apply",
+          "snapped": 0,
+          "connections": 1,
+          "counts": {
+            "objects": 10,
+            "vegetation": 0,
+            "roads": 4,
+            "features": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "10 road connection (snap endpoints, connection preview)",
+      "ok": true,
+      "detail": {
+        "errors": [],
+        "warnings": [
+          "roadSplits",
+          "roadExternal"
+        ],
+        "terrain": "offset",
+        "snapped": 1,
+        "connections": 1,
+        "counts": {
+          "objects": 10,
+          "vegetation": 0,
+          "roads": 4,
+          "features": 0
+        }
+      }
+    },
+    {
+      "name": "11 blueprint placed (roads + objects, ONE undo step)",
+      "ok": true,
+      "detail": {
+        "objects": 10,
+        "roads": 6,
+        "features": 0,
+        "past": 2,
+        "name": ""
+      }
+    },
+    {
+      "name": "12 undo restores the world exactly; redo restores the placement",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "13 export (file downloaded, format v2, local ids)",
+      "ok": true,
+      "detail": "Junction_교차로.blueprint.json"
+    },
+    {
+      "name": "14 import (validated preview, duplicate handled as a copy; broken references refused)",
+      "ok": true,
+      "detail": "파일을 가져올 수 없습니다. — 내부 참조(ID)가 잘못되었습니다roads.segments[0]: missing node n999"
+    },
+    {
+      "name": "15 world template saved (library, Complete Worlds)",
+      "ok": true,
+      "detail": [
+        {
+          "id": "tpl_0eb5c60614d",
+          "name": "Junction world",
+          "kind": "world",
+          "category": "world",
+          "counts": {
+            "objects": 10,
+            "buildings": 4,
+            "trees": 0,
+            "roads": 6,
+            "features": 0
+          },
+          "favorite": false
+        }
+      ]
+    },
+    {
+      "name": "16 world created from a template (wizard → build mode)",
+      "ok": true,
+      "detail": {
+        "d16": {
+          "objects": 78,
+          "roads": 1,
+          "features": 4,
+          "past": 0,
+          "name": "Wizard Valley"
+        },
+        "mode16": [
+          "editor",
+          "select"
+        ]
+      }
+    },
+    {
+      "name": "17 save / load round trip (fingerprint identical)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "18 typhoon on a template world",
+      "ok": true,
+      "detail": {
+        "events": 437,
+        "by": {
+          "wind": 437,
+          "earthquake": 0,
+          "flood": 0
+        },
+        "water": 3020,
+        "err": 4.411049303598702e-11
+      }
+    },
+    {
+      "name": "19 earthquake",
+      "ok": true,
+      "detail": {
+        "events": 351,
+        "by": {
+          "wind": 0,
+          "earthquake": 351,
+          "flood": 0
+        },
+        "water": 3026,
+        "err": 5.502442945726216e-11
+      }
+    },
+    {
+      "name": "20 flood (river water + rain, mass budget closed)",
+      "ok": true,
+      "detail": {
+        "events": 1,
+        "by": {
+          "wind": 0,
+          "earthquake": 0,
+          "flood": 1
+        },
+        "water": 3057,
+        "err": 4.229150363244116e-11
+      }
+    },
+    {
+      "name": "21 multi-hazard (wind + earthquake + rain)",
+      "ok": true,
+      "detail": {
+        "events": 471,
+        "by": {
+          "wind": 71,
+          "earthquake": 399,
+          "flood": 1
+        },
+        "water": 3032,
+        "err": 1.4097167877480388e-11
+      }
+    },
+    {
+      "name": "22 original world restored after every run",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}
