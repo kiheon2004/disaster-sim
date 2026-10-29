@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
-import type { Vec3 } from '@/core/types';
+import type { Quat, Vec3 } from '@/core/types';
 import type { ShapeSpec } from '@/core/shapes';
 import type {
   TerrainColliderDesc,
@@ -206,6 +206,13 @@ export class RapierEngine implements PhysicsEngine {
       b?.resetTorques(false);
     }
     this.forced.clear();
+  }
+
+  setBodyPose(h: BodyHandle, position: Vec3, quaternion: Quat) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    b.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+    b.setRotation({ x: quaternion[0], y: quaternion[1], z: quaternion[2], w: quaternion[3] }, true);
   }
 
   getPose(h: BodyHandle): Pose {

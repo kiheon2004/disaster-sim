@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource']);
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation']);
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -137,7 +137,7 @@ describe('scheduler and pipeline', () => {
     const systems = [...createDefaultSystems(), new MetricsSystem(new MetricsRecorder(1))];
     expect(validatePipeline(systems)).toEqual([]);
     expect(describePipeline(systems).map((s) => `${s.phase === 'prePhysics' ? 'pre' : 'post'}:${s.name}`)).toEqual([
-      'pre:windForce', 'pre:groundMotion', 'pre:waterSolver', 'pre:waterForce', 'pre:groundContact',
+      'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:waterSolver', 'pre:waterForce', 'pre:groundContact',
       'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:debris', 'post:particles', 'post:exposure', 'post:metrics',
     ]);
     // Moving the water solver after the water forces breaks the data flow → reported.
@@ -225,11 +225,12 @@ describe('forces: one path, no duplicates', () => {
 });
 
 describe('unified damage and interactions', () => {
-  const fake = (d: Partial<{ eq: number; flood: number; wind: number }>) =>
+  const fake = (d: Partial<{ eq: number; flood: number; wind: number; ground: number }>) =>
     ({
       seismic: d.eq !== undefined ? { damage: d.eq, tiltMag: 0, failureTilt: Infinity } : undefined,
       flood: d.flood !== undefined ? { damage: d.flood } : undefined,
       integrity: d.wind !== undefined ? { windHealth: 1 - d.wind, history: [] } : undefined,
+      ground: d.ground !== undefined ? { damage: d.ground } : undefined,
     }) as unknown as RuntimeEntity;
 
   it('residual strength uses the other hazards\' damage as an envelope (max), never a sum', () => {
@@ -238,7 +239,8 @@ describe('unified damage and interactions', () => {
     expect(residualStrength(fake({ eq: 0.5 }), 'earthquake')).toBe(1); // own damage is in its own model
     expect(residualStrength(fake({ eq: 0.4, flood: 0.6 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.6, 12);
     expect(residualStrength(fake({ eq: 3 }), 'flood')).toBeCloseTo(1 - STRENGTH_LOSS, 12);
-    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0 });
+    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0 });
+    expect(residualStrength(fake({ eq: 0.2, ground: 0.5 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.5, 12); // ground joins the envelope
   });
 
   it('wind + earthquake: with interactions the shaken town carries the wind load and its own wind fatigue stays separate', async () => {

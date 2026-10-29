@@ -25,6 +25,8 @@ export interface SystemContext {
   forces: ForceLedger;
   /** Multi-hazard interaction models on (project setting, Phase 15; see docs/PHENOMENA.md §6). */
   interactions: boolean;
+  /** Add an experiment timeline milestone (Phase 21; optional for headless helpers). */
+  milestone?(m: import('../analysis/MilestoneRecorder').Milestone, onceKey?: string): void;
 }
 
 /**
@@ -33,7 +35,9 @@ export interface SystemContext {
  * unless the reader declares the key in `lagged` (it intentionally uses the previous step).
  */
 export type StateKey =
-  | 'airflow' | 'groundMotion' | 'water' | 'forces' | 'poses' | 'structure' | 'damage' | 'exposure' | 'debris' | 'particles' | 'metrics';
+  | 'airflow' | 'groundMotion' | 'water' | 'forces' | 'poses' | 'structure' | 'damage' | 'exposure' | 'debris' | 'particles' | 'metrics'
+  // Phase 21: the ground surface itself (heights, collider) — written only by the DeformationSystem.
+  | 'terrain';
 
 /**
  * A unit of simulation logic run on the fixed-step clock.

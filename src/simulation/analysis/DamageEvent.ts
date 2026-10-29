@@ -51,7 +51,8 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood';
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground';
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground'];
 
 export interface DamageEventRecord {
   id: number;

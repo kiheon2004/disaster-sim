@@ -111,9 +111,11 @@ export class SimulationController {
     // Rapier (WASM) is loaded on demand so the editor starts fast.
     const { RapierEngine } = await import('@/physics/RapierEngine');
     const physics = new RapierEngine();
-    // The terrain is frozen while simulating: its collider is built once per (re)load.
+    // The run's OWN terrain (Phase 21): runtime deformation writes this copy, never the snapshot,
+    // so a reset rebuilds the original ground exactly. Without deformation it stays as loaded.
+    const runTerrain = runtimeTerrain(this.snapshot.terrain);
     const t0 = performance.now();
-    await physics.init(this.snapshot.settings.gravity, terrainColliderDesc(this.snapshot.terrain));
+    await physics.init(this.snapshot.settings.gravity, terrainColliderDesc(runTerrain));
     this.terrainBuildMs = performance.now() - t0;
     if (token !== this.loadToken) {
       physics.dispose(); // a newer load/reset superseded this one
@@ -121,7 +123,7 @@ export class SimulationController {
     }
     this.physics = physics;
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
-    const terrain = new TerrainSampler(this.snapshot.terrain);
+    const terrain = new TerrainSampler(runTerrain);
     this.runtime = buildRuntime(this.snapshot, physics, terrain);
     // Phase 19 vegetation options (opt-in per project).
     if (sim.vegetation?.canopyShelter) computeCanopy(this.runtime);
@@ -361,6 +363,7 @@ export class SimulationController {
       recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
       forces,
       interactions: this.interactions,
+      milestone: (m, key) => (key ? this.metrics.milestones.once(key, m) : this.metrics.milestones.add(m)),
     };
     this.metrics.beginStep();
     physics.clearForces();
@@ -603,6 +606,11 @@ export class SimulationController {
 }
 
 export const simulationController = new SimulationController();
+
+/** The simulation's own copy of the terrain arrays (Phase 21: deformation writes it in place). */
+export function runtimeTerrain(t: WorldDocument['terrain']): WorldDocument['terrain'] {
+  return { ...t, heights: t.heights.slice(), ground: t.ground.slice(), soil: t.soil.slice(), settings: { ...t.settings }, revision: 0 };
+}
 
 /**
  * The simulation's private copy of the document. Modular building designs (Phase 17) are

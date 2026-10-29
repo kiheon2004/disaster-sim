@@ -15,6 +15,10 @@ import { RainEvent, RisingWaterEvent, WaterSourceEvent } from '@/events/flood/Wa
 import { rainEventSchema, risingWaterEventSchema, waterSourceEventSchema } from '@/events/flood/floodSchema';
 import { DEFAULT_SOURCE_RADIUS, rainAssumptions, resolveRisingWater, sourceAssumptions } from '@/events/flood/resolveFlood';
 import type { ImplementedPhenomenon, PhenomenonContext, PlannedPhenomenon } from './types';
+import { DEFORMATION_KINDS, FALLOFFS, TIME_PROFILES, type TerrainDeformationSpec } from '@/deformation/types';
+import { LIMITS as DEF_LIMITS, eventDuration as deformEventDuration, validateDeformation } from '@/deformation/field';
+import { terrainDeformationSchema } from '@/events/deformation/deformationSchema';
+import { TerrainDeformationEvent } from '@/events/deformation/TerrainDeformationEvent';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -154,7 +158,54 @@ const waterSource = implemented<WaterSourceEventSpec>({
   }),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource];
+// ── Terrain deformation (Phase 21) ─────────────────────────────────────────
+
+const pos = (k: 0 | 1) => ({
+  get: (s: EventSpec) => (s as TerrainDeformationSpec).center[k],
+  set: (s: EventSpec, v: number | string | undefined) => {
+    const d = s as TerrainDeformationSpec;
+    const c: [number, number] = [...d.center];
+    c[k] = Number(v);
+    return { ...d, center: c } as EventSpec;
+  },
+});
+
+const terrainDeformation = implemented<TerrainDeformationSpec>({
+  type: 'terrainDeformation', labelKey: 'phen.terrainDeformation', icon: 'terrain', status: 'implemented',
+  channels: ['terrainDeformation', 'mechanicalForce'],
+  models: ['terrainDeformation', 'bedDisplacement', 'foundationSettlement', 'roadDeformation'],
+  keywords: /지형\s*(?:변형|침하|융기)|지반\s*(?:침하|융기)|침하|융기|subsid|uplift|terrain\s*deform|ground\s*settle/,
+  schema: terrainDeformationSchema,
+  defaults: () => ({ event: 'terrainDeformation', kind: 'subsidence', center: [0, 0], radius: 20, amount: 2, duration: 5, profile: 'smooth', falloff: 'smooth' }),
+  seeded: true,
+  fields: [
+    { key: 'kind', labelKey: 'deform.kind', unit: '', min: 0, max: 0, step: 0, precision: 0, options: DEFORMATION_KINDS.filter((k) => k !== 'prescribed').map((k) => ({ value: k, labelKey: `deform.kind.${k}` as const })) },
+    { key: 'x', labelKey: 'deform.x', unit: 'm', min: -100, max: 100, step: 1, precision: 1, ...pos(0) },
+    { key: 'z', labelKey: 'deform.z', unit: 'm', min: -100, max: 100, step: 1, precision: 1, ...pos(1) },
+    { key: 'radius', labelKey: 'deform.radius', unit: 'm', min: DEF_LIMITS.radius[0], max: DEF_LIMITS.radius[1], step: 1, precision: 0 },
+    { key: 'amount', labelKey: 'deform.amount', unit: 'm', min: DEF_LIMITS.amount[0], max: DEF_LIMITS.amount[1], step: 0.1, precision: 2 },
+    { key: 'profile', labelKey: 'deform.profile', unit: '', min: 0, max: 0, step: 0, precision: 0, options: TIME_PROFILES.map((k) => ({ value: k, labelKey: `deform.profile.${k}` as const })) },
+    { key: 'duration', labelKey: 'param.duration', unit: 's', min: 0, max: DEF_LIMITS.duration[1], step: 1, precision: 1 },
+    { key: 'falloff', labelKey: 'deform.falloff', unit: '', min: 0, max: 0, step: 0, precision: 0, options: FALLOFFS.map((k) => ({ value: k, labelKey: `deform.falloff.${k}` as const })) },
+    { key: 'stages', labelKey: 'deform.stages', unit: '', min: DEF_LIMITS.stages[0], max: DEF_LIMITS.stages[1], step: 1, precision: 0, optional: true },
+    { key: 'period', labelKey: 'deform.period', unit: 's', min: DEF_LIMITS.period[0], max: DEF_LIMITS.period[1], step: 0.5, precision: 1, optional: true },
+    { key: 'length', labelKey: 'deform.length', unit: 'm', min: DEF_LIMITS.length[0], max: DEF_LIMITS.length[1], step: 1, precision: 0, optional: true },
+    { key: 'bearing', labelKey: 'deform.bearing', unit: '°', min: 0, max: 359, step: 5, precision: 0, optional: true },
+    { key: 'variability', labelKey: 'deform.variability', unit: '%', min: 0, max: 100, step: 5, precision: 0, scale: 100, optional: true },
+    { key: 'supportLoss', labelKey: 'deform.supportLoss', unit: '%', min: 0, max: 90, step: 5, precision: 0, scale: 100, optional: true },
+  ],
+  createEvent: (spec, now, ctx) => new TerrainDeformationEvent(spec, now, ctx.seed),
+  duration: (spec) => deformEventDuration(spec),
+  assumptions: (spec, ctx) => {
+    const out: I18nMessage[] = [{ key: 'deform.assume.prescribed' }, { key: 'deform.assume.persists' }];
+    out.push(spec.supportLoss ? { key: 'deform.assume.support', params: { pct: Math.round(spec.supportLoss * 100) } } : { key: 'deform.assume.noSupport' });
+    for (const i of validateDeformation(spec, ctx.terrain, ctx.seed).issues) out.push({ key: `deform.issue.${i.code}`, params: { v: (i.value ?? 0).toFixed(2) } });
+    return out;
+  },
+  describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
+});
+
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -167,15 +218,15 @@ export const PLANNED: PlannedPhenomenon[] = [
   }),
   planned({
     type: 'sinkhole', labelKey: 'phen.sinkhole', icon: 'warning', channels: ['terrainDeformation', 'mechanicalForce'], models: [],
-    keywords: /싱크홀|땅\s*꺼짐|지반\s*함몰|sinkhole/, missing: ['missing.terrainDeformation', 'missing.supportLoss'], reuses: ['reuse.terrainCollider', 'reuse.waterBed', 'reuse.debris'],
+    keywords: /싱크홀|땅\s*꺼짐|지반\s*함몰|sinkhole/, missing: ['missing.cavityCollapse', 'missing.supportLoss'], reuses: ['reuse.deformationEngine', 'reuse.terrainCollider', 'reuse.waterBed', 'reuse.debris'],
   }),
   planned({
     type: 'landslide', labelKey: 'phen.landslide', icon: 'warning', channels: ['terrainDeformation', 'mechanicalForce'], models: [],
-    keywords: /산사태|토석류|landslide|mudslide|debris\s*flow/, missing: ['missing.terrainDeformation', 'missing.slopeStability', 'missing.granularFlow'], reuses: ['reuse.groundMotion', 'reuse.water', 'reuse.debris'],
+    keywords: /산사태|토석류|landslide|mudslide|debris\s*flow/, missing: ['missing.slopeStability', 'missing.granularFlow'], reuses: ['reuse.deformationEngine', 'reuse.groundMotion', 'reuse.water', 'reuse.debris'],
   }),
   planned({
     type: 'meteor', labelKey: 'phen.meteor', icon: 'warning', channels: ['mechanicalForce', 'pressure', 'temperature', 'terrainDeformation'], models: [],
-    keywords: /운석|소행성|meteor|asteroid/, missing: ['missing.pressureWave', 'missing.terrainDeformation', 'missing.thermal'], reuses: ['reuse.impulse', 'reuse.groundMotion', 'reuse.debris'],
+    keywords: /운석|소행성|meteor|asteroid/, missing: ['missing.pressureWave', 'missing.craterFormation', 'missing.thermal'], reuses: ['reuse.deformationEngine', 'reuse.impulse', 'reuse.groundMotion', 'reuse.debris'],
   }),
   planned({
     type: 'explosion', labelKey: 'phen.explosion', icon: 'warning', channels: ['pressure', 'temperature', 'mechanicalForce'], models: [],

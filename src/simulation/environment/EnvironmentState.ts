@@ -6,6 +6,7 @@ import { SpatialWindField } from '../wind/SpatialWindField';
 import { flatSampler, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { GroundMotionField } from '../seismic/GroundMotionField';
 import { FloodEnvironment } from '../water/FloodEnvironment';
+import { DeformationChannel } from '../deformation/DeformationChannel';
 
 /**
  * Shared environmental fields. Events WRITE the global values; systems READ local values.
@@ -27,6 +28,8 @@ export interface EnvironmentState {
   terrain: TerrainSampler;
   groundMotion: GroundMotionField;
   flood: FloodEnvironment;
+  /** Terrain deformation channel (Phase 21): runtime displacement sources over the run's terrain copy. */
+  deformation: DeformationChannel;
   // Future: fire?: FireField;
 }
 
@@ -42,6 +45,7 @@ export function createEnvironment(
   return {
     time: 0, airDensity, wind, windField: new SpatialWindField(wind, windModel, seed), terrain, groundMotion: new GroundMotionField(terrain),
     flood: new FloodEnvironment(terrain, water),
+    deformation: new DeformationChannel(terrain.data, seed),
   };
 }
 

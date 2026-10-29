@@ -89,6 +89,8 @@ export interface RuntimeEntity {
   forces?: Float64Array;
   /** Flood exposure / response state; created when the water model activates (Phase 14). */
   flood?: FloodEntityState;
+  /** Ground deformation response (Phase 21): settlement, tilt, foundation contact, damage. */
+  ground?: import('./deformation/response').GroundEntityState;
   /** Member-level state of a modular building (Phase 17); absent on every other entity. */
   modular?: import('./buildings/modular').ModularRuntime;
   components: RuntimeComponent[];

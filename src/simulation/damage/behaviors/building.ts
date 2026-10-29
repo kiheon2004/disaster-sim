@@ -11,6 +11,7 @@ import { createLocalWind, createSampleCache, type LocalWind } from '../../wind/S
 import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 import { seismicLevel, seismicHealth } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
+import { groundLevel } from '../../deformation/response';
 import { integrityOf } from '../../interactions/integrity';
 import { modularWindStructure, processPending } from '../../buildings/modular';
 
@@ -292,6 +293,7 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
     // Earthquake / flood damage (if any) and wind fatigue share one structural health.
     if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
     if (e.flood) structure.health = Math.min(structure.health, e.flood.health);
+    if (e.ground) structure.health = Math.min(structure.health, e.ground.health);
     e.health = structure.health;
     if (e.modular !== undefined) {
       // Wind failure of a modular building = collapse of its weakest story (and above).
@@ -317,5 +319,6 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   if (frac > 0.35) s = worst(s, DamageState.CRITICAL);
   if (e.seismic) s = worst(s, seismicLevel(e.seismic));
   if (e.flood) s = worst(s, floodLevel(e.flood));
+  if (e.ground) s = worst(s, groundLevel(e.ground));
   e.state = s;
 }

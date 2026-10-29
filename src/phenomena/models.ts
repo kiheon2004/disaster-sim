@@ -53,6 +53,27 @@ export const MODELS: Record<string, ModelInfo> = {
     assumptions: ['model.as.depthDamage', 'model.as.capacityRatio'],
     units: ['m', 's', 'N'], validRange: 'depth 0–10 m', limitations: ['model.lim.notEngineering', 'model.lim.noSafety'], reference: 'docs/FLOOD.md §9',
   }),
+  // ── Terrain deformation (Phase 21) ──
+  terrainDeformation: m({
+    id: 'terrainDeformation', labelKey: 'model.terrainDeformation', level: 'hypothetical',
+    assumptions: ['model.as.prescribedField', 'model.as.superposition'],
+    units: ['m', 's'], validRange: '|w| ≤ 30 m, radius 2–150 m', limitations: ['model.lim.noFailureMechanism', 'model.lim.heightfield'], reference: 'docs/TERRAIN_DEFORMATION.md §3–6',
+  }),
+  bedDisplacement: m({
+    id: 'bedDisplacement', labelKey: 'model.bedDisplacement', level: 'physics',
+    assumptions: ['model.as.depthPreserving'], units: ['m', 'm³'], validRange: 'bed motion slow vs. gravity waves',
+    limitations: ['model.lim.noVerticalMomentum'], reference: 'docs/TERRAIN_DEFORMATION.md §12',
+  }),
+  foundationSettlement: m({
+    id: 'foundationSettlement', labelKey: 'model.foundationSettlement', level: 'empirical',
+    assumptions: ['model.as.rigidFoundation', 'model.as.angularDistortion'], units: ['m', 'rad'], validRange: 'β 0–1/50',
+    limitations: ['model.lim.notGeotechnical', 'model.lim.noSafety'], reference: 'docs/TERRAIN_DEFORMATION.md §10',
+  }),
+  roadDeformation: m({
+    id: 'roadDeformation', labelKey: 'model.roadDeformation', level: 'empirical',
+    assumptions: ['model.as.roadOffset'], units: ['m', '%'], validRange: 'samples every 5 m',
+    limitations: ['model.lim.notEngineering'], reference: 'docs/TERRAIN_DEFORMATION.md §11',
+  }),
   // ── Multi-hazard interactions (Phase 15) ──
   windStress: m({
     id: 'windStress', labelKey: 'model.windStress', level: 'empirical',

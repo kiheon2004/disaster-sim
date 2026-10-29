@@ -105,6 +105,8 @@ interface EntityView {
   cracks?: { index: number; local: THREE.Matrix4 }[];
   /** Earthquake drawing state last applied (skip unchanged frames). */
   quakeKey?: number;
+  /** Ground deformation pose last applied (Phase 21). */
+  groundKey?: number;
   cracksShown?: number;
   tint?: number;
   /** Flood: wetness tint last applied (0 = dry; quantized). */
@@ -532,6 +534,7 @@ export class SimRenderAdapter {
       if (v.type === 'building') {
         if (v.members) this.updateMemberLod(v);
         if (this.quake && v.e.seismic && this.updateBuildingQuake(v)) cracksDirty = true;
+        else if (v.e.ground && this.updateBuildingGround(v)) cracksDirty = true;
         continue;
       }
       this.updateLod(v);
@@ -579,15 +582,17 @@ export class SimRenderAdapter {
     // Stress tint: current drift / slight-damage drift → white … yellow … red.
     // (Modular buildings recolor hundreds of member instances per change: 0.05 steps.)
     const tint = q.stress ? (v.members ? Math.round(Math.min(3, st.stress) * 20) / 20 : Math.min(3, st.stress)) : 0;
-    const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k;
+    const gr = e.ground;
+    const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k + (gr ? gr.settlement * 17.3 + gr.gradient[0] * 911 + gr.gradient[1] * 577 : 0);
     const crackCount = Math.ceil(st.crack * CRACKS_PER_BUILDING);
     // Distant buildings refresh every ANIM_STRIDE frames (visual only).
     if (!this.isNear(v) && (this.frame + v.index) % ANIM_STRIDE !== 0) return false;
     if (key === v.quakeKey && crackCount === v.cracksShown) return false;
     v.quakeKey = key;
     const t = e.source.transform;
-    // R(yaw)·S
-    mTmp.compose(vPos.set(0, 0, 0), qA.setFromEuler(euler.set(t.rotation[0], t.rotation[1], t.rotation[2])), v.scale);
+    // R(yaw)·S — with ground deformation (Phase 21) the ground-following orientation instead.
+    if (gr) mTmp.compose(vPos.set(0, 0, 0), setQ(qA, e.pose.quaternion), v.scale);
+    else mTmp.compose(vPos.set(0, 0, 0), qA.setFromEuler(euler.set(t.rotation[0], t.rotation[1], t.rotation[2])), v.scale);
     mShear.set(1, sx, 0, 0, 0, 1, 0, 0, 0, sz, 1, 0, 0, 0, 0, 1);
     mRoot.multiplyMatrices(mShear, mTmp);
     if (tilt > 1e-6) {
@@ -595,7 +600,8 @@ export class SimRenderAdapter {
       mTilt.makeRotationAxis(vAxis, tilt);
       mRoot.premultiply(mTilt);
     }
-    mRoot.setPosition(t.position[0] + gx, t.position[1] + gy, t.position[2] + gz);
+    const base = gr ? e.pose.position : t.position;
+    mRoot.setPosition(base[0] + gx, base[1] + gy, base[2] + gz);
     for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(mRoot, part.local) : mRoot);
     if (v.facade && v.facadeLocal) {
       for (let f = 0; f < v.facade.length; f++) {
@@ -616,6 +622,31 @@ export class SimRenderAdapter {
       for (const part of v.parts) if (part.role === 'root') part.batch.mesh.setColorAt(part.id, cTint);
       if (v.members) this.writeMemberColors(v, cTint);
     }
+    return true;
+  }
+
+  /**
+   * Ground deformation of a building (Phase 21, no earthquake drawing active): the shell, facade,
+   * members and cracks follow the building's kinematic pose (settlement + rigid tilt computed by
+   * the deformation response). Only rewritten when that pose changed.
+   */
+  private updateBuildingGround(v: EntityView): boolean {
+    const e = v.e;
+    const g = e.ground!;
+    const key = g.settlement * 17.3 + g.gradient[0] * 911 + g.gradient[1] * 577;
+    if (key === v.groundKey) return false;
+    v.groundKey = key;
+    const root = mRoot.compose(vPos.set(e.pose.position[0], e.pose.position[1], e.pose.position[2]), setQ(qA, e.pose.quaternion), v.scale);
+    v.staticRoot = root.clone();
+    for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(root, part.local) : root);
+    if (v.facade && v.facadeLocal) {
+      for (let f = 0; f < v.facade.length; f++) {
+        const [kind, i, ci] = v.facade[f];
+        if (e.components[ci].condition === 'detached') continue;
+        this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(root, v.facadeLocal[f]));
+      }
+    }
+    if (v.members) this.writeMembers(v, root);
     return true;
   }
 
@@ -698,7 +729,8 @@ export class SimRenderAdapter {
         const broken = e.flags.snapped || e.flags.uprooted;
         // Upper part (trunk + canopy): falling body or swaying around the base.
         if (broken) this.compose(mRoot, this.shaken(e, e.pose.position), setQ(qA, e.pose.quaternion), v.scale);
-        else this.compose(mRoot, this.shaken(e, e.initialPose.position), this.swayed(e, e.visual.swayAngle, e.initialPose.quaternion), v.scale);
+        // (A standing tree follows deforming ground through its pose, Phase 21; else its rest pose.)
+        else this.compose(mRoot, this.shaken(e, e.ground ? e.pose.position : e.initialPose.position), this.swayed(e, e.visual.swayAngle, e.ground ? e.pose.quaternion : e.initialPose.quaternion), v.scale);
         if (animate) {
           const s = 1 - 0.38 * e.visual.foliageLoss;
           const ph = (e.source.seed % 1000) * 0.37;
@@ -713,7 +745,7 @@ export class SimRenderAdapter {
         // Stump: stays unless uprooted.
         const stump = v.parts[0];
         if (e.flags.uprooted) this.compose(mRoot, this.shaken(e, e.pose.position), setQ(qA, e.pose.quaternion), v.scale);
-        else this.compose(mRoot, this.shaken(e, e.initialPose.position), setQ(qA, e.initialPose.quaternion), v.scale);
+        else this.compose(mRoot, this.shaken(e, e.ground ? e.pose.position : e.initialPose.position), setQ(qA, e.ground ? e.pose.quaternion : e.initialPose.quaternion), v.scale);
         stump.batch.mesh.setMatrixAt(stump.id, mRoot);
         return;
       }

@@ -7,6 +7,7 @@ import { applyFatigue, healthLevel, loadLevel } from '../fatigue';
 import { componentWorldNormal, componentWorldPos, spawnDebris } from '../spawn';
 import { seismicHealth, seismicLevel } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
+import { groundLevel } from '../../deformation/response';
 import { integrityOf } from '../../interactions/integrity';
 import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 
@@ -69,6 +70,7 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   }
   if (e.seismic) e.health = Math.min(e.health, seismicHealth(e.seismic));
   if (e.flood) e.health = Math.min(e.health, e.flood.health);
+  if (e.ground) e.health = Math.min(e.health, e.ground.health);
   if (e.health <= 0) {
     ctx.recordDamage(e, {
       eventType: e.source.type === 'wall' ? 'COLLAPSED' : 'TOPPLED',
@@ -85,6 +87,7 @@ export function updateAnchoredStructure(e: RuntimeEntity, ctx: SystemContext, dt
   if (failed > 0) s = worst(s, DamageState.DAMAGED);
   if (e.seismic) s = worst(s, seismicLevel(e.seismic));
   if (e.flood) s = worst(s, floodLevel(e.flood));
+  if (e.ground) s = worst(s, groundLevel(e.ground));
   e.state = s;
 }
 

@@ -63,8 +63,9 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     owner: 'Rapier world gravity (project setting, constant)', writers: [], readers: ['Rapier', 'structural', 'buoyancy'],
   },
   terrainDeformation: {
-    id: 'terrainDeformation', labelKey: 'channel.terrainDeformation', status: 'interface', quantity: 'elevation change m',
-    owner: 'TerrainData (frozen during a run)', writers: [], readers: [],
+    id: 'terrainDeformation', labelKey: 'channel.terrainDeformation', status: 'active', quantity: 'vertical ground displacement m (+ up)',
+    owner: 'env.deformation (DeformationEngine over the run\'s terrain copy)', writers: ['TerrainDeformationEvent', '(Phase 22–23 sources)'],
+    readers: ['deformation (terrain, collider, water bed, foundations, roads)', 'renderer'],
   },
   atmosphere: {
     id: 'atmosphere', labelKey: 'channel.atmosphere', status: 'interface', quantity: 'pressure kPa, O₂ fraction, density kg/m³',

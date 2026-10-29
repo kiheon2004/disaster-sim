@@ -14,6 +14,11 @@ import { isFlat } from './TerrainData';
 /** Ground contact friction of the terrain collider (same as the flat ground slab). */
 export const TERRAIN_FRICTION = 0.9;
 
+/** Heightfield description regardless of flatness (Phase 21: a deformed flat world needs one). */
+export function heightfieldDesc(t: TerrainData): TerrainColliderDesc {
+  return { nx: t.nx, nz: t.nz, cellSize: t.cellSize, originX: t.originX, originZ: t.originZ, heights: t.heights, friction: TERRAIN_FRICTION };
+}
+
 /** null for a flat terrain → the engine keeps its exact flat ground plane. */
 export function terrainColliderDesc(t: TerrainData): TerrainColliderDesc | null {
   if (isFlat(t)) return null;

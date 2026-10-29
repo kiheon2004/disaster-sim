@@ -8,7 +8,7 @@
 import type { I18nMessage } from '@/i18n/i18n';
 import type { Hazard } from './DamageEvent';
 
-export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firstFall' | 'floated' | 'floodArea';
+export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firstFall' | 'floated' | 'floodArea' | 'deformPeak' | 'supportLoss' | 'roadCut';
 
 export interface Milestone {
   time: number;

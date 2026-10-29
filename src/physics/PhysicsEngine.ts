@@ -70,6 +70,11 @@ export interface PhysicsEngine {
   createBody(desc: BodyDesc): BodyHandle;
   removeBody(h: BodyHandle): void;
   setBodyKind(h: BodyHandle, kind: BodyKind): void;
+  /**
+   * Move a body to a pose (Phase 21: fixed bodies following deforming ground; dynamic bodies
+   * lifted by uplifting ground). Wakes the body; velocities are kept.
+   */
+  setBodyPose(h: BodyHandle, position: Vec3, quaternion: Quat): void;
   setRotationsLocked(h: BodyHandle, locked: boolean): void;
   /**
    * Change the contact friction of every collider of a body in place (no collider rebuild;

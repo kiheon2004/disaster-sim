@@ -14,6 +14,7 @@ import { GroundContactSystem } from './GroundContactSystem';
 import { FloodDamageSystem } from './FloodDamageSystem';
 import { RoadSystem } from './RoadSystem';
 import { ExposureSystem } from '../response/exposure';
+import { DeformationSystem } from './DeformationSystem';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -25,6 +26,8 @@ import { ExposureSystem } from '../response/exposure';
  */
 export function createDefaultSystems(): SimulationSystem[] {
   return [
+    // Phase 21: the ground moves first; every later system of the step sees the new surface.
+    new DeformationSystem(),
     new WindForceSystem(),
     new SeismicForceSystem(),
     new WaterSolverSystem(),

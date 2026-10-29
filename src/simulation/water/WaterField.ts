@@ -297,6 +297,53 @@ export class WaterField {
     }
   }
 
+  /**
+   * Bed motion bookkeeping (Phase 21). The bed moves under the water; the water COLUMN moves with
+   * it (depth h preserved), so the water volume — and the mass budget — is unchanged by a bed
+   * update. What changes is the free surface (η = bed + h) and the potential energy of the water:
+   *   displacedVolume  Σ |Δbed|·A over wet cells (water moved vertically, m³)
+   *   work             Σ ρ·g·h·A·Δbed over wet cells (J): work the moving ground does on the water
+   * Kinetic effects of the bed's own velocity (vertical momentum, pressure pulses) are outside
+   * the shallow-water model and are not represented.
+   */
+  readonly bedMotion = { updates: 0, displacedVolume: 0, work: 0, maxRise: 0, maxDrop: 0 };
+
+  /**
+   * Re-derive the bed of every cell touching a vertex rectangle from the terrain heights (which
+   * the deformation engine has just changed). Depth-preserving: h, discharges and the budget are
+   * untouched (see bedMotion). Returns the number of cells updated.
+   */
+  applyBedChange(rect: { x0: number; z0: number; x1: number; z1: number }): number {
+    const t = this.terrain.data;
+    const vx = t.nx, hs = t.heights;
+    const cx0 = Math.max(0, rect.x0 - 1), cz0 = Math.max(0, rect.z0 - 1);
+    const cx1 = Math.min(this.nx - 1, rect.x1), cz1 = Math.min(this.nz - 1, rect.z1);
+    let n = 0;
+    const m = this.bedMotion;
+    for (let iz = cz0; iz <= cz1; iz++) {
+      for (let ix = cx0; ix <= cx1; ix++) {
+        const i = iz * this.nx + ix, v = iz * vx + ix;
+        const bed = (hs[v] + 2 * hs[v + 1] + 2 * hs[v + vx] + hs[v + vx + 1]) / 6;
+        const d = bed - this.bed[i];
+        if (d === 0) continue;
+        this.bed[i] = bed;
+        n++;
+        const h = this.h[i];
+        if (h > 0) {
+          m.displacedVolume += Math.abs(d) * this.cellArea;
+          m.work += 1000 * 9.81 * h * this.cellArea * d;
+        }
+        if (d > m.maxRise) m.maxRise = d;
+        if (-d > m.maxDrop) m.maxDrop = -d;
+      }
+    }
+    if (n) {
+      m.updates++;
+      this.rev++;
+    }
+    return n;
+  }
+
   /** A collapsed building / broken wall no longer blocks the flow. */
   removeObstacle(id: EntityId): boolean {
     const k = this.obstacles.findIndex((o) => o.id === id);
