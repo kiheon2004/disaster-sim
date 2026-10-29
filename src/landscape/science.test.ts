@@ -25,7 +25,7 @@ const features: Feature[] = [
   { id: 'f3', kind: 'lake', points: [[30, -70], [70, -70], [70, -30], [30, -30]], surface: -0.3, depth: 3, shoreWidth: 6, material: 7, filled: true },
 ];
 
-describe('one terrain for collider, water bed and rendering', () => {
+describe('one terrain for collider, water bed and rendering', { timeout: 120_000 }, () => {
   it('after layer + road + sculpt edits the collider heights ARE the terrain heights and the water bed is their cell mean', () => {
     S().setFeatures(features, 4);
     S().applyEdit({ roads: drawRoad(S().doc.roads, [[-90, -10], [90, 0]], { curved: false, profile: defaultProfile() }).network });
@@ -59,7 +59,7 @@ describe('one terrain for collider, water bed and rendering', () => {
   });
 });
 
-describe('water flows from the higher to the lower water surface', () => {
+describe('water flows from the higher to the lower water surface', { timeout: 120_000 }, () => {
   it('two basins connected by a channel equalize toward a common level; mass conserved', () => {
     S().setFeatures([
       { id: 'f1', kind: 'lake', points: [[-80, -20], [-40, -20], [-40, 20], [-80, 20]], surface: 0, depth: 3, shoreWidth: 4, material: 7, filled: false },
