@@ -252,7 +252,8 @@ Relativistic Ray Tracing"을 붙입니다.
 
 천체 실험이 없으면 Phase 31(`4fdab8a`)과 같습니다: 동일성 프로브(`src/__audit__/p31/identity.probe.ts`, 깊은 잎 비교)로 **Phase 30 기준 32장면 +
 Phase 31 지정 20장면 + 의도 변경 1장면 = 53장면 모두 공통 잎 차이 0**(타이밍 잎 제외). 새 잎은 모두 0값: `env.gravity.celestial`(길이 0),
-`env.gravity.lateral`(false), 구조 장부 `mass.captured`(0), 층 모델 `gfx`/`hasG`(0) — `docs/bench-phase32-identity.json`.
+`env.gravity.lateral`(false), 구조 장부 `mass.captured`(0), 층 모델 `gfx`/`hasG`(0), 층 모델 `nLive`(= n, `0ad6fe0`) — `docs/bench-phase32-identity.json`. 층 모델 수정(`0ad6fe0`) 뒤 53장면을 다시 돌려
+같은 결과(공통 잎 차이 0)를 확인했습니다.
 
 ## 30. 테스트
 
