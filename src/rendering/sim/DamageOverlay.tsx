@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import type { RuntimeEntity } from '@/simulation/SimulationRuntime';
 import { DAMAGE_STATE_COLORS, DamageState } from '@/simulation/damage/DamageState';
 import { useViewStore } from '../viewStore';
@@ -17,7 +18,7 @@ export function DamageOverlay({ entities }: { entities: RuntimeEntity[] }) {
   const show = useViewStore((s) => s.showDamage);
   const list = useMemo(() => entities.filter((e) => !e.def.inert), [entities]);
   const radii = useMemo(() => list.map((e) => Math.max(e.dims[0], e.dims[2]) * 0.62 + 0.4), [list]);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }), []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }), []);
 
   useFrame(({ clock }) => {
     const mesh = ref.current;

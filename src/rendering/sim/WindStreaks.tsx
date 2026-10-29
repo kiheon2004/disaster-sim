@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import { simulationController } from '@/simulation/SimulationController';
 import { useViewStore } from '../viewStore';
 import { UNIT_BOX } from '../geometry/primitives';
@@ -16,7 +17,7 @@ export function WindStreaks() {
   const frame = useRef(0);
   const show = useViewStore((s) => s.showWind && s.windViz !== 'arrows');
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
-  const material = useMemo(
+  const material = useDisposable(
     () => new THREE.MeshBasicMaterial({ color: '#f4f8ff', transparent: true, opacity: 0, depthWrite: false }),
     [],
   );

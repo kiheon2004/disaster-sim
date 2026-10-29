@@ -1,7 +1,8 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { useDisposable } from '../../useDisposable';
 import { WORLD_HALF } from '@/core/units';
 import { useT } from '@/i18n/i18n';
 import { useSimStore } from '@/simulation/simStore';
@@ -23,8 +24,8 @@ export function EpicenterMarker() {
   const show = useViewStore((s) => s.quakeViz.epicenter);
   const quake = useSimStore((s) => s.quake);
   const rings = useRef<THREE.Group>(null);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ff5a3c', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }), []);
-  const beamMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ff5a3c', transparent: true, opacity: 0.22, depthWrite: false }), []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#ff5a3c', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }), []);
+  const beamMat = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#ff5a3c', transparent: true, opacity: 0.22, depthWrite: false }), []);
 
   useFrame(({ clock }) => {
     const g = rings.current;

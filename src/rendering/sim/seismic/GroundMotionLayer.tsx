@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../../useDisposable';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GRAVITY, WORLD_SIZE } from '@/core/units';
 import { simulationController } from '@/simulation/SimulationController';
@@ -25,13 +26,13 @@ const dummy = new THREE.Object3D();
  */
 function GroundSurface() {
   const show = useViewStore((s) => s.quakeViz.ground);
-  const geometry = useMemo(() => {
+  const geometry = useDisposable(() => {
     const g = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, SEG, SEG).rotateX(-Math.PI / 2);
     g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
     return g;
   }, []);
   const base = useMemo(() => Float32Array.from(geometry.attributes.position.array as Float32Array), [geometry]);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }), []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }), []);
   const ref = useRef<THREE.Mesh>(null);
   const since = useRef(Infinity);
   const envelope = useMemo(() => new Float32Array(geometry.attributes.position.count), [geometry]);
@@ -92,8 +93,8 @@ function arrowGeometry() {
 function AccelerationArrows() {
   const show = useViewStore((s) => s.quakeViz.arrows);
   const ref = useRef<THREE.InstancedMesh>(null);
-  const geometry = useMemo(arrowGeometry, []);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }), []);
+  const geometry = useDisposable(arrowGeometry, []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9, depthWrite: false }), []);
   const count = (ARROW_HALF * 2 + 1) ** 2;
   const envelope = useMemo(() => new Float32Array(count), [count]);
 

@@ -1,4 +1,5 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
+import * as THREE from 'three';
 import { useWorldStore } from '@/world/worldStore';
 import { landslideOutlook, sinkholeOutlook } from '@/phenomena/groundDefinitions';
 import { useEditorStore } from '@/editor/editorStore';
@@ -55,7 +56,7 @@ import { worldFingerprint } from '@/world/fingerprint';
 import { terrainStats } from '@/terrain/terrainStats';
 import { validateDeformation } from '@/deformation/field';
 import { phenomena } from '@/phenomena/registry';
-import { warmUpMs as rapierWarmUpMs } from '@/physics/RapierEngine';
+import { warmUpMs as rapierWarmUpMs, rapierWorlds } from '@/physics/RapierEngine';
 import { currentDeformation } from '@/rendering/terrain/runtimeGround';
 
 export function installDevtools() {
@@ -96,7 +97,28 @@ export function installDevtools() {
     waterRenderStats,
     profiler: simProfiler,
     /** Phase 21 terrain deformation (benchmarks / browser verification). */
-    deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation, phenomena, rapierWarmUpMs: () => rapierWarmUpMs },
+    deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation, phenomena, rapierWarmUpMs: () => rapierWarmUpMs, rapierWorlds },
+    /**
+     * GPU-resource tracking (Phase 23 stress test): every geometry the renderer uploads registers a
+     * 'dispose' listener; record it with its creation stack until it is disposed.
+     */
+    trackGeometries: () => {
+      const live = new Map<THREE.BufferGeometry, string>();
+      const proto = THREE.BufferGeometry.prototype as unknown as { addEventListener: (t: string, l: unknown) => void; __tracked?: boolean };
+      if (!proto.__tracked) {
+        proto.__tracked = true;
+        const add = proto.addEventListener;
+        proto.addEventListener = function (this: THREE.BufferGeometry, t: string, l: unknown) {
+          if (t === 'dispose' && !live.has(this)) {
+            live.set(this, (new Error().stack ?? '').split('\n').slice(2, 14).join(' | '));
+            const g = this;
+            add.call(this, 'dispose', () => live.delete(g));
+          }
+          return add.call(this, t, l);
+        };
+      }
+      return () => [...live.entries()].map(([g, stack]) => ({ type: g.type, name: g.name, vertices: g.attributes.position?.count ?? 0, attrs: Object.keys(g.attributes).join(','), stack }));
+    },
     /** Phase 22 ground failure (benchmarks / browser verification). */
     groundLib: { sinkholeOutlook, landslideOutlook },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */

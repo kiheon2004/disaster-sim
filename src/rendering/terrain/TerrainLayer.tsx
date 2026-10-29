@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import { WORLD_SIZE } from '@/core/units';
 import { useWorldStore } from '@/world/worldStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
@@ -86,7 +87,8 @@ function TerrainMesh({ showGrid, engine }: { showGrid: boolean; engine?: Deforma
   // One surface per grid (commits share the arrays and only bump the object identity).
   const surface = useMemo(() => new TerrainSurface(terrain, mode), [terrain.heights, terrain.ground, terrain.soil]); // eslint-disable-line react-hooks/exhaustive-deps
   const { material, uniforms } = useMemo(createTerrainMaterial, []);
-  const skirtMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#7a6249', roughness: 1, side: THREE.DoubleSide }), []);
+  useEffect(() => () => material.dispose(), [material]);
+  const skirtMat = useDisposable(() => new THREE.MeshStandardMaterial({ color: '#7a6249', roughness: 1, side: THREE.DoubleSide }), []);
   const lastRev = useRef(terrain.revision);
   const [water, setWater] = useState<number | null>(null);
 

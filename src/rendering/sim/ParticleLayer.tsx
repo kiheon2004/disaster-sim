@@ -1,6 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import { simulationController } from '@/simulation/SimulationController';
 import { MAX_PARTICLES } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
@@ -17,7 +18,7 @@ function cachedColor(hex: string) {
 /** Leaves and glass shards: one InstancedMesh, matrices + colors rewritten each frame. */
 export function ParticleLayer() {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const material = useMemo(
+  const material = useDisposable(
     () => new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.1, flatShading: true }),
     [],
   );

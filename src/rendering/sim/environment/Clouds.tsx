@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../../useDisposable';
 import { Rng } from '@/core/random';
 import { UNIT_BOX } from '../../geometry/primitives';
 import { globalFlow, weatherIntensity } from './intensity';
@@ -14,7 +15,7 @@ const DARK = new THREE.Color('#3f464f');
 /** Voxel cloud deck drifting with the global wind; denser and darker as the storm builds. */
 export function Clouds() {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const material = useMemo(() => new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false, fog: false }), []);
+  const material = useDisposable(() => new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false, fog: false }), []);
   const blocks = useMemo(() => {
     const rng = new Rng(4711);
     return Array.from({ length: COUNT }, (_, i) => ({

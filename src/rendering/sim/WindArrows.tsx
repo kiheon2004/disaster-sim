@@ -1,6 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { simulationController } from '@/simulation/SimulationController';
 import { useViewStore } from '../viewStore';
@@ -33,8 +34,8 @@ export function WindArrows() {
   const show = useViewStore((s) => s.showWind && s.windViz !== 'particles');
   const height = useViewStore((s) => s.arrowHeight);
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
-  const geometry = useMemo(arrowGeometry, []);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false }), []);
+  const geometry = useDisposable(arrowGeometry, []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, depthWrite: false }), []);
   const since = useRef(Infinity);
 
   useFrame((_, dt) => {

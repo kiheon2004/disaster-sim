@@ -1,6 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../useDisposable';
 import { simulationController } from '@/simulation/SimulationController';
 import { MAX_DEBRIS } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
@@ -28,7 +29,7 @@ function cachedColor(hex: string) {
 export function DebrisLayer() {
   const ref = useRef<THREE.InstancedMesh>(null);
   const rev = useRef(-1);
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, metalness: 0, flatShading: true }), []);
+  const material = useDisposable(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, metalness: 0, flatShading: true }), []);
   useFrame(() => {
     const mesh = ref.current;
     const rt = simulationController.getRuntime();

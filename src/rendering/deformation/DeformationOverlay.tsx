@@ -20,7 +20,7 @@ import type { DeformationEngine } from '@/deformation/engine';
 import { simulationController } from '@/simulation/SimulationController';
 import { useViewStore } from '../viewStore';
 import { useDeformationEngine } from '../terrain/runtimeGround';
-import { FieldPatch } from './fieldMesh';
+import { FieldPatch, swapGeometry } from './fieldMesh';
 import { footprint } from '@/simulation/deformation/response';
 import { contactColor, displacementAlpha, displacementColor, displacementScale } from './deformColors';
 
@@ -95,7 +95,7 @@ function Overlay({ engine }: { engine: DeformationEngine }) {
       patchRef.current?.dispose();
       const r = regionOf(engine);
       patchRef.current = r ? new FieldPatch(t, r) : null;
-      if (meshRef.current) meshRef.current.geometry = patchRef.current?.geometry ?? new THREE.BufferGeometry();
+      if (meshRef.current) swapGeometry(meshRef.current, patchRef.current?.geometry ?? new THREE.BufferGeometry());
     }
     const p = patchRef.current;
     const scale = displacementScale(engine.maxAbs);

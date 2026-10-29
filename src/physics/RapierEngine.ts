@@ -68,6 +68,9 @@ function colliderFor(shape: ShapeSpec): RAPIER.ColliderDesc {
   return d;
 }
 
+/** Rapier worlds alive (created − freed) — resource-lifecycle checks (Phase 23 stress test). */
+export const rapierWorlds = { live: 0, created: 0 };
+
 /** Rapier implementation of the PhysicsEngine interface. */
 export class RapierEngine implements PhysicsEngine {
   private world: RAPIER.World | null = null;
@@ -80,6 +83,8 @@ export class RapierEngine implements PhysicsEngine {
   async init(gravity: number, terrain: TerrainColliderDesc | null = null) {
     await ensureRapier();
     this.world = new RAPIER.World({ x: 0, y: -gravity, z: 0 });
+    rapierWorlds.live++;
+    rapierWorlds.created++;
     this.events = new RAPIER.EventQueue(true);
     this.setTerrain(terrain);
   }
@@ -304,6 +309,7 @@ export class RapierEngine implements PhysicsEngine {
 
   dispose() {
     this.events?.free();
+    if (this.world) rapierWorlds.live--;
     this.world?.free();
     this.events = null;
     this.world = null;

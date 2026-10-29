@@ -58,3 +58,14 @@ export class FieldPatch {
     this.geometry.dispose();
   }
 }
+
+/**
+ * Give a mesh a new geometry and dispose the one it had (the initial empty geometry React creates,
+ * or a previous one). Found by the Phase 23 stress test: assigning without disposing leaked two
+ * GPU geometries per run (one per overlay). Disposing a patch geometry twice is harmless.
+ */
+export function swapGeometry(mesh: THREE.Mesh, next: THREE.BufferGeometry) {
+  const old = mesh.geometry;
+  mesh.geometry = next;
+  if (old && old !== next) old.dispose();
+}

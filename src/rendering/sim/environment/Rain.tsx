@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useDisposable } from '../../useDisposable';
 import { Rng } from '@/core/random';
 import { smoothstep } from '@/core/math';
 import { UNIT_BOX } from '../../geometry/primitives';
@@ -18,7 +19,7 @@ const dir = new THREE.Vector3();
 export function Rain() {
   const ref = useRef<THREE.InstancedMesh>(null);
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#c9d6e3', transparent: true, opacity: 0.4, depthWrite: false }), []);
+  const material = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#c9d6e3', transparent: true, opacity: 0.4, depthWrite: false }), []);
   const drops = useMemo(() => {
     const rng = new Rng(2024);
     return Array.from({ length: MAX }, () => new THREE.Vector3(rng.spread(RANGE), rng.range(0, TOP), rng.spread(RANGE)));

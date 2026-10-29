@@ -23,7 +23,7 @@ import type { GroundFailureChannel } from '@/simulation/ground/GroundFailureChan
 import { simulationController } from '@/simulation/SimulationController';
 import { useViewStore } from '../viewStore';
 import { useDeformationEngine } from '../terrain/runtimeGround';
-import { FieldPatch } from '../deformation/fieldMesh';
+import { FieldPatch, swapGeometry } from '../deformation/fieldMesh';
 import { displacementAlpha, displacementColor, displacementScale } from '../deformation/deformColors';
 import { depositColor, FAILED_COLOR, flowColor, fsColor, sedimentColor } from './groundColors';
 import { GroundLine, areaOutline } from './GroundTools';
@@ -143,7 +143,7 @@ function Overlay({ engine, ch }: { engine: DeformationEngine; ch: GroundFailureC
     if (r && (!patchRef.current || !contains(patchRef.current.rect, r))) {
       patchRef.current?.dispose();
       patchRef.current = new FieldPatch(t, r);
-      if (meshRef.current) meshRef.current.geometry = patchRef.current.geometry;
+      if (meshRef.current) swapGeometry(meshRef.current, patchRef.current.geometry);
     }
     const p = patchRef.current;
     if (p && meshRef.current) {
