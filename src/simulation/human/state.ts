@@ -100,6 +100,8 @@ export interface HumanState {
   posture: Posture;
   postureChanges: number;
   freeSteps: number;
+  /** Supported (contact or terrain) at the last awake step — a body asleep in Rapier is supported only if it fell asleep so. */
+  sleepSupported: boolean;
   stillFor: number;
   lastLanding: number;
   /** Highest COM height along "up" of the current free phase (NaN outside), and the largest drop landed. */
@@ -173,6 +175,7 @@ export function createHumanState(height: number, mass: number, settings: HumanSe
     posture: 'upright',
     postureChanges: 0,
     freeSteps: 0,
+    sleepSupported: true,
     stillFor: 0,
     lastLanding: -Infinity,
     airTop: NaN,

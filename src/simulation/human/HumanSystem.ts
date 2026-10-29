@@ -307,10 +307,13 @@ export class HumanSystem implements SimulationSystem {
     this.energy(st, e, v, w, g, c, dt);
     const gm = Math.hypot(g[0], g[1], g[2]);
     const up: Vec3 = gm > 1e-6 ? [-g[0] / gm, -g[1] / gm, -g[2] / gm] : [0, 1, 0];
-    // Supported: a contact, a sleeping body (it rests on something), or the capsule's lowest point within GROUND_GAP of the
-    // terrain surface under it — after the terrain collider is rebuilt (a crater re-cut it) Rapier reported no contact for
-    // bodies standing on it for seconds (measured, Phase 33 audit; HUMAN_PHYSICS.md §20).
-    const touching = physics.touching(h) || physics.isSleeping(h) || onTerrain(ctx, e, q, p0);
+    // Supported: a contact, a sleeping body that fell asleep supported (it rests on something — a body far out where float32
+    // positions no longer move can fall asleep in free flight; Phase 33 long-run audit), or the capsule's lowest point within
+    // GROUND_GAP of the terrain surface under it — after the terrain collider is rebuilt (a crater re-cut it) Rapier reported
+    // no contact for bodies standing on it for seconds (measured, Phase 33 audit; HUMAN_PHYSICS.md §20).
+    let touching = physics.touching(h);
+    if (physics.isSleeping(h)) touching ||= st.sleepSupported;
+    else st.sleepSupported = touching ||= onTerrain(ctx, e, q, p0);
     st.freeSteps = touching ? 0 : st.freeSteps + 1;
     const m = st.bp.mass, hc = st.bp.hc;
     if (!st.started) {

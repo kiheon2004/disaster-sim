@@ -129,6 +129,17 @@ describe('extended human model in the simulation', () => {
     expect(Math.abs(p.pose.position[1] - 0.5 * G * 4) / (0.5 * G * 4)).toBeLessThan(0.1);
   });
 
+  it('weightless in mid-air: a body asleep in free flight is not supported (no stance regained or collapse in the air)', async () => {
+    const c = await controller(world([person(0, 0, 5)]), [gravity({ magnitude: 0, direction: [0, -1, 0] } as never)]);
+    const p = people(c)[0];
+    c.advance(10);
+    expect(p.human!.standing).toBe(false);
+    expect(p.human!.fallCause).toBe('noSupport');
+    expect(p.human!.regained + p.human!.collapsed).toBe(0);
+    expect(p.human!.posture).toBe('airborne');
+    expect(c.getDamageEvents().filter((d) => d.eventType === 'FALLEN').length).toBe(1);
+  });
+
   it('wind: a moderate wind is resisted, a storm topples the person downwind, the fall is attributed to the wind', async () => {
     const run = async (speed: number) => {
       const c = await controller(world([person(0, 0)]), [{ event: 'wind', speed, direction: 'S', duration: 30, gustStrength: 0, rampDuration: 4 } as EventSpec]);

@@ -119,7 +119,7 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('human long runs', () =
         const d = crowd(20, true);
         return { doc: d, events: [{ event: 'earthquake', magnitude: 8, pga: 8, duration: 40, seed: 5 } as EventSpec] };
       },
-      tides: () => ({ doc: crowd(20, true), events: [{ event: 'celestial', scenario: 'custom', sources: [{ kind: 'compact', center: [0, -30, 0], mass: 2e15 / 6.6743e-11, softening: 3, capture: 0, ramp: 0 }], probes: [], accretion: { visual: false, particles: 0, inner: 6, outer: 20, particleMass: 1 }, duration: T, startTime: 0 } as unknown as EventSpec] }),
+      tides: () => ({ doc: crowd(20, true), events: [{ event: 'celestial', scenario: 'custom', sources: [{ kind: 'compact', center: [0, -12, 0], mass: 2000 / 6.6743e-11, softening: 2, capture: 0, ramp: 4 }], probes: [], accretion: { visual: false, particles: 0, inner: 6, outer: 20, particleMass: 1 }, duration: T, startTime: 0 } as unknown as EventSpec] }),
     };
     const only = process.env.LONG_SCENES?.split(',');
     const rows: Any[] = [];
