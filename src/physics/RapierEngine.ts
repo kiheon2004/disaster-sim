@@ -319,6 +319,10 @@ export class RapierEngine implements PhysicsEngine {
     b.setLinvel({ x: vel[0], y: vel[1], z: vel[2] }, false);
   }
 
+  isDynamic(h: BodyHandle) {
+    return this.bodies.get(h)?.isDynamic() ?? false;
+  }
+
   touching(h: BodyHandle) {
     const b = this.bodies.get(h);
     const world = this.world;

@@ -120,6 +120,8 @@ export interface PhysicsEngine {
   writeMotion(h: BodyHandle, pos: ArrayLike<number>, vel: ArrayLike<number>): void;
   /** The body had a solver contact in the last step (any collider, ground included). */
   touching(h: BodyHandle): boolean;
+  /** The body is dynamic (not fixed / kinematic) — Phase 32.1: only dynamic bodies take the orbit integrator. */
+  isDynamic(h: BodyHandle): boolean;
   /** Linear damping coefficient of a body (1/s; v ← v/(1 + d·dt) per step). */
   linearDamping(h: BodyHandle): number;
   /**

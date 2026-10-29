@@ -154,4 +154,20 @@ describe('celestial sources in the simulation', () => {
     expect(g.getEnvironment().gravity.rt!.celestial).toBeNull();
     expect(g.getEnvironment().gravity.field!.points.empty).toBe(true);
   });
+
+  it('a body made fixed (buried, settled) is never moved by the orbit integrator — only free dynamic bodies are', async () => {
+    // A car turned into a fixed body (as rubble burial / settled fragments do) under a source pulling ~25 m/s²: Rapier
+    // does not move a fixed body, so its pose must stay exactly where it is. (Before Phase 32.1 the KDK replacement
+    // treated it as a free body: (½ − κ)·g·dt² per step, ≈ 2 cm/s upward.)
+    const c = await controller(world([{ type: 'car', seed: 1, transform: tf(0, 0) }]), [celestialSpec({ sources: [labSource({ center: [40, 20, 0] })] })]);
+    c.advance(0.5);
+    const e = [...c.getRuntime()!.entities.values()].find((x) => x.source.type === 'car')!;
+    const ph = c.getPhysics()!;
+    ph.setBodyKind(e.body!, 'fixed');
+    c.advance(1 / 60);
+    const p0 = [...ph.getPose(e.body!).position];
+    c.advance(2);
+    expect([...ph.getPose(e.body!).position]).toEqual(p0);
+    expect(ph.getLinearVelocity(e.body!)).toEqual([0, 0, 0]);
+  });
 });

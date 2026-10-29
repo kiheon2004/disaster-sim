@@ -282,7 +282,8 @@ export class CelestialRuntime {
    */
   integrate(ctx: SystemContext, h: BodyHandle, m: number, x0: Readonly<Vec3>, v0: Readonly<Vec3>, g0: Readonly<Vec3>, phi0: number, dt: number, ledger: GravityLedger, out: { captured: number; x: Vec3; v: Vec3 }): boolean {
     const physics = ctx.physics;
-    if (physics.isSleeping(h)) return false;
+    // Only a free dynamic body: a fixed one (buried, settled) is not moved by Rapier, so the replacement would move it.
+    if (physics.isSleeping(h) || !physics.isDynamic(h)) return false;
     if (physics.touching(h)) { this.stats.contact++; return false; }
     const x = this.x, v = this.v, res = this.res;
     x[0] = x0[0]; x[1] = x0[1]; x[2] = x0[2];
