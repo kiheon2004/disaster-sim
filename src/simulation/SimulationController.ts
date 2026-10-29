@@ -1,4 +1,4 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive, FireLive, VolcanoLive } from './simStore';
 import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
 import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
@@ -236,6 +236,7 @@ export class SimulationController {
       blasts: null,
       structure: null,
       thermal: null,
+      volcano: null,
       floodSeries: null,
       milestones: [],
     });
@@ -602,6 +603,7 @@ export class SimulationController {
     patch.structure = this.structureLive();
     patch.thermal = this.thermalLive();
     patch.fire = this.fireLive();
+    patch.volcano = this.volcanoLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -770,6 +772,45 @@ export class SimulationController {
       internal: L.final, residual: L.residual(), relativeResidual: L.relativeResidual(),
       bodies: s.bodies, buildings: s.buildings, activeTiles: s.activeTiles, substeps: w.last.substeps, maxSubsteps: w.maxSubsteps, ms: rt.ms, msTotal: rt.msTotal,
       damagedStructures: s.damagedStructures, failedMembers: s.failedMembers, minFactor: s.minFactor, maxUtil: s.maxUtil, restraint: w.settings.restraint,
+    };
+  }
+
+  /** Live volcano summary (Phase 28; null until the first eruption is due). */
+  volcanoLive(): VolcanoLive | null {
+    const ch = this.env.volcano;
+    const vr = ch.rt;
+    if (!vr) return null;
+    const vw = vr.world, f = vw.field, s = vr.stats;
+    let vol = 0, area = 0, dArea = 0, dMax = 0, aArea = 0, aMax = 0;
+    for (const i of f.mobile) { const h = f.depth(i); vol += h * f.area; if (h > 0.01) area += f.area; }
+    for (let i = 0; i < f.n; i++) {
+      const dl = (f.depM[i] + f.depB[i]) / (f.rho * f.area), da = f.depA[i] / (1000 * f.area);
+      if (dl > 0.01) { dArea += f.area; if (dl > dMax) dMax = dl; }
+      if (da > 0.001) { aArea += f.area; if (da > aMax) aMax = da; }
+    }
+    const o = { contact: 0, buried: 0, held: 0, toppled: 0, damaged: 0, roofAsh: 0, maxAshLoad: 0, bombs: 0 };
+    for (const e of this.runtime?.entities.values() ?? []) {
+      const v = e.volcano;
+      if (!v) continue;
+      if (v.contact > 0) o.contact++;
+      if (v.noted.has('buried')) o.buried++;
+      if (v.held) o.held++;
+      if (e.flags.toppled && e.lastHazard === 'volcano') o.toppled++;
+      if (v.damage >= 0.3) o.damaged++;
+      if (v.ash > 0) o.roofAsh++;
+      if (v.ashLoad > o.maxAshLoad) o.maxAshLoad = v.ashLoad;
+      o.bombs += v.bombs;
+    }
+    let blocked = 0, impassable = 0;
+    for (const sg of this.runtime?.roads?.segments ?? []) { if (sg.volcanic?.blocked) blocked++; if (sg.volcanic?.impassable) impassable++; }
+    const byId = new Map(vw.eruptions.map((e) => [e.id, e]));
+    return {
+      material: vw.mat.id,
+      eruptions: ch.eruptions.map((r) => { const e = byId.get(r.id); return { id: r.id, name: r.name, start: r.start, phase: e?.phase ?? (r.done ? 'stopped' : 'dormant'), rate: e ? e.spec.rate : 0, supplied: e ? e.lava + e.bombs + e.ash : 0, reason: r.reason, done: r.done, vents: r.spec.vents.length }; }),
+      supplyRate: s.supplyRate, ledger: vw.ledger(), thermalVolcanic: vr.trt.world.ledger.volcanic,
+      mobileVolume: vol, activeLava: s.activeLava, hotDeposits: s.hotDeposits, maxDepth: s.maxDepth, maxT: s.maxT, maxSpeed: s.maxSpeed, area, depositArea: dArea, maxDeposit: dMax, ashArea: aArea, maxAsh: aMax,
+      bombsAir: vw.bombs.filter((b) => !b.landed).length, puffs: vw.puffs.length, substeps: s.substeps, faces: s.faces, limited: f.ledger.limited, contacts: s.contacts, receivers: s.receivers, waterAbove100: s.waterAbove100,
+      objects: o, roads: { blocked, impassable }, ms: vr.ms, msTotal: vr.msTotal, cost: { ...s.ms },
     };
   }
 

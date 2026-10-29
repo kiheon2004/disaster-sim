@@ -1,5 +1,8 @@
 /** Development-only handles for debugging from the browser console (window.__ds). */
 import { FIRE_PRESETS } from '@/fire/presets';
+import { VOLCANO_PRESETS } from '@/volcano/presets';
+import { volcanoOutlook } from '@/volcano/outlook';
+import type { VolcanoSpec } from '@/volcano/types';
 import { fireOutlook } from '@/fire/outlook';
 import { defaultFireSettings, type FireSpec } from '@/fire/types';
 import * as THREE from 'three';
@@ -168,6 +171,12 @@ export function installDevtools() {
       rt: () => simulationController.getEnvironment().fire.rt,
       presets: FIRE_PRESETS,
       outlook: (spec: FireSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return fireOutlook(spec, d.objects, (x, z) => s.sampleHeight(x, z), { ...defaultFireSettings(), ...(d.settings.simulation.fire ?? {}) }); },
+    },
+    /** Phase 28 volcano (benchmarks / browser verification): the run's volcano state, presets and the preview outlook. */
+    volcanoLib: {
+      rt: () => simulationController.getEnvironment().volcano.rt,
+      presets: VOLCANO_PRESETS,
+      outlook: (spec: VolcanoSpec) => { const d = useWorldStore.getState().doc; const s = samplerFor(d.terrain); return volcanoOutlook(spec, d.terrain, (x, z) => s.sampleHeight(x, z)); },
     },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {

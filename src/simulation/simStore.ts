@@ -161,6 +161,41 @@ export interface StructureLive {
   /** Simulation cost of the engine (ms per step, last profiled). */
 }
 
+/** Live volcano summary (Phase 28) for the HUD, results and verification. Masses kg, energies J, volumes m³. */
+export interface VolcanoLive {
+  material: string;
+  eruptions: { id: string; name: string; start: number; phase: string; rate: number; supplied: number; reason: string | null; done: boolean; vents: number }[];
+  /** Bulk supply now (m³/s) and the peak so far. */
+  supplyRate: number;
+  ledger: import('@/volcano/VolcanoWorld').VolcanoLedger;
+  /** Heat booked by the thermal world from the lava (J; equals the ledger's transferred heat). */
+  thermalVolcanic: number;
+  mobileVolume: number;
+  activeLava: number;
+  hotDeposits: number;
+  maxDepth: number;
+  maxT: number;
+  maxSpeed: number;
+  area: number;
+  depositArea: number;
+  maxDeposit: number;
+  ashArea: number;
+  maxAsh: number;
+  bombsAir: number;
+  puffs: number;
+  substeps: number;
+  faces: number;
+  limited: number;
+  contacts: number;
+  receivers: number;
+  waterAbove100: number;
+  objects: { contact: number; buried: number; held: number; toppled: number; damaged: number; roofAsh: number; maxAshLoad: number; bombs: number };
+  roads: { blocked: number; impassable: number };
+  ms: number;
+  msTotal: number;
+  cost: { flow: number; cool: number; ash: number; bombs: number; heat: number; objects: number };
+}
+
 /** Live fire summary (Phase 27) for the HUD, results and verification. Energies J, powers W, masses kg. */
 export interface FireLive {
   hrr: number;
@@ -310,6 +345,7 @@ export interface SimState {
   structure: StructureLive | null;
   thermal: ThermalLive | null;
   fire: FireLive | null;
+  volcano: VolcanoLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -347,6 +383,7 @@ export const useSimStore = create<SimState>((set) => ({
   structure: null,
   thermal: null,
   fire: null,
+  volcano: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

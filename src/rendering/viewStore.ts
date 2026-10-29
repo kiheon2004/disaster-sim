@@ -141,9 +141,31 @@ export interface FireViz {
   overlay: FireOverlay;
 }
 
+/**
+ * Volcano views (Phase 28, render-only — never read by the simulation):
+ *  - lava: the computed mobile lava surface (bed + depth), colored by its computed surface temperature
+ *    (glow above the Draper point, dark crust below); deposits tinted (lava / bombs dark, ash grey);
+ *  - ejecta: the computed bombs in flight; ash: the computed ash puffs (spread σ); steam: a visual-only
+ *    plume where lava meets water (no steam is computed); fountain: visual spatter over active vents;
+ *  - overlay: lava depth, lava temperature, flow speed, crystal (solid) fraction, ash thickness, or the
+ *    ground surface temperature (thermal exposure), with legends.
+ */
+export type VolcanoOverlay = 'off' | 'depth' | 'temperature' | 'speed' | 'solid' | 'ash' | 'exposure';
+export const VOLCANO_OVERLAYS: readonly VolcanoOverlay[] = ['off', 'depth', 'temperature', 'speed', 'solid', 'ash', 'exposure'];
+export interface VolcanoViz {
+  lava: boolean;
+  ejecta: boolean;
+  ash: boolean;
+  steam: boolean;
+  fountain: boolean;
+  overlay: VolcanoOverlay;
+}
+
 export interface GroundPick {
   id: string;
   mode: 'point' | 'polygon';
+  /** Volcano (Phase 28): what the click places — the first vent, the fissure's second end, or an extra vent. */
+  target?: 'vent' | 'end' | 'add';
 }
 
 export interface DeformViz {
@@ -205,6 +227,8 @@ interface ViewState {
   setThermalViz: (patch: Partial<ThermalViz>) => void;
   fireViz: FireViz;
   setFireViz: (patch: Partial<FireViz>) => void;
+  volcanoViz: VolcanoViz;
+  setVolcanoViz: (patch: Partial<VolcanoViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -259,6 +283,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setThermalViz: (patch) => set((s) => ({ thermalViz: { ...s.thermalViz, ...patch } })),
   fireViz: { flames: true, glow: true, smoke: true, embers: true, overlay: 'off' },
   setFireViz: (patch) => set((s) => ({ fireViz: { ...s.fireViz, ...patch } })),
+  volcanoViz: { lava: true, ejecta: true, ash: true, steam: true, fountain: true, overlay: 'off' },
+  setVolcanoViz: (patch) => set((s) => ({ volcanoViz: { ...s.volcanoViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

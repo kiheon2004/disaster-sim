@@ -333,3 +333,57 @@ describe('ash, bombs and the world ledger', () => {
     expect(Array.from(a.w.field.dep)).toEqual(Array.from(b.w.field.dep));
   });
 });
+
+describe('editor: outlook, presets, fields', () => {
+  it('steepest-descent paths go down the slope; the outlook reports slope, bearing and the initial material state', async () => {
+    const { volcanoOutlook, steepestPath } = await import('./outlook');
+    const nx = 101, nz = 101;
+    const t = { kind: 'heightfield', nx, nz, cellSize: 1, originX: -50, originZ: -50, heights: plane(nx, nz, 1, 0.1), ground: new Uint8Array(nx * nz), soil: new Uint8Array(nx * nz), settings: {} as never, revision: 0 } as unknown as import('@/core/model').TerrainData;
+    const p = steepestPath(t, -30, 0);
+    expect(p.length).toBeGreaterThan(10);
+    expect(p[p.length - 1][0]).toBeGreaterThan(p[0][0]);
+    const ground = (x: number) => -0.1 * (x + 50);
+    const o = volcanoOutlook({ event: 'volcano', vents: [{ kind: 'central', position: [-30, 0], radius: 2 }], material: 'basalt', temperature: 1140, rate: 2, duration: 600, profile: 'constant' }, t, ground);
+    expect(o.vents[0].slope).toBeCloseTo((Math.atan(0.1) * 180) / Math.PI, 1);
+    expect(o.vents[0].bearing).toBeCloseTo(90, 0);
+    expect(o.vents[0].hcr).toBeGreaterThan(0);
+    expect(o.volume).toBe(1200);
+    expect(o.viscosity).toBeCloseTo(viscosity(basalt, 1140 + ZERO_C), 6);
+    expect(o.paths.length).toBe(5);
+  });
+
+  it('every preset is a valid experiment with its assumptions', async () => {
+    const { VOLCANO_PRESETS, volcanoPreset } = await import('./presets');
+    const { phenomena } = await import('@/phenomena/registry');
+    for (const id of VOLCANO_PRESETS) {
+      const p = volcanoPreset(id);
+      expect(p.assumptions.length).toBeGreaterThan(0);
+      expect(p.events.some((e) => e.event === 'volcano')).toBe(true);
+      for (const e of p.events) expect(phenomena.implemented(e.event)!.schema.safeParse(e).success).toBe(true);
+      expect(Number.isFinite(p.height(0, 0))).toBe(true);
+    }
+  });
+
+  it('editor fields: layout switches vents, a material change starts at its default temperature, invalid values are rejected', async () => {
+    const { phenomena } = await import('@/phenomena/registry');
+    const d = phenomena.implemented('volcano')!;
+    let s = d.defaults();
+    const f = (k: string) => d.fields.find((x) => x.key === k)!;
+    s = f('layout').set!(s, 'fissure');
+    expect((s as unknown as VolcanoSpec).vents[0].kind).toBe('fissure');
+    expect(d.schema.safeParse(s).success).toBe(true);
+    s = f('layout').set!(s, 'multiple');
+    expect((s as unknown as VolcanoSpec).vents.length).toBe(3);
+    expect(d.schema.safeParse(s).success).toBe(true);
+    s = f('material').set!(s, 'andesite');
+    expect((s as unknown as VolcanoSpec).temperature).toBe(1050);
+    expect(d.schema.safeParse(s).success).toBe(true);
+    s = f('profile').set!(s, 'staged');
+    expect((s as unknown as VolcanoSpec).stages).toEqual([0.3, 1, 0.5]);
+    s = f('stage2').set!(s, 40);
+    expect((s as unknown as VolcanoSpec).stages![1]).toBeCloseTo(0.4, 12);
+    const bad = d.schema.safeParse({ ...s, temperature: 1400 });
+    expect(bad.success).toBe(false);
+    expect(JSON.stringify(bad.error?.issues)).toContain('volcano.invalid.temperature');
+  });
+});

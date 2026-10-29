@@ -28,6 +28,7 @@ import { defaultExperiment, type PhenomenonContext, type PhenomenonInstance } fr
 import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
 import { deleteSelection, duplicateSelection } from './buildActions';
 import { useBuildStore } from '@/editor/buildStore';
+import { volcanoPreset, type VolcanoPresetId } from '@/volcano/presets';
 import { worldFingerprint } from '@/world/fingerprint';
 import { firePreset, type FirePresetId } from '@/fire/presets';
 
@@ -151,6 +152,31 @@ export function loadFirePreset(id: FirePresetId) {
   useWorldStore.getState().addObjects(p.objects);
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'fire.preset.loaded', params: { name: t(`fire.preset.${id}`) } });
+}
+
+/**
+ * A volcano preset (Phase 28): a new project with its terrain (and lake), objects standing on the terrain,
+ * and the experiment's phenomena. Asks first when the current world has objects.
+ */
+export function loadVolcanoPreset(id: VolcanoPresetId) {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('volcano.preset.confirm', { name: t(`volcano.preset.${id}`) }))) return;
+  const p = volcanoPreset(id);
+  const doc = createEmptyDocument(t(`volcano.preset.${id}`));
+  const instances: PhenomenonInstance[] = [];
+  for (const ev of p.events) instances.push(createInstance(ev.event, instances, ev));
+  doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+  useEditorStore.getState().select(null);
+  const ws = useWorldStore.getState();
+  ws.replaceDocument(doc);
+  const t0 = useWorldStore.getState().doc.terrain;
+  const heights = new Float32Array(t0.heights.length);
+  for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) heights[iz * t0.nx + ix] = p.height(t0.originX + ix * t0.cellSize, t0.originZ + iz * t0.cellSize);
+  useWorldStore.getState().applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+  if (p.lake) useWorldStore.getState().setFeatures([p.lake], 2);
+  // Objects stand on the terrain (as the editor places them).
+  useWorldStore.getState().addObjects(p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], p.height(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })));
+  useWorldStore.setState({ past: [], future: [] });
+  toast('success', { key: 'volcano.preset.loaded', params: { name: t(`volcano.preset.${id}`) } });
 }
 
 export function loadSampleTown() {

@@ -35,6 +35,8 @@ import type { BlastSpec } from '@/blast/types';
 import type { HeatSourceSpec } from '@/thermal/types';
 import { ThermalPreview } from '../thermal/ThermalPreview';
 import { FirePreview } from '../fire/FirePreview';
+import { VolcanoPreview, fissureOutline } from '../volcano/VolcanoPreview';
+import type { VolcanoSpec } from '@/volcano/types';
 import type { FireSpec } from '@/fire/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
 
@@ -45,7 +47,7 @@ function groundTerrain(): TerrainData {
 }
 
 function useGroundInstance(id: string | null): PhenomenonInstance | null {
-  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire')) ?? null : null));
+  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact' || i.type === 'blast' || i.type === 'heatSource' || i.type === 'fire' || i.type === 'volcano')) ?? null : null));
 }
 
 /** Points of a closed (or open) line on the ground, lifted a little. */
@@ -99,6 +101,15 @@ function moveArea(a: GroundArea, to: [number, number]): GroundArea {
   return { kind: 'polygon', points: a.points.map(([x, z]) => [round1(x + to[0] - cx), round1(z + to[1] - cz)] as [number, number]) };
 }
 
+/** A map click on a volcano scenario: move the first vent (a fissure keeps its length and direction), set the fissure's second end, or add a vent. */
+export function placeVent(s: VolcanoSpec, p: [number, number], target: 'vent' | 'end' | 'add'): VolcanoSpec {
+  const v = s.vents[0] ?? { kind: 'central' as const, position: p, radius: 2 };
+  if (target === 'end') return { ...s, vents: [{ ...v, kind: 'fissure', end: p }, ...s.vents.slice(1)] };
+  if (target === 'add') return s.vents.length >= 6 ? s : { ...s, vents: [...s.vents, { kind: 'central', position: p, radius: v.radius }] };
+  const end = v.end ? [p[0] + v.end[0] - v.position[0], p[1] + v.end[1] - v.position[1]] as [number, number] : undefined;
+  return { ...s, vents: [{ ...v, position: p, ...(end ? { end } : {}) }, ...s.vents.slice(1)] };
+}
+
 export function GroundPicker() {
   const pick = useViewStore((s) => s.groundPick);
   const inst = useGroundInstance(pick?.id ?? null);
@@ -110,7 +121,7 @@ export function GroundPicker() {
   const ray = useRef(new THREE.Raycaster());
   useEffect(() => {
     if (!pick) return;
-    const { id, mode } = pick;
+    const { id, mode, target } = pick;
     const el = gl.domElement;
     const hit: Vec3 = [0, 0, 0];
     const pointAt = (ev: MouseEvent): [number, number] | null => {
@@ -144,6 +155,7 @@ export function GroundPicker() {
         else if (cur.type === 'blast') updatePhenomenon(id, { spec: { ...(cur.spec as BlastSpec), position: p } });
         else if (cur.type === 'heatSource') updatePhenomenon(id, { spec: { ...(cur.spec as HeatSourceSpec), position: p } });
         else if (cur.type === 'fire') updatePhenomenon(id, { spec: { ...(cur.spec as FireSpec), position: p } });
+        else if (cur.type === 'volcano') updatePhenomenon(id, { spec: placeVent(cur.spec as VolcanoSpec, p, target ?? 'vent') });
         else if (cur.type === 'sinkhole') updatePhenomenon(id, { spec: { ...(cur.spec as SinkholeSpec), center: p } });
         else updatePhenomenon(id, { spec: { ...(cur.spec as LandslideSpec), area: moveArea((cur.spec as LandslideSpec).area, p) } });
         return done();
@@ -197,6 +209,11 @@ export function GroundPicker() {
   let outline: [number, number][];
   if (inst.type === 'impact' || inst.type === 'blast') return <AimMarker x={hover[0]} z={hover[1]} color="#ffd34d" />;
   if (inst.type === 'fire') return <GroundLine pts={circlePts(hover[0], hover[1], (inst.spec as FireSpec).radius)} color="#ff5a1f" />;
+  if (inst.type === 'volcano') {
+    const vs = inst.spec as VolcanoSpec, v = vs.vents[0];
+    if (pick.target === 'end' && v) return <GroundLine pts={fissureOutline(v.position, hover, v.radius)} color="#ff6a1a" />;
+    return <GroundLine pts={circlePts(hover[0], hover[1], v?.radius ?? 2)} color="#ff6a1a" />;
+  }
   if (inst.type === 'heatSource') {
     const hs = inst.spec as HeatSourceSpec;
     return hs.kind === 'point' ? <AimMarker x={hover[0]} z={hover[1]} color="#ff8a3d" /> : <GroundLine pts={circlePts(hover[0], hover[1], hs.radius)} color="#ff8a3d" />;
@@ -278,5 +295,6 @@ export function GroundPreview() {
   if (inst.type === 'blast') return <BlastPreview inst={inst} />;
   if (inst.type === 'heatSource') return <ThermalPreview inst={inst} />;
   if (inst.type === 'fire') return <FirePreview inst={inst} />;
+  if (inst.type === 'volcano') return <VolcanoPreview inst={inst} />;
   return inst.type === 'sinkhole' ? <SinkholePreview inst={inst} /> : <LandslidePreview inst={inst} />;
 }

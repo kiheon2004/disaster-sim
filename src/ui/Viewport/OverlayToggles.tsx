@@ -11,6 +11,8 @@ import { FACTOR_GRADIENT, TEMPERATURE_GRADIENT, THERMAL_SCALES, UTIL_GRADIENT } 
 import { useSimStore } from '@/simulation/simStore';
 import { FUEL_GRADIENT, HRR_GRADIENT, ROOM_COLORS, STATE_COLORS, VISIBILITY_GRADIENT } from '@/rendering/fire/fireColors';
 import { FIRE_STATES } from '@/fire/FireWorld';
+import { GLOW_GRADIENT, OVERLAY_SCALE, overlayGradient } from '@/rendering/volcano/volcanoColors';
+import { VOLCANO_OVERLAYS } from '@/rendering/viewStore';
 import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
 import { cssGradient, DEPTH_MAX, DEPTH_STOPS, SPEED_MAX, SPEED_STOPS } from '@/rendering/sim/water/waterColors';
@@ -281,6 +283,7 @@ export function OverlayToggles() {
         </>
       )}
       <ThermalToggles />
+      <VolcanoToggles />
       <FireToggles />
       <StructureToggles />
     </div>
@@ -367,6 +370,34 @@ function FireToggles() {
           <Toggle checked={color === 'fire'} onChange={(b) => useViewStore.getState().setStructureViz({ color: b ? 'fire' : 'normal' })} label={t('overlay.fire.members')} />
         )}
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.fire.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Volcano views (Phase 28): shown once an eruption runs. Visual-only effects are labelled as such. */
+function VolcanoToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.volcano !== null);
+  const viz = useViewStore((s) => s.volcanoViz);
+  const set = useViewStore.getState().setVolcanoViz;
+  if (!live) return null;
+  const o = viz.overlay;
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#ff6a1a', marginTop: 2 }}>{t('overlay.volcano')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="volcano-overlay">
+        <Toggle checked={viz.lava} onChange={(b) => set({ lava: b })} label={t('overlay.volcano.lava')} />
+        <Toggle checked={viz.ejecta} onChange={(b) => set({ ejecta: b })} label={t('overlay.volcano.ejecta')} />
+        <Toggle checked={viz.ash} onChange={(b) => set({ ash: b })} label={t('overlay.volcano.ash')} />
+        <Toggle checked={viz.steam} onChange={(b) => set({ steam: b })} label={t('overlay.volcano.steam')} />
+        <Toggle checked={viz.fountain} onChange={(b) => set({ fountain: b })} label={t('overlay.volcano.fountain')} />
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.volcano.overlay')}</span>
+        <Segmented size="small" value={o} onChange={(v) => set({ overlay: v })} ariaLabel={t('overlay.volcano.overlay')}
+          options={VOLCANO_OVERLAYS.map((v) => ({ value: v, label: t(`overlay.volcano.o.${v}`), title: t(`overlay.volcano.ot.${v}`) }))} />
+        {o === 'off' && viz.lava && <Legend gradient={GLOW_GRADIENT} labels={['300 °C', '750 °C', '1200 °C']} note={t('overlay.volcano.glowNote')} />}
+        {o !== 'off' && <Legend gradient={overlayGradient(o)} labels={[`0 ${OVERLAY_SCALE[o].unit}`.trim(), `${OVERLAY_SCALE[o].max / 2} ${OVERLAY_SCALE[o].unit}`.trim(), `${OVERLAY_SCALE[o].max} ${OVERLAY_SCALE[o].unit}`.trim()]} note={t(`overlay.volcano.ot.${o}`)} />}
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.volcano.note')}</span>
       </div>
     </>
   );

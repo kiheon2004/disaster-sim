@@ -116,6 +116,7 @@ function ResultsDialog() {
     structure: useSimStore.getState().structure ?? undefined, collapseSequences: collapseSequences(),
     thermal: useSimStore.getState().thermal ?? undefined, thermalMembers: thermalMembers(),
     fire: useSimStore.getState().fire ?? undefined, fireItems: fireItems(),
+    volcano: useSimStore.getState().volcano ?? undefined, volcanoRoads: volcanoRoads(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -144,6 +145,7 @@ function ResultsDialog() {
           {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
           <ThermalSummary t={t} name={name} />
+          <VolcanoSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
           {m ? (
@@ -552,6 +554,60 @@ function thermalMembers() {
     }
   }
   return out;
+}
+
+/** Road segments reached by the volcano (Phase 28). */
+function volcanoRoads() {
+  const segs = simulationController.getRuntime()?.roads?.segments ?? [];
+  return segs.filter((s) => s.volcanic).map((s) => ({ segment: s.id, status: s.status, lava_m: +s.volcanic!.peakLava.toFixed(3), deposit_m: +s.volcanic!.deposit.toFixed(3), ash_m: +s.volcanic!.ash.toFixed(4), peakSurface_C: +(s.volcanic!.peakT > 0 ? s.volcanic!.peakT - 273.15 : 0).toFixed(0), blocked: s.volcanic!.blocked, impassable: s.volcanic!.impassable }));
+}
+
+/** Objects with a volcano state (Phase 28). */
+function volcanoObjects() {
+  const out: { object: string; type: string; lava_m: number; peakLava_m: number; deposit_m: number; loadRatio: number; damage: number; contact_s: number; buried: boolean; held: boolean; ash_kg: number; ashLoad_kPa: number; bombs: number }[] = [];
+  for (const e of simulationController.getRuntime()?.entities.values() ?? []) {
+    const v = e.volcano;
+    if (!v) continue;
+    out.push({ object: e.id, type: e.source.type, lava_m: +v.lava.toFixed(3), peakLava_m: +v.peakLava.toFixed(3), deposit_m: +v.deposit.toFixed(3), loadRatio: +v.ratio.toFixed(3), damage: +v.damage.toFixed(3), contact_s: +v.contact.toFixed(1), buried: v.noted.has('buried'), held: v.held, ash_kg: +v.ash.toFixed(1), ashLoad_kPa: +v.ashLoad.toFixed(3), bombs: v.bombs });
+  }
+  return out;
+}
+
+function VolcanoSummary({ t, name }: { t: TFunction; name: string }) {
+  const s = useSimStore((x) => x.volcano);
+  if (!s) return null;
+  const M = s.ledger.mass, E = s.ledger.energy;
+  const exportCsv = () => {
+    const mass = Object.entries(M).map(([k, v]) => `mass.${k},${v}`);
+    const energy = Object.entries(E).map(([k, v]) => `energy.${k},${v}`);
+    const obj = volcanoObjects();
+    const roads = volcanoRoads();
+    download(`${name || 'simulation'}-volcano.csv`, [
+      '# volcano ledgers (kg, J)', 'quantity,value', ...mass, ...energy, `thermal.volcanic,${s.thermalVolcanic}`, '',
+      '# eruptions', 'id,name,start_s,phase,supplied_kg,rejected', ...s.eruptions.map((e) => [e.id, e.name, e.start.toFixed(1), e.phase, e.supplied.toFixed(0), e.reason ?? ''].join(',')), '',
+      '# objects', 'object,type,lava_m,peakLava_m,deposit_m,loadRatio,damage,contact_s,buried,held,ash_kg,ashLoad_kPa,bombs', ...obj.map((o) => Object.values(o).join(',')), '',
+      '# roads', 'segment,status,lava_m,deposit_m,ash_m,peakSurface_C,blocked,impassable', ...roads.map((r) => Object.values(r).join(',')),
+    ].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="volcano-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.volcano.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="volcano-csv"><Icon name="save" size={13} /> {t('results.volcano.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.volcano.supplied')} value={fmt(M.supplied / 1000, 0)} unit="t" sub={t('results.volcano.suppliedSub', { l: fmt(M.lavaSupplied / 1000, 0), b: fmt(M.bombsLaunched / 1000, 1), a: fmt(M.ashReleased / 1000, 1) })} />
+        <Card label={t('results.volcano.solid')} value={fmt(M.solidified / 1000, 0)} unit="t" sub={t('results.volcano.solidSub', { A: fmt(s.depositArea, 0), h: fmt(s.maxDeposit, 2) })} />
+        <Card label={t('results.volcano.mobile')} value={fmt(M.mobile / 1000, 0)} unit="t" sub={t('results.volcano.mobileSub', { out: fmt(M.outLava / 1000, 1) })} />
+        <Card label={t('results.volcano.ash')} value={fmt((M.ashDeposited + M.ashCaught) / 1000, 1)} unit="t" sub={t('results.volcano.ashSub', { r: fmt(M.ashCaught / 1000, 2), o: fmt(M.outAsh / 1000, 2), A: fmt(s.ashArea, 0) })} />
+        <Card label={t('results.volcano.heat')} value={energyText(E.toGround + E.toObjects + E.toWater + E.toAir + E.radiated)} sub={t('results.volcano.heatSub', { g: energyText(E.toGround), o: energyText(E.toObjects), w: energyText(E.toWater) })} />
+        <Card label={t('results.volcano.latent')} value={energyText(E.latentReleased)} sub={t('results.volcano.latentSub', { p: energyText(E.plumeHeat) })} />
+        <Card label={t('results.volcano.objects')} value={String(s.objects.contact)} sub={t('results.volcano.objectsSub', { b: s.objects.buried, h: s.objects.held, d: s.objects.damaged, r: s.roads.blocked })} />
+        <Card label={t('results.volcano.residual')} value={(M.residual / Math.max(1, M.supplied)).toExponential(1)} sub={t('results.volcano.residualSub', { e: (E.residual / Math.max(1, E.supplied)).toExponential(1) })} />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.volcano.note')}</div>
+    </div>
+  );
 }
 
 /** Every fuel item of the run (Phase 27): owner, kind, material, state, fuel, energy, peak heat release, char, ignition. */
