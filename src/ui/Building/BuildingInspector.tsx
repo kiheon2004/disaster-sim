@@ -16,6 +16,7 @@ import { Section } from '@/ui/common/Panel';
 import { fmt } from '@/ui/format';
 import { AnalysisRows, WarningList } from './AnalysisSummary';
 import { StructureSection } from './StructureInspector';
+import { analysisNow } from '@/simulation/buildings/modular';
 import styles from './Building.module.css';
 
 /** Building Inspector sections of a modular building (Phase 17). */
@@ -129,7 +130,7 @@ function LiveBuildingSection({ obj, a }: { obj: WorldObject; a: BuildingAnalysis
   const e = simulationController.getRuntime()?.entities.get(obj.id);
   const mr = e?.modular;
   if (!e || !mr) return null;
-  const cur = mr.current;
+  const cur = analysisNow(mr);
   const failed = mr.failedSet.size;
   const damaged = Array.from(mr.damage).filter((v, i) => v > 0.3 && !mr.failed[i]).length;
   const st0 = cur.stories[0];

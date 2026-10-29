@@ -63,6 +63,10 @@ import { validateDeformation } from '@/deformation/field';
 import { phenomena } from '@/phenomena/registry';
 import { warmUpMs as rapierWarmUpMs, rapierWorlds } from '@/physics/RapierEngine';
 import { currentDeformation } from '@/rendering/terrain/runtimeGround';
+import { useMemberStore } from '@/editor/memberStore';
+import { removalPreview } from '@/structure/preview';
+import { graphOf } from '@/structure/graph';
+import { qRotate } from '@/core/math';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -123,6 +127,23 @@ export function installDevtools() {
         };
       }
       return () => [...live.entries()].map(([g, stack]) => ({ type: g.type, name: g.name, vertices: g.attributes.position?.count ?? 0, attrs: Object.keys(g.attributes).join(','), stack }));
+    },
+    /** Phase 25 structural destruction (browser verification). */
+    members: useMemberStore,
+    structureLib: {
+      removalPreview, graphOf,
+      /** World centre of a member of a building in the running simulation (fallen members displaced). */
+      memberWorld: (id: string, i: number) => {
+        const e = simulationController.getRuntime()?.entities.get(id);
+        const mr = e?.modular;
+        if (!e || !mr) return null;
+        const g = mr.structure?.model.g ?? graphOf(mr.design, mr.scale);
+        const m = mr.structure?.model;
+        const o = 6 * i;
+        const local: [number, number, number] = [(g.box[o] + g.box[o + 3]) / 2 + (m?.dx[i] ?? 0), (g.box[o + 1] + g.box[o + 4]) / 2 + (m?.dy[i] ?? 0), (g.box[o + 2] + g.box[o + 5]) / 2 + (m?.dz[i] ?? 0)];
+        const p = qRotate(e.pose.quaternion, local);
+        return [e.pose.position[0] + p[0], e.pose.position[1] + p[1], e.pose.position[2] + p[2]];
+      },
     },
     /** Phase 22 ground failure (benchmarks / browser verification). */
     groundLib: {

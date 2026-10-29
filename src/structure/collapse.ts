@@ -230,8 +230,11 @@ export class CollapseModel {
     return this.state[i] <= MS.SEVERE;
   }
 
+  /** Falling blocks still moving. */
+  activeBlocks = 0;
+
   get active(): boolean {
-    return this.s.pending || this.dead.length > 0 || this.blocks.some((b) => b.active);
+    return this.s.pending || this.dead.length > 0 || this.activeBlocks > 0;
   }
 
   private set(i: number, to: number) {
@@ -352,7 +355,10 @@ export class CollapseModel {
   step(dt: number, time: number, kin?: Kinematics, g = GRAVITY) {
     if (this.s.pending) this.redistribute(time);
     if (this.dead.length) this.formBlocks(time, kin, g);
-    for (const b of this.blocks) if (b.active) this.advance(b, dt, time, g);
+    if (this.activeBlocks) {
+      for (const b of this.blocks) if (b.active) this.advance(b, dt, time, g);
+      this.ledger.energy.kinetic = this.kineticOfBlocks();
+    } else this.ledger.energy.kinetic = 0;
   }
 
   private redistribute(time: number) {
@@ -479,6 +485,7 @@ export class CollapseModel {
       for (let k = 0; k < members.length; k++) blk.join[k] = 0;
       for (const i of members) this.blockOf[i] = blk.id;
       this.blocks.push(blk);
+      this.activeBlocks++;
       this.events.push({ kind: 'block', group: blk.id, time, members: members.length, mass, root, hazard: blk.hazard });
     }
   }
@@ -707,7 +714,6 @@ export class CollapseModel {
       this.move(b, d, dt);
       b.v += g * dt;
       this.ledger.energy.released += b.mass * g * d;
-      this.ledger.energy.kinetic = this.kineticOfBlocks();
       return;
     }
     // Contact within this step.
@@ -716,7 +722,6 @@ export class CollapseModel {
     this.ledger.energy.released += b.mass * g * gap;
     b.v = vc;
     this.land(b, gap, time + t, g);
-    this.ledger.energy.kinetic = this.kineticOfBlocks();
   }
 
   private kineticOfBlocks() {
@@ -831,6 +836,7 @@ export class CollapseModel {
   private rest(b: FallingBlock, contacts: number[], R: number[]) {
     const G = this.g;
     b.active = false;
+    this.activeBlocks--;
     // Each member rests on the receiver under its bottom-layer member in the same plan cell
     // (upper layers of the block bear on the layer below), else the first receiver.
     const surfOf = new Map<number, number>();
@@ -875,6 +881,7 @@ export class CollapseModel {
   private settle(b: FallingBlock, time: number, g: number) {
     const G = this.g;
     b.active = false;
+    this.activeBlocks--;
     const K = 0.5 * b.mass * b.v * b.v;
     this.ledger.energy.ground += K;
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, solid = 0, base = Infinity;

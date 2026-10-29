@@ -106,6 +106,7 @@ export function spawnFragment(ctx: SystemContext, e: RuntimeEntity, i: number, v
   };
   ctx.runtime.debris.push(piece);
   S.fragments.push(piece);
+  S.fragmentById.set(piece.id, piece);
   ctx.runtime.debrisRev++;
   return piece;
 }
@@ -159,6 +160,7 @@ export function updateFragments(ctx: SystemContext) {
       S.aggregated += d.mass;
       model?.ledger.move('bodies', 'rubble', d.mass);
       physics.removeBody(d.body);
+      S.fragmentById.delete(d.id);
       const k = runtime.debris.indexOf(d);
       if (k >= 0) runtime.debris.splice(k, 1);
       continue;
@@ -176,5 +178,6 @@ export function fragmentLeft(ctx: SystemContext, d: DebrisPiece) {
   if (!S || !d.structural) return;
   const k = S.fragments.indexOf(d);
   if (k >= 0) S.fragments.splice(k, 1);
+  S.fragmentById.delete(d.id);
   ctx.runtime.entities.get(d.structural.owner)?.modular?.structure?.model.ledger.move('bodies', 'left', d.mass);
 }

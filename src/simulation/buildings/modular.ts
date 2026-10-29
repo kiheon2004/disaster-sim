@@ -77,9 +77,10 @@ export interface ModularRuntime {
   design: BuildingDesign;
   floors: number;
   scale: Vec3;
-  /** Analysis at t = 0 and after the failures so far. */
+  /** Analysis at t = 0 and after the failures so far (`current`: use analysisNow — recomputed on demand). */
   initial: BuildingAnalysis;
   current: BuildingAnalysis;
+  currentStale: boolean;
   /** Component index of a member (facade parts), −1 for structural members. */
   comp: Int32Array;
   /** Member damage 0 … 1 (≥ 1 = failed) and failure flags. */
@@ -157,7 +158,7 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
     if (!a.supported || (a.bearing && a.utilization > 1)) pending.push(i);
   });
   return {
-    design, floors, scale, initial, current: initial, comp, damage, failed, failedSet, capacity, storyMembers,
+    design, floors, scale, initial, current: initial, currentStale: false, comp, damage, failed, failedSet, capacity, storyMembers,
     storyDrift: new Float64Array(floors), storyPeak: new Float64Array(floors), storyPeakAxis: new Float64Array(2 * floors), evalPeak: new Float64Array(floors),
     unit: null, unitIndex: -1, modelK: new Float64Array(0), modelFy: new Float64Array(0),
     collapsedFrom: Infinity, reserve: strengthReserve(initial, initial), windShare: 1, pending, rev: 0, memberOfComp,
@@ -194,7 +195,7 @@ export function attachUnit(mr: ModularRuntime, unit: ModularUnit, unitIndex: num
 /** Story drifts (building-local axes) from the lumped model, with peaks. */
 export function updateStoryDrifts(mr: ModularRuntime, model: StructuralModel, ui: number) {
   const L = mr.unit!.lumps;
-  const st = mr.current.stories;
+  const st = mr.initial.stories; // story heights do not change with failures
   for (let s = 0; s < mr.floors; s++) {
     if (s >= mr.collapsedFrom) break;
     const j = L.dof[s];
@@ -287,6 +288,7 @@ export function failMembers(e: RuntimeEntity, ctx: SystemContext, list: number[]
   for (const i of batch) { mr.failed[i] = 1; mr.failedSet.add(mr.design.members[i].id); }
   st.lateralDirty = true;
   st.analysisDirty = true;
+  mr.currentStale = true;
   mr.rev++;
   e.rev++;
   activate(e, ctx);
@@ -445,6 +447,20 @@ export function structureLevel(mr: ModularRuntime): DamageState {
   return l === 'global' ? DamageState.DESTROYED : l === 'partial' ? DamageState.CRITICAL : l === 'local' ? DamageState.DAMAGED : l === 'damaged' ? DamageState.STRESSED : DamageState.NORMAL;
 }
 
+/**
+ * The Phase 17 analysis of the building as it stands now (failed members removed) — computed on
+ * demand when the structure changed (weakest story for the wind, inspector). The simulation itself
+ * uses the collapse engine's incremental state (loads, story strengths); this full re-analysis is
+ * never run every step.
+ */
+export function analysisNow(mr: ModularRuntime): BuildingAnalysis {
+  if (mr.currentStale) {
+    mr.currentStale = false;
+    mr.current = analyzeBuilding(mr.design, { scale: mr.scale, failed: mr.failedSet });
+  }
+  return mr.current;
+}
+
 /** Phase 17 failed flags from the collapse model's states. */
 export function syncFailed(mr: ModularRuntime) {
   const m = mr.structure?.model;
@@ -485,6 +501,7 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
   syncFailed(mr);
   st.lateralDirty = true;
   st.analysisDirty = true;
+  mr.currentStale = true;
   mr.rev++;
   e.rev++;
   activate(e, ctx);
@@ -611,8 +628,11 @@ function facadeLevels(e: RuntimeEntity): Int32Array {
  */
 export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, health: number, governing: Hazard = 'wind'): boolean {
   const mr = e.modular!;
-  const weak = Math.min(mr.current.weakStory[0], mr.current.weakStory[1]);
   const d = 1 - health;
+  // The weakest story of the building as it stands now — only when wind damage is drawn or it fails.
+  if (d <= 0.12 && health > 0) return false;
+  const cur = analysisNow(mr);
+  const weak = Math.min(cur.weakStory[0], cur.weakStory[1]);
   if (d > 0.12 && weak < mr.collapsedFrom) {
     for (const i of mr.storyMembers[weak] ?? []) {
       if (!mr.failed[i] && d * 0.9 > mr.damage[i] + 0.02) {

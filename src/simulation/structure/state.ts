@@ -15,13 +15,15 @@ import { foundationContact } from '@/buildings/foundation';
 import type { RuntimeEntity, SimulationRuntime } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 import { RubbleField } from './rubbleField';
+import { simProfiler } from '../profiling/SimProfiler';
 
 export interface StructureState {
   model: CollapseModel;
   /** Member FAILED events recorded in the damage log for this building (budget). */
   recorded: number;
-  /** Model revision last synchronized into the Phase 17 runtime / renderers. */
+  /** Model revision last synchronized into the Phase 17 runtime / renderers, and its structural revision. */
   syncedRev: number;
+  syncedStruct: number;
   /** Records already turned into damage events / milestones. */
   seenRecords: number;
   /** Lateral members that left since the last lumped-model sync. */
@@ -50,8 +52,9 @@ export interface StructuresRuntime {
   /** Every building with a model (results, inspector). */
   all: RuntimeEntity[];
   rubble: RubbleField;
-  /** Fragment bodies (debris pieces) of the structural engine, oldest first. */
+  /** Fragment bodies (debris pieces) of the structural engine, oldest first, and by id. */
   fragments: import('../SimulationRuntime').DebrisPiece[];
+  fragmentById: Map<string, import('../SimulationRuntime').DebrisPiece>;
   /** Mass of fragments aggregated over the active-body budget (kg) — also in each building's ledger. */
   aggregated: number;
   /** Strike episodes already evaluated: `${debris}|${target}` → last step seen. */
@@ -65,7 +68,7 @@ export interface StructuresRuntime {
 }
 
 export function structuresOf(rt: SimulationRuntime): StructuresRuntime {
-  return (rt.structures ??= { active: [], all: [], rubble: new RubbleField(), fragments: [], aggregated: 0, strikes: new Map(), secondary: 0, legacyRecycled: 0, milestones: new Set() });
+  return (rt.structures ??= { active: [], all: [], rubble: new RubbleField(), fragments: [], fragmentById: new Map(), aggregated: 0, strikes: new Map(), secondary: 0, legacyRecycled: 0, milestones: new Set() });
 }
 
 /** Static bearing ratio of the building in the original world (Phase 17 foundation contact). */
@@ -84,14 +87,17 @@ function bearing0(e: RuntimeEntity, ctx: SystemContext): number {
 export function structureOf(e: RuntimeEntity, ctx: SystemContext): StructureState {
   const mr = e.modular!;
   if (mr.structure) return mr.structure;
+  const tProf = simProfiler.now();
   const g = graphOf(mr.design, mr.scale);
   const model = new CollapseModel(g, mr.damage);
   model.init(bearing0(e, ctx));
+  simProfiler.add('struct.create', tProf);
   // Members the Phase 17 runtime already removed (absent in the original world) stay absent.
   const st: StructureState = {
-    model, recorded: 0, syncedRev: -1, seenRecords: 0, lateralDirty: false, analysisDirty: false, lastAnalysis: -Infinity,
+    model, recorded: 0, syncedRev: -1, syncedStruct: -1, seenRecords: 0, lateralDirty: false, analysisDirty: false, lastAnalysis: -Infinity,
     heaps: [], globalRecorded: false, noted: new Set(),
   };
+  st.level = model.collapseLevel();
   mr.structure = st;
   const S = structuresOf(ctx.runtime);
   S.all.push(e);

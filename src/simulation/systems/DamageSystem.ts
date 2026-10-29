@@ -88,7 +88,7 @@ export class DamageSystem implements SimulationSystem {
     if (!e) return;
     // Phase 25: fragments of the structural engine strike buildings (member capacity), anchored
     // structures (base moment), vehicles and people (secondary attribution, once per strike).
-    const frag = other.debrisId?.startsWith('frag-') ? ctx.runtime.structures?.fragments.find((d) => d.id === other.debrisId) : undefined;
+    const frag = other.debrisId?.startsWith('frag-') ? ctx.runtime.structures?.fragmentById.get(other.debrisId) : undefined;
     if (frag) {
       // A body touched by a fragment is pushed by the collapse: the fragment's primary hazard (Phase 25).
       if (e.dynamic) { e.counters.fragStep = ctx.step; e.counters.fragHazard = HAZARDS.indexOf(hazardOf(frag.structural?.hazard ?? frag.hazard)); }

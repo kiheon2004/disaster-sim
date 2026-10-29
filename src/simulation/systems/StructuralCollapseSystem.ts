@@ -16,7 +16,6 @@
  */
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
-import { analyzeBuilding } from '@/buildings/analysis';
 import { MT_COLUMN, MT_DOOR, MT_WALL, MT_WINDOW } from '@/structure/graph';
 import { MS, type FailCause } from '@/structure/types';
 import type { CollapseEvent, CollapseRecord } from '@/structure/collapse';
@@ -33,9 +32,6 @@ import { rubbleEffects } from '../structure/rubbleEffects';
 import type { RubbleHeap } from '../structure/rubbleField';
 import { simProfiler } from '../profiling/SimProfiler';
 
-/** Full Phase 17 re-analyses (inspector / weakest story) per step over all buildings, and per building per second. */
-const ANALYSES_PER_STEP = 1;
-const ANALYSIS_INTERVAL = 0.5;
 
 export function hazardOf(name: string): Hazard {
   if (name === '' || name === ORIGINAL_WORLD) return 'wind';
@@ -69,7 +65,6 @@ export class StructuralCollapseSystem implements SimulationSystem {
   update(ctx: SystemContext, dt: number) {
     const S = structuresOf(ctx.runtime);
     const changed: RubbleHeap[] = [];
-    let analyses = ANALYSES_PER_STEP;
     const still: RuntimeEntity[] = [];
     for (const e of S.active) {
       const mr = e.modular!;
@@ -81,25 +76,34 @@ export class StructuralCollapseSystem implements SimulationSystem {
       const events = m.events;
       m.events = [];
       const t1 = simProfiler.now();
+      let tp = simProfiler.now();
       if (events.length) this.events(ctx, e, st, events, changed);
+      simProfiler.add('struct.ev.events', tp);
+      tp = simProfiler.now();
       this.piles(ctx, e, st, changed);
+      simProfiler.add('struct.ev.piles', tp);
       if (m.rev !== st.syncedRev) {
         st.syncedRev = m.rev;
-        syncFailed(mr);
-        if (st.lateralDirty) { syncModel(e, ctx); st.lateralDirty = false; }
-        this.rubbleMass(ctx, e, st);
-        this.standing(ctx, e, st);
+        // States / resting places changed: the Phase 17 views, the lumped model, the collapse class.
+        // (Only falling positions changed: the renderers alone.)
+        if (m.structRev !== st.syncedStruct) {
+          st.syncedStruct = m.structRev;
+          let ts = simProfiler.now();
+          syncFailed(mr);
+          mr.currentStale = true;
+          if (st.lateralDirty) { syncModel(e, ctx); st.lateralDirty = false; }
+          simProfiler.add('struct.ev.sync', ts);
+          ts = simProfiler.now();
+          this.rubbleMass(ctx, e, st);
+          this.standing(ctx, e, st);
+          simProfiler.add('struct.ev.standing', ts);
+        }
         mr.rev++;
         e.rev++;
       }
-      if (st.analysisDirty && analyses > 0 && ctx.time - st.lastAnalysis >= ANALYSIS_INTERVAL && !m.blocks.some((b) => b.active)) {
-        analyses--;
-        st.analysisDirty = false;
-        st.lastAnalysis = ctx.time;
-        mr.current = analyzeBuilding(mr.design, { scale: mr.scale, failed: mr.failedSet });
-      }
+      if (st.analysisDirty) { st.analysisDirty = false; mr.currentStale = true; }
       simProfiler.add('struct.events', t1);
-      if (m.active || st.analysisDirty) still.push(e);
+      if (m.active) still.push(e);
     }
     S.active = still;
     const t2 = simProfiler.now();
@@ -122,7 +126,9 @@ export class StructuralCollapseSystem implements SimulationSystem {
           // A story mechanism is one building-level record (STORY_COLLAPSED / COLLAPSED); its members
           // stay in the collapse sequence. Its consequences (lost support, floors crushed) are logged.
           if (r.cause !== 'facade' && r.cause !== 'story' && !opening) {
+            const tr = simProfiler.now();
             this.recordFailure(ctx, e, st, r);
+            simProfiler.add('struct.ev.record', tr);
             if (m.g.lateral[r.i]) st.lateralDirty = true;
             st.analysisDirty = true;
           }
@@ -159,9 +165,12 @@ export class StructuralCollapseSystem implements SimulationSystem {
           spawnParticles(ctx, 'dust', c, Math.min(40, 6 + Math.round(ev.mass / 15000)), [0, 0.8, 0], Math.max(1.5, Math.min(6, (pile.x1 - pile.x0) / 3)), '#a8a091');
           break;
         }
-        case 'exit':
+        case 'exit': {
+          const tf = simProfiler.now();
           spawnFragment(ctx, e, ev.i, ev.velocity, ev.hazard);
+          simProfiler.add('struct.ev.spawn', tf);
           break;
+        }
         case 'crush':
           if ((ctx.step + ev.i) % 4 === 0) spawnParticles(ctx, 'dust', this.centre(e, st, ev.i), 2, [0, 0.4, 0], 0.8, '#aaa196');
           break;
