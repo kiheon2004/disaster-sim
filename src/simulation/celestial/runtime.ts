@@ -409,6 +409,7 @@ export class CelestialRuntime {
     const t0 = performance.now();
     this.particles(ctx, dt);
     this.diagnostics(ctx, dt);
+    this.events(ctx, dt);
     this.stats.meanSubsteps = this.nInt ? this.sumN / this.nInt : 0;
     if (ctx.time + dt >= this.nextSeries) {
       this.nextSeries = ctx.time + dt + SERIES_DT;
@@ -450,14 +451,15 @@ export class CelestialRuntime {
     this.stats.sources = pts.live.map((l) => ({ owner: l.owner, index: l.index, mass: l.mu / G_N, mu: l.mu, rs: schwarzschildRadius(l.mu / G_N), eps: Math.sqrt(l.eps2), capture: Math.sqrt(l.cap2), x: l.x, y: l.y, z: l.z, policy: l.spec.massPolicy, moving: l.vx !== 0 || l.vy !== 0 || l.vz !== 0 }));
   }
 
-  /** Field and tide sampled at a body (HUD maxima). */
-  sampleAt(x: number, y: number, z: number) {
+  /** Field and tide sampled at a body (HUD maxima); beyond the accel / gradient limits the model limit is reached. */
+  sampleAt(ctx: SystemContext, x: number, y: number, z: number) {
     const g = this.f.sample(x, y, z, tmp);
     const a = Math.hypot(g[0], g[1], g[2]);
     if (a > this.stats.maxAccel) this.stats.maxAccel = a;
     const [l1] = symEigenvalues(this.f.gradient(x, y, z, this.T));
     if (l1 > this.stats.maxTidal) this.stats.maxTidal = l1;
-    if (a > CELESTIAL_LIMITS.accel) this.stats.limitReason ||= 'accel';
+    if (a > CELESTIAL_LIMITS.accel) this.limit(ctx, 'accel');
+    else if (l1 > CELESTIAL_LIMITS.gradient) this.limit(ctx, 'gradient');
   }
 
   /** Accretion test particles: KDK in the field, landing on the ground, capture, leaving the world. */
@@ -547,7 +549,12 @@ export class CelestialRuntime {
         const ang = this.planeAngle(n, rx, ry, rz, p);
         if (!Number.isNaN(d.private_angle) && d.private_angle < 0 && ang >= 0 && ang - d.private_angle < Math.PI) {
           if (Number.isNaN(d.tFirst)) d.tFirst = ctx.time + dt;
-          else { d.revs++; d.period = (ctx.time + dt - d.tFirst) / d.revs; }
+          else {
+            d.revs++;
+            d.period = (ctx.time + dt - d.tFirst) / d.revs;
+            // A full revolution about its source: the probe is in orbit (timeline, once per probe).
+            if (d.revs === 1) ctx.milestone?.({ time: ctx.time, kind: 'orbitEntry', subject: 'celestial', label: { key: 'ms.celestial.orbit' as never, params: { id: p.id } } }, `celestial:orbit:${p.id}`);
+          }
         }
         d.private_angle = ang;
       }
@@ -559,6 +566,44 @@ export class CelestialRuntime {
         ctx.milestone?.({ time: ctx.time, kind: 'closeApproach', subject: 'celestial', label: { key: 'ms.celestial.approach' as never, params: { id: p.id, r: d.r.toFixed(1) } } }, `celestial:approach:${key}`);
       }
     }
+  }
+
+  /**
+   * Timeline events of the run (each once): a source starts moving, a structure collapses or the first fragment
+   * appears while sources act, an experiment window closes.
+   */
+  private moved = new Set<string>();
+  private collapsed = new Set<string>();
+  private debrisSeen = false;
+  private ended = new Set<number>();
+  private events(ctx: SystemContext, dt: number) {
+    const ms = ctx.milestone;
+    if (!ms) return;
+    for (const l of this.f.points.live) {
+      const k = `${l.owner}:${l.index}`;
+      if ((l.vx !== 0 || l.vy !== 0 || l.vz !== 0) && !this.moved.has(k)) {
+        this.moved.add(k);
+        ms({ time: ctx.time, kind: 'sourceMove', subject: 'celestial', label: { key: 'ms.celestial.move' as never, params: {} } }, `celestial:move:${k}`);
+      }
+    }
+    if (this.f.points.live.length && ctx.step % 30 === 0) {
+      for (const e of ctx.runtime.entities.values()) {
+        if (!e.modular || !e.flags.collapsed || this.collapsed.has(e.id)) continue;
+        this.collapsed.add(e.id);
+        ms({ time: ctx.time, kind: 'celestialCollapse', subject: 'celestial', label: { key: 'ms.celestial.collapse' as never, params: { id: e.id } } }, `celestial:collapse:${e.id}`);
+      }
+      if (!this.debrisSeen && ctx.runtime.debris.length > 0) {
+        this.debrisSeen = true;
+        ms({ time: ctx.time, kind: 'celestialDebris', subject: 'celestial', label: { key: 'ms.celestial.debris' as never, params: {} } }, 'celestial:debris');
+      }
+    }
+    this.f.celestial.forEach((e, k) => {
+      const end = e.start + e.spec.duration;
+      if (ctx.time + dt >= end && !this.ended.has(k)) {
+        this.ended.add(k);
+        ms({ time: end, kind: 'celestialEnd', subject: 'celestial', label: { key: 'ms.celestial.end' as never, params: {} } }, `celestial:end:${k}`);
+      }
+    });
   }
 
   private planeBasis = new Map<Probe, [Vec3, Vec3]>();

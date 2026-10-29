@@ -209,7 +209,7 @@ export class GravityRuntime {
         }
       }
       const gg = Math.hypot(g[0], g[1], g[2]);
-      if (cel) cel.sampleAt(x[0], x[1], x[2]);
+      if (cel) cel.sampleAt(ctx, x[0], x[1], x[2]);
       if (gg > this.stats.peak) this.stats.peak = gg;
       if (gg < this.stats.minimum) this.stats.minimum = gg;
       n++;

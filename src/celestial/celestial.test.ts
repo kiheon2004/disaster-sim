@@ -373,3 +373,39 @@ describe('celestial spec validation', () => {
     expect(Math.hypot(...g(f, 50, 0, 0))).toBeCloseTo(20, 9);
   });
 });
+
+describe('numerical stability (§50)', () => {
+  const sf = (f: PointField): StepField => stepField(f);
+  it('the field is finite everywhere: r = 0, r ≪ ε, r ≈ ε, r ≫ ε, at the capture boundary, huge and tiny masses', () => {
+    for (const mass of [1, 1e3, M, 1e20, 1e40]) {
+      for (const eps of [0.05, 1, 50]) {
+        const f = fieldOf([src({ mass, softening: eps, capture: 1 })]);
+        for (const r of [0, 1e-9 * eps, 0.01 * eps, eps, 100 * eps, 1, 1.0000001, 1e6]) {
+          const g = g3(f, r);
+          expect(g.every(Number.isFinite), `M ${mass} ε ${eps} r ${r}`).toBe(true);
+          expect(Number.isFinite(f.potential(r, 0, 0))).toBe(true);
+          const T = f.addGradient(r, 0, 0, new Float64Array(9));
+          expect(Array.from(T).every(Number.isFinite)).toBe(true);
+        }
+      }
+    }
+  });
+  it('a very fast body (10⁷ m/s) and a body through the centre stay finite; strong gradients and several sources too', () => {
+    const f = fieldOf([src({ mass: M, softening: 1, kind: 'compact', capture: 0 }), src({ center: [3, 0, 0], mass: 10 * M, softening: 2, kind: 'compact', capture: 0 })]);
+    for (const v0 of [[1e7, 0, 0], [0, 0, 0], [30, 5, -2]] as Vec3[]) {
+      const x: Vec3 = [-20, 0.5, 0], v: Vec3 = [...v0] as Vec3;
+      const res = newKdkResult();
+      for (let k = 0; k < 120; k++) { kdk(sf(f), x, v, 1 / 60, res); expect([...x, ...v, res.work].every(Number.isFinite)).toBe(true); }
+    }
+  });
+  it('a source switched on at once (ramp 0), growing, ending: μ jumps exactly, the field vanishes after the window', () => {
+    const f = new PointField();
+    f.add(spec([src({ ramp: 0, massPolicy: 'grow', end: 10 })], { duration: 20 }), 0, 0);
+    expect(f.prepare(0).live[0].mu).toBeCloseTo(MU, 9);
+    f.grow(0, 0, 1e9);
+    expect(f.live[0].mu).toBeCloseTo(G_N * (M + 1e9), 3);
+    expect(f.prepare(10).live.length).toBe(0);
+    expect(g3(f, 5).every((v) => v === 0)).toBe(true);
+  });
+});
+const g3 = (f: PointField, r: number) => f.addSample(r, 0, 0, [0, 0, 0]);

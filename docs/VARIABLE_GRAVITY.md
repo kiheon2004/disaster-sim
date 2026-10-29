@@ -452,7 +452,7 @@ Node(헤드리스, 렌더링 없음), 장면마다 고정 1/60 s 스텝(최악 �
 | 물체 생명주기 | `PhysicsEngine.hasBody` — 장 스텝 뒤에 사라진 물체는 스텝 시작 상태로 장부 이탈 |
 | 극한 가속 진단 | 런타임 `stats.peak / minimum`, 입력 한계 50 m/s²와 중심부 최대값 검사(`gravity.invalid.core`) |
 
-이번 Phase에서 사건의 지평선·광선 휘어짐·일반상대론은 구현하지 않았습니다.
+이번 Phase에서 사건의 지평선·광선 휘어짐·일반상대론은 구현하지 않았습니다. Phase 32는 이 인터페이스 위에 연화 점질량원(블랙홀·압축 천체)을 더했습니다 — [EXTREME_CELESTIAL.md](EXTREME_CELESTIAL.md) (`GravityField.points`, 구배는 점질량원 해석식).
 
 ## 48. 문서
 

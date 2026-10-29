@@ -25,14 +25,14 @@
 |---|---|---|
 | `PhenomenonDefinition` | `src/phenomena/types.ts`, `definitions.ts` | 현상 유형별 **고유 타입의 파라미터**(zod 스키마), 편집 필드(단위·범위·배율), 기본값, 가정, 효과 채널, 사용 모델, 이벤트 생성, 지속시간, 설명 |
 | `PhenomenonInstance` | `types.ts` | 실험 속 한 번의 발생: id, type, spec, enabled, start(절대 시각 또는 다른 현상의 시작/종료 + 간격), seed, visualize |
-| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종; Phase 27 현재: 구현 12종(+ 열원·화재) + 계획 8종; Phase 28 현재: 구현 13종(+ 화산) + 계획 7종; Phase 29 현재: 구현 14종(+ 대기) + 계획 7종(대기 소멸은 산소 분율 변경·저산소로 좁혀 계획 유지); Phase 30 현재: 구현 15종(+ 기후) + 계획 6종(극한 온도는 기후로 대체); Phase 31 현재: 구현 16종(+ 가변 중력) + 계획 5종(중력 변화는 가변 중력으로 대체) |
+| `PhenomenonRegistry` | `registry.ts` | 구현 5종(바람·지진·폭우·수위 상승·물 공급원) + 계획 13종(토네이도, 싱크홀, 산사태, 운석, 폭발, 화산, 화재, 극한 온도, 대기 소멸, 중력 변화, 블랙홀, 쓰나미, 폭설) — Phase 24 현재: 구현 10종(+ 지형 변형·싱크홀·산사태·운석·대기 압력파) + 계획 9종; Phase 27 현재: 구현 12종(+ 열원·화재) + 계획 8종; Phase 28 현재: 구현 13종(+ 화산) + 계획 7종; Phase 29 현재: 구현 14종(+ 대기) + 계획 7종(대기 소멸은 산소 분율 변경·저산소로 좁혀 계획 유지); Phase 30 현재: 구현 15종(+ 기후) + 계획 6종(극한 온도는 기후로 대체); Phase 31 현재: 구현 16종(+ 가변 중력) + 계획 5종(중력 변화는 가변 중력으로 대체); Phase 32 현재: 구현 17종(+ 블랙홀·극한 중력원 `celestial`) + 계획 4종(블랙홀은 `celestial`로 대체) |
 | Lifecycle | 기존 `SimulationEvent` | onStart → update(고정 스텝) → onEnd(finished / superseded), 채널별 대체 규칙 유지 |
 | `PhenomenonContext` | `types.ts` | 시드, 고정 지형, 물 설정(기본값 해석용) |
 | Output | 효과 채널(§3) | 현상은 채널만 쓰고, 시스템이 힘·피해·노출로 바꿈 |
 | 스케줄 해석 | `schedule.ts` | 상대 시작 해석(깊이 우선), 순환·참조 누락·비활성 참조·잘못된 파라미터·음수 시작을 **실행하지 않고 보고**, 시작 시각·계획 순서로 안정 정렬 |
 | 실험 비교 | `experiment.ts` | 같은 초기 월드에서 시나리오별 헤드리스 실행 |
 
-모든 현상에 같은 파라미터 구조를 강요하지 않습니다: 지진은 규모·PGA·주파수·깊이, 폭우는 mm/h·시간, 블랙홀은(계획) 질량. 레지스트리 경계에서만 타입을 지웁니다(`AnyPhenomenonDefinition`).
+모든 현상에 같은 파라미터 구조를 강요하지 않습니다: 지진은 규모·PGA·주파수·깊이, 폭우는 mm/h·시간, 블랙홀은 질량·연화 길이·포획 반경(Phase 32). 레지스트리 경계에서만 타입을 지웁니다(`AnyPhenomenonDefinition`).
 
 **새 현상 추가 절차**: ① 스펙 타입 + zod 스키마 ② `SimulationEvent`(채널만 쓰기) ③ `PhenomenonDefinition` 등록 ④ 새 채널이면 필드 + 시스템 + 응답 핸들러 ⑤ 모델 카탈로그 항목 ⑥ i18n. UI(실험 탭 편집기)·저장·명령 인식·비교는 정의만으로 자동 지원됩니다.
 
@@ -44,7 +44,7 @@
 | Airflow | **작동** | 풍속 m/s | `env.wind`, `env.windField` | WindEvent → 바람 힘·피해·물 표면 응력·렌더 |
 | Ground Motion | **작동** | 변위·속도·가속도 | `env.groundMotion` | EarthquakeEvent → 관성력·구조 응답·물 관성·렌더 |
 | Water Depth / Flow | **작동** | 수심·수면·유속 | `env.flood.field` (솔버만 기록) | 물 이벤트(강제) → 솔버 → 부력·마찰·피해·노출·렌더 |
-| Gravity Field | **작동(Phase 31)** | g(x, t) m/s² (벡터), 퍼텐셜 J/kg | `env.gravity` (GravityChannel → GravityField; 실험 없으면 휴면 = 프로젝트 상수) | GravityEvent → Rapier 균일 중력·국소장 힘(ForceLedger `gravityField`)·구조 하중 비율·물·대기·열·화재·기후·화산·운석·지반·입자 — [VARIABLE_GRAVITY.md](VARIABLE_GRAVITY.md) |
+| Gravity Field | **작동(Phase 31)** | g(x, t) m/s² (벡터), 퍼텐셜 J/kg | `env.gravity` (GravityChannel → GravityField; 실험 없으면 휴면 = 프로젝트 상수) | GravityEvent·CelestialEvent(Phase 32: 점질량원을 같은 장에 더함) → Rapier 균일 중력·국소장 힘(ForceLedger `gravityField`)·KDK 자유 비행 교체·포획·구조 하중 비율·층 수평 하중·들림·물·대기·열·화재·기후·화산·운석·지반·입자 — [VARIABLE_GRAVITY.md](VARIABLE_GRAVITY.md), [EXTREME_CELESTIAL.md](EXTREME_CELESTIAL.md) |
 | Pressure | 인터페이스만 | 과압 Pa | — | 구현 시스템 없음 |
 | Temperature / Heat Flux | **작동(Phase 26)** | K(표시 °C), W, W/m², J | `env.thermal` (ThermalWorld: 지면 기둥·물 열·공기층·구획·노드·장부) | HeatSourceEvent·운석 열 몫 → 열 시스템 → 구조 계수·열하중·노출·렌더 — [THERMAL_PHYSICS.md](THERMAL_PHYSICS.md) |
 | Terrain Deformation | 인터페이스만 | 표고 변화 m | TerrainData(실행 중 고정) | `TerrainDeformationRequest` 계약만 |
@@ -127,7 +127,7 @@ Rapier·지형 데이터는 복제하지 않습니다(힘 기록은 오브젝트
 
 **실험 탭**(KO/EN): 현상 목록(활성화, 시작–종료 시각, 시각화 켜기/끄기, 삭제), 편집기(정의에서 생성된 파라미터 필드·단위·자동값, 시드, 시작 기준: 절대 시각 / 다른 현상 시작 후 / 종료 후 + 간격, 가정, 효과 채널, 모델 배지), 추가 메뉴(계획 현상은 "준비 중" + 필요한 시스템), 재난 상호작용 스위치, 실험 실행 / 지금 적용, 스케줄 문제 표시. 기존 바람·지진·홍수 탭의 상세 설정은 그대로이며 **"실험에 추가"** 버튼으로 현재 설정을 넣을 수 있습니다. 실행 중인 현상 목록은 타임라인 레인과 HUD에 표시됩니다.
 
-**명령어**: "태풍을 발생시키고 10초 후 지진을 발생시켜", "시간당 100mm의 비와 초속 30m의 바람을 동시에 발생시켜", "Start an earthquake 10 seconds after the typhoon begins"(같은 명령 안 → 예약된 이벤트 순으로 기준을 찾고, 없으면 지금 + 10초로 실행하고 경고), "Run heavy rainfall and strong wind simultaneously". 실행 전 검증: 현상 유형(레지스트리), 파라미터·단위(각 스키마), 시작·지속시간, 지원 여부. 싱크홀·운석·블랙홀·토네이도·중력·산소 등은 "미구현 현상 · 필요한 시스템: …"으로 표시만 하고 **실행하지 않습니다**.
+**명령어**: "태풍을 발생시키고 10초 후 지진을 발생시켜", "시간당 100mm의 비와 초속 30m의 바람을 동시에 발생시켜", "Start an earthquake 10 seconds after the typhoon begins"(같은 명령 안 → 예약된 이벤트 순으로 기준을 찾고, 없으면 지금 + 10초로 실행하고 경고), "Run heavy rainfall and strong wind simultaneously". 실행 전 검증: 현상 유형(레지스트리), 파라미터·단위(각 스키마), 시작·지속시간, 지원 여부. 싱크홀·운석·블랙홀·토네이도·중력·산소 등은 "미구현 현상 · 필요한 시스템: …"으로 표시만 하고 **실행하지 않습니다**(Phase 32 현재 블랙홀은 구현됨 — 텍스트는 실험 편집기로 안내).
 
 ## 11. Experiment Timeline · Comparison
 
@@ -230,7 +230,7 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | Atmosphere | **구현됨(Phase 29)** — 기둥 질량·정수압·상태방정식, 반암시적 기류·근지면 수렴, 대기 제거(일정·누출·예약·처방 기압, 균일·국소)·복원(저장소·경계), 단열/등온, 국소 밀도의 공기역학·대류·연소 산소·연기/가스/화산재 수송, 물·지형, 폭발·운석 옵트인, [ATMOSPHERE.md](ATMOSPHERE.md). 남은 것: 산소 분율 변경·생리(계획 `atmosphereLoss`, Phase 34), 습도·상변화는 Phase 30에서 구현 | **열물리(26)**: 공기층(온도 소유)·대류·장부, **화재(27)**: O₂·그을음, **화산(28)**: 가스·화산재, **바람(15)**: 처방 배경, **폭발(24)**·**운석(23)**: 기준 상태 입력 |
 | Climate / Snow / Ice | **구현됨(Phase 30)** — 배경 공기 강제(폭염·한파, 경계층 교환 또는 처방), 습도(수증기 질량)·포화·응결·증발·끓음, 강설·적설·압밀·융설, 결빙·해빙(물·토양), 도로·호수 얼음, 태양·하늘 장파, 지붕 하중·수관 파손·마찰·화재 함수율·용암/화산재 연동, `climate` 해저드, [EXTREME_CLIMATE.md](EXTREME_CLIMATE.md). 남은 것: 구름·강수 미세물리, 다층 적설, 빙하·얼음 파괴, 생리(Phase 34) | **열물리(26)**: 온도·엔탈피·지면 스텝·장부, **홍수(14)**: 액체·침투, **화재(27)**: 수관 물, **대기(29)**: 기압·기류·제거, **화산(28)**: 열·화산재, **구조(25)**: `addLoad` |
 | Gravity (가변 중력) | **구현됨(Phase 31)** — 전역 중력 대체(크기·방향·전이·시간 프로파일·종료 방식) + 국소 영역·방사형 중력원(정규 순서 합성), Rapier 균일 중력 + 국소장 차이 힘, 깨우기·접촉 임계값, 구조 부재 중력 비율(자중·적설·잔해 × g/g₀), 지붕 패널 용량(R1)·지붕 눈 묶음(R2), 물(하향 성분·기울어진 기준면·Froude 상사)·대기(σ 보존)·대류·화재·기후·화산·운석·지반 스케일링, 지원 범위 판정, 에너지·운동량 장부, `gravity` 해저드·원인 `gravityLoad`, [VARIABLE_GRAVITY.md](VARIABLE_GRAVITY.md). 남은 것: 일반상대론·조석 파괴(Phase 32), 무중력 3D 유체, 구조의 수평·상향 하중 경로 | **Rapier**, **ForceLedger**(`gravityField`), **구조(25)**: 하중 경로·파괴 엔진, **홍수(14)**: 관성 하중 항, **대기(29)**: 기둥 질량, **열(26)·화재(27)·화산(28)·기후(30)**: 단계 범위 비율 |
-| Black Hole | 조석력(크기 있는 물체의 차등 가속)·일반상대론 효과(Phase 32) | **Phase 31 중력장**(방사형 중력원·기울기·조석 표본·장의 일 장부), ForceLedger, 파편, 비교 실행, "실험적·가상" 모델 수준 |
+| Black Hole (`celestial`) | **구현됨(Phase 32)** — 연화 점질량(실제 G·질량) ≤ 4개, 해석적 구배 텐서·조석, KDK 궤도 적분(결정적 하위 스텝)으로 Rapier 1차 중력 증분 교체, 궤도 시험체, 포획(질량·운동량·에너지 장부, 고정/누적/성장), 지정 운동, 시험 입자, 층별 수평 하중·들림 파괴, 프리셋 20종, [EXTREME_CELESTIAL.md](EXTREME_CELESTIAL.md). 남은 것: 일반상대론(지평선·시간 지연·광선 휘어짐·Kerr), N-body, 실제 강착 원반 | **Phase 31 중력장**(합성·퍼텐셜·장부), ForceLedger, Rapier, 구조(25)·층 모델(13), 파편, 홍수(14) 공간장 경로 |
 
 ## 20. 커밋
 

@@ -62,11 +62,19 @@ function sourceFields(k: number): ParamField[] {
       set: (s, v) => {
         const q = src(s);
         if (v === 'velocity') return putSrc(s, { motion: 'velocity', velocity: q.velocity ?? [3, 0, 0] });
-        if (v === 'path') return putSrc(s, { motion: 'path', path: q.path ?? [[0, q.center[0], q.center[1], q.center[2]], [Math.min(60, C(s).duration), q.center[0] + 60, q.center[1], q.center[2]]] });
+        if (v === 'path') return putSrc(s, { motion: 'path', path: q.path ?? [[0, q.center[0], q.center[1], q.center[2]], [Math.min(30, C(s).duration / 2), q.center[0] + 40, q.center[1], q.center[2]], [Math.min(60, C(s).duration), q.center[0] + 40, q.center[1], q.center[2] + 40]] });
         return putSrc(s, { motion: 'fixed' });
       },
     },
     vel(0, 'vx'), vel(1, 'vy'), vel(2, 'vz'),
+    // Path: the source starts at its first waypoint; two more editable waypoints (time s, x, y, z) — longer paths
+    // come from presets / files.
+    ...([1, 2] as const).flatMap((w) => (['t', 'x', 'y', 'z'] as const).map((c, ci): ParamField => ({
+      visible: (s) => has(s) && src(s).motion === 'path' && (src(s).path?.length ?? 0) > w,
+      key: key(`w${w}${c}`), labelKey: L(`w${w}${c}`), unit: c === 't' ? 's' : 'm', min: c === 't' ? 0 : c === 'y' ? -20 : -300, max: c === 't' ? L1.duration[1] : c === 'y' ? 400 : 300, step: 1, precision: 1,
+      get: (s) => src(s).path![w][ci],
+      set: (s, v) => { const p = src(s).path!.map((q) => [...q] as [number, number, number, number]); p[w][ci] = Number(v); return putSrc(s, { path: p }); },
+    }))),
     num('start', 's', 0, L1.duration[1], 1, 0, (q) => q.start ?? 0, (_q, v) => ({ start: v })),
     // End: optional — "auto" is the experiment's duration.
     { visible: has, key: key('end'), labelKey: L('end'), unit: 's', min: 0, max: L1.duration[1], step: 1, precision: 0, optional: true, autoValue: (s) => C(s).duration, get: (s) => src(s).end, set: (s, v) => putSrc(s, { end: v === undefined || v === '' ? undefined : Number(v) }) },

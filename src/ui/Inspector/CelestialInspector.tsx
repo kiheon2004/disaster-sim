@@ -74,6 +74,13 @@ export function CelestialObjectSection({ id }: { id: EntityId }) {
     [t('celestial.inspect.tide'), `λ₁ ${sci(F.l1, 3)} s⁻² · ${t('celestial.inspect.alongAxis')} ${sci(lam, 3)} s⁻²`],
     [t('celestial.inspect.tension'), `${force(barTension(m, d[ax], lam))} ${t('celestial.inspect.tensionRef')}`],
   ];
+  // A building: the storey model's peak lateral field and the members pulled off by uplift (structural damage).
+  const model = e.modular?.structure?.model;
+  if (model) {
+    const up = model.records.filter((r) => r.cause === 'uplift').length;
+    const grav = model.records.filter((r) => r.hazard === 'gravity').length;
+    rows.push([t('celestial.inspect.structure'), t('celestial.inspect.structureLine', { a: fmt(e.seismic?.pgaGravity ?? 0, 2), f: grav, u: up })]);
+  }
   const physics = simulationController.getPhysics();
   if (e.dynamic && e.body !== null && physics) {
     const v = physics.getLinearVelocity(e.body);

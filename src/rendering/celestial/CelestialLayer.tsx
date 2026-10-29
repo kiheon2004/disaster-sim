@@ -18,7 +18,7 @@ import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
 import { useViewStore } from '../viewStore';
 import { useDisposable } from '../useDisposable';
-import { celestialColor, ZONE_COLORS } from './celestialColors';
+import { celestialColor, speedColor, ZONE_COLORS } from './celestialColors';
 import { symEigenvalues, symEigenvector } from '@/celestial/tidal';
 import { CELESTIAL_LIMITS } from '@/celestial/types';
 import { TRAIL } from '@/simulation/celestial/runtime';
@@ -75,7 +75,7 @@ function CelestialScene() {
   const lensMat = useDisposable(() => new THREE.MeshPhysicalMaterial({ transmission: 1, roughness: 0, ior: 1.5, thickness: 6, transparent: true, opacity: 1, metalness: 0, attenuationColor: new THREE.Color('#ffffff') }));
   const ptsGeo = useDisposable(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * CELESTIAL_LIMITS.particles * 4), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(3 * CELESTIAL_LIMITS.particles * 4), 3)); g.setDrawRange(0, 0); return g; });
   const ptsMat = useDisposable(() => new THREE.PointsMaterial({ size: 0.45, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
-  const probeMat = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#7ff0c0' }));
+  const probeMat = useDisposable(() => new THREE.MeshBasicMaterial({ color: '#ffffff' }));
   const probes = useDisposable(() => { const m = new THREE.InstancedMesh(ball, probeMat, MAX_PROBES); m.count = 0; m.frustumCulled = false; m.raycast = () => null; return m; }, [ball, probeMat]);
   const trailGeo = useDisposable(() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_PROBES * TRAIL * 2 * 3), 3)); g.setDrawRange(0, 0); return g; });
   const trailMat = useDisposable(() => new THREE.LineBasicMaterial({ color: '#7ff0c0', transparent: true, opacity: 0.6 }));
@@ -97,9 +97,13 @@ function CelestialScene() {
     // Probes and particles every frame (they move fast); the rest every REFRESH s of simulated time.
     let np = 0, nt = 0;
     const tp = trailGeo.getAttribute('position') as THREE.BufferAttribute, ta = tp.array as Float32Array;
+    const speed = vs.overlay === 'speed';
+    const vRatio = (x: number, y: number, z: number, vx: number, vy: number, vz: number) => Math.hypot(vx, vy, vz) / Math.max(1e-9, Math.sqrt(2 * Math.abs(f.points.potential(x, y, z))));
     for (const p of cel.probes) {
       if (p.body === null || np >= MAX_PROBES) continue;
       tmp.m4.compose(tmp.v.set(p.pos[0], p.pos[1], p.pos[2]), tmp.q.identity(), tmp.s.setScalar(p.radius));
+      if (speed) speedColor(vRatio(p.pos[0], p.pos[1], p.pos[2], p.vel[0], p.vel[1], p.vel[2]), tmp.c); else tmp.c.set('#7ff0c0');
+      probes.setColorAt(np, tmp.c);
       probes.setMatrixAt(np++, tmp.m4);
       if (vs.trails) for (let k = 1; k < p.trailN; k++) {
         const a = (p.trailHead - k + TRAIL) % TRAIL, b = (p.trailHead - k - 1 + TRAIL) % TRAIL;
@@ -110,6 +114,7 @@ function CelestialScene() {
     }
     probes.count = np;
     probes.instanceMatrix.needsUpdate = true;
+    if (probes.instanceColor) probes.instanceColor.needsUpdate = true;
     trailGeo.setDrawRange(0, 2 * nt);
     tp.needsUpdate = true;
     const N = cel.pstate.length;
@@ -120,7 +125,8 @@ function CelestialScene() {
       const st = cel.pstate[i];
       if (st !== 1 && st !== 2) continue;
       P[3 * n] = cel.px[3 * i]; P[3 * n + 1] = cel.px[3 * i + 1]; P[3 * n + 2] = cel.px[3 * i + 2];
-      if (st === 1) { C[3 * n] = 1; C[3 * n + 1] = 0.78; C[3 * n + 2] = 0.45; } else { C[3 * n] = 0.5; C[3 * n + 1] = 0.48; C[3 * n + 2] = 0.45; }
+      if (st === 1 && speed) { speedColor(vRatio(cel.px[3 * i], cel.px[3 * i + 1], cel.px[3 * i + 2], cel.pv[3 * i], cel.pv[3 * i + 1], cel.pv[3 * i + 2]), tmp.c); C[3 * n] = tmp.c.r; C[3 * n + 1] = tmp.c.g; C[3 * n + 2] = tmp.c.b; }
+      else if (st === 1) { C[3 * n] = 1; C[3 * n + 1] = 0.78; C[3 * n + 2] = 0.45; } else { C[3 * n] = 0.5; C[3 * n + 1] = 0.48; C[3 * n + 2] = 0.45; }
       n++;
     }
     ptsGeo.setDrawRange(0, n);
@@ -169,7 +175,7 @@ function CelestialScene() {
     }
     const first = f.points.live[0];
     const o = vs.overlay;
-    if (o !== 'off' && first) {
+    if (o !== 'off' && o !== 'speed' && first) {
       slice.position.set(first.x, first.y, first.z);
       const col = sliceGeo.getAttribute('color') as THREE.BufferAttribute, ca = col.array as Float32Array;
       const h = SLICE_SIZE / (SLICE - 1);
@@ -216,7 +222,7 @@ function CelestialScene() {
   return (
     <group name="celestial-layer">
       <primitive object={group} />
-      <primitive object={slice} visible={viz.overlay !== 'off'} />
+      <primitive object={slice} visible={viz.overlay !== 'off' && viz.overlay !== 'speed'} />
       <primitive object={points} visible={viz.particles} />
       <primitive object={probes} />
       <primitive object={trails} visible={viz.trails} />
