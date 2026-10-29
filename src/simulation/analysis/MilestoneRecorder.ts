@@ -27,7 +27,9 @@ export type MilestoneKind = 'start' | 'end' | 'firstDamage' | 'collapse' | 'firs
   | 'atmosStart' | 'atmosRejected' | 'removalStart' | 'pressureMilestone' | 'lowDensity' | 'airflowPeak' | 'oxygenLimitation' | 'plumeDevelopment' | 'restorationStart' | 'restorationComplete'
   // Phase 30 climate.
   | 'climateStart' | 'climateRejected' | 'heatwaveStart' | 'coldWaveStart' | 'firstSnow' | 'peakSnowfall' | 'firstFreezing' | 'lakeIce' | 'snowLoadDamage' | 'snowFromRoof'
-  | 'thawStart' | 'peakSnowmelt' | 'snowmeltFlood' | 'roadIcing' | 'climateEnd';
+  | 'thawStart' | 'peakSnowmelt' | 'snowmeltFlood' | 'roadIcing' | 'climateEnd'
+  // Phase 31 gravity.
+  | 'gravityStart' | 'gravityIncrease' | 'gravityDecrease' | 'zeroGravity' | 'gravityReversal' | 'gravityFailure' | 'gravityDebrisImpact' | 'gravityEnd';
 
 export interface Milestone {
   time: number;

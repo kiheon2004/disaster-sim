@@ -58,7 +58,9 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
     // Phase 28: lateral lava load (its own damage index; burial, contact and ash are separate records).
     volcano: e.volcano ? Math.min(1, e.volcano.damage) : 0,
     // Phase 30: snow / ice load breakage of crowns (structural snow loads act through the collapse model).
-    climate: e.climate ? Math.min(1, e.climate.damage) : 0 };
+    climate: e.climate ? Math.min(1, e.climate.damage) : 0,
+    // Phase 31: gravity loads act through the collapse model (member failures with hazard 'gravity'), not a second index.
+    gravity: 0 };
 }
 
 /**

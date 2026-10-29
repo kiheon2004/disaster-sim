@@ -86,9 +86,10 @@ export class ForceLedger {
   }
 
   /** Force through the center of mass for this step. */
-  force(source: ForceSource, h: BodyHandle, f: Vec3, owner?: ForceOwner): boolean {
+  force(source: ForceSource, h: BodyHandle, f: Vec3, owner?: ForceOwner, wake = true): boolean {
     if (!this.claim(source, h, owner)) return false;
-    this.physics.addForce(h, f);
+    if (wake) this.physics.addForce(h, f);
+    else this.physics.addForce(h, f, false);
     this.note(source, f, owner);
     return true;
   }

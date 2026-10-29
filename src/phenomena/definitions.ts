@@ -27,6 +27,7 @@ import { fire } from './fireDefinitions';
 import { volcano } from './volcanoDefinitions';
 import { climate } from './climateDefinitions';
 import { atmosphere } from './atmosphereDefinitions';
+import { gravity } from './gravityDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -213,7 +214,7 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate, gravity];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
@@ -232,13 +233,11 @@ export const PLANNED: PlannedPhenomenon[] = [
     keywords: /산소\s*(?:감소|부족|농도)|저산소|oxygen|hypoxia/,
     missing: ['missing.o2Composition', 'missing.physiology'], reuses: ['reuse.exposure', 'reuse.atmosphere'],
   }),
-  planned({
-    type: 'gravityChange', labelKey: 'phen.gravityChange', icon: 'warning', channels: ['gravity'], models: [],
-    keywords: /중력|무중력|gravity|zero[\s-]?g/, missing: ['missing.gravityField'], reuses: ['reuse.forceLedger', 'reuse.structural'],
-  }),
+  // Phase 31: changing gravity is the implemented 'gravity' experiment (the planned 'gravityChange' entry was replaced);
+  // black holes (Phase 32) will reuse its field (radial sources, gradient / tidal sampling, field-work ledger).
   planned({
     type: 'blackHole', labelKey: 'phen.blackHole', icon: 'warning', channels: ['gravity', 'mechanicalForce'], models: [],
-    keywords: /블랙홀|black\s*hole/, missing: ['missing.gravityField', 'missing.tidal'], reuses: ['reuse.forceLedger', 'reuse.debris'],
+    keywords: /블랙홀|black\s*hole/, missing: ['missing.tidal', 'missing.relativity'], reuses: ['reuse.gravityField', 'reuse.forceLedger', 'reuse.debris'],
   }),
   planned({
     type: 'tsunami', labelKey: 'phen.tsunami', icon: 'water', channels: ['water'], models: [],

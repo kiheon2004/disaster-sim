@@ -86,8 +86,10 @@ export interface PhysicsEngine {
    * body asleep (static loads such as buoyancy in still water, Phase 14).
    */
   addForceAtPoint(h: BodyHandle, force: Vec3, worldPoint: Vec3, wake?: boolean): void;
-  /** Force through the center of mass for the next step (no torque; cleared by clearForces). */
-  addForce(h: BodyHandle, force: Vec3): void;
+  /** Force through the center of mass for the next step (no torque; cleared by clearForces). `wake` as addForceAtPoint. */
+  addForce(h: BodyHandle, force: Vec3, wake?: boolean): void;
+  /** Contact-force event threshold (N) of every collider of a body (Phase 31: resting weight changes with gravity). */
+  setContactForceThreshold(h: BodyHandle, threshold: number): void;
   applyImpulse(h: BodyHandle, impulse: Vec3, worldPoint?: Vec3): void;
   applyTorqueImpulse(h: BodyHandle, torque: Vec3): void;
   clearForces(): void;
@@ -101,6 +103,14 @@ export interface PhysicsEngine {
   /** Put a body to sleep (it wakes on the next applied force or contact change). */
   sleep(h: BodyHandle): void;
   step(dt: number): void;
+  /**
+   * Uniform gravity of the world (m/s², Phase 31 — the gravity experiment's global part; per-body differences of a
+   * spatial field go through the ForceLedger). Sleeping bodies are NOT woken (the caller decides, see GravityRuntime).
+   */
+  setGravity(g: Readonly<Vec3>): void;
+  getGravity(): Vec3;
+  /** Position and linear velocity of a body into flat arrays at `o` (no Pose objects; ledgers over many bodies). */
+  readMotion(h: BodyHandle, pos: Float64Array, vel: Float64Array, o: number): void;
   drainContactEvents(): ContactEvent[];
   bodyCount(): number;
   dispose(): void;

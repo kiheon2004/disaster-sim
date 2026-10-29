@@ -15,7 +15,6 @@
  * not Rapier forces — hence separate channels instead of one force vector.
  */
 import type { MessageKey } from '@/i18n/i18n';
-import type { Vec3 } from '@/core/types';
 import type { ChannelId } from './types';
 
 export type ChannelStatus = 'active' | 'uniform' | 'interface';
@@ -62,8 +61,10 @@ export const CHANNELS: Record<ChannelId, ChannelInfo> = {
     readers: ['thermal (heat transfer)', 'structuralCollapse (material factor / thermal load via the thermal system)', 'waterSolver (heat advection)', 'exposure (air temperature, radiant flux)', 'renderer', 'inspector'],
   },
   gravity: {
-    id: 'gravity', labelKey: 'channel.gravity', status: 'uniform', quantity: 'gravitational acceleration m/s²',
-    owner: 'Rapier world gravity (project setting, constant)', writers: [], readers: ['Rapier', 'structural', 'buoyancy'],
+    id: 'gravity', labelKey: 'channel.gravity', status: 'active', quantity: 'gravitational acceleration g(x, t) m/s² (vector), potential J/kg',
+    owner: 'env.gravity (GravityChannel → GravityField: project gravity replaced / extended by gravity experiments; dormant = the project constant)',
+    writers: ['GravityEvent'],
+    readers: ['Rapier (uniform part)', 'gravityField forces (ForceLedger, local part)', 'structural (dead / snow loads × g/g₀)', 'collapse (falling blocks)', 'water (head, waves, CFL, buoyancy)', 'atmosphere (column weight)', 'thermal (natural convection)', 'fire (plume buoyancy)', 'climate (snow loads, compaction)', 'volcano (bombs, ash, lava)', 'impact (trajectory, crater, ejecta)', 'ground (stability, runout)', 'particles', 'inspector'],
   },
   terrainDeformation: {
     id: 'terrainDeformation', labelKey: 'channel.terrainDeformation', status: 'active', quantity: 'vertical ground displacement m (+ up)',
@@ -113,27 +114,7 @@ export interface AtmosphereSample {
 /** Standard atmosphere at sea level — a constant, NOT a simulation result. */
 export const BASELINE_ATMOSPHERE: Readonly<AtmosphereSample> = { pressure: 101.325, oxygen: 0.2095, temperature: 15, density: 1.225 };
 
-/**
- * Future contract of a spatial gravity field (gravity change, black hole). Today gravity is the
- * uniform project setting inside Rapier; a non-uniform field would be applied as per-body forces
- * through the ForceLedger with source 'gravityField' while Rapier's own gravity stays the baseline.
- */
-export interface GravityField {
-  /** Gravitational acceleration at a point (m/s², written into `out`). */
-  sample(p: Readonly<Vec3>, t: number, out: Vec3): Vec3;
-  readonly uniform: boolean;
-}
-
-export class UniformGravity implements GravityField {
-  readonly uniform = true;
-  constructor(private readonly g: number) {}
-  sample(_p: Readonly<Vec3>, _t: number, out: Vec3): Vec3 {
-    out[0] = 0;
-    out[1] = -this.g;
-    out[2] = 0;
-    return out;
-  }
-}
+/** The spatial gravity field is implemented since Phase 31: src/gravity/field.ts (GravityField), read through env.gravity. */
 
 /** Future contract of terrain deformation (sinkhole, crater, landslide). */
 export interface TerrainDeformationRequest {

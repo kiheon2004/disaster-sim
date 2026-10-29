@@ -1,0 +1,279 @@
+/**
+ * Gravity runtime (Phase 31): the adapter between the gravity field and the run, created with the first gravity
+ * experiment (GravitySystem). Per fixed step:
+ *
+ *  prePhysics   the field is prepared for the step's time (every later system of the step reads the same field);
+ *               the Rapier world takes the field's UNIFORM part G(t) as its gravity (one write when it changed) —
+ *               Rapier stays the only place the uniform weight m·G is applied (no second gravity force anywhere);
+ *               a spatial field adds only its DIFFERENCE m·(g(x) − G) per dynamic body through the ForceLedger
+ *               (source 'gravityField'); sleeping bodies are woken when G moved by more than WAKE_SHARE since the
+ *               last wake (a body asleep under 1 g would otherwise hang in the air at 0 g) and the contact-force event
+ *               thresholds follow the heavier resting weight (no resting contact reported as an impact at 3 g)
+ *  postPhysics  the energy / momentum ledger over the dynamic bodies (gravity/ledger.ts), statistics, milestones
+ *
+ * Fixed bodies (buildings, anchored objects, standing trees) are not moved by gravity — their weight acts through the
+ * structural model (structure k factor), not through Rapier.
+ */
+import type { Vec3 } from '@/core/types';
+import type { BodyHandle } from '@/physics/PhysicsEngine';
+import type { SystemContext } from '../systems/SimulationSystem';
+import type { GravityField } from '@/gravity/field';
+import { GravityLedger, type GravityBalance } from '@/gravity/ledger';
+import { EARTH_G } from '@/gravity/types';
+import type { GravityChannel } from './GravityChannel';
+import type { ForceOwner } from '../forces/ForceLedger';
+
+/** Wake every dynamic body when the uniform gravity moved by this share of max(|G|, 0.05 g₀) since the last wake. */
+const WAKE_SHARE = 0.02;
+/** Seconds between history samples. */
+const SERIES_DT = 0.5;
+const SERIES_MAX = 4000;
+
+interface Tracked {
+  h: BodyHandle;
+  m: number;
+  owner: ForceOwner;
+  /** Contact threshold: floor (N) and factor on the resting weight (RuntimeBuilder / spawn / fragments). */
+  thrMin: number;
+  thrK: number;
+  /** Φ(x₁, t) of the last step (NaN without a potential) and the last velocity (bodies leaving). */
+  phi: number;
+  v: Vec3;
+  seen: number;
+  x0: Vec3;
+  g: Vec3;
+}
+
+export interface GravityStats {
+  /** Uniform part (m/s²), |G|, |G|/g₀ (Earth), down component. */
+  G: Vec3;
+  magnitude: number;
+  ratio: number;
+  down: number;
+  uniform: boolean;
+  /** Dynamic bodies tracked / inside a local source / under a changed field. */
+  bodies: number;
+  inSource: number;
+  affected: number;
+  /** Field-difference forces applied this step and wakes so far. */
+  fieldForces: number;
+  wakes: number;
+  /** Peak / minimum |g| sampled at bodies so far. */
+  peak: number;
+  minimum: number;
+  /** Cost (ms) of this runtime in the last step, cumulative. */
+  ms: number;
+  msTotal: number;
+}
+
+export interface GravitySeriesPoint {
+  t: number;
+  gx: number; gy: number; gz: number;
+  magnitude: number;
+  kinetic: number;
+  potential: number;
+  workGravity: number;
+  workField: number;
+  workOther: number;
+  px: number; py: number; pz: number;
+  jx: number; jy: number; jz: number;
+  bodies: number;
+  /** Structural members failed so far with hazard gravity, roofs failed. */
+  failed: number;
+}
+
+/** Support of each model under the current field (the outlook's state for the running field). */
+export type SupportLevel = 'full' | 'scaled' | 'limited' | 'unsupported';
+
+export class GravityRuntime {
+  readonly ch: GravityChannel;
+  readonly field: GravityField;
+  readonly ledger = new GravityLedger();
+  readonly stats: GravityStats = { G: [0, 0, 0], magnitude: 0, ratio: 0, down: 0, uniform: true, bodies: 0, inSource: 0, affected: 0, fieldForces: 0, wakes: 0, peak: 0, minimum: Infinity, ms: 0, msTotal: 0 };
+  readonly series: GravitySeriesPoint[] = [];
+  /** Structural failures attributed to gravity (StructuralCollapseSystem), roofs among them. */
+  failures = 0;
+  roofFailures = 0;
+  private tracked = new Map<BodyHandle, Tracked>();
+  private stamp = 0;
+  private rapierG: Vec3 = [NaN, NaN, NaN];
+  private wakeG: Vec3;
+  private nextSeries = 0;
+  /** Milestone state. */
+  private lastLevel: number;
+  private zeroSeen = false;
+  private reverseSeen = false;
+  private endSeen = new Set<string>();
+  private readonly tmp: Vec3 = [0, 0, 0];
+
+  constructor(ch: GravityChannel) {
+    this.ch = ch;
+    this.field = ch.field!;
+    this.wakeG = [0, -ch.g0, 0];
+    this.lastLevel = ch.g0;
+  }
+
+  // ── Before the physics step ──────────────────────────────
+
+  pre(ctx: SystemContext) {
+    const t0 = performance.now();
+    const f = this.field.prepare(ctx.time);
+    const G = f.G, physics = ctx.physics;
+    let thresholds = false;
+    if (G[0] !== this.rapierG[0] || G[1] !== this.rapierG[1] || G[2] !== this.rapierG[2]) {
+      physics.setGravity(G);
+      this.rapierG[0] = G[0]; this.rapierG[1] = G[1]; this.rapierG[2] = G[2];
+      const ref = Math.max(Math.hypot(this.wakeG[0], this.wakeG[1], this.wakeG[2]), 0.05 * this.ch.g0);
+      if (Math.hypot(G[0] - this.wakeG[0], G[1] - this.wakeG[1], G[2] - this.wakeG[2]) > WAKE_SHARE * ref) {
+        this.wakeG[0] = G[0]; this.wakeG[1] = G[1]; this.wakeG[2] = G[2];
+        thresholds = true;
+        this.stats.wakes++;
+      }
+    }
+    // Bodies of this step (canonical order: entities in map order, then debris in list order — both deterministic).
+    const stamp = ++this.stamp;
+    const gm = Math.hypot(G[0], G[1], G[2]);
+    const thrG = Math.max(gm, this.ch.g0);
+    const ledger = this.ledger;
+    const start = !ledger.started;
+    let k0 = 0, u0 = 0;
+    const p0: Vec3 = [0, 0, 0];
+    let n = 0, inSrc = 0, forces = 0;
+    const visit = (h: BodyHandle, owner: ForceOwner, thrMin: number, thrK: number) => {
+      let tr = this.tracked.get(h);
+      const fresh = !tr;
+      if (!tr) {
+        tr = { h, m: physics.getMass(h), owner, thrMin, thrK, phi: NaN, v: [0, 0, 0], seen: 0, x0: [0, 0, 0], g: [0, 0, 0] };
+        this.tracked.set(h, tr);
+      }
+      tr.seen = stamp;
+      const x = tr.x0;
+      const p = physics.getPose(h).position, v = physics.getLinearVelocity(h);
+      x[0] = p[0]; x[1] = p[1]; x[2] = p[2];
+      if (thresholds || (fresh && thrG > this.ch.g0)) physics.setContactForceThreshold(h, Math.max(thrMin, tr.m * thrG * thrK));
+      if (thresholds) physics.wake(h);
+      const phi = f.potential(x[0], x[1], x[2]);
+      if (start) {
+        k0 += 0.5 * tr.m * (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        u0 += tr.m * phi;
+        p0[0] += tr.m * v[0]; p0[1] += tr.m * v[1]; p0[2] += tr.m * v[2];
+      } else if (fresh) ledger.boundary(1, tr.m, v, phi);
+      else if (!Number.isNaN(phi) && !Number.isNaN(tr.phi)) ledger.workField += tr.m * (phi - tr.phi);
+      const g = f.sample(x[0], x[1], x[2], tr.g);
+      if (!f.uniform) {
+        const dx = g[0] - G[0], dy = g[1] - G[1], dz = g[2] - G[2];
+        if (dx !== 0 || dy !== 0 || dz !== 0) {
+          inSrc++;
+          const F = this.tmp;
+          F[0] = tr.m * dx; F[1] = tr.m * dy; F[2] = tr.m * dz;
+          // Wake only while the field itself changes (or on a global wake): a body asleep in a constant local field
+          // fell asleep in equilibrium with it.
+          if (ctx.forces.force('gravityField', h, [F[0], F[1], F[2]], owner, this.fieldChanging || thresholds)) forces++;
+        }
+      }
+      const gg = Math.hypot(g[0], g[1], g[2]);
+      if (gg > this.stats.peak) this.stats.peak = gg;
+      if (gg < this.stats.minimum) this.stats.minimum = gg;
+      n++;
+    };
+    for (const e of ctx.runtime.entities.values()) if (e.dynamic && e.body !== null) visit(e.body, e, 800, 2.5);
+    for (const d of ctx.runtime.debris) visit(d.body, d, 600, 4);
+    // Bodies that left the set (removed debris, bodies made fixed).
+    for (const [h, tr] of this.tracked) {
+      if (tr.seen === stamp) continue;
+      if (!start) ledger.boundary(-1, tr.m, tr.v, Number.isNaN(tr.phi) ? 0 : tr.phi);
+      this.tracked.delete(h);
+    }
+    if (start) ledger.start(k0, u0, p0);
+    this.fieldChanging = this.fieldSignature();
+    const s = this.stats;
+    s.G = [G[0], G[1], G[2]];
+    s.magnitude = gm;
+    s.ratio = gm / EARTH_G;
+    s.down = -G[1];
+    s.uniform = f.uniform;
+    s.bodies = n;
+    s.inSource = inSrc;
+    s.affected = f.uniform ? (Math.abs(G[0]) + Math.abs(G[1] + this.ch.g0) + Math.abs(G[2]) > 0 ? n : 0) : inSrc;
+    s.fieldForces = forces;
+    this.milestones(ctx, gm, G);
+    s.ms = performance.now() - t0;
+  }
+
+  /** The local part changed since the last step (strength factors) — wakes bodies under a varying local field. */
+  private fieldChanging = true;
+  private lastSig = '';
+  private fieldSignature(): boolean {
+    let sig = '';
+    for (const l of this.field.liveSources()) sig += `${l.f};`;
+    const ch = sig !== this.lastSig;
+    this.lastSig = sig;
+    return ch;
+  }
+
+  // ── After the physics step ───────────────────────────────
+
+  post(ctx: SystemContext, dt: number) {
+    const t0 = performance.now();
+    const physics = ctx.physics, f = this.field, ledger = this.ledger;
+    ledger.beginStep();
+    for (const tr of this.tracked.values()) {
+      const p = physics.getPose(tr.h).position, v = physics.getLinearVelocity(tr.h);
+      const phi = f.potential(p[0], p[1], p[2]);
+      ledger.body(tr.m, tr.x0, p, v, tr.g, dt, phi, phi);
+      tr.phi = phi;
+      tr.v[0] = v[0]; tr.v[1] = v[1]; tr.v[2] = v[2];
+    }
+    ledger.endStep(f.potentialDefined);
+    if (ctx.time + dt >= this.nextSeries) {
+      this.nextSeries = ctx.time + dt + SERIES_DT;
+      const b = ledger.balance(), G = f.G;
+      this.series.push({ t: ctx.time + dt, gx: G[0], gy: G[1], gz: G[2], magnitude: Math.hypot(G[0], G[1], G[2]), kinetic: b.kinetic, potential: b.potential, workGravity: b.workGravity, workField: b.workField, workOther: b.workOther, px: b.momentum[0], py: b.momentum[1], pz: b.momentum[2], jx: b.impulse[0], jy: b.impulse[1], jz: b.impulse[2], bodies: b.bodies, failed: this.failures });
+      if (this.series.length > SERIES_MAX) this.series.splice(0, this.series.length - SERIES_MAX);
+    }
+    this.stats.ms += performance.now() - t0;
+    this.stats.msTotal += this.stats.ms;
+  }
+
+  balance(): GravityBalance {
+    return this.ledger.balance();
+  }
+
+  // ── Milestones ───────────────────────────────────────────
+
+  private milestones(ctx: SystemContext, gm: number, G: Readonly<Vec3>) {
+    const ms = ctx.milestone;
+    if (!ms) return;
+    const g0 = this.ch.g0;
+    const label = (key: string, params: Record<string, string> = {}) => ({ key: key as never, params });
+    if (gm < 0.01 * g0 && !this.zeroSeen) {
+      this.zeroSeen = true;
+      ms({ time: ctx.time, kind: 'zeroGravity', subject: 'gravity', label: label('ms.gravity.zero') }, 'gravity:zero');
+    }
+    if (G[1] > 0.01 * g0 && !this.reverseSeen) {
+      this.reverseSeen = true;
+      ms({ time: ctx.time, kind: 'gravityReversal', subject: 'gravity', label: label('ms.gravity.reverse', { g: G[1].toFixed(2) }) }, 'gravity:reverse');
+    }
+    // Increase / decrease: every crossing of a 25 % step of g₀ from the last reported level.
+    const step = 0.25 * g0;
+    if (gm >= this.lastLevel + step || gm <= this.lastLevel - step) {
+      const up = gm > this.lastLevel;
+      this.lastLevel = gm;
+      ms({ time: ctx.time, kind: up ? 'gravityIncrease' : 'gravityDecrease', subject: 'gravity', label: label(up ? 'ms.gravity.increase' : 'ms.gravity.decrease', { g: gm.toFixed(2), x: (gm / EARTH_G).toFixed(2) }) });
+    }
+    for (const e of this.field.canonical) {
+      const end = e.start + e.spec.duration;
+      if (ctx.time >= end && !this.endSeen.has(e.id)) {
+        this.endSeen.add(e.id);
+        ms({ time: end, kind: 'gravityEnd', subject: 'gravity', label: label(e.spec.end === 'hold' ? 'ms.gravity.endHold' : 'ms.gravity.endRestore', { id: e.id }) });
+      }
+    }
+  }
+
+  /** A structural failure attributed to gravity (StructuralCollapseSystem) — the first one is a milestone. */
+  noteFailure(ctx: SystemContext, roof: boolean, building: string) {
+    this.failures++;
+    if (roof) this.roofFailures++;
+    ctx.milestone?.({ time: ctx.time, kind: 'gravityFailure', subject: 'gravity', label: { key: (roof ? 'ms.gravity.roofFailure' : 'ms.gravity.failure') as never, params: { id: building } } }, `gravity:fail:${roof ? 'roof' : 'member'}`);
+  }
+}

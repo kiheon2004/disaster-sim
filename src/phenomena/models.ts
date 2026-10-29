@@ -304,6 +304,24 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['m', 'kg'], validRange: 'lake / road ice up to ≈ 1 m',
     limitations: ['model.lim.noIceMechanics', 'model.lim.noStratification'], reference: 'docs/EXTREME_CLIMATE.md §15–17',
   }),
+  gravityField: m({
+    id: 'gravityField', labelKey: 'model.gravityField', level: 'hypothetical',
+    assumptions: ['model.as.gravityCompose', 'model.as.gravityRapier', 'model.as.gravityPotential'],
+    units: ['m/s²', 'N', 'J', 'N·s'], validRange: '|g| ≤ 50 m/s²; uniform + up to 8 local sources (regions, softened radial fields)',
+    limitations: ['model.lim.noRelativity', 'model.lim.notCelestial'], reference: 'docs/VARIABLE_GRAVITY.md §4–8, §28–29',
+  }),
+  gravityStructure: m({
+    id: 'gravityStructure', labelKey: 'model.gravityStructure', level: 'physics',
+    assumptions: ['model.as.gravityDeadLoad', 'model.as.roofCapacity', 'model.as.designEarth'],
+    units: ['N', 'kPa'], validRange: 'downward g 0–5 g₀; vertical load paths (uplift and lateral gravity not modelled)',
+    limitations: ['model.lim.noFea', 'model.lim.notEngineering'], reference: 'docs/VARIABLE_GRAVITY.md §2, §13–14',
+  }),
+  gravityFluids: m({
+    id: 'gravityFluids', labelKey: 'model.gravityFluids', level: 'physics',
+    assumptions: ['model.as.gravityNormal', 'model.as.gravityTilt', 'model.as.convectionScaling'],
+    units: ['m/s²', 'Pa', 'W/(m²·K)'], validRange: 'downward component ≥ 0.05 g₀, tilt ≤ 0.3 (shallow-water, column and convection models)',
+    limitations: ['model.lim.noZeroGFluid', 'model.lim.noMicrogravityFlame'], reference: 'docs/VARIABLE_GRAVITY.md §16–23',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

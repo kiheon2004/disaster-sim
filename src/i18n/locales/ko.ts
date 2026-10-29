@@ -20,6 +20,7 @@ import { koFire } from './ko.fire';
 import { koVolcano } from './ko.volcano';
 import { koAtmosphere } from './ko.atmosphere';
 import { koClimate } from './ko.climate';
+import { koGravity } from './ko.gravity';
 
 export const ko = {
   // App
@@ -613,6 +614,7 @@ export const ko = {
   ...koVolcano,
   ...koAtmosphere,
   ...koClimate,
+  ...koGravity,
 } as const;
 
 export type MessageKey = keyof typeof ko;

@@ -55,7 +55,9 @@ export type DamageCause =
   // Phase 28: pushed / damaged by lava standing against it; weight of volcanic ash on a roof.
   | 'lava' | 'ashLoad'
   // Phase 30: weight of snow / ice (roofs, crowns), repeated freezing and thawing (reported index).
-  | 'snowLoad' | 'iceLoad' | 'freezeThaw';
+  | 'snowLoad' | 'iceLoad' | 'freezeThaw'
+  // Phase 31: own weight under a changed gravity field (dead load × g / g₀) and the members it overloaded.
+  | 'gravityLoad';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -70,9 +72,9 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire' | 'volcano' | 'climate';
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire' | 'volcano' | 'climate' | 'gravity';
 /** Order matters only for ties (origin); later phases append so earlier hazards keep their indices. */
-export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire', 'volcano', 'climate'];
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire', 'volcano', 'climate', 'gravity'];
 
 export interface DamageEventRecord {
   id: number;

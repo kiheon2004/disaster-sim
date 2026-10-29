@@ -148,6 +148,8 @@ export class SimulationController {
     const hydro = this.snapshot.landscape ? hydrologyPlan(this.snapshot.landscape, this.snapshot.terrain, water) : null;
     const runWater = hydro && Object.keys(hydro.boundaries).length ? { ...water, boundaries: { ...water.boundaries, ...hydro.boundaries } } : water;
     this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, runWater, { ...defaultThermalSettings(), ...(sim.thermal ?? {}) }, { ...defaultFireSettings(), ...(sim.fire ?? {}) });
+    // Phase 31: the gravity field's baseline is the Rapier world's (project) gravity.
+    this.env.gravity.g0 = this.snapshot.settings.gravity;
     const obstacles = [];
     for (const e of this.runtime.entities.values()) {
       const o = obstacleFromEntity(e);
@@ -943,6 +945,10 @@ export class SimulationController {
   }
   getEnvironment(): EnvironmentState {
     return this.env;
+  }
+  /** Physics engine of the run (tests, verification; null while unloaded). */
+  getPhysics(): PhysicsEngine | null {
+    return this.physics;
   }
   getTime() {
     return this.time;

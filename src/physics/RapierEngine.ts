@@ -211,10 +211,19 @@ export class RapierEngine implements PhysicsEngine {
     for (let i = 0; i < b.numColliders(); i++) b.collider(i).setFriction(friction);
   }
 
-  addForce(h: BodyHandle, f: Vec3) {
+  setContactForceThreshold(h: BodyHandle, threshold: number) {
     const b = this.bodies.get(h);
     if (!b) return;
-    b.addForce({ x: f[0], y: f[1], z: f[2] }, true);
+    for (let i = 0; i < b.numColliders(); i++) {
+      const c = b.collider(i);
+      if (c.activeEvents() & RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS) c.setContactForceEventThreshold(threshold);
+    }
+  }
+
+  addForce(h: BodyHandle, f: Vec3, wake = true) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    b.addForce({ x: f[0], y: f[1], z: f[2] }, wake);
     this.forced.add(h);
   }
 
@@ -279,6 +288,24 @@ export class RapierEngine implements PhysicsEngine {
 
   sleep(h: BodyHandle) {
     this.bodies.get(h)?.sleep();
+  }
+
+  setGravity(g: Readonly<Vec3>) {
+    const w = this.w();
+    w.gravity = { x: g[0], y: g[1], z: g[2] };
+  }
+
+  getGravity(): Vec3 {
+    const v = this.w().gravity;
+    return [v.x, v.y, v.z];
+  }
+
+  readMotion(h: BodyHandle, pos: Float64Array, vel: Float64Array, o: number) {
+    const b = this.bodies.get(h);
+    if (!b) { pos[o] = pos[o + 1] = pos[o + 2] = 0; vel[o] = vel[o + 1] = vel[o + 2] = 0; return; }
+    const t = b.translation(), v = b.linvel();
+    pos[o] = t.x; pos[o + 1] = t.y; pos[o + 2] = t.z;
+    vel[o] = v.x; vel[o + 1] = v.y; vel[o + 2] = v.z;
   }
 
   step(dt: number) {
