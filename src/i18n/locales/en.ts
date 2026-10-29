@@ -8,6 +8,7 @@ import { enRoads } from './en.roads';
 import { enNature } from './en.nature';
 import { enBlueprints } from './en.blueprints';
 import { enDeformation } from './en.deformation';
+import { enGround } from './en.ground';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -592,4 +593,5 @@ export const en: Record<MessageKey, string> = {
   ...enNature,
   ...enBlueprints,
   ...enDeformation,
+  ...enGround,
 };
