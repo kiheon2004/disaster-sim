@@ -114,7 +114,8 @@ Rapier는 접촉·충돌·강체를, KDK는 극한 장의 자유 비행 정확�
   x₁ ← x₁ + (x* − x₀ − v₀dt) − κ g dt²,   v₁ ← v₁ + ((v* − v₀) − g dt)/(1 + d dt)
 
 x*, v*는 같은 장의 KDK 결과입니다. 다른 힘(바람·물·폭발)과 감쇠가 그 스텝에 한 일은 남습니다. 대상: 깨어 있고 그 스텝에 **해석
-접촉이 없는** 동적 물체(`PhysicsEngine.touching` — contactPairsWith/numSolverContacts). 상태 전환: 자유 궤도(KDK) → 접촉(Rapier 1차) →
+접촉이 없는** 동적 물체(`PhysicsEngine.touching` — 고체 접촉이 있는 충돌체 쌍; Phase 32.1부터 Rapier 충돌 이벤트로 유지하고 높이장
+쌍만 있는 물체는 직접 질의, `PhysicsEngine.isDynamic` — Phase 32.1에서 고정 물체를 적분하던 결함을 고침, PHASE32_PERFORMANCE_AUDIT §19). 상태 전환: 자유 궤도(KDK) → 접촉(Rapier 1차) →
 충돌·파괴·파편(기존) → 포획(제거) → 세계 이탈(±800 m). 장부는 KDK 물체를 `bodyPath`로 기록합니다(W = 경로 일, ε = W − ΔK_kdk, J = mΔv) —
 에너지가 임의로 변하지 않습니다(원 궤도 ΔE/E 6·10⁻⁶, Rapier f32 위치 반올림 포함).
 
@@ -293,6 +294,10 @@ massAfter − massBefore = m, 합 = grown으로 검사를 고쳤습니다(허용
 스크린샷·`results-*.json`은 `docs/verify/celestial/`.
 
 ## 32. 성능
+
+> **Phase 32.1**: 이 절의 수치는 부하 28–45(이전 작업의 고아 vitest 프로세스 포함)에서 잰 Phase 32 최종 측정입니다. 조용한 머신에서
+> 기준 빌드와 번갈아 다시 잰 값과 최적화 결과(1000동 −41 ~ −46 %, 물체 1000개 −16 ~ −18 %, 1000동 + 중력원 브라우저 중앙값
+> 29.6 → 39 FPS, 결과는 비트 동일)는 [PHASE32_PERFORMANCE_AUDIT.md](PHASE32_PERFORMANCE_AUDIT.md) §27에 있습니다.
 
 헤드리스 코어(렌더링 없음), 1/60 s 고정 스텝, Apple M3 8코어, `BENCH=1 AB=1`(커밋 `0ad6fe0`), 측정 중 부하 [28.2, 41.5, 45]. "켬"은 천체 실험 포함,
 "끔"은 같은 장면에서 천체 실험만 뺀 것, "Phase 31"은 `4fdab8a` 빌드(`docs/bench-phase32-p31.json`, 부하 [33, 41.2, 44.7]). 원자료 `docs/bench-phase32.json`, 번갈아 잰 3회 `docs/bench-phase32-ab/`.

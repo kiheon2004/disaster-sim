@@ -1,0 +1,388 @@
+{
+ "date": "2026-10-22T17:47:14.030Z",
+ "load": [
+  4.8076171875,
+  9.97314453125,
+  8.9140625
+ ],
+ "rows": [
+  {
+   "scene": "19 1000 objects",
+   "celestial": true,
+   "seconds": 10,
+   "loadMs": 186,
+   "addMs": 10,
+   "msPerSimS": 1270.7,
+   "stepP50": 23.98,
+   "stepP95": 29.76,
+   "stepP99": 35.33,
+   "stepMax": 65.2,
+   "sections": {
+    "physics": {
+     "msPerSimS": 698.47,
+     "share": 0.5497,
+     "calls": 600,
+     "meanUs": 11641.1,
+     "worstMs": 45.15
+    },
+    "dispatch": {
+     "msPerSimS": 565.37,
+     "share": 0.4449,
+     "calls": 1200,
+     "meanUs": 4711.4,
+     "worstMs": 25.95
+    },
+    "sys.gravityLedger": {
+     "msPerSimS": 291.88,
+     "share": 0.2297,
+     "calls": 600,
+     "meanUs": 4864.6,
+     "worstMs": 13.55
+    },
+    "gravity.ledger": {
+     "msPerSimS": 291.79,
+     "share": 0.2296,
+     "calls": 600,
+     "meanUs": 4863.2,
+     "worstMs": 13.54
+    },
+    "celestial.kdk": {
+     "msPerSimS": 259.82,
+     "share": 0.2045,
+     "calls": 586730,
+     "meanUs": 4.4,
+     "worstMs": 2.31
+    },
+    "sys.damage": {
+     "msPerSimS": 133.93,
+     "share": 0.1054,
+     "calls": 600,
+     "meanUs": 2232.2,
+     "worstMs": 15.89
+    },
+    "damage.impacts": {
+     "msPerSimS": 106.79,
+     "share": 0.084,
+     "calls": 600,
+     "meanUs": 1779.8,
+     "worstMs": 15.46
+    },
+    "sys.gravity": {
+     "msPerSimS": 103.83,
+     "share": 0.0817,
+     "calls": 600,
+     "meanUs": 1730.5,
+     "worstMs": 25.92
+    },
+    "gravity.field": {
+     "msPerSimS": 103.77,
+     "share": 0.0817,
+     "calls": 600,
+     "meanUs": 1729.5,
+     "worstMs": 25.91
+    },
+    "damage.entities": {
+     "msPerSimS": 27.02,
+     "share": 0.0213,
+     "calls": 600,
+     "meanUs": 450.3,
+     "worstMs": 2.34
+    },
+    "sys.poseSync": {
+     "msPerSimS": 25.49,
+     "share": 0.0201,
+     "calls": 600,
+     "meanUs": 424.9,
+     "worstMs": 3.84
+    },
+    "celestial.pre": {
+     "msPerSimS": 25.45,
+     "share": 0.02,
+     "calls": 600,
+     "meanUs": 424.2,
+     "worstMs": 22.99
+    },
+    "sys.sway": {
+     "msPerSimS": 6.7,
+     "share": 0.0053,
+     "calls": 600,
+     "meanUs": 111.7,
+     "worstMs": 1.44
+    },
+    "sys.metrics": {
+     "msPerSimS": 1.9,
+     "share": 0.0015,
+     "calls": 600,
+     "meanUs": 31.6,
+     "worstMs": 1.01
+    },
+    "celestial.post": {
+     "msPerSimS": 0.77,
+     "share": 0.0006,
+     "calls": 600,
+     "meanUs": 12.8,
+     "worstMs": 0.53
+    },
+    "celestial.struct": {
+     "msPerSimS": 0.31,
+     "share": 0.0002,
+     "calls": 600,
+     "meanUs": 5.2,
+     "worstMs": 0.49
+    },
+    "sys.debris": {
+     "msPerSimS": 0.1,
+     "share": 0.0001,
+     "calls": 600,
+     "meanUs": 1.6,
+     "worstMs": 0.03
+    },
+    "sys.particles": {
+     "msPerSimS": 0.09,
+     "share": 0.0001,
+     "calls": 300,
+     "meanUs": 3.1,
+     "worstMs": 0.12
+    }
+   }
+  },
+  {
+   "scene": "22 1000 buildings",
+   "celestial": true,
+   "seconds": 15,
+   "loadMs": 257,
+   "addMs": 138,
+   "msPerSimS": 1289.2,
+   "stepP50": 20.8,
+   "stepP95": 48.94,
+   "stepP99": 52.53,
+   "stepMax": 151.37,
+   "sections": {
+    "dispatch": {
+     "msPerSimS": 1197.15,
+     "share": 0.9286,
+     "calls": 1800,
+     "meanUs": 9976.2,
+     "worstMs": 76.28
+    },
+    "sys.gravity": {
+     "msPerSimS": 686.03,
+     "share": 0.5321,
+     "calls": 900,
+     "meanUs": 11433.8,
+     "worstMs": 62.65
+    },
+    "gravity.field": {
+     "msPerSimS": 685.95,
+     "share": 0.5321,
+     "calls": 900,
+     "meanUs": 11432.5,
+     "worstMs": 62.65
+    },
+    "celestial.struct": {
+     "msPerSimS": 258.92,
+     "share": 0.2008,
+     "calls": 900,
+     "meanUs": 4315.3,
+     "worstMs": 41.24
+    },
+    "sys.structuralCollapse": {
+     "msPerSimS": 150.36,
+     "share": 0.1166,
+     "calls": 879,
+     "meanUs": 2565.9,
+     "worstMs": 38.01
+    },
+    "sys.seismicDamage": {
+     "msPerSimS": 134.9,
+     "share": 0.1046,
+     "calls": 891,
+     "meanUs": 2271.1,
+     "worstMs": 12.39
+    },
+    "struct.model": {
+     "msPerSimS": 128.23,
+     "share": 0.0995,
+     "calls": 91453,
+     "meanUs": 21,
+     "worstMs": 17.04
+    },
+    "sys.structural": {
+     "msPerSimS": 127.16,
+     "share": 0.0986,
+     "calls": 891,
+     "meanUs": 2140.8,
+     "worstMs": 7.77
+    },
+    "physics": {
+     "msPerSimS": 90.02,
+     "share": 0.0698,
+     "calls": 900,
+     "meanUs": 1500.3,
+     "worstMs": 12.34
+    },
+    "sys.damage": {
+     "msPerSimS": 48.41,
+     "share": 0.0376,
+     "calls": 900,
+     "meanUs": 806.9,
+     "worstMs": 12.74
+    },
+    "damage.entities": {
+     "msPerSimS": 41.76,
+     "share": 0.0324,
+     "calls": 900,
+     "meanUs": 696,
+     "worstMs": 12.64
+    },
+    "sys.gravityLedger": {
+     "msPerSimS": 33.9,
+     "share": 0.0263,
+     "calls": 900,
+     "meanUs": 565,
+     "worstMs": 13.91
+    },
+    "gravity.ledger": {
+     "msPerSimS": 33.84,
+     "share": 0.0262,
+     "calls": 900,
+     "meanUs": 564,
+     "worstMs": 13.91
+    },
+    "celestial.kdk": {
+     "msPerSimS": 28.88,
+     "share": 0.0224,
+     "calls": 114302,
+     "meanUs": 3.8,
+     "worstMs": 12.08
+    },
+    "struct.events": {
+     "msPerSimS": 16.1,
+     "share": 0.0125,
+     "calls": 91453,
+     "meanUs": 2.6,
+     "worstMs": 1.04
+    },
+    "damage.impacts": {
+     "msPerSimS": 6.54,
+     "share": 0.0051,
+     "calls": 900,
+     "meanUs": 109,
+     "worstMs": 2.58
+    },
+    "celestial.pre": {
+     "msPerSimS": 6.32,
+     "share": 0.0049,
+     "calls": 900,
+     "meanUs": 105.3,
+     "worstMs": 1.84
+    },
+    "struct.ev.events": {
+     "msPerSimS": 6.01,
+     "share": 0.0047,
+     "calls": 91453,
+     "meanUs": 1,
+     "worstMs": 0.7
+    },
+    "sys.particles": {
+     "msPerSimS": 5.14,
+     "share": 0.004,
+     "calls": 450,
+     "meanUs": 171.5,
+     "worstMs": 4.44
+    },
+    "struct.create": {
+     "msPerSimS": 4.81,
+     "share": 0.0037,
+     "calls": 1000,
+     "meanUs": 72.1,
+     "worstMs": 4.24
+    },
+    "struct.ev.standing": {
+     "msPerSimS": 4.65,
+     "share": 0.0036,
+     "calls": 8208,
+     "meanUs": 8.5,
+     "worstMs": 0.58
+    },
+    "sys.sway": {
+     "msPerSimS": 3.39,
+     "share": 0.0026,
+     "calls": 900,
+     "meanUs": 56.5,
+     "worstMs": 1.12
+    },
+    "struct.fragments": {
+     "msPerSimS": 3.16,
+     "share": 0.0025,
+     "calls": 879,
+     "meanUs": 53.9,
+     "worstMs": 1.31
+    },
+    "sys.metrics": {
+     "msPerSimS": 2.72,
+     "share": 0.0021,
+     "calls": 900,
+     "meanUs": 45.4,
+     "worstMs": 0.55
+    },
+    "sys.poseSync": {
+     "msPerSimS": 2.61,
+     "share": 0.002,
+     "calls": 900,
+     "meanUs": 43.4,
+     "worstMs": 0.3
+    },
+    "struct.ev.spawn": {
+     "msPerSimS": 2.44,
+     "share": 0.0019,
+     "calls": 9724,
+     "meanUs": 3.8,
+     "worstMs": 0.52
+    },
+    "struct.ev.record": {
+     "msPerSimS": 2.03,
+     "share": 0.0016,
+     "calls": 11980,
+     "meanUs": 2.5,
+     "worstMs": 0.55
+    },
+    "struct.ev.sync": {
+     "msPerSimS": 1.88,
+     "share": 0.0015,
+     "calls": 8208,
+     "meanUs": 3.4,
+     "worstMs": 0.44
+    },
+    "struct.ev.piles": {
+     "msPerSimS": 1.24,
+     "share": 0.001,
+     "calls": 91453,
+     "meanUs": 0.2,
+     "worstMs": 0.8
+    },
+    "struct.create.bearing": {
+     "msPerSimS": 1.16,
+     "share": 0.0009,
+     "calls": 1000,
+     "meanUs": 17.3,
+     "worstMs": 2.24
+    },
+    "sys.debris": {
+     "msPerSimS": 1.04,
+     "share": 0.0008,
+     "calls": 900,
+     "meanUs": 17.4,
+     "worstMs": 0.13
+    },
+    "celestial.post": {
+     "msPerSimS": 0.47,
+     "share": 0.0004,
+     "calls": 900,
+     "meanUs": 7.9,
+     "worstMs": 0.36
+    }
+   }
+  }
+ ]
+}

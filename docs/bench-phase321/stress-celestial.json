@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-22T15:40:57.048Z",
+  "url": "http://localhost:4199/",
+  "cycles": 12,
+  "crashed": false,
+  "errors": [],
+  "rows": [
+    {
+      "cycle": 0,
+      "label": "start",
+      "heapMB": 19.3,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 17,
+      "textures": 17,
+      "programs": 12,
+      "rapierLive": 0,
+      "rapierCreated": 0,
+      "rss": {
+        "renderer": 427,
+        "gpu": 140,
+        "browser": 193,
+        "other": 147
+      },
+      "load": 2.2
+    },
+    {
+      "cycle": 1,
+      "label": "celestialCapture",
+      "heapMB": 29.9,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 2,
+      "rss": {
+        "renderer": 386,
+        "gpu": 144,
+        "browser": 145,
+        "other": 160
+      },
+      "load": 2.6
+    },
+    {
+      "cycle": 2,
+      "label": "celestialTidal",
+      "heapMB": 31.1,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 4,
+      "rss": {
+        "renderer": 373,
+        "gpu": 133,
+        "browser": 136,
+        "other": 130
+      },
+      "load": 3.1
+    },
+    {
+      "cycle": 3,
+      "label": "celestialGrowing",
+      "heapMB": 32,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 6,
+      "rss": {
+        "renderer": 304,
+        "gpu": 106,
+        "browser": 128,
+        "other": 90
+      },
+      "load": 3.8
+    },
+    {
+      "cycle": 4,
+      "label": "celestialAccretion",
+      "heapMB": 31.8,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 12,
+      "textures": 7,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 8,
+      "rss": {
+        "renderer": 298,
+        "gpu": 108,
+        "browser": 115,
+        "other": 88
+      },
+      "load": 4.3
+    },
+    {
+      "cycle": 5,
+      "label": "celestialCapture",
+      "heapMB": 32.8,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 10,
+      "rss": {
+        "renderer": 299,
+        "gpu": 112,
+        "browser": 113,
+        "other": 88
+      },
+      "load": 5.2
+    },
+    {
+      "cycle": 6,
+      "label": "celestialTidal",
+      "heapMB": 33,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 12,
+      "rss": {
+        "renderer": 292,
+        "gpu": 106,
+        "browser": 110,
+        "other": 85
+      },
+      "load": 5.5
+    },
+    {
+      "cycle": 7,
+      "label": "celestialGrowing",
+      "heapMB": 33.4,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 14,
+      "rss": {
+        "renderer": 278,
+        "gpu": 102,
+        "browser": 95,
+        "other": 76
+      },
+      "load": 6.2
+    },
+    {
+      "cycle": 8,
+      "label": "celestialAccretion",
+      "heapMB": 32.8,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 12,
+      "textures": 7,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 16,
+      "rss": {
+        "renderer": 269,
+        "gpu": 99,
+        "browser": 98,
+        "other": 162
+      },
+      "load": 6.6
+    },
+    {
+      "cycle": 9,
+      "label": "celestialCapture",
+      "heapMB": 33.6,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 18,
+      "rss": {
+        "renderer": 289,
+        "gpu": 104,
+        "browser": 99,
+        "other": 72
+      },
+      "load": 6.8
+    },
+    {
+      "cycle": 10,
+      "label": "celestialTidal",
+      "heapMB": 33.6,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 20,
+      "rss": {
+        "renderer": 289,
+        "gpu": 105,
+        "browser": 97,
+        "other": 74
+      },
+      "load": 6.5
+    },
+    {
+      "cycle": 11,
+      "label": "celestialGrowing",
+      "heapMB": 29.8,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 13,
+      "textures": 9,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 22,
+      "rss": {
+        "renderer": 287,
+        "gpu": 104,
+        "browser": 99,
+        "other": 73
+      },
+      "load": 6.5
+    },
+    {
+      "cycle": 12,
+      "label": "celestialAccretion",
+      "heapMB": 29.1,
+      "nodes": 801,
+      "listeners": 358,
+      "geometries": 12,
+      "textures": 7,
+      "programs": 16,
+      "rapierLive": 0,
+      "rapierCreated": 24,
+      "rss": {
+        "renderer": 266,
+        "gpu": 100,
+        "browser": 95,
+        "other": 67
+      },
+      "load": 5.7
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-22T17:50:47.924Z",
+  "url": "http://localhost:4198/",
+  "cpus": "Apple M3",
+  "rows": [
+    {
+      "scene": "town",
+      "frames": 330,
+      "fps": 29.6,
+      "fpsP5": 20,
+      "p50": 33.3,
+      "p95": 50,
+      "p99": 50.1,
+      "worst": 100,
+      "longFrames": 7,
+      "simMsPerFrame": 26.3,
+      "simShare": 0.78,
+      "stepsPerFrame": 1,
+      "simTimeEnd": 9.4,
+      "prepMs": 758,
+      "systemsMsPerFrame": {
+        "gravity": 13.77,
+        "structuralCollapse": 2.96,
+        "physics": 2.69,
+        "seismicDamage": 2.56,
+        "structural": 2.38,
+        "gravityLedger": 0.89,
+        "damage": 0.65,
+        "particles": 0.14,
+        "poseSync": 0.06,
+        "sway": 0.06,
+        "metrics": 0.04,
+        "debris": 0.02
+      },
+      "drawCalls": 21,
+      "triangles": 1134872,
+      "geometries": 20,
+      "textures": 3,
+      "heapMB": 113.1,
+      "load": [
+        4.2,
+        7.4,
+        8
+      ]
+    },
+    {
+      "scene": "objects",
+      "frames": 330,
+      "fps": 36.9,
+      "fpsP5": 29.94,
+      "p50": 33.3,
+      "p95": 33.4,
+      "p99": 50.1,
+      "worst": 83.4,
+      "longFrames": 4,
+      "simMsPerFrame": 25.05,
+      "simShare": 0.925,
+      "stepsPerFrame": 1,
+      "simTimeEnd": 9.85,
+      "prepMs": 156,
+      "systemsMsPerFrame": {
+        "physics": 15.34,
+        "gravityLedger": 5.6,
+        "damage": 2.25,
+        "gravity": 1.18,
+        "poseSync": 0.43,
+        "sway": 0.1,
+        "metrics": 0.02,
+        "debris": 0,
+        "particles": 0
+      },
+      "drawCalls": 16,
+      "triangles": 238994,
+      "geometries": 21,
+      "textures": 7,
+      "heapMB": 63.9,
+      "load": [
+        3.9,
+        7.2,
+        7.9
+      ]
+    }
+  ],
+  "errors": []
+}

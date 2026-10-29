@@ -22,7 +22,7 @@ PASS 19 overlays: |g| (m/s², 9.81 marked), |Φ| (J/kg), escape speed (m/s), mod
 PASS 56 model-limit zones: the zones legend names all four regions 
 PASS 20 object inspector: distance, |g|, escape speed, tidal stretch along the long axis, bar tension (reference), energy / angular momentum To the nearest source10.89 m · r_c 1.00 · ε 2.00 mLocal |g|23.88 m/s² · 2.43 g₀Escape speed (source field)23.18 m/sTidal stretchλ₁ 4.171 s⁻²
 PASS 59 vehicles: a car pulled off the ground and turned by the field (rigid body; no internal model) {"p":[-2.314439535140991,10.73902702331543,5.999906539916992],"captured":true}
-PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_15155ddf3n","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
+PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_e8b41ec23n","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
 PASS 22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone {"n":40,"hidden22":12}
 PASS 23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported {"mass":18903.298095703125}
 PASS 54 timeline: celestial start and capture milestones recorded once each kind ["capture","capture","capture","capture","capture","capture","capture","capture"]
@@ -50,7 +50,7 @@ PASS 42 original world: after captures the edited world is untouched (fingerprin
 PASS 43 rerun: the same run again gives the same captures, poses and probes (hash) 
 PASS 44 save / load: the celestial experiment survives serialization (schema v7) {"sl44":1}
 PASS 45 determinism: a third run identical too 
-PASS 46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate {"fps":14.6,"worst":116.7,"pend46":0}
+PASS 46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate {"fps":31.7,"worst":100,"pend46":0}
 PASS 49 KO / EN text: the HUD and overlay show translated text (no raw keys) []
 PASS 53 field arrows with a source: logarithmic length (|g| spans decades) — no 100 m arrows {"len53":3.9670597383343216}
 PASS 51 dormant: a gravity experiment alone shows no celestial HUD or runtime (Phase 31 path unchanged) 
@@ -60,6 +60,6 @@ PASS 50 stress preset (4 sources, 16 probes, 2000 particles, town): runs without
 PASS 60 gentle orbital field: three orbits in different planes stay circular (ΔE/E < 10⁻³ each) [0.000008203184710925025,0.000008368484288378609,0.000017472025027043438]
 PASS 48 resources: GPU geometries back to the start after all runs {"geo0":17,"geo1":8}
 PASS whole run: no page errors, the tab alive {"errors":0}
-{"heap0":30.8,"heap1":55.9,"geo0":17,"geo1":8,"crashed":false}
+{"heap0":30.6,"heap1":56,"geo0":17,"geo1":8,"crashed":false}
 
-62/62 passed; 0 page errors; heap 30.8 → 55.9 MB; geometries 17 → 8; crashed false
+62/62 passed; 0 page errors; heap 30.6 → 56 MB; geometries 17 → 8; crashed false

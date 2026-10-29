@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-22T15:06:29.944Z",
+  "url": "http://localhost:4199/",
+  "cpus": "Apple M3",
+  "rows": [
+    {
+      "scene": "town",
+      "frames": 330,
+      "fps": 26.2,
+      "fpsP5": 19.96,
+      "p50": 33.4,
+      "p95": 50.1,
+      "p99": 66.7,
+      "worst": 83.3,
+      "longFrames": 34,
+      "simMsPerFrame": 26.51,
+      "simShare": 0.693,
+      "stepsPerFrame": 1.02,
+      "simTimeEnd": 9.38,
+      "prepMs": 1256,
+      "systemsMsPerFrame": {
+        "gravity": 6.92,
+        "structuralCollapse": 5.03,
+        "physics": 4.26,
+        "seismicDamage": 4.21,
+        "structural": 3.65,
+        "damage": 1.05,
+        "gravityLedger": 0.68,
+        "particles": 0.2,
+        "sway": 0.14,
+        "poseSync": 0.1,
+        "metrics": 0.07,
+        "debris": 0.03
+      },
+      "drawCalls": 21,
+      "triangles": 1134954,
+      "geometries": 20,
+      "textures": 3,
+      "heapMB": 143,
+      "load": [
+        19.8,
+        9,
+        17
+      ]
+    },
+    {
+      "scene": "town-off",
+      "frames": 330,
+      "fps": 45.2,
+      "fpsP5": 29.94,
+      "p50": 16.7,
+      "p95": 33.4,
+      "p99": 33.4,
+      "worst": 33.5,
+      "longFrames": 0,
+      "simMsPerFrame": 18.03,
+      "simShare": 0.815,
+      "stepsPerFrame": 1,
+      "simTimeEnd": 9.83,
+      "prepMs": 597,
+      "systemsMsPerFrame": {
+        "damage": 14.26,
+        "windForce": 2.38,
+        "physics": 0.84,
+        "sway": 0.25,
+        "metrics": 0.15,
+        "poseSync": 0.04,
+        "exposure": 0.02,
+        "debris": 0.01,
+        "particles": 0
+      },
+      "drawCalls": 11,
+      "triangles": 966622,
+      "geometries": 16,
+      "textures": 3,
+      "heapMB": 118.9,
+      "load": [
+        35.6,
+        13,
+        18.3
+      ]
+    },
+    {
+      "scene": "objects",
+      "frames": 330,
+      "fps": 22.4,
+      "fpsP5": 15.02,
+      "p50": 50,
+      "p95": 66.6,
+      "p99": 66.7,
+      "worst": 83.4,
+      "longFrames": 48,
+      "simMsPerFrame": 40.06,
+      "simShare": 0.897,
+      "stepsPerFrame": 1,
+      "simTimeEnd": 9.48,
+      "prepMs": 481,
+      "systemsMsPerFrame": {
+        "physics": 29.04,
+        "damage": 4.2,
+        "gravity": 3.02,
+        "gravityLedger": 2.12,
+        "poseSync": 0.93,
+        "sway": 0.29,
+        "metrics": 0.09,
+        "debris": 0.01,
+        "particles": 0
+      },
+      "drawCalls": 16,
+      "triangles": 238994,
+      "geometries": 21,
+      "textures": 7,
+      "heapMB": 67.1,
+      "load": [
+        48.7,
+        17.5,
+        19.7
+      ]
+    }
+  ],
+  "errors": []
+}
