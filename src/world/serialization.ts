@@ -154,6 +154,8 @@ const documentSchema = z.object({
           openings: z.enum(['asBuilt', 'windowsOpen', 'closed']),
           heatIgnition: z.boolean().optional(),
         }).optional().catch(undefined),
+        // Phase 33: extended human model (absent = legacy people; invalid values are dropped, not fixed).
+        humans: z.object({ model: z.literal('extended'), riskScale: z.number().min(0.5).max(2).optional() }).optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -357,6 +359,7 @@ export function parseDocument(json: string): LoadResult {
       ...(sim?.thermal ? { thermal: { ...sim.thermal } } : {}),
       ...(sim?.fire ? { fire: { ...sim.fire, heatIgnition: !!sim.fire.heatIgnition } } : {}),
       ...(sim?.vegetation ? { vegetation: { canopyShelter: !!sim.vegetation.canopyShelter, floodResponse: !!sim.vegetation.floodResponse } } : {}),
+      ...(sim?.humans ? { humans: { model: 'extended' as const, ...(sim.humans.riskScale !== undefined ? { riskScale: sim.humans.riskScale } : {}) } } : {}),
     },
   };
   const rawFlood = res.data.scenario?.flood;

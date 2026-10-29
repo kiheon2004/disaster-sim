@@ -12,6 +12,8 @@ export interface BodyUserData {
   entityId: EntityId;
   /** Set for detached component debris. */
   debrisId?: string;
+  /** Phase 33: report contact events of this body with their force vector and contact point (ContactEvent.detail). */
+  detail?: boolean;
 }
 
 export interface BodyDesc {
@@ -30,6 +32,11 @@ export interface BodyDesc {
   ccd?: boolean;
   /** Report contact forces above this magnitude (N) via drainContactEvents. */
   contactForceThreshold?: number;
+  /**
+   * Phase 33: explicit mass properties (local COM, principal moments along the local axes) instead of the colliders'
+   * uniform density — `mass` is then the whole mass, the colliders carry none.
+   */
+  massProps?: { com: Vec3; inertia: Vec3 };
   userData: BodyUserData;
 }
 
@@ -38,6 +45,12 @@ export interface ContactEvent {
   b: BodyUserData | null;
   /** Total contact force magnitude (N). */
   force: number;
+  /**
+   * Phase 33 (only when a or b asked for `detail`): the step's total contact force ON a (N, world; Rapier reports the solver
+   * impulse of the step / dt, so J = F·dt), the impulse-weighted world contact point, the unit normal from a to b, and the
+   * solver contact points themselves as (x, y, z, normal impulse) quadruples (a contact spread along a body).
+   */
+  detail?: { F: Vec3; P: Vec3; n: Vec3; pts: number[] };
 }
 
 export interface Pose {
@@ -118,6 +131,8 @@ export interface PhysicsEngine {
    * kept; the body is not woken or put to sleep).
    */
   writeMotion(h: BodyHandle, pos: ArrayLike<number>, vel: ArrayLike<number>): void;
+  /** Phase 33: set a body's linear and angular velocity (world; wakes it) — the release of a standing person's lean. */
+  setVelocity(h: BodyHandle, v: Readonly<Vec3>, w: Readonly<Vec3>): void;
   /** The body had a solver contact in the last step (any collider, ground included). */
   touching(h: BodyHandle): boolean;
   /** The body is dynamic (not fixed / kinematic) — Phase 32.1: only dynamic bodies take the orbit integrator. */

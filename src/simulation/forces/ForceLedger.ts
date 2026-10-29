@@ -31,6 +31,28 @@ export function newForceRecord(): ForceRecord {
 
 export interface ForceOwner {
   forces?: ForceRecord;
+  /**
+   * Phase 33: per-source sums of this step's applied forces for the standing-balance model of extended people —
+   * HUM_STRIDE floats per source (FORCE_SOURCES order): Σ F at points (3), Σ p × F (3), Σ F through the COM (3). The
+   * owner resets it after reading. 'gravityField' is never accumulated (the balance model takes gravity from the field).
+   */
+  hum?: Float64Array;
+}
+
+export const HUM_STRIDE = 9;
+export const newHumAccumulator = () => new Float64Array(FORCE_SOURCES.length * HUM_STRIDE);
+
+function accumulate(a: Float64Array, source: ForceSource, f: Readonly<Vec3>, p: Readonly<Vec3> | null) {
+  if (source === 'gravityField') return;
+  const o = SOURCE_INDEX[source] * HUM_STRIDE;
+  if (p) {
+    a[o] += f[0]; a[o + 1] += f[1]; a[o + 2] += f[2];
+    a[o + 3] += p[1] * f[2] - p[2] * f[1];
+    a[o + 4] += p[2] * f[0] - p[0] * f[2];
+    a[o + 5] += p[0] * f[1] - p[1] * f[0];
+  } else {
+    a[o + 6] += f[0]; a[o + 7] += f[1]; a[o + 8] += f[2];
+  }
 }
 
 export class ForceLedger {
@@ -82,6 +104,7 @@ export class ForceLedger {
     if (!this.claim(source, h, owner)) return false;
     this.physics.addForceAtPoint(h, f, p, wake);
     this.note(source, f, owner);
+    if (owner?.hum) accumulate(owner.hum, source, f, p);
     return true;
   }
 
@@ -91,6 +114,7 @@ export class ForceLedger {
     if (wake) this.physics.addForce(h, f);
     else this.physics.addForce(h, f, false);
     this.note(source, f, owner);
+    if (owner?.hum) accumulate(owner.hum, source, f, null);
     return true;
   }
 }

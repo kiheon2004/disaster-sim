@@ -198,6 +198,17 @@ export interface SimulationSettings {
    * Absent = defaults (150 %, as built); only read when an ignition runs.
    */
   fire?: import('@/fire/types').FireSettings;
+  /**
+   * Human physical response (Phase 33): 'extended' = the reduced biomechanical model (segment mass / inertia, standing
+   * balance, contact episodes, educational injury-risk index); absent = the Phase 0–32 behaviour (bit-identical).
+   * `riskScale` multiplies the reference velocity changes of the risk index (model parameter, 0.5–2).
+   */
+  humans?: HumanSettings;
+}
+
+export interface HumanSettings {
+  model: 'extended';
+  riskScale?: number;
 }
 
 // ── Flood: water model settings (Phase 14, approximate model parameters) ─────

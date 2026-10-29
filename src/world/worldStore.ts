@@ -150,7 +150,7 @@ export interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>> }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -591,6 +591,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
               ...(patch.thermal || cur.thermal ? { thermal: { ...defaultThermalSettings(), ...(cur.thermal ?? {}), ...(patch.thermal ?? {}) } } : {}),
               ...(patch.fire || cur.fire ? { fire: { ...defaultFireSettings(), ...(cur.fire ?? {}), ...(patch.fire ?? {}) } } : {}),
               ...(patch.vegetation || cur.vegetation ? { vegetation: { canopyShelter: false, floodResponse: false, ...(cur.vegetation ?? {}), ...(patch.vegetation ?? {}) } } : {}),
+              // Phase 33: extended human model (null in the patch switches it off; kept when other settings change).
+              ...(patch.humans !== undefined ? (patch.humans ? { humans: patch.humans } : {}) : cur.humans ? { humans: cur.humans } : {}),
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },

@@ -185,11 +185,14 @@ export class RapierEngine implements PhysicsEngine {
 
     const fractions = desc.shapes.map((s) => s.massFraction ?? 1 / desc.shapes.length);
     const total = fractions.reduce((a, b) => a + b, 0) || 1;
+    const mp = desc.massProps;
     desc.shapes.forEach((shape, i) => {
       const cd = colliderFor(shape)
         .setFriction(desc.friction)
-        .setRestitution(desc.restitution)
-        .setMass(Math.max(0.1, (desc.mass * fractions[i]) / total));
+        .setRestitution(desc.restitution);
+      // Phase 33: explicit mass properties on the body; the colliders carry none.
+      if (mp) cd.setDensity(0);
+      else cd.setMass(Math.max(0.1, (desc.mass * fractions[i]) / total));
       if (desc.contactForceThreshold !== undefined) {
         cd.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS | RAPIER.ActiveEvents.COLLISION_EVENTS);
         cd.setContactForceEventThreshold(desc.contactForceThreshold);
@@ -197,6 +200,10 @@ export class RapierEngine implements PhysicsEngine {
       const c = world.createCollider(cd, body);
       this.colliderBody.set(c.handle, body.handle);
     });
+    if (mp) {
+      body.setAdditionalMassProperties(desc.mass, { x: mp.com[0], y: mp.com[1], z: mp.com[2] }, { x: mp.inertia[0], y: mp.inertia[1], z: mp.inertia[2] }, { x: 0, y: 0, z: 0, w: 1 }, true);
+      body.recomputeMassPropertiesFromColliders();
+    }
     if (desc.lockRotations) body.lockRotations(true, true);
 
     this.bodies.set(body.handle, body);
@@ -350,6 +357,13 @@ export class RapierEngine implements PhysicsEngine {
     b.setLinvel({ x: vel[0], y: vel[1], z: vel[2] }, false);
   }
 
+  setVelocity(h: BodyHandle, v: Readonly<Vec3>, w: Readonly<Vec3>) {
+    const b = this.bodies.get(h);
+    if (!b) return;
+    b.setLinvel({ x: v[0], y: v[1], z: v[2] }, true);
+    b.setAngvel({ x: w[0], y: w[1], z: w[2] }, true);
+  }
+
   touching(h: BodyHandle) {
     if ((this.touchCount.get(h) ?? 0) > 0) return true;
     return (this.hfCount.get(h) ?? 0) > 0 && this.touchingQuery(h);
@@ -452,15 +466,49 @@ export class RapierEngine implements PhysicsEngine {
     // Bodies by collider handle (Phase 32.1: the engine's own map instead of two WASM calls per collider — the same
     // body; ground colliders have none, as their body has no user data).
     this.events.drainContactForceEvents((e) => {
-      const b1 = this.colliderBody.get(e.collider1());
-      const b2 = this.colliderBody.get(e.collider2());
-      out.push({
-        a: b1 !== undefined ? this.userData.get(b1) ?? null : null,
-        b: b2 !== undefined ? this.userData.get(b2) ?? null : null,
-        force: e.totalForceMagnitude(),
-      });
+      const c1 = e.collider1(), c2 = e.collider2();
+      const b1 = this.colliderBody.get(c1);
+      const b2 = this.colliderBody.get(c2);
+      const a = b1 !== undefined ? this.userData.get(b1) ?? null : null;
+      const b = b2 !== undefined ? this.userData.get(b2) ?? null : null;
+      const ev: ContactEvent = { a, b, force: e.totalForceMagnitude() };
+      if (a?.detail || b?.detail) ev.detail = this.contactDetail(world, c1, c2, e.totalForce());
+      out.push(ev);
     });
     return out;
+  }
+
+  /**
+   * Phase 33: force on collider 1, impulse-weighted contact point and normal (1 → 2) of a contact-force event, from the
+   * pair's manifolds of the step. Rapier's total force has no documented sign convention: it is oriented here so that it
+   * pushes collider 1 away from collider 2 (along −n), as a contact force does.
+   */
+  private contactDetail(world: RAPIER.World, c1: number, c2: number, tf: RAPIER.Vector): { F: Vec3; P: Vec3; n: Vec3; pts: number[] } {
+    const k1 = world.getCollider(c1), k2 = world.getCollider(c2);
+    let jw = 0, px = 0, py = 0, pz = 0, nx = 0, ny = 0, nz = 0;
+    const pts: number[] = [];
+    if (k1 && k2) {
+      world.contactPair(k1, k2, (m, flipped) => {
+        const n = m.normal();
+        const s = flipped ? -1 : 1;
+        for (let i = 0; i < m.numSolverContacts(); i++) {
+          const j = m.contactImpulse(i);
+          const q = m.solverContactPoint(i);
+          if (!q || !(j > 0)) continue;
+          jw += j;
+          px += j * q.x; py += j * q.y; pz += j * q.z;
+          pts.push(q.x, q.y, q.z, j);
+          nx += s * j * n.x; ny += s * j * n.y; nz += s * j * n.z;
+        }
+      });
+    }
+    const nm = Math.hypot(nx, ny, nz);
+    const n: Vec3 = nm > 0 ? [nx / nm, ny / nm, nz / nm] : [0, 0, 0];
+    const dot = -(tf.x * n[0] + tf.y * n[1] + tf.z * n[2]);
+    const sg = dot < 0 ? -1 : 1;
+    const F: Vec3 = [sg * tf.x, sg * tf.y, sg * tf.z];
+    const P: Vec3 = jw > 0 ? [px / jw, py / jw, pz / jw] : [NaN, NaN, NaN];
+    return { F, P, n, pts };
   }
 
   bodyCount() {
