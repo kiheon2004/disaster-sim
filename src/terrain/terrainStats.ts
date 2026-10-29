@@ -11,7 +11,12 @@ export const terrainStats = {
   meshMs: 0,
   /** Simulation-mode mesh refreshes after terrain deformation updates (Phase 21). */
   deformUpdates: 0,
+  /** Heightfield render meshes built (TerrainSurface) and their CPU cost (ms) — first-frame analysis. */
+  surfaceBuilds: 0,
+  surfaceBuildMs: 0,
   reset() {
+    this.surfaceBuilds = 0;
+    this.surfaceBuildMs = 0;
     this.deformUpdates = 0;
     this.dabs = 0;
     this.dabMs = 0;

@@ -40,6 +40,8 @@ export interface DeformationStats {
   cells: number;
   objects: number;
   roads: number;
+  /** The FIRST applied update of the run, split (first-frame analysis, Phase 22): foundation priming + the parts above. */
+  first: { primeMs: number; fieldMs: number; colliderMs: number; waterMs: number; responseMs: number } | null;
 }
 
 export class DeformationSystem implements SimulationSystem {
@@ -47,7 +49,7 @@ export class DeformationSystem implements SimulationSystem {
   readonly phase = 'prePhysics' as const;
   readonly reads = ['terrain'] as const;
   readonly writes = ['terrain', 'water', 'poses', 'damage'] as const;
-  readonly stats: DeformationStats = { updates: 0, fieldMs: 0, colliderMs: 0, waterMs: 0, responseMs: 0, totalMs: 0, colliderTotalMs: 0, vertices: 0, cells: 0, objects: 0, roads: 0 };
+  readonly stats: DeformationStats = { updates: 0, fieldMs: 0, colliderMs: 0, waterMs: 0, responseMs: 0, totalMs: 0, colliderTotalMs: 0, vertices: 0, cells: 0, objects: 0, roads: 0, first: null };
   private peak = 0;
   private primed = new Set<string>();
   private started = new Set<string>();
@@ -65,6 +67,7 @@ export class DeformationSystem implements SimulationSystem {
       return;
     }
     // Foundations' static bearing on the ORIGINAL ground, once per building, before it moves.
+    const p0 = performance.now();
     for (const s of engine.sources) {
       if (this.primed.has(s.id)) continue;
       this.primed.add(s.id);
@@ -76,6 +79,7 @@ export class DeformationSystem implements SimulationSystem {
       }
     }
     const a = performance.now();
+    const primeMs = a - p0;
     const u = engine.update(ctx.time);
     if (!u) return;
     const terrain = ctx.env.terrain;
@@ -108,6 +112,7 @@ export class DeformationSystem implements SimulationSystem {
     st.cells = cells;
     st.objects = r.followed + r.dynamicWoken;
     st.roads = r.roads;
+    if (!st.first) st.first = { primeMs, fieldMs: st.fieldMs, colliderMs: st.colliderMs, waterMs: st.waterMs, responseMs: st.responseMs };
     ctx.env.deformation.stats = st;
     if (engine.maxAbs > this.peak + 1e-6) this.peak = engine.maxAbs;
     // Timeline: a source reaching its final state = peak displacement of that deformation.

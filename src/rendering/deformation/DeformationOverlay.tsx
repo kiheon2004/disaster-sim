@@ -13,7 +13,7 @@
  * Everything is refreshed only when the engine applied a new update (engine.rev).
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { unionRect, type GridRect } from '@/terrain/TerrainData';
 import type { DeformationEngine } from '@/deformation/engine';
@@ -42,6 +42,13 @@ function Overlay({ engine }: { engine: DeformationEngine }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const lastRev = useRef(-1);
   const lastMode = useRef('');
+  const groupRef = useRef<THREE.Group>(null);
+  const { gl, camera } = useThree();
+  // Compile the overlay's programs now (also while nothing is drawn yet): mounting happens while
+  // the run is being prepared, not mid-run (Phase 22 first-frame analysis).
+  useEffect(() => {
+    if (groupRef.current) gl.compile(groupRef.current, camera);
+  }, [gl, camera]);
   const arrows = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.12, 0.12, 1, 5).translate(0, 0.5, 0);
     // Drawn over the ground: an exaggerated downward arrow reaches below the current surface.
@@ -146,7 +153,7 @@ function Overlay({ engine }: { engine: DeformationEngine }) {
   });
 
   return (
-    <group name="deformation-overlay">
+    <group name="deformation-overlay" ref={groupRef}>
       <mesh ref={meshRef} renderOrder={3} raycast={() => null}>
         <meshBasicMaterial vertexColors transparent opacity={0.72} depthWrite={false} polygonOffset polygonOffsetFactor={-2} />
       </mesh>

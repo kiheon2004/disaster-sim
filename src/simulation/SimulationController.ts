@@ -231,6 +231,16 @@ export class SimulationController {
 
   // ── Controls ──────────────────────────────────────────────
 
+  /**
+   * Prepare the runtime ground layer before a run that will deform the terrain (Phase 22): the
+   * (empty) deformation engine exists from now on, so renderers switch to the runtime terrain
+   * and build their meshes / shaders BEFORE the clock starts. No source is added, nothing moves,
+   * the collider is not touched — the simulation itself is unchanged.
+   */
+  prepareGround() {
+    this.env.deformation.ensure();
+  }
+
   /** Schedule an event. Without an explicit start time it begins now. */
   addEvent(spec: EventSpec) {
     const absolute: EventSpec = { ...spec, startTime: spec.startTime ?? this.time };
@@ -560,7 +570,7 @@ export class SimulationController {
   /** Live terrain deformation status (null until the first deformation starts). Phase 21. */
   private deformLive(): DeformLive | null {
     const e = this.env.deformation.engine;
-    if (!e) return null;
+    if (!e || !e.sources.length) return null;
     const st = this.env.deformation.stats;
     const bm = this.env.flood.field?.bedMotion;
     const last = e.history[e.history.length - 1];

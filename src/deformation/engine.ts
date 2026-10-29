@@ -29,7 +29,7 @@ export interface DeformationUpdate {
   rect: GridRect;
   /** Largest |ΔW| in this update (m). */
   maxDelta: number;
-  /** W after the update over `rect` minus W before (row-major over rect). */
+  /** W after the update over `rect` minus W before (row-major over rect; valid until the next update). */
   delta: Float32Array;
   /** At least one source was a step change (instant / stage). */
   discontinuous: boolean;
@@ -114,6 +114,7 @@ export class DeformationEngine {
   maxAbs = 0;
   /** Changed rectangles of the last updates (renderers catch up with dirtySince). */
   private recent: { rev: number; rect: GridRect }[] = [];
+  private deltaBuf = new Float32Array(0);
 
   constructor(readonly terrain: TerrainData) {
     this.original = terrain.heights.slice();
@@ -168,7 +169,10 @@ export class DeformationEngine {
     const t = this.terrain;
     const W = this.field;
     const rw = rect.x1 - rect.x0 + 1, rh = rect.z1 - rect.z0 + 1;
-    const delta = new Float32Array(rw * rh);
+    // Scratch buffer reused between updates (valid until the next update; no per-update garbage).
+    if (this.deltaBuf.length < rw * rh) this.deltaBuf = new Float32Array(rw * rh);
+    const delta = this.deltaBuf.subarray(0, rw * rh);
+    delta.fill(0);
     for (const e of changed) {
       const tau = time - e.source.startTime;
       // Two buffers per source, swapped (no allocation per update).

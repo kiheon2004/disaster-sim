@@ -186,10 +186,25 @@ export function exitSimulation() {
   useEditorStore.getState().setMode('editor');
 }
 
+/** Events that change the terrain at run time (prepare the runtime ground layer first). */
+const GROUND_EVENTS = new Set<string>(['terrainDeformation', 'sinkhole', 'landslide']);
+const nextFrames = (n: number) => new Promise<void>((resolve) => {
+  if (typeof requestAnimationFrame === 'undefined') return resolve();
+  let k = 0;
+  const f = () => (++k >= n ? resolve() : requestAnimationFrame(f));
+  requestAnimationFrame(f);
+});
+
 /** Add events (now, or at their startTime) and play. Enters simulation mode if needed. */
 export async function runSimulation(specs: EventSpec[]) {
   if (useEditorStore.getState().mode === 'editor') await enterSimulation();
   if (!simulationController.isLoaded()) return;
+  // Ground-changing phenomena: build the runtime terrain meshes / shaders before the clock starts
+  // (two rendered frames), so the first deformation does not stall a frame mid-run (Phase 22).
+  if (specs.some((s) => GROUND_EVENTS.has(s.event)) && !simulationController.getEnvironment().deformation.engine) {
+    simulationController.prepareGround();
+    await nextFrames(2);
+  }
   for (const s of specs) simulationController.addEvent(s);
   simulationController.play();
 }

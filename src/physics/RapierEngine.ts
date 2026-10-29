@@ -15,9 +15,36 @@ import type {
 let initPromise: Promise<void> | null = null;
 /** WASM init is global and must only happen once. */
 function ensureRapier() {
-  initPromise ??= RAPIER.init();
+  initPromise ??= RAPIER.init().then(warmUp);
   return initPromise;
 }
+
+/**
+ * Exercise the solver's code paths once on a THROWAWAY world (boxes / a ball resting and colliding
+ * on a heightfield and a slab), so the browser compiles them while the simulation is still loading
+ * (Phase 22: the first real step took ~50 ms in Chrome, 0.5 ms in Node). The simulation's own
+ * world is not touched — nothing is skipped or pre-computed for it.
+ */
+function warmUp() {
+  const t0 = performance.now();
+  const w = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  const ground = w.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const n = 9;
+  const h = new Float32Array(n * n).map((_, i) => 0.1 * Math.sin(i));
+  w.createCollider(RAPIER.ColliderDesc.heightfield(n - 1, n - 1, h, { x: 8, y: 1, z: 8 }, RAPIER.HeightFieldFlags.FIX_INTERNAL_EDGES), ground);
+  w.createCollider(RAPIER.ColliderDesc.cuboid(20, 0.5, 20).setTranslation(30, -0.5, 0), ground);
+  for (let k = 0; k < 8; k++) {
+    const b = w.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation((k % 4) - 2, 0.6 + Math.floor(k / 4) * 1.1, (k % 3) - 1));
+    w.createCollider(k % 2 ? RAPIER.ColliderDesc.cuboid(0.4, 0.4, 0.4) : RAPIER.ColliderDesc.ball(0.4), b);
+  }
+  const q = new RAPIER.EventQueue(true);
+  for (let i = 0; i < 30; i++) w.step(q);
+  q.free();
+  w.free();
+  warmUpMs = performance.now() - t0;
+}
+/** Cost of the solver warm-up at initialization (ms; first-frame analysis). */
+export let warmUpMs = 0;
 
 const GROUND_HALF = 1500;
 

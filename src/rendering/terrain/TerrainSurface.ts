@@ -60,6 +60,7 @@ export class TerrainSurface {
   private colors: Float32Array;
 
   constructor(private t: TerrainData, private mode: TerrainViewMode) {
+    const t0 = performance.now();
     const { nx, nz, cellSize: cs, originX, originZ } = t;
     const n = nx * nz;
     this.positions = new Float32Array(n * 3);
@@ -91,6 +92,8 @@ export class TerrainSurface {
     this.geometry.setAttribute('normal', new THREE.BufferAttribute(this.normals, 3));
     this.geometry.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
     this.update(null);
+    terrainStats.surfaceBuilds++;
+    terrainStats.surfaceBuildMs += performance.now() - t0;
   }
 
   setMode(mode: TerrainViewMode) {

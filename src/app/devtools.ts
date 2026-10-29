@@ -54,6 +54,7 @@ import { worldFingerprint } from '@/world/fingerprint';
 import { terrainStats } from '@/terrain/terrainStats';
 import { validateDeformation } from '@/deformation/field';
 import { phenomena } from '@/phenomena/registry';
+import { warmUpMs as rapierWarmUpMs } from '@/physics/RapierEngine';
 import { currentDeformation } from '@/rendering/terrain/runtimeGround';
 
 export function installDevtools() {
@@ -94,7 +95,7 @@ export function installDevtools() {
     waterRenderStats,
     profiler: simProfiler,
     /** Phase 21 terrain deformation (benchmarks / browser verification). */
-    deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation, phenomena },
+    deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation, phenomena, rapierWarmUpMs: () => rapierWarmUpMs },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {
       const doc = useWorldStore.getState().doc;
