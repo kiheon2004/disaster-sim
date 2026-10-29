@@ -32,6 +32,7 @@ import type { GravityField } from '@/gravity/field';
 import { ensureSeismicRuntime } from '../seismic/SeismicState';
 import { structureOf, activate } from '../structure/state';
 import { memberGy } from '../gravity/memberField';
+import { simProfiler as P } from '../profiling/SimProfiler';
 import { spawnFragment } from '../structure/fragments';
 import { memberMaterial, MT_BEAM, MT_COLUMN, MT_DOOR, MT_ROOF, MT_WALL, MT_WINDOW, type StructuralGraph } from '@/structure/graph';
 import { CK } from '@/structure/types';
@@ -48,6 +49,13 @@ const TENSION: Record<string, (fc: number) => number> = {
 const SEAT: Record<string, number> = { structuralSteel: 0.5, reinforcedConcrete: 0.5, timber: 0.3, masonry: 0.1 };
 
 const tmp: Vec3 = [0, 0, 0];
+
+/**
+ * Tension capacities of a graph (Phase 32.1 cache): per connection k (its dependent → its support) and per member's own
+ * section — functions of the static graph and its materials only (eCap is set when the graph is built), computed once
+ * per graph instead of on every check. Same values as computing them on the spot.
+ */
+const capacities = new WeakMap<StructuralGraph, { edge: Float64Array; own: Float64Array }>();
 
 export class CelestialStructures {
   /** Members detached by uplift, storeys loaded laterally (units with a field), peak lateral field (m/s²). */
@@ -67,8 +75,12 @@ export class CelestialStructures {
     if (sig === this.sig) return;
     this.sig = sig;
     if (!tidal) { ch.lateral = false; return; }
+    const tl = P.now();
     this.lateral(ctx, f);
+    P.add('celestial.lateral', tl);
+    const tu = P.now();
     this.uplift(ctx, f);
+    P.add('celestial.uplift', tu);
   }
 
   /** Floors of every storey-model unit: the celestial horizontal field at their height. */
@@ -137,10 +149,12 @@ export class CelestialStructures {
     }
     if (!any) return;
     const failed: number[] = [];
+    let caps: { edge: Float64Array; own: Float64Array } | undefined;
     // Top first (supports rank lower): a member's pull, plus what it carries, goes to its supports.
     for (let r = n - 1; r >= 0; r--) {
       const i = g.byRank[r];
       if (!m.alive(i) || !(N[i] > 0)) continue;
+      caps ??= this.capacitiesOf(g);
       let count = 0;
       for (let k = g.eStart[i]; k < g.eStart[i + 1]; k++) if (m.alive(g.eTo[k])) count++;
       if (count === 0) continue;
@@ -149,7 +163,7 @@ export class CelestialStructures {
       for (let k = g.eStart[i]; k < g.eStart[i + 1]; k++) {
         const j = g.eTo[k];
         if (!m.alive(j)) continue;
-        if (share > this.capacity(g, i, k)) broken = true;
+        if (share > caps.edge[k]) broken = true;
         else N[j] += share;
       }
       if (broken) failed.push(i);
@@ -169,12 +183,25 @@ export class CelestialStructures {
     }
     for (const i of [...out].sort((a, b) => a - b)) {
       const share = N[i];
-      if (!m.detachMember(i, 'uplift', 'gravity', ctx.time, share / Math.max(1, this.ownCapacity(g, i)))) continue;
+      if (!m.detachMember(i, 'uplift', 'gravity', ctx.time, share / Math.max(1, this.capacitiesOf(g).own[i]))) continue;
       spawnFragment(ctx, e, i, [0, 0, 0], 'gravity');
       this.uplifted++;
     }
     activate(e, ctx);
     ctx.milestone?.({ time: ctx.time, kind: 'tidalFailure', subject: 'celestial', label: { key: 'ms.celestial.uplift' as never, params: { id: e.id } } }, 'celestial:uplift');
+  }
+
+  private capacitiesOf(g: StructuralGraph) {
+    let c = capacities.get(g);
+    if (c) return c;
+    const edge = new Float64Array(g.eTo.length), own = new Float64Array(g.n);
+    for (let i = 0; i < g.n; i++) {
+      own[i] = this.ownCapacity(g, i);
+      for (let k = g.eStart[i]; k < g.eStart[i + 1]; k++) edge[k] = this.capacity(g, i, k);
+    }
+    c = { edge, own };
+    capacities.set(g, c);
+    return c;
   }
 
   /** Tension capacity of connection k (dependent i → its support), N. */

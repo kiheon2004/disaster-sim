@@ -441,12 +441,14 @@ export class RapierEngine implements PhysicsEngine {
     const out: ContactEvent[] = [];
     const world = this.world;
     if (!world || !this.events) return out;
+    // Bodies by collider handle (Phase 32.1: the engine's own map instead of two WASM calls per collider — the same
+    // body; ground colliders have none, as their body has no user data).
     this.events.drainContactForceEvents((e) => {
-      const b1 = world.getCollider(e.collider1())?.parent();
-      const b2 = world.getCollider(e.collider2())?.parent();
+      const b1 = this.colliderBody.get(e.collider1());
+      const b2 = this.colliderBody.get(e.collider2());
       out.push({
-        a: b1 ? this.userData.get(b1.handle) ?? null : null,
-        b: b2 ? this.userData.get(b2.handle) ?? null : null,
+        a: b1 !== undefined ? this.userData.get(b1) ?? null : null,
+        b: b2 !== undefined ? this.userData.get(b2) ?? null : null,
         force: e.totalForceMagnitude(),
       });
     });

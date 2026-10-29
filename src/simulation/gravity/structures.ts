@@ -27,6 +27,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 import { structureOf, activate, type StructureState } from '../structure/state';
 import { memberGy } from './memberField';
+import { simProfiler as P } from '../profiling/SimProfiler';
 import type { GravityField } from '@/gravity/field';
 import type { GravitySourceSpec } from '@/gravity/types';
 import { G_N } from '@/celestial/constants';
@@ -126,7 +127,9 @@ export class GravityStructures {
         let changed = !a?.kM;
         const next = new Float64Array(g.n);
         let jump = 0;
+        const tm = P.now();
         const gy = memberGy(e, st, f);
+        P.add('gravity.members', tm);
         for (let i = 0; i < g.n; i++) {
           next[i] = -gy[i] / this.g0;
           const d = Math.abs(next[i] - kM[i]);
@@ -137,7 +140,9 @@ export class GravityStructures {
         // Phase 32: models near a celestial source are prepared before it starts, so a jump of a member's own ratio
         // within one application (re-applied every K_QUANTUM) is the field's own sudden change (a source switched on).
         const cel = f.points.live.length > 0;
+        const ta = P.now();
         this.applyMembers(st, next, sudden || (cel && a !== undefined && jump > SUDDEN_RATIO) || (cel && !a && jump > SUDDEN_RATIO && this.celestialSudden), cel);
+        P.add('gravity.apply', ta);
         this.applied.set(e, { k: NaN, kM: next, step });
       }
       this.applications++;

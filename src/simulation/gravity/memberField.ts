@@ -10,10 +10,16 @@
  *            as before).
  *   gy       key: the field (identity), its epoch and its point sources' epoch (bumped by every prepare / growth / new
  *            experiment); value: g_y = f.sample(centre)[1] of every member (the same call as before).
+ *   geometry key: the centres and, per live point source in canonical order, its position, ε², influence radius and
+ *            inner taper radius; value per (source, member): q·√q (q = r² + ε²; NaN where the source does not act —
+ *            beyond R or q ≤ 0), the vertical offset y − y_s and the taper factor (sm(·) where r > inner, else none).
+ *            A ramping or growing source changes only μ, so g_y = base_y − Σ_k (μ_k / D)·[taper]·dy reuses them — the
+ *            operations of PointField.addSample on the same values in the same order (its x / z parts are not needed).
  * Bit-identical to sampling member by member: same functions, same inputs, same order; only repeated work is skipped.
  */
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { GravityField } from '@/gravity/field';
+import type { PointLive } from '@/celestial/point';
 import type { StructureState } from '../structure/state';
 import { toWorld } from '../structure/state';
 import type { Vec3 } from '@/core/types';
@@ -26,6 +32,11 @@ interface MemberField {
   epoch: number;
   pEpoch: number;
   gy: Float64Array;
+  /** Point-source geometry (see the header): signature (6 per source), D, dy, taper (K × n each; taper NaN = none). */
+  sig: Float64Array;
+  D: Float64Array;
+  dy: Float64Array;
+  taper: Float64Array;
 }
 
 const cache = new WeakMap<StructureState, MemberField>();
@@ -48,7 +59,7 @@ export function memberCentres(e: RuntimeEntity, st: StructureState): Float64Arra
     centres[3 * i] = w[0]; centres[3 * i + 1] = w[1]; centres[3 * i + 2] = w[2];
   }
   const p = e.pose.position, q = e.pose.quaternion;
-  c = { graph: g, pose: Float64Array.of(p[0], p[1], p[2], q[0], q[1], q[2], q[3]), centres, field: null, epoch: -1, pEpoch: -1, gy: new Float64Array(n) };
+  c = { graph: g, pose: Float64Array.of(p[0], p[1], p[2], q[0], q[1], q[2], q[3]), centres, field: null, epoch: -1, pEpoch: -1, gy: new Float64Array(n), sig: new Float64Array(0), D: new Float64Array(0), dy: new Float64Array(0), taper: new Float64Array(0) };
   cache.set(st, c);
   return centres;
 }
@@ -59,7 +70,52 @@ export function memberGy(e: RuntimeEntity, st: StructureState, f: GravityField):
   const c = cache.get(st)!;
   if (c.field === f && c.epoch === f.epoch && c.pEpoch === f.points.epoch) return c.gy;
   const n = st.model.g.n, gy = c.gy;
-  for (let i = 0; i < n; i++) gy[i] = f.sample(centres[3 * i], centres[3 * i + 1], centres[3 * i + 2], tmp)[1];
+  const live = f.points.live, K = live.length;
+  geometry(c, live, n);
+  for (let i = 0; i < n; i++) {
+    let y = f.sampleBase(centres[3 * i], centres[3 * i + 1], centres[3 * i + 2], tmp)[1];
+    for (let k = 0; k < K; k++) {
+      const j = k * n + i, D = c.D[j];
+      if (D !== D) continue;
+      let a = live[k].mu / D;
+      const t = c.taper[j];
+      if (t === t) a *= t;
+      y -= a * c.dy[j];
+    }
+    gy[i] = y;
+  }
   c.field = f; c.epoch = f.epoch; c.pEpoch = f.points.epoch;
   return gy;
+}
+
+/** smootherstep (PointField's taper). */
+const sm = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (x * (6 * x - 15) + 10));
+
+/** (Re)build the per-source geometry when a source moved, appeared or changed shape. */
+function geometry(c: MemberField, live: readonly PointLive[], n: number) {
+  const K = live.length;
+  let same = c.sig.length === 6 * K;
+  for (let k = 0; same && k < K; k++) {
+    const l = live[k], s = c.sig;
+    same = s[6 * k] === l.x && s[6 * k + 1] === l.y && s[6 * k + 2] === l.z && s[6 * k + 3] === l.eps2 && s[6 * k + 4] === l.R && s[6 * k + 5] === l.inner;
+  }
+  if (same) return;
+  const sig = new Float64Array(6 * K), D = new Float64Array(K * n), dy = new Float64Array(K * n), taper = new Float64Array(K * n);
+  for (let k = 0; k < K; k++) {
+    const l = live[k];
+    sig[6 * k] = l.x; sig[6 * k + 1] = l.y; sig[6 * k + 2] = l.z; sig[6 * k + 3] = l.eps2; sig[6 * k + 4] = l.R; sig[6 * k + 5] = l.inner;
+    for (let i = 0; i < n; i++) {
+      const j = k * n + i;
+      const x = c.centres[3 * i], y = c.centres[3 * i + 1], z = c.centres[3 * i + 2];
+      const dx = x - l.x, ddy = y - l.y, dz = z - l.z;
+      const r2 = dx * dx + ddy * ddy + dz * dz;
+      const q = r2 + l.eps2;
+      dy[j] = ddy;
+      taper[j] = NaN;
+      if (r2 >= l.R * l.R || !(q > 0)) { D[j] = NaN; continue; }
+      D[j] = q * Math.sqrt(q);
+      if (r2 > l.inner * l.inner) taper[j] = sm((l.R - Math.sqrt(r2)) / (l.R - l.inner));
+    }
+  }
+  c.sig = sig; c.D = D; c.dy = dy; c.taper = taper;
 }
