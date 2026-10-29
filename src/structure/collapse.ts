@@ -311,6 +311,8 @@ export class CollapseModel {
     this.damage[i] = 1;
     this.external[i] = 1;
     this.ledger.move('structure', this.g.type[i] === MT_WINDOW ? 'fines' : 'bodies', this.g.mass[i]);
+    // Glass leaves as visual shards: nothing left to simulate (its mass is booked as fines).
+    if (this.g.type[i] === MT_WINDOW) this.set(i, MS.SETTLED);
     this.s.kill(i, i);
     this.dynamicNext = true;
     return rec;
@@ -453,6 +455,7 @@ export class CollapseModel {
             const p = G.mass[i] * Math.hypot(vx, vz);
             if (d.impulse) this.ledger.momentum.impulse += p; else this.ledger.momentum.inherited += p;
           } else this.ledger.momentum.inherited += G.mass[i] * Math.hypot(vx, vz);
+          if (G.type[i] === MT_WINDOW) { this.set(i, MS.SETTLED); continue; }
           this.events.push({ kind: 'exit', i, time, velocity: [vx, 0, vz], hazard: this.hazardName(i), root: this.root[i], impulse: !!d.impulse });
           continue;
         }

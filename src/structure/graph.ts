@@ -278,6 +278,11 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
       if (ed.kind === CK.BEAM_SEAT || ed.kind === CK.BEAM_BEAM) {
         const s = A.members[i].size;
         eCap[e] = beamSeatCapacity(mi.material, s[0], s[1], s[2]);
+      } else if (ed.kind === CK.TRANSFER && type[j] === MT_SLAB) {
+        // A column / wall standing on a slab: punching shear around its footprint (perimeter at d/2 ≈ t/2 out).
+        const t = A.members[j].size[1];
+        const fx = B(i, 3) - B(i, 0), fz = B(i, 5) - B(i, 2);
+        eCap[e] = slabEdgeCapacity(src[j].material, t, 2 * (fx + fz) + 4 * t);
       } else if (ed.kind === CK.SLAB) {
         const ox = Math.max(0, Math.min(B(i, 3), B(j, 3)) - Math.max(B(i, 0), B(j, 0)));
         const oz = Math.max(0, Math.min(B(i, 5), B(j, 5)) - Math.max(B(i, 2), B(j, 2)));

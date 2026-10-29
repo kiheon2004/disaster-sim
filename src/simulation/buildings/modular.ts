@@ -40,7 +40,19 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { StructuralModel } from '../seismic/StructuralModel';
 import { DamageState, worst } from '../damage/DamageState';
 import { COMPONENT_ROUNDS, downhill, type QuakeCollapse } from '../damage/behaviors/building';
-import { blastGovernsStructure } from '../seismic/SeismicState';
+import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
+
+/**
+ * The hazard a structural-model failure belongs to: the shared structural model is driven by ground
+ * motion, impact shocks and air-pressure loads — failures go to the one that governs (Phase 23 / 24
+ * attribution), so the collapse sequence and the damage log agree.
+ */
+export function governingHazard(e: RuntimeEntity, h: Hazard): Hazard {
+  if (h !== 'earthquake') return h;
+  if (blastGovernsStructure(e.seismic)) return 'blast';
+  if (impactGovernsShaking(e.seismic)) return 'impact';
+  return h;
+}
 import { accumulate, capacities, CRACK_LEVELS, failPart, isDriftPart } from '../damage/behaviors/seismic';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 import type { DamageCause, Hazard } from '../analysis/DamageEvent';
@@ -258,7 +270,7 @@ export function failMembers(e: RuntimeEntity, ctx: SystemContext, list: number[]
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
   const pending = o.cause === 'gravity' && o.response === 0;
-  st.model.fail(batch, FAIL_CAUSE[o.cause] ?? 'story', pending ? ORIGINAL_WORLD : o.hazard, ctx.time, {
+  st.model.fail(batch, FAIL_CAUSE[o.cause] ?? 'story', pending ? ORIGINAL_WORLD : governingHazard(e, o.hazard), ctx.time, {
     u: o.response,
     impulse: o.impulse,
     velocity: (i) => o.velocity?.(i) ?? (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3),
@@ -406,7 +418,7 @@ export function modularCollapse(e: RuntimeEntity, ctx: SystemContext, quake?: Qu
   // Direction / speed of the sway (fragments leave with the structure's velocity, not this).
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
-  st.model.failStory(0, 'story', hazard, ctx.time, quake?.response ?? e.loadRatio, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  st.model.failStory(0, 'story', governingHazard(e, hazard), ctx.time, quake?.response ?? e.loadRatio, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
   syncFailed(mr);
   mr.rev++;
   e.rev++;
@@ -460,7 +472,7 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
   truncate(e, ctx, s);
   const kin = kinematics(e, ctx);
   const tmp: Vec3 = [0, 0, 0];
-  st.model.failStory(s, 'story', o.hazard, ctx.time, o.response, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  st.model.failStory(s, 'story', governingHazard(e, o.hazard), ctx.time, o.response, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
   syncFailed(mr);
   st.lateralDirty = true;
   st.analysisDirty = true;

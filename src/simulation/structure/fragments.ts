@@ -7,8 +7,8 @@
  * collide with the ground, vehicles, people, other buildings and each other; contact forces drive
  * the secondary damage (secondary.ts).
  *
- * Budget (Physics LOD): at most MAX_ACTIVE moving fragments; a fragment at rest for 0.5 s becomes a
- * FIXED body (no solver cost, still collides); beyond MAX_TOTAL bodies the oldest resting fragment
+ * Budget (Physics LOD): at most FRAGMENT_LIMITS.active moving fragments; a fragment at rest for 0.5 s becomes a
+ * FIXED body (no solver cost, still collides); beyond FRAGMENT_LIMITS.total bodies the oldest resting fragment
  * is merged into the rubble field at its place. A fragment that cannot get a body (over the active
  * budget) lands as aggregated rubble at its ballistic landing point. Nothing is dropped silently:
  * every kilogram moves between the building's ledger accounts (bodies → rubble / left).
@@ -25,8 +25,8 @@ import { structuresOf, structureOf, toWorld, dirToWorld } from './state';
 import { memberColor } from '@/buildings/memberColor';
 import { hazardOf } from '../systems/StructuralCollapseSystem';
 
-export const MAX_ACTIVE = 160;
-export const MAX_TOTAL = 600;
+/** Fragment body budget (Physics LOD): moving bodies, all bodies. Mutable for tests / benchmarks. */
+export const FRAGMENT_LIMITS = { active: 160, total: 600 };
 /** Steps at rest before a fragment becomes a fixed body. */
 const REST_STEPS = 30;
 
@@ -67,7 +67,7 @@ export function spawnFragment(ctx: SystemContext, e: RuntimeEntity, i: number, v
   }
   const pos = toWorld(e, local);
   const vel = dirToWorld(e, vLocal);
-  if (moving(ctx) >= MAX_ACTIVE || S.fragments.length >= MAX_TOTAL + 64) {
+  if (moving(ctx) >= FRAGMENT_LIMITS.active || S.fragments.length >= FRAGMENT_LIMITS.total + 64) {
     aggregate(ctx, e, i, pos, vel, hazard);
     return null;
   }
@@ -145,8 +145,8 @@ export function updateFragments(ctx: SystemContext) {
       }
     } else s.quiet = 0;
   }
-  if (S.fragments.length <= MAX_TOTAL) return;
-  let excess = S.fragments.length - MAX_TOTAL;
+  if (S.fragments.length <= FRAGMENT_LIMITS.total) return;
+  let excess = S.fragments.length - FRAGMENT_LIMITS.total;
   const keep: DebrisPiece[] = [];
   for (const d of S.fragments) {
     if (excess > 0 && d.structural!.settled) {

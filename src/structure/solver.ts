@@ -289,8 +289,9 @@ export class StructuralSolver {
       const u = this.util[i];
       const om = dynamic ? dynamicFactor(memberMaterial(g, i)) : 1;
       const uDyn = u + (om - 1) * Math.max(0, u - uOld);
-      const limit = g.type[i] === MT_FOUNDATION ? 1 : OVERLOAD;
-      if (uDyn >= limit && (g.structural[i] || g.type[i] === MT_FOUNDATION)) {
+      const soil = g.type[i] === MT_FOUNDATION || g.ground[i] === 1;
+      const limit = soil ? 1 : OVERLOAD;
+      if (uDyn >= limit && (g.structural[i] || soil)) {
         res.failed.push({ i, cause: this.governing(i), u: uDyn, trigger: this.originStamp[i] === this.stamp ? this.origin[i] : -1 });
       }
     }
@@ -446,7 +447,7 @@ export class StructuralSolver {
       if (f <= 1e-9) continue;
       // Member reserve.
       let res = Infinity;
-      if (g.type[i] === MT_FOUNDATION) {
+      if (g.type[i] === MT_FOUNDATION || g.ground[i]) {
         const u = this.bearingUtil(i);
         if (u > 0) res = this.load[i] * (1 / u - 1);
       } else if (g.structural[i] && this.util[i] > 0) res = this.load[i] * (OVERLOAD / this.util[i] - 1);
@@ -507,7 +508,7 @@ export class StructuralSolver {
 
   private governing(i: number): FailCause {
     const g = this.g;
-    if (g.type[i] === MT_FOUNDATION) return 'bearing';
+    if (g.type[i] === MT_FOUNDATION || g.ground[i]) return 'bearing';
     const n = this.uN[i], m = this.uM[i], v = this.uV[i];
     return n >= m && n >= v ? 'axial' : m >= v ? 'bending' : 'shear';
   }
@@ -523,7 +524,8 @@ export class StructuralSolver {
       else if (t === MT_BEAM) { this.beamDemand(i); m = this.dM / (g.capM[i] * cf); v = this.dV / (g.capV[i] * cf); }
       else if (t === MT_SLAB && g.capM[i] > 0) m = this.slabMoment(i) / (g.capM[i] * cf);
     }
-    if (t === MT_FOUNDATION && this.alive[i]) n = this.bearingUtil(i);
+    // Footings and ground slabs: bearing pressure on the soil.
+    if ((t === MT_FOUNDATION || g.ground[i]) && this.alive[i]) n = this.bearingUtil(i);
     this.uN[i] = n; this.uM[i] = m; this.uV[i] = v;
     this.util[i] = Math.max(n, m, v);
   }
