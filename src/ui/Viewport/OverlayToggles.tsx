@@ -293,11 +293,13 @@ function StructureToggles() {
     <>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#c9b8ff', marginTop: 2 }}>{t('overlay.struct')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="structure-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.struct.colorLabel')}</span>
         <Segmented
           size="small"
           value={viz.color}
           onChange={(c) => set({ color: c })}
-          options={(['normal', 'demand', 'failure', 'sequence'] as const).map((c) => ({ value: c, label: t(`overlay.struct.color.${c}`) }))}
+          ariaLabel={t('overlay.struct.colorLabel')}
+          options={(['normal', 'demand', 'failure', 'sequence'] as const).map((c) => ({ value: c, label: t(`overlay.struct.colorShort.${c}`), title: t(`overlay.struct.color.${c}`) }))}
         />
         {viz.color === 'demand' && (
           <div>

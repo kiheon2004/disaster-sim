@@ -1,0 +1,246 @@
+{
+  "lang": "en",
+  "url": "http://localhost:4191/",
+  "results": [
+    {
+      "name": "1 a structural member selected in the editor shows its demand / capacity",
+      "ok": true,
+      "detail": {
+        "dem1": "Utilization axial / bending / shear0.12 / 0.00 / 0.00 (failure 1.25)Capacity axial · bending · shear7500.0 kN · 0.0 kN·m"
+      }
+    },
+    {
+      "name": "2 its load-transfer connections are listed (kind, support, load, capacity)",
+      "ok": true,
+      "detail": {
+        "rows": [
+          [
+            "Foundation T0",
+            "fd-mat",
+            "924.2",
+            "—"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "4 single-member removal preview: computed with the collapse model, local result, the design is unchanged",
+      "ok": true,
+      "detail": {
+        "level": "local",
+        "followers": 3,
+        "removed": [
+          "c0-1-0"
+        ]
+      }
+    },
+    {
+      "name": "3 the original design is not modified by the preview (fingerprint unchanged)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "5 connection failures are computed and recorded (connections out of the load path)",
+      "ok": true,
+      "detail": {
+        "edges": [
+          9,
+          0
+        ],
+        "ms": true
+      }
+    },
+    {
+      "name": "6 load redistribution: members failing because another member failed (trigger recorded)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "7 partial collapse stage reached (part of the building standing while part fell)",
+      "ok": true,
+      "detail": [
+        "damaged",
+        "intact",
+        "local",
+        "partial",
+        "global"
+      ]
+    },
+    {
+      "name": "8 progressive collapse: falling floors broke through the floors below, in time order",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "9 roof failure: roof / top-floor members failed and came down",
+      "ok": true,
+      "detail": 6
+    },
+    {
+      "name": "11 floor slabs failed (bending / support / impact)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "12 debris falls: falling blocks inside the building and moving fragments were observed",
+      "ok": true,
+      "detail": {
+        "blocks": 33,
+        "moving": 90,
+        "levels": [
+          "damaged",
+          "intact",
+          "local",
+          "partial",
+          "global"
+        ]
+      }
+    },
+    {
+      "name": "13 debris impacts recorded (milestone)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "14 vehicles damaged by fragments: secondary records keep the primary hazard and the source building",
+      "ok": true,
+      "detail": [
+        {
+          "o": "car_180b158a2t",
+          "ty": "car",
+          "t": "IMPACT",
+          "h": "earthquake",
+          "c": "impact",
+          "sec": {
+            "striker": "frag-2",
+            "source": "building_887dfa402o",
+            "member": "w4-s-2",
+            "energy": 9722.897206067099
+          },
+          "f": null,
+          "time": 5.316666666666653
+        },
+        {
+          "o": "car_1eb1c4ef2r",
+          "ty": "car",
+          "t": "IMPACT",
+          "h": "earthquake",
+          "c": "impact",
+          "sec": {
+            "striker": "frag-45",
+            "source": "building_887dfa402o",
+            "member": "w1-s-0",
+            "energy": 3373.111208259086
+          },
+          "f": null,
+          "time": 5.549999999999986
+        }
+      ]
+    },
+    {
+      "name": "15 the street is blocked by the collapse rubble (separate from sediment)",
+      "ok": true,
+      "detail": {
+        "height": 2.1222979789307876,
+        "blocked": true,
+        "source": "building_887dfa402o"
+      }
+    },
+    {
+      "name": "16 earthquake integration: every structural failure of this run is the earthquake's; mass conserved",
+      "ok": true,
+      "detail": [
+        -1.5366822481155396e-8,
+        -1.4551915228366852e-11
+      ]
+    },
+    {
+      "name": "1b a member clicked in the simulation is picked; its computed state is shown",
+      "ok": true,
+      "detail": {
+        "pick": {
+          "owner": "building_482fe0a32p",
+          "member": 12
+        },
+        "memSec": "StateSettled on the groundDamage index100 %Residual capacity99 %Vertical load0.0"
+      }
+    },
+    {
+      "name": "3b load-path overlay of the selected building drawn from the engine state (vertices)",
+      "ok": true,
+      "detail": {
+        "vertices": 224
+      }
+    },
+    {
+      "name": "20 cause / timeline: inspector level + collapse sequence rows, HUD, timeline milestones",
+      "ok": true,
+      "detail": {
+        "level16": "Global collapse",
+        "seqRows": 40,
+        "tl": 12
+      }
+    },
+    {
+      "name": "20b results: structural destruction summary (classes, members, debris mass, roads, secondary)",
+      "ok": true,
+      "detail": "Structural destruction Collapse sequence CSVBuildings damaged / local failure0Local failure 0Partial"
+    },
+    {
+      "name": "22 reset → re-run: the same collapse sequence (members, causes, times) bit for bit",
+      "ok": true,
+      "detail": {
+        "len": 12850
+      }
+    },
+    {
+      "name": "21 leaving the simulation shows the original world exactly (fingerprint)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10 exterior walls / cladding blown off by the wave: detached parts become fragments",
+      "ok": true,
+      "detail": {
+        "frags": 82
+      }
+    },
+    {
+      "name": "17 blast integration: structural failures recorded as the blast's (walls out of plane / story mechanism)",
+      "ok": true,
+      "detail": [
+        28,
+        37,
+        28
+      ]
+    },
+    {
+      "name": "18 ground: the footing whose ground gave way fails; the rest of the building stands",
+      "ok": true,
+      "detail": {
+        "level": "local",
+        "n": 4
+      }
+    },
+    {
+      "name": "19 landslide: the sediment load damages the ground-story members (ground hazard only)",
+      "ok": true,
+      "detail": {
+        "maxD": 0.47398177548875464,
+        "hz": [
+          "ground"
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "heap": [
+    28.3,
+    45.8
+  ],
+  "geometries": [
+    17,
+    8
+  ],
+  "crashed": false
+}

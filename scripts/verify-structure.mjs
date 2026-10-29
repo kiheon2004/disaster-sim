@@ -16,7 +16,7 @@ const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: true,
   args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--window-size=1600,1000', '--enable-precise-memory-info', '--js-flags=--expose-gc'],
-  defaultViewport: { width: 1600, height: 1000, deviceScaleFactor: 1 }, protocolTimeout: 900_000,
+  defaultViewport: { width: 1600, height: 1000, deviceScaleFactor: 1 }, protocolTimeout: 900_000, timeout: 180_000,
 });
 const errors = [];
 const results = [];
@@ -63,7 +63,8 @@ async function openSection(key) {
   const title = await tr(key);
   return ev((title) => {
     for (const b of document.querySelectorAll('button, [role="button"], summary, div')) {
-      if (b.children.length < 4 && (b.textContent ?? '').trim().startsWith(title) && b.getAttribute('aria-expanded') === 'false') { b.click(); return true; }
+      // Section headers start with the chevron "▸".
+      if (b.children.length < 4 && (b.textContent ?? '').replace(/^[\s▸]+/, '').startsWith(title) && b.getAttribute('aria-expanded') === 'false') { b.click(); return true; }
     }
     return false;
   }, title);
@@ -114,6 +115,7 @@ const geo0 = await geometries();
 // ══ Building editor (creative mode) ══════════════════════════════════════════════════════════
 await newWorld();
 const [aptId] = await place([['building', 0, 0, 'apartment']]);
+const fpBefore = await fp();
 await ev((id) => { window.__ds.editor.getState().select(id); window.__ds.buildingActions.enterBuildingEdit(id); }, aptId);
 await wait(500);
 await ev(() => window.__ds.members.getState().select(['c0-1-0']));
@@ -127,17 +129,17 @@ check('1 a structural member selected in the editor shows its demand / capacity'
 check('2 its load-transfer connections are listed (kind, support, load, capacity)', conn1.length > 0 && conn1.every((r) => r.length === 4), { rows: conn1.slice(0, 3) });
 
 // ── 3/4. Removal preview (alternate path) — the selected ground column removed suddenly ─────────
-await page.click('[data-testid="removal-preview"]');
+// DOM click: the button sits in the scrolled inspector; a coordinate click could land in the viewport.
+await ev(() => document.querySelector('[data-testid="removal-preview"]').click());
 await wait(600);
 const prev4 = await ev(() => { const p = window.__ds.members.getState().preview; return p ? { level: p.result.level, followers: p.result.failed.length, removed: p.result.removed } : null; });
 const res4 = await ev(() => document.querySelector('[data-testid="removal-result"]')?.textContent ?? '');
 await view(0, 0, 40, 40);
 await shot('04-removal-preview');
-const fpEdit = await fp();
 check('4 single-member removal preview: computed with the collapse model, local result, the design is unchanged', prev4 && prev4.level === 'local' && prev4.removed[0] === 'c0-1-0' && res4.length > 0, prev4);
 await ev(() => { window.__ds.buildingActions.exitBuildingEdit(); window.__ds.members.getState().setPreview(null); });
 await wait(300);
-check('3 the original design is not modified by the preview (fingerprint unchanged)', (await fp()) === fpEdit);
+check('3 the original design is not modified by the preview (fingerprint unchanged)', (await fp()) === fpBefore);
 
 // ══ Street: earthquake 1.1 g — apartment, house, cars, a road ════════════════════════════════
 await newWorld();
