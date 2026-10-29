@@ -27,7 +27,9 @@ export type DamageEventType =
   // Phase 22: covered by deposited sediment (people, vehicles, small structures).
   | 'BURIED'
   // Phase 28: touched by lava (recorded once; the effects are separate events / exposure).
-  | 'LAVA_CONTACT';
+  | 'LAVA_CONTACT'
+  // Phase 33: an extended-model person's body segment reached a higher educational injury-risk level.
+  | 'INJURED';
 
 /**
  * Why it happened:
@@ -139,8 +141,14 @@ export interface DamageEventRecord {
    * of the fragment's failure; `cause` is the direct cause (impact, burial).
    */
   secondary?: { striker: string; source: string; member?: string; energy?: number };
+  /**
+   * Phase 33 (extended human model): body segment (componentId repeats it), the episode's impulse |J| (N·s), the struck
+   * point's velocity change (m/s), the representative deceleration (m/s², a lower bound — step-resolved), the
+   * educational risk index and level reached, the partner ('ground', an object or debris id), the posture.
+   */
+  human?: { segment?: string; impulse?: number; dv?: number; decel?: number; index?: number; level?: string; partner?: string; posture?: string };
 }
 
-type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
+type Optional = 'human' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
 
 export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'contributors' | 'origin' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

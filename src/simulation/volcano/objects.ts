@@ -23,6 +23,7 @@
  *                rubble threshold of Phase 25); ash ≥ 0.1 m → impassable (assumed indicative threshold: a few
  *                cm to 10 cm of ash are reported to stop two-wheel-drive vehicles). The network is never edited.
  */
+import { humanStruck } from '../human/HumanSystem';
 import { gravityDown } from '@/thermal/gravityScope';
 import { GRAVITY } from '@/core/units';
 import { qRotate } from '@/core/math';
@@ -37,7 +38,7 @@ import { activate, structureOf } from '../structure/state';
 import { MT_COLUMN, MT_DOOR, MT_ROOF, MT_WALL, MT_WINDOW } from '@/structure/graph';
 import { MS } from '@/structure/types';
 import { ROAD_IMPASSABLE_STEP } from '../deformation/response';
-import type { Bomb } from '@/volcano/bombs';
+import { BOMB_DENSITY, type Bomb } from '@/volcano/bombs';
 import type { VolcanoRuntime } from './runtime';
 import type { EntityThermal } from '../thermal/runtime';
 
@@ -279,6 +280,20 @@ export class VolcanoObjects {
     const E = 0.5 * b.parcel.mass * b.parcel.v1 * b.parcel.v1;
     st.bombs++;
     st.bombEnergy += E;
+    // Phase 33: an extended person takes one representative bomb's momentum (the parcel aggregates many bombs of its
+    // fragment diameter); the legacy record stays for everything else.
+    if (e.human) {
+      const p = b.parcel, n = p.path.length;
+      const mb = Math.min(p.mass, BOMB_DENSITY * (Math.PI / 6) * p.size ** 3);
+      let d: Vec3 = [0, -1, 0];
+      if (n >= 6) {
+        const dx = p.path[n - 3] - p.path[n - 6], dy = p.path[n - 2] - p.path[n - 5], dz = p.path[n - 1] - p.path[n - 4], l = Math.hypot(dx, dy, dz);
+        if (l > 0) d = [dx / l, dy / l, dz / l];
+      }
+      const hp: Vec3 = [e.pose.position[0], e.pose.position[1] + e.dims[1] * 0.95, e.pose.position[2]];
+      humanStruck(ctx, e, `bomb:${b.id}`, 'volcano', hp, [d[0] * p.v1, d[1] * p.v1, d[2] * p.v1], mb);
+      return;
+    }
     ctx.recordDamage(e, { eventType: 'IMPACT', cause: 'ejecta', hazard: 'volcano', force: E, damageBefore: 1 - e.health, damageAfter: 1 - e.health, worldPosition: [...b.parcel.p1] as Vec3, source: 'volcano' });
   }
 

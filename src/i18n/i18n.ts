@@ -41,9 +41,12 @@ export const useLocaleStore = create<LocaleState>()(
 export function translate(locale: Locale, key: MessageKey, params?: TranslateParams): string {
   const template = dictionaries[locale][key] ?? dictionaries.ko[key] ?? key;
   if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (_, name: string) =>
-    params[name] !== undefined ? String(params[name]) : `{${name}}`,
-  );
+  return template.replace(/\{(\w+)\}/g, (_, name: string) => {
+    if (params[name] === undefined) return `{${name}}`;
+    const v = String(params[name]);
+    // Phase 33: a parameter "@key" is itself a message key (segment / level names inside a log line).
+    return v.charCodeAt(0) === 64 && isMessageKey(v.slice(1)) ? translate(locale, v.slice(1) as MessageKey) : v;
+  });
 }
 
 /** Non-reactive translation (for use outside React). */

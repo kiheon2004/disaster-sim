@@ -19,6 +19,9 @@ import { enAtmosphere } from './en.atmosphere';
 import { enClimate } from './en.climate';
 import { enGravity } from './en.gravity';
 import { enCelestial } from './en.celestial';
+import { enHuman } from './en.human';
+import { enHumanUi } from './en.humanUi';
+import { enHumanPresets } from './en.humanPresets';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -614,4 +617,7 @@ export const en: Record<MessageKey, string> = {
   ...enClimate,
   ...enGravity,
   ...enCelestial,
+  ...enHuman,
+  ...enHumanUi,
+  ...enHumanPresets,
 };

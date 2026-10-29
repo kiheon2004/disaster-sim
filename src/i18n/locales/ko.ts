@@ -22,6 +22,9 @@ import { koAtmosphere } from './ko.atmosphere';
 import { koClimate } from './ko.climate';
 import { koGravity } from './ko.gravity';
 import { koCelestial } from './ko.celestial';
+import { koHuman } from './ko.human';
+import { koHumanUi } from './ko.humanUi';
+import { koHumanPresets } from './ko.humanPresets';
 
 export const ko = {
   // App
@@ -617,6 +620,9 @@ export const ko = {
   ...koClimate,
   ...koGravity,
   ...koCelestial,
+  ...koHuman,
+  ...koHumanUi,
+  ...koHumanPresets,
 } as const;
 
 export type MessageKey = keyof typeof ko;

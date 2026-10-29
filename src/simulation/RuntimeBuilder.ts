@@ -1,6 +1,6 @@
 import type { Vec3 } from '@/core/types';
 import type { ShapeSpec } from '@/core/shapes';
-import type { WorldDocument, WorldObject } from '@/core/model';
+import type { HumanSettings, WorldDocument, WorldObject } from '@/core/model';
 import { quatFromEuler, seededRandom } from '@/core/math';
 import { getDefinition } from '@/objects/registry';
 import type { BodyHandle, PhysicsEngine } from '@/physics/PhysicsEngine';
@@ -13,6 +13,7 @@ import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { foundationPlinth } from '@/terrain/groundPlacement';
 import { newForceRecord } from './forces/ForceLedger';
 import { createModularRuntime } from './buildings/modular';
+import { createHumanState, SERIES_PEOPLE } from './human/state';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -33,7 +34,7 @@ export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
 /** Contact-force threshold so resting contact is ignored but impacts are reported. */
 export const impactThreshold = (mass: number) => Math.max(800, mass * 9.81 * 2.5);
 
-export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction'>, dynamic: boolean, plinth = 0): BodyHandle {
+export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction' | 'human'>, dynamic: boolean, plinth = 0): BodyHandle {
   const o = e.source;
   const shapes = e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale));
   // Slope foundation plinth (buildings on terrain, Phase 13): solid down to the ground.
@@ -55,7 +56,11 @@ export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 
     linearDamping: 0.05,
     angularDamping: e.profile === 'upright' ? 0.8 : 0.35,
     contactForceThreshold: dynamic ? impactThreshold(o.physics.mass) : undefined,
-    userData: { entityId: o.id },
+    // Phase 33: extended people — segment mass properties (COM ≈ 0.55 H, segment inertia) and contact detail.
+    // Continuous collision detection: a falling person crosses a thin floor / wall in one step from ≈ 0.44 m/step (the
+    // capsule's diameter) — 26 m/s at 60 Hz (a 35 m drop, or ~12 m at 3 g).
+    ...(e.human ? { massProps: { com: e.human.model.com, inertia: e.human.model.inertia }, ccd: true } : {}),
+    userData: e.human ? { entityId: o.id, detail: true } : { entityId: o.id },
   });
 }
 
@@ -65,7 +70,7 @@ function naturalStrength(o: WorldObject): number {
   return 1 + (seededRandom(o.seed ^ 0x5bd1e995)() * 2 - 1) * spread;
 }
 
-function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSampler): RuntimeEntity {
+function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSampler, humans?: HumanSettings, series?: { n: number }): RuntimeEntity {
   const def = getDefinition(o.type);
   const k = o.transform.scale;
   const d = def.getDimensions(o.params);
@@ -128,16 +133,28 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     blast: undefined,
     // Phase 17: member-level state of modular buildings (declared on every entity: one shape).
     modular: o.type === 'building' && o.building ? createModularRuntime(o) : undefined,
+    human: undefined,
+    hum: undefined,
   };
+  // Phase 33: extended people (dynamic, valid body) — the model state exists before the body (mass properties).
+  if (humans && o.type === 'human' && dynamic) {
+    const st = createHumanState(e.dims[1], o.physics.mass, humans, series !== undefined && series.n < SERIES_PEOPLE);
+    if (st) {
+      e.human = st;
+      e.hum = st.acc;
+      if (series && st.series) series.n++;
+    }
+  }
   e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic, foundationPlinth(o, terrain));
   if (def.inert) e.dynamic = false;
   return e;
 }
 
 /** WorldDocument (read-only) → fresh SimulationRuntime with physics bodies. */
-export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain)): SimulationRuntime {
+export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain), humans?: HumanSettings): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
-  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain));
+  const series = { n: 0 };
+  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain, humans, series));
   let modular = false;
   for (const e of entities.values()) if (e.modular) { modular = true; break; }
   return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}) };

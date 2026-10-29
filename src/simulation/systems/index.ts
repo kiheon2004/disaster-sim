@@ -1,3 +1,4 @@
+import { HumanSystem } from '../human/HumanSystem';
 import type { SimulationSystem } from './SimulationSystem';
 import { WindForceSystem } from './WindForceSystem';
 import { PoseSyncSystem } from './PoseSyncSystem';
@@ -60,6 +61,8 @@ export function createDefaultSystems(): SimulationSystem[] {
     new RoadSystem(),
     new SwaySystem(),
     new DamageSystem(),
+    // Phase 33: extended people (balance, release, contact episodes, injury index) — after the contacts were drained.
+    new HumanSystem(),
     // Phase 26: heat sources → heat transfer → temperatures → material factors / thermal forces, read
     // by the collapse engine right after (idle without a heat source).
     new ThermalSystem(),

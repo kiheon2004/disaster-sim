@@ -268,7 +268,8 @@ export class CelestialRuntime {
       physics.applyTorqueImpulse(h, [tq[0] * dt, tq[1] * dt, tq[2] * dt]);
     };
     for (const e of ctx.runtime.entities.values()) {
-      if (!e.dynamic || e.body === null || e.def.physicsProfile === 'upright') continue;
+      // Standing people are held upright by posture control (no rotation); a released extended person (Phase 33) turns.
+      if (!e.dynamic || e.body === null || (e.def.physicsProfile === 'upright' && !(e.human && !e.human.standing))) continue;
       apply(e.body, physics.getMass(e.body), e.dims, e.pose.quaternion, e.pose.position);
     }
     for (const d of ctx.runtime.debris) apply(d.body, d.mass, d.size, d.pose.quaternion, d.pose.position);

@@ -118,6 +118,10 @@ export interface RuntimeEntity {
   windCache: SampleCache;
   /** Running counters used to aggregate log messages. */
   counters: Record<string, number>;
+  /** Phase 33: extended human model state (people of an 'extended' run only). */
+  human?: import('./human/state').HumanState;
+  /** Phase 33: ForceLedger accumulator of a standing extended person (see ForceOwner.hum). */
+  hum?: Float64Array;
 }
 
 export interface DebrisPiece {

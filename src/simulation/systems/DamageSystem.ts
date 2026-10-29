@@ -1,5 +1,6 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { updateHuman, knockDown } from '../damage/behaviors/human';
+import { humanContact } from '../human/HumanSystem';
 import { updateTree } from '../damage/behaviors/tree';
 import { updateCar } from '../damage/behaviors/car';
 import { updateBuilding } from '../damage/behaviors/building';
@@ -50,13 +51,23 @@ export class DamageSystem implements SimulationSystem {
     }
     simProfiler.add('damage.entities', t0);
     const t1 = simProfiler.now();
-    this.processImpacts(ctx);
+    this.processImpacts(ctx, dt);
     simProfiler.add('damage.impacts', t1);
   }
 
-  private processImpacts(ctx: SystemContext) {
+  private processImpacts(ctx: SystemContext, dt: number) {
     const events = ctx.physics.drainContactEvents();
     for (const ev of events) {
+      // Phase 33: contacts of extended people (ground included) are contact episodes of their injury model.
+      if (ev.detail) {
+        const ea = ev.a && !ev.a.debrisId ? ctx.runtime.entities.get(ev.a.entityId) : undefined;
+        const eb = ev.b && !ev.b.debrisId ? ctx.runtime.entities.get(ev.b.entityId) : undefined;
+        if (ea?.human) humanContact(ctx, ea, ev.b, ev, true, dt);
+        else this.impact(ctx, ev.a, ev.b, ev.force);
+        if (eb?.human) humanContact(ctx, eb, ev.a, ev, false, dt);
+        else this.impact(ctx, ev.b, ev.a, ev.force);
+        continue;
+      }
       this.impact(ctx, ev.a, ev.b, ev.force);
       this.impact(ctx, ev.b, ev.a, ev.force);
     }

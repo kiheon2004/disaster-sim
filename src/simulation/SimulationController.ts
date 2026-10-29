@@ -142,7 +142,7 @@ export class SimulationController {
     this.physics = physics;
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     const terrain = new TerrainSampler(runTerrain);
-    this.runtime = buildRuntime(this.snapshot, physics, terrain);
+    this.runtime = buildRuntime(this.snapshot, physics, terrain, sim.humans);
     // Phase 19 vegetation options (opt-in per project).
     if (sim.vegetation?.canopyShelter) computeCanopy(this.runtime);
     if (sim.vegetation?.floodResponse) this.runtime.vegetation = { flood: true };
@@ -306,7 +306,11 @@ export class SimulationController {
     const ctx: SystemContext = {
       env: this.env, runtime: rt, physics, time: this.time, step: this.stepIndex, rng: this.rng, fxRng: this.fxRng,
       log: (entityId, severity, message) => this.log(entityId, severity, message),
-      recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
+      recordDamage: (e, ev) => {
+        // Phase 33: burial of an extended person (ground flow, rubble, tephra) — the body-state flag for Phase 34.
+        if (e.human && ev.eventType === 'BURIED') e.human.buried = true;
+        this.metrics.record(this.time, e, ev);
+      },
       forces, interactions: this.interactions,
       milestone: (m, key) => (key ? this.metrics.milestones.once(key, m) : this.metrics.milestones.add(m)),
     };
@@ -514,7 +518,11 @@ export class SimulationController {
       rng: this.rng,
       fxRng: this.fxRng,
       log: (entityId, severity, message) => this.log(entityId, severity, message),
-      recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
+      recordDamage: (e, ev) => {
+        // Phase 33: burial of an extended person (ground flow, rubble, tephra) — the body-state flag for Phase 34.
+        if (e.human && ev.eventType === 'BURIED') e.human.buried = true;
+        this.metrics.record(this.time, e, ev);
+      },
       forces,
       interactions: this.interactions,
       milestone: (m, key) => (key ? this.metrics.milestones.once(key, m) : this.metrics.milestones.add(m)),

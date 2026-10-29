@@ -10,6 +10,8 @@ const KNOCKDOWN_RATIO = 1.0;
 
 export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' | 'impact' | 'earthquake' | 'flood' | 'ground' | 'ejecta' | 'blast', impactForce?: number, dir?: [number, number, number]) {
   if (e.flags.fallen || !e.dynamic || e.body === null) return;
+  // Phase 33: extended people fall by their balance model (HumanSystem), never by these rules.
+  if (e.human) return;
   e.flags.fallen = true;
   e.rev++;
   const { physics } = ctx;
@@ -58,6 +60,8 @@ export function knockDown(e: RuntimeEntity, ctx: SystemContext, reason: 'wind' |
 }
 
 export function updateHuman(e: RuntimeEntity, ctx: SystemContext, dt: number) {
+  // Phase 33: extended people — health and state belong to the injury model (HumanSystem).
+  if (e.human) return;
   const p = e.source.physics;
   e.health = applyFatigue(e.health, e.loadRatio, p.durability, Infinity, dt);
   if (!e.flags.fallen && (e.loadRatio >= KNOCKDOWN_RATIO || e.health < 0.6)) knockDown(e, ctx, 'wind');
