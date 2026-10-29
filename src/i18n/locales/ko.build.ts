@@ -101,7 +101,7 @@ export const koBuild = {
   'multi.rotateLeft': '왼쪽으로 90°',
   'multi.rotateRight': '오른쪽으로 90°',
   'multi.physicsNote': '그룹은 편집용 논리 구조입니다. 시뮬레이션에서는 각 오브젝트가 독립된 물리 바디로 계산됩니다.',
-  'multi.scaleNote': '여러 오브젝트 크기 조절은 지원하지 않습니다 (개별 선택 후 조절).',
+  'multi.scaleNote': '선택 중심 기준 균일 크기 조절 (실행 취소 1단계). 모듈형 건물은 함께 이동하지만 크기는 유지됩니다 — 크기는 건물 탭에서 바꾸세요 (치수는 설계 매개변수).',
   'object.group': '그룹',
 
   'outliner.selectCategory': '종류별 선택',

@@ -103,7 +103,7 @@ export const enBuild: Record<keyof typeof koBuild, string> = {
   'multi.rotateLeft': '90° left',
   'multi.rotateRight': '90° right',
   'multi.physicsNote': 'Groups are an editing structure only. In the simulation every object is still its own physics body.',
-  'multi.scaleNote': 'Scaling several objects at once is not supported (select one to scale it).',
+  'multi.scaleNote': 'Uniform scale about the selection center (one undo step). Modular buildings move with the group but keep their size — change it in the Building tab (dimensions are design parameters).',
   'object.group': 'Group',
 
   'outliner.selectCategory': 'Select by type',

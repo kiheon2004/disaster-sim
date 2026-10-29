@@ -81,14 +81,19 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
     if (!pivotObj) return;
     pivotObj.position.set(pivot.x, pivot.y, pivot.z);
     pivotObj.rotation.set(0, 0, 0);
+    pivotObj.scale.set(1, 1, 1);
   }, [pivotObj, pivot]);
 
   const start = useRef<{ x: number; y: number; z: number } | null>(null);
   const commit = () => {
     if (!pivotObj || !start.current) return;
-    const d = { dx: pivotObj.position.x - start.current.x, dy: pivotObj.position.y - start.current.y, dz: pivotObj.position.z - start.current.z, dyaw: pivotObj.rotation.y };
+    // Uniform scale: the axis the user dragged (the one furthest from 1).
+    const sc = [pivotObj.scale.x, pivotObj.scale.y, pivotObj.scale.z].reduce((a, b) => (Math.abs(b - 1) > Math.abs(a - 1) ? b : a), 1);
+    const scale = Math.min(5, Math.max(0.2, sc));
+    pivotObj.scale.set(1, 1, 1);
+    const d = { dx: pivotObj.position.x - start.current.x, dy: pivotObj.position.y - start.current.y, dz: pivotObj.position.z - start.current.z, dyaw: pivotObj.rotation.y, scale };
     start.current = null;
-    if (Math.abs(d.dx) + Math.abs(d.dy) + Math.abs(d.dz) + Math.abs(d.dyaw) < 1e-9) return;
+    if (Math.abs(d.dx) + Math.abs(d.dy) + Math.abs(d.dz) + Math.abs(d.dyaw) + Math.abs(scale - 1) < 1e-9) return;
     transformSelection(d, { x: pivot.x, z: pivot.z });
   };
 
@@ -105,7 +110,7 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
           </group>
         ))}
       </group>
-      {pivotObj && mode !== 'scale' && (
+      {pivotObj && (
         <TransformControls
           object={pivotObj}
           mode={mode}
@@ -115,6 +120,7 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
           showZ={mode !== 'rotate'}
           translationSnap={snap ? gridStep(snapping.grid, 0) : null}
           rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
+          scaleSnap={snap ? 0.1 : null}
           onMouseDown={() => {
             start.current = { x: pivot.x, y: pivot.y, z: pivot.z };
             useEditorStore.getState().setDragging(true);

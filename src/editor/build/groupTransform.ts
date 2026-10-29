@@ -17,6 +17,12 @@ export interface RigidDelta {
   dz: number;
   /** Rotation about +Y through the pivot (rad). */
   dyaw: number;
+  /**
+   * Uniform scale about the pivot (Phase 17; default 1): offsets from the pivot and object
+   * scales grow together. Modular buildings move with the group but keep their size — their
+   * dimensions are design parameters (Building Creator), not a transform.
+   */
+  scale?: number;
 }
 
 /** Center of the objects' positions on the ground plane (bounds center). */
@@ -46,10 +52,12 @@ export function yawRotate(rotation: Vec3, dyaw: number): Vec3 {
 export function transformObjects(objs: readonly WorldObject[], pivot: { x: number; z: number }, d: RigidDelta, terrain: TerrainSampler): WorldObject[] {
   const c = Math.cos(d.dyaw);
   const s = Math.sin(d.dyaw);
-  return objs.map((o) => {
+  const k = d.scale ?? 1;
+  return objs.map((orig) => {
+    const o = k !== 1 && !orig.building ? { ...orig, transform: { ...orig.transform, scale: orig.transform.scale.map((v) => Math.min(10, Math.max(0.1, v * k))) as Vec3 } } : orig;
     const [px, py, pz] = o.transform.position;
-    const rx = px - pivot.x;
-    const rz = pz - pivot.z;
+    const rx = (px - pivot.x) * k;
+    const rz = (pz - pivot.z) * k;
     // Rotation about +Y by dyaw: x' = x cos + z sin, z' = −x sin + z cos (three.js convention).
     const x = pivot.x + rx * c + rz * s + d.dx;
     const z = pivot.z - rx * s + rz * c + d.dz;

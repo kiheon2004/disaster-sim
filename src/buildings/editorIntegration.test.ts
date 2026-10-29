@@ -257,3 +257,17 @@ describe('editor: copy / paste, terrain policy and slope alignment', () => {
     expect(level.terrainAlign).toBeUndefined();
   });
 });
+
+describe('multi-selection uniform scale (Phase 17 extension of the group transform)', () => {
+  it('scales offsets and object sizes about the pivot; modular buildings keep their size', async () => {
+    const { transformObjects } = await import('@/editor/build/groupTransform');
+    const tree = createWorldObject({ type: 'tree', transform: T(10, 0) }, 1);
+    const house = modular('house', -10, 0);
+    const out = transformObjects([tree, house], { x: 0, z: 0 }, { dx: 0, dy: 0, dz: 0, dyaw: 0, scale: 2 }, flatSampler());
+    expect(out[0].transform.position[0]).toBeCloseTo(20);
+    expect(out[0].transform.scale).toEqual([2, 2, 2]);
+    expect(out[1].transform.position[0]).toBeCloseTo(-20);
+    expect(out[1].transform.scale).toEqual([1, 1, 1]);
+    expect(out[1].building).toBe(house.building);
+  });
+});
