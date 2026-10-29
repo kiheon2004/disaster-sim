@@ -34,6 +34,7 @@ import { knockDown } from '../damage/behaviors/human';
 import { AIR, FOOT_LEVER } from '../ground/objects';
 import { residualStrength } from '../interactions/integrity';
 import { failMembers } from '../buildings/modular';
+import { detachFacadeMember } from '../structure/facade';
 import { MATERIALS } from '@/buildings/materials';
 import { facadeNormal } from '@/buildings/generate';
 import { advanceSdof, boxFaces, dragImpulse, faceFactor, reliefTime, responseBound, faceLoads, freeAmplitude, netImpulse, newSdof, pressureCentre, projectedArea, type FaceLoad, type Faces } from '@/blast/loads';
@@ -188,7 +189,8 @@ export function buildWalls(e: RuntimeEntity, ctx: SystemContext, faces: Faces): 
     const n = qRotate(q, facadeNormal(m.facade));
     const h = Math.max(1, m.size[1] * k[1]), L = Math.max(0.5, m.size[0]);
     const t = Math.max(0.05, m.size[2]), te = t * mat.fill.wall;
-    const N = (mr.current.members[i]?.load ?? 0) / L;
+    // Gravity load per metre the wall carries now (Phase 25: from the collapse engine when it exists).
+    const N = (mr.structure ? mr.structure.model.s.load[i] : mr.current.members[i]?.load ?? 0) / L;
     let cap = ((4 / 3) * mat.flexural * te * te) / (h * h) + (4 * N * t) / (h * h);
     if (ctx.interactions) cap *= residualStrength(e, 'blast');
     const w1 = ((Math.PI / h) ** 2) * Math.sqrt((mat.E * mat.stiffnessFactor * te ** 3 / 12) / (mat.density * te));
@@ -317,7 +319,21 @@ function failWalls(e: RuntimeEntity, ctx: SystemContext, list: { p: PartEntry; r
   st.broken += list.length;
   e.lastHazard = 'blast';
   e.lastCause = 'overpressure';
-  failMembers(e, ctx, list.map((w) => w.p.member!), { hazard: 'blast', cause: 'overpressure', response: ratio, dir: [kx / kh, 0, kz / kh] });
+  // Phase 25: each wall leaves with the momentum the wave gave it — its received face impulse (Pa·s)
+  // × its area / its mass, along the wave (building frame); out of its plan → a fragment.
+  const mr = e.modular!, k = e.source.transform.scale, q = e.initialPose.quaternion;
+  const inv: [number, number, number, number] = [-q[0], -q[1], -q[2], q[3]];
+  const dirLocal = qRotate(inv, [kx / kh, 0, kz / kh]);
+  const speed = new Map<number, number>();
+  for (const { p } of list) {
+    const m = mr.design.members[p.member!];
+    const area = m.size[0] * m.size[1] * Math.max(k[0], k[2]) * k[1];
+    speed.set(p.member!, (Math.abs(p.impulse) * area) / Math.max(1, mr.initial.members[p.member!].mass));
+  }
+  failMembers(e, ctx, list.map((w) => w.p.member!), {
+    hazard: 'blast', cause: 'overpressure', response: ratio, dir: [kx / kh, 0, kz / kh], impulse: true,
+    velocity: (i) => { const v = speed.get(i) ?? 0; return [dirLocal[0] * v, 0, dirLocal[2] * v]; },
+  });
   const cnt = (e.counters.blastWall = (e.counters.blastWall ?? 0) + 1);
   if (cnt === 1) ctx.log(e.id, 'danger', { key: 'log.blast.wall' });
 }
@@ -346,6 +362,11 @@ function failPart(e: RuntimeEntity, ctx: SystemContext, p: PartEntry, ratio: num
   let kx = 0, ky = 0, kz = 0, best = -1;
   for (const l of p.loads) if (l.a.dp > best) { best = l.a.dp; kx = l.a.k[0]; ky = l.a.k[1]; kz = l.a.k[2]; }
   const speed = Math.max(0.5, Math.min(30, (Math.abs(p.impulse) * area) / Math.max(1, c.spec.mass)));
+  // Modular buildings (Phase 25): the member leaves with the momentum the wave gave it (∫p·A dt / m of
+  // its own mass), without the Phase 24 speed bounds.
+  const mi = e.modular ? e.modular.memberOfComp[p.ci] : -1;
+  const vMember = mi >= 0 ? (Math.abs(p.impulse) * area) / Math.max(1, e.modular!.initial.members[mi].mass) : 0;
+  const modular = e.modular !== undefined && detachFacadeMember(ctx, e, c, 'blast', [kx * vMember, ky * vMember, kz * vMember], true);
   if (c.spec.kind === 'window') {
     c.condition = 'broken';
     // Glass is driven along the wave (inward on the facing side) — particles are a visual effect.
@@ -355,7 +376,7 @@ function failPart(e: RuntimeEntity, ctx: SystemContext, p: PartEntry, ratio: num
     return;
   }
   c.condition = 'detached';
-  spawnDebris(ctx, e, { kind: c.spec.kind, position: pos, size, mass: c.spec.mass, color: c.spec.color ?? '#888', push: [kx * speed, Math.max(0.2, ky * speed), kz * speed], hazard: 'blast' });
+  if (!modular) spawnDebris(ctx, e, { kind: c.spec.kind, position: pos, size, mass: c.spec.mass, color: c.spec.color ?? '#888', push: [kx * speed, Math.max(0.2, ky * speed), kz * speed], hazard: 'blast' });
   const cnt = (e.counters.blastPart = (e.counters.blastPart ?? 0) + 1);
   if (LOG_STEPS.includes(cnt)) ctx.log(e.id, 'warn', { key: 'log.blast.parts', params: { n: cnt } });
 }

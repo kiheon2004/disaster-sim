@@ -149,7 +149,8 @@ describe('building foundations', { timeout: 120_000 }, () => {
     // Damage is attributed to the ground hazard, once per kind.
     const ev = c.getDamageEvents().filter((e) => e.objectId === b.id && e.hazard === 'ground');
     expect(ev.length).toBeGreaterThan(0);
-    expect(new Set(ev.map((e) => e.eventType)).size).toBe(ev.length);
+    // Once per kind (member failures of a collapse — Phase 25 — once per member).
+    expect(new Set(ev.map((e) => `${e.eventType}|${e.componentId ?? ''}`)).size).toBe(ev.length);
     c.unload();
   });
 

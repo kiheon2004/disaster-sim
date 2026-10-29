@@ -110,8 +110,22 @@ export interface DamageEventRecord {
   origin: Hazard;
   /** Phenomenon kind that produced it when more specific than the hazard (sinkhole, landslide …). */
   source?: string;
+  /**
+   * Phase 25 member failure detail: the engine's failure mode (axial, bending, shear, connection,
+   * support, impact, foundation, bearing, story, drift, overpressure) and the collapse chain it
+   * belongs to — the member whose loss triggered it, the chain's root member and its depth. The
+   * record's `hazard` is the chain's PRIMARY hazard (what started it).
+   */
+  failure?: string;
+  chain?: { trigger: string | null; root: string; depth: number; round: number };
+  /**
+   * Secondary damage (Phase 25): the object was struck by a fragment / rubble of another object —
+   * the striking piece, the building and member it came from. `hazard` stays the primary hazard
+   * of the fragment's failure; `cause` is the direct cause (impact, burial).
+   */
+  secondary?: { striker: string; source: string; member?: string; energy?: number };
 }
 
-type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source';
+type Optional = 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
 
 export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'contributors' | 'origin' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

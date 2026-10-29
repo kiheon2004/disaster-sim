@@ -34,7 +34,7 @@ export const ROAD_IMPASSABLE = 0.3;
 /** Crack index at which a road counts as severely damaged (impassable). */
 export const ROAD_SEVERE = 0.6;
 
-export type RoadStatus = 'intact' | 'cracked' | 'steep' | 'severe' | 'inundated' | 'impassable' | 'scoured';
+export type RoadStatus = 'intact' | 'cracked' | 'steep' | 'severe' | 'inundated' | 'impassable' | 'scoured' | 'blocked';
 
 export interface RoadSegmentState {
   id: string;
@@ -63,6 +63,8 @@ export interface RoadSegmentState {
   status: RoadStatus;
   /** Ground deformation state (Phase 21; absent until the ground moves under it). */
   deform?: import('../deformation/response').RoadDeformState;
+  /** Collapse rubble on the carriageway (Phase 25): thickest point (m), blocked, building it came from. */
+  rubble?: { height: number; blocked: boolean; source: string | null };
 }
 
 export interface Inlet {
@@ -76,7 +78,7 @@ export interface Inlet {
 export interface RoadEvent {
   time: number;
   segment: string;
-  kind: 'cracked' | 'steep' | 'severe' | 'inundated' | 'impassable' | 'scoured';
+  kind: 'cracked' | 'steep' | 'severe' | 'inundated' | 'impassable' | 'scoured' | 'blocked';
   value: number;
 }
 
@@ -89,7 +91,7 @@ export interface RoadGroundFailure {
   offset(x: number, z: number, time: number): number;
 }
 
-const RANK: Record<RoadStatus, number> = { intact: 0, cracked: 1, steep: 2, inundated: 2, scoured: 3, severe: 4, impassable: 4 };
+const RANK: Record<RoadStatus, number> = { intact: 0, cracked: 1, steep: 2, inundated: 2, scoured: 3, severe: 4, impassable: 4, blocked: 4 };
 
 export class RoadRuntime {
   readonly segments: RoadSegmentState[] = [];
@@ -143,7 +145,7 @@ export class RoadRuntime {
 
   /** Counts per status for results / HUD. */
   summary() {
-    const out = { total: this.segments.length, cracked: 0, severe: 0, inundated: 0, impassable: 0, scoured: 0, steep: 0, cut: 0 };
+    const out = { total: this.segments.length, cracked: 0, severe: 0, inundated: 0, impassable: 0, scoured: 0, steep: 0, cut: 0, rubble: 0 };
     for (const s of this.segments) {
       if (s.crack >= 0.05) out.cracked++;
       if (s.crack >= ROAD_SEVERE) out.severe++;
@@ -152,6 +154,7 @@ export class RoadRuntime {
       if (s.scour >= 1) out.scoured++;
       if (s.deform && s.deform.grade >= 0.15 && s.deform.grade > s.deform.grade0 + 0.01) out.steep++;
       if (s.deform && !s.deform.passable) out.cut++;
+      if (s.rubble?.blocked) out.rubble++;
     }
     return out;
   }

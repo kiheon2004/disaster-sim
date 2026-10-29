@@ -14,8 +14,8 @@
  */
 import * as THREE from 'three';
 import type { EntityId } from '@/core/types';
-import { MATERIAL_LOOK, MATERIAL_LOOKS, MATERIALS, type MaterialLook } from '@/buildings/materials';
-import { tint } from '@/buildings/design';
+import { MATERIAL_LOOK, MATERIAL_LOOKS, type MaterialLook } from '@/buildings/materials';
+import { memberColor } from '@/buildings/memberColor';
 import type { BuildingMember, BuildingDesign } from '@/buildings/types';
 import { memberBounds } from '@/buildings/geometry';
 import { UNIT_BOX } from '../geometry/primitives';
@@ -46,13 +46,7 @@ const ray = new THREE.Ray();
 const box = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
 const hit = new THREE.Vector3();
 
-/** Base color of a member (cladding and parapets follow the facade tint). */
-export function memberColor(m: BuildingMember, design: BuildingDesign): string {
-  const mat = MATERIALS[m.material];
-  if (m.type === 'wall' && (m.role === 'cladding' || m.role === 'nonStructural') && m.material !== 'glass') return tint(mat.color, design.spec.color);
-  if (m.type === 'wall' && m.role === 'bearing' && m.facade && m.material !== 'reinforcedConcrete') return tint(mat.color, design.spec.color, 0.35);
-  return mat.color;
-}
+export { memberColor };
 
 /** Local matrix of a member box (building space, before the object's own transform). */
 export function memberMatrix(m: BuildingMember, out: THREE.Matrix4): THREE.Matrix4 {

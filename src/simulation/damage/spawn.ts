@@ -28,10 +28,14 @@ export function spawnDebris(
   opts: { kind: ComponentSpec['kind']; position: Vec3; size: Vec3; mass: number; color: string; push?: Vec3; hazard?: Hazard },
 ): DebrisPiece | null {
   const { runtime, physics } = ctx;
-  if (runtime.debris.length >= MAX_DEBRIS) {
+  // The cap applies to the Phase 0–24 pieces; fragments of the structural engine (Phase 25) have
+  // their own budget and aggregation (simulation/structure/fragments.ts) and are never recycled here.
+  const own = runtime.structures ? runtime.structures.fragments.length : 0;
+  if (runtime.debris.length - own >= MAX_DEBRIS) {
     // Recycle the oldest piece that has come to rest.
-    const idx = runtime.debris.findIndex((d) => physics.isSleeping(d.body));
+    const idx = runtime.debris.findIndex((d) => !d.structural && physics.isSleeping(d.body));
     if (idx < 0) return null;
+    if (runtime.structures) runtime.structures.legacyRecycled += runtime.debris[idx].mass;
     physics.removeBody(runtime.debris[idx].body);
     runtime.debris.splice(idx, 1);
   }
@@ -75,7 +79,7 @@ export function spawnDebris(
 
 export function spawnParticles(
   ctx: SystemContext,
-  kind: 'glass' | 'leaf',
+  kind: 'glass' | 'leaf' | 'dust',
   at: Vec3,
   count: number,
   baseVel: Vec3,
@@ -94,10 +98,10 @@ export function spawnParticles(
       velocity: [baseVel[0] + r(), baseVel[1] + Math.abs(r()) * 0.5, baseVel[2] + r()],
       rotation: [rng.next(), rng.next(), rng.next(), 1],
       spin: [r() * 6, r() * 6, r() * 6],
-      life: kind === 'leaf' ? rng.range(6, 12) : rng.range(3, 6),
+      life: kind === 'leaf' ? rng.range(6, 12) : kind === 'dust' ? rng.range(4, 9) : rng.range(3, 6),
       maxLife: 12,
       color,
-      size: kind === 'leaf' ? rng.range(0.12, 0.22) : rng.range(0.06, 0.16),
+      size: kind === 'leaf' ? rng.range(0.12, 0.22) : kind === 'dust' ? rng.range(0.5, 1.2) : rng.range(0.06, 0.16),
     });
   }
 }

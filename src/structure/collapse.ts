@@ -316,6 +316,11 @@ export class CollapseModel {
     return rec;
   }
 
+  /** A fragment handed to the physics engine came to rest (fixed body / aggregated). */
+  settleExternal(i: number) {
+    if (this.state[i] === MS.FALLING && this.external[i]) this.set(i, MS.SETTLED);
+  }
+
   /** Sidesway collapse of a story (lumped story model): its vertical members fail. */
   failStory(level: number, cause: FailCause, hazard: string, time: number, u = 1, velocity?: (i: number) => Vec3 | undefined): CollapseRecord[] {
     const list: number[] = [];

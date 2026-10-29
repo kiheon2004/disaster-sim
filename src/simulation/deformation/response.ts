@@ -37,6 +37,7 @@ import type { GridRect } from '@/terrain/TerrainData';
 import type { RoadRuntime, RoadSegmentState } from '../roads/RoadRuntime';
 import { recordStateChange } from '../interactions/integrity';
 import { groundResponseFor } from '@/deformation/groundModel';
+import { foundationSupport } from '../structure/foundation';
 
 /** Empirical angular-distortion limits (rad). */
 export const BETA = { safe: 1 / 500, cracking: 1 / 300, structural: 1 / 150, severe: 1 / 50 } as const;
@@ -161,7 +162,7 @@ function fitBase(engine: DeformationEngine, e: RuntimeEntity, n: number) {
   // Local gradient (along local x, z) → world: local x = (cos, −sin), local z = (sin, cos).
   const gx = b * c + cz * s, gz = -b * s + cz * c;
   const residual = w.map((v, k) => v - (a + b * lxs[k] + cz * lzs[k]));
-  return { a, gradient: [gx, gz] as [number, number], residual, lxs, lzs, hx, hz, yaw, c, s, x0, z0 };
+  return { a, b, cz, gradient: [gx, gz] as [number, number], residual, lxs, lzs, hx, hz, yaw, c, s, x0, z0 };
 }
 
 /** Move a fixed body to its initial pose displaced by (settlement, tilt). */
@@ -216,6 +217,9 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: Deformati
   st.damage = Math.max(st.damage, betaDamage(st.peakBeta));
   st.health = 1 - st.damage;
   follow(e, ctx, f.a, f.gradient);
+  // Phase 25: the ground under each foundation member (gap below the rigid base, explicit support
+  // loss) → its support in the structural graph — local loss of support, not only a rigid motion.
+  if (e.modular) foundationSupport(e, ctx, engine, f);
   const before = e.state;
   const level = groundLevel(st);
   if (level > e.state) {
@@ -236,7 +240,7 @@ function respondBuilding(e: RuntimeEntity, ctx: SystemContext, engine: Deformati
 }
 
 /** Static bearing ratio of the building at t = 0 (Phase 17 foundation contact, original ground). */
-function bearingRatioAt0(e: RuntimeEntity, ctx: SystemContext, engine?: DeformationEngine): number {
+export function bearingRatioAt0(e: RuntimeEntity, ctx: SystemContext, engine?: DeformationEngine): number {
   try {
     // On the ORIGINAL ground (the engine keeps it) when the ground already moved (lazy priming).
     const c = foundationContact(e.source as WorldObject, engine ? engine.originalSampler() : ctx.env.terrain);

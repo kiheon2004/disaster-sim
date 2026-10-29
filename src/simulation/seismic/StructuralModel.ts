@@ -306,6 +306,25 @@ export class StructuralModel {
     }
   }
 
+  /**
+   * Mass added on dof j (Phase 25): rubble that fell from higher up and rests on that floor moves
+   * with it (inertia) and loads the stories below (P-Δ weight recomputed); negative when it falls
+   * again. Rubble never takes a floor below its original mass, so the substep bound stays valid.
+   */
+  addMass(ui: number, j: number, kg: number, gravity: number) {
+    if (!kg) return;
+    const o = this.off[ui];
+    const n = this.n[ui];
+    const d0 = o + Math.max(1, Math.min(n, j));
+    this.m[d0] = Math.max(1, this.m[d0] + kg);
+    let above = 0;
+    for (let q = n; q >= 1; q--) {
+      const d = o + q;
+      above += this.m[d];
+      if (this.pdel[d] !== 0 || q === 1) this.pdel[d] = (above * gravity) / this.hs[d];
+    }
+  }
+
   /** Relative displacement of dof j over dof j−1 along a LOCAL axis (m). */
   storyDelta(ui: number, j: number, ax: 0 | 1): number {
     const d = this.off[ui] + j;

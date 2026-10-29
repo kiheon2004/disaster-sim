@@ -15,6 +15,8 @@ export class FloodDamageSystem implements SimulationSystem {
   readonly phase = 'postPhysics' as const;
   readonly reads = ['water', 'poses', 'structure'] as const;
   readonly writes = ['damage', 'debris', 'exposure'] as const;
+  /** Phase 25: structural collapse of a step is resolved later in it (StructuralCollapseSystem) — seen on the next step. */
+  readonly lagged = ['structure'] as const;
 
   isActive(ctx: SystemContext) {
     return ctx.env.flood.field !== null;

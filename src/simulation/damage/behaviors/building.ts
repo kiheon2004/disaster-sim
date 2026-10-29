@@ -13,8 +13,9 @@ import { seismicLevel, seismicHealth } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
 import { groundLevel } from '../../deformation/response';
 import { integrityOf } from '../../interactions/integrity';
-import { modularWindStructure, processPending } from '../../buildings/modular';
+import { modularCollapse, modularWindStructure, processPending, structureLevel } from '../../buildings/modular';
 import { blastGovernsStructure } from '../../seismic/SeismicState';
+import { detachFacadeMember } from '../../structure/facade';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -92,6 +93,9 @@ function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext
     shadowSource: lw.shadowSource,
   });
 
+  // Modular buildings (Phase 25): the member leaves the structure; panels become fragments with the
+  // member's mass and no invented push (the wind then acts on them).
+  const modular = e.modular !== undefined && detachFacadeMember(ctx, e, c, 'wind', null);
   if (c.spec.kind === 'window') {
     c.condition = 'broken';
     // Glass is pushed inward on the windward side and sucked outward elsewhere.
@@ -102,7 +106,7 @@ function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext
   }
 
   c.condition = 'detached';
-  spawnDebris(ctx, e, {
+  if (!modular) spawnDebris(ctx, e, {
     kind: c.spec.kind,
     position: pos,
     size,
@@ -148,8 +152,8 @@ export interface QuakeCollapse {
   speed: number;
   cause: DamageCause;
   response: number;
-  /** Default earthquake (Phase 13); 'flood' for lateral water load failures (Phase 14); 'ground' for foundation failure on deforming ground (Phase 21). */
-  hazard?: 'earthquake' | 'flood' | 'ground';
+  /** Default earthquake (Phase 13); 'flood' for lateral water load failures (Phase 14); 'ground' for foundation failure on deforming ground (Phase 21); 'impact' for ejecta loads (Phase 25, modular buildings). */
+  hazard?: 'earthquake' | 'flood' | 'ground' | 'impact';
   /** Extra fields for the damage record (flood: water depth, flow speed, load …). */
   extra?: Partial<DamageEventInput>;
 }
@@ -159,13 +163,13 @@ export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeColl
   const { physics } = ctx;
   const p = e.source.params as BuildingParams;
   const k = e.source.transform.scale;
-  e.flags.collapsed = true;
   if (e.modular !== undefined) {
-    // Every member goes with the building (renderers hide them; Phase 17).
-    e.modular.failed.fill(1);
-    e.modular.collapsedFrom = 0;
-    e.modular.rev++;
+    // Phase 25: the superstructure falls through the structural destruction engine (members crushed
+    // onto the ground floor, rubble pile, fragments with their exact masses) — no chunk bodies.
+    modularCollapse(e, ctx, quake);
+    return;
   }
+  e.flags.collapsed = true;
   if (e.body !== null) physics.removeBody(e.body);
   e.body = null;
   for (const c of e.components) if (c.condition === 'intact') c.condition = 'detached';
@@ -342,5 +346,6 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   if (e.seismic) s = worst(s, seismicLevel(e.seismic));
   if (e.flood) s = worst(s, floodLevel(e.flood));
   if (e.ground) s = worst(s, groundLevel(e.ground));
+  if (e.modular?.structure) s = worst(s, structureLevel(e.modular));
   e.state = s;
 }

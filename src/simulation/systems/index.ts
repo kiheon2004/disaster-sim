@@ -19,6 +19,7 @@ import { GroundFailureSystem } from './GroundFailureSystem';
 import { SedimentForceSystem } from './SedimentForceSystem';
 import { ImpactSystem } from './ImpactSystem';
 import { BlastSystem } from './BlastSystem';
+import { StructuralCollapseSystem } from './StructuralCollapseSystem';
 
 /**
  * Ordered system pipeline. prePhysics systems run before the physics step, postPhysics after.
@@ -53,6 +54,9 @@ export function createDefaultSystems(): SimulationSystem[] {
     new RoadSystem(),
     new SwaySystem(),
     new DamageSystem(),
+    // Phase 25: member failures of this step are resolved by the collapse engine (redistribution
+    // round, falling blocks, fragments, rubble) after every hazard has evaluated its damage.
+    new StructuralCollapseSystem(),
     new DebrisSystem(),
     new ParticleSystem(),
     new ExposureSystem(),

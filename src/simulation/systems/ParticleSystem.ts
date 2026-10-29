@@ -27,6 +27,7 @@ export class ParticleSystem implements SimulationSystem {
       p.life -= dt;
       if (p.life <= 0) continue;
       const leaf = p.kind === 'leaf';
+      const dust = p.kind === 'dust';
       const ground = env.terrain.sampleHeight(p.position[0], p.position[2]) + 0.02;
       const onGround = p.position[1] <= ground;
       if (!p.wind || (i & 1) === this.step) {
@@ -36,10 +37,11 @@ export class ParticleSystem implements SimulationSystem {
       }
       const wv = p.wind;
       // Relax toward the wind velocity (light leaves follow it closely, glass less so).
-      const k = (leaf ? 1.6 : 0.5) * (onGround ? 0.25 : 1);
+      const k = (leaf ? 1.6 : dust ? 1.2 : 0.5) * (onGround ? 0.25 : 1);
       p.velocity[0] += (wv[0] - p.velocity[0]) * Math.min(1, k * dt);
       p.velocity[2] += (wv[2] - p.velocity[2]) * Math.min(1, k * dt);
-      p.velocity[1] -= (leaf ? 2.2 : 9.81) * dt;
+      // Dust settles slowly (fine particles, drag-dominated); visual only.
+      p.velocity[1] = dust ? p.velocity[1] + (-0.15 - p.velocity[1]) * Math.min(1, 1.5 * dt) : p.velocity[1] - (leaf ? 2.2 : 9.81) * dt;
       if (leaf) p.velocity[1] += Math.sin(time * 5 + i) * 1.5 * dt; // flutter
       p.position[0] += p.velocity[0] * dt;
       p.position[1] += p.velocity[1] * dt;

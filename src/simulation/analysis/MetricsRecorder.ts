@@ -100,6 +100,9 @@ export class MetricsRecorder {
       contributors: hazardDamage(e),
       origin: ev.hazard ?? 'wind',
       source: ev.source,
+      ...(ev.failure ? { failure: ev.failure } : {}),
+      ...(ev.chain ? { chain: ev.chain } : {}),
+      ...(ev.secondary ? { secondary: ev.secondary } : {}),
     };
     // The origin: the channel that had done the most damage (ties and undamaged → the trigger).
     let best = rec.contributors[rec.hazard];

@@ -72,6 +72,19 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
       id: 'blastObjects', owner: 'RuntimeEntity.blast + StructuralModel', kind: 'state', holds: 'per-object shielding, face loads, facade-part oscillators (x, v, peak), people velocity change, received impulse; structural model state',
       present: env.blast.active, bytes: rt ? [...rt.entities.values()].reduce((s, e) => s + (e.blast ? 256 + (e.blast.parts?.length ?? 0) * 96 : 0), 0) : 0,
     },
+    {
+      // Phase 25: the structural graph is derived from the (saved) design; the collapse state is not.
+      id: 'structuralGraph', owner: 'structure/graph (per design, shared)', kind: 'derived', holds: 'members, tiered support candidates, connections and capacities, rank, plan grid',
+      present: !!rt?.structures, bytes: 0,
+    },
+    {
+      id: 'collapse', owner: 'CollapseModel (per building)', kind: 'state',
+      holds: 'member states, damage, failure records (cause / trigger / root / hazard), solver loads / shares / supports / ground support / capacity factors, falling blocks (fall distance, speed), member displacements, resting map, rubble piles, mass / energy / momentum ledger',
+      present: !!rt?.structures?.all.length,
+      bytes: rt?.structures ? rt.structures.all.reduce((s, e) => { const m = e.modular?.structure?.model; return s + (m ? bytesOf(m.state, m.damage, m.dx, m.dy, m.dz, m.sy, m.s.load, m.s.share, m.s.extra, m.s.util) : 0); }, 0) : 0,
+    },
+    { id: 'fragments', owner: 'StructuresRuntime', kind: 'external', holds: 'fragment bodies (Rapier) with their member / root / hazard; settled flags', present: !!rt?.structures?.fragments.length, bytes: (rt?.structures?.fragments.length ?? 0) * 160 },
+    { id: 'rubble', owner: 'RubbleField', kind: 'state', holds: 'rubble heaps (footprint, mass, volume, height, hazard) + their fixed colliders', present: !!rt?.structures?.rubble.heaps.length, bytes: (rt?.structures?.rubble.heaps.length ?? 0) * 96 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

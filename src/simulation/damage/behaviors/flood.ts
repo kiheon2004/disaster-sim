@@ -42,6 +42,7 @@ import { CAR_FLOOR } from '../../systems/WaterForceSystem';
 import type { DamageCause } from '../../analysis/DamageEvent';
 import { residualStrength } from '../../interactions/integrity';
 import { modularFloodCapacity, openDoors } from '../../buildings/modular';
+import { detachFacadeMember } from '../../structure/facade';
 
 const RHO = WATER_DENSITY;
 /** Scratch velocity (the per-object loops are synchronous). */
@@ -227,13 +228,15 @@ function envelopeParts(e: RuntimeEntity, ctx: SystemContext, st: FloodEntityStat
     });
     if (c.spec.kind === 'window') {
       c.condition = 'broken';
+      detachFacadeMember(ctx, e, c, 'flood', null);
       if (!e.counters.floodWindowLogged) {
         e.counters.floodWindowLogged = 1;
         ctx.log(e.id, 'warn', { key: 'log.flood.windows' });
       }
     } else {
       c.condition = 'detached';
-      spawnDebris(ctx, e, { kind: c.spec.kind, position: pos, size, mass: c.spec.mass, color: c.spec.color ?? '#999', push: [st.flow[0] * 0.3, 0.1, st.flow[1] * 0.3], hazard: 'flood' });
+      // Modular buildings (Phase 25): the member's own mass, no push (the water drag acts on it).
+      if (!detachFacadeMember(ctx, e, c, 'flood', null)) spawnDebris(ctx, e, { kind: c.spec.kind, position: pos, size, mass: c.spec.mass, color: c.spec.color ?? '#999', push: [st.flow[0] * 0.3, 0.1, st.flow[1] * 0.3], hazard: 'flood' });
     }
   }
 }

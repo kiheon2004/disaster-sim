@@ -138,5 +138,7 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
 export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain)): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
   for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain));
-  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [] };
+  let modular = false;
+  for (const e of entities.values()) if (e.modular) { modular = true; break; }
+  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}) };
 }

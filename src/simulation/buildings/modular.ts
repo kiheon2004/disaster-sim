@@ -17,15 +17,20 @@
  *    openings (doors / broken windows) replace the system-level constants.
  *  - Residual strength: member failures lower the capacity every hazard sees (reserve).
  *
- * What it is NOT: no dynamic analysis of falling floors, impact on the floors below, catenary
- * action or connection detailing — a progressive collapse beyond the load-path rounds below is
- * left to a later phase (Phase 25).
+ * Phase 25: member failures, story mechanisms and total collapse go through the structural
+ * destruction engine (src/structure, simulation/structure): incremental load-path re-analysis one
+ * round per step (beams, slabs and connections checked too), falling blocks with impact on the
+ * floors below (crush-down or arrest), rubble, fragments with exact masses. This runtime keeps
+ * the Phase 17 views of that state (failed flags, story stiffness / strength for the lumped model,
+ * remaining lateral strength, partial / total collapse flags).
  */
 import type { Vec3 } from '@/core/types';
 import type { WorldObject } from '@/core/model';
-import { hashString, qRotate, seededRandom, vAdd, vScale } from '@/core/math';
+import { hashString, seededRandom } from '@/core/math';
 import { GRAVITY } from '@/core/units';
 import { analyzeBuilding, type BuildingAnalysis } from '@/buildings/analysis';
+import { MS, type FailCause } from '@/structure/types';
+import { activate, kinematics, structureOf, type StructureState } from '../structure/state';
 import { analysisOf } from '@/buildings/design';
 import { MATERIALS, material } from '@/buildings/materials';
 import { lumpStories, type ModularUnit } from '@/buildings/structuralAdapter';
@@ -34,8 +39,8 @@ import type { SystemContext } from '../systems/SimulationSystem';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { StructuralModel } from '../seismic/StructuralModel';
 import { DamageState, worst } from '../damage/DamageState';
-import { spawnDebris } from '../damage/spawn';
-import { collapse, COMPONENT_ROUNDS, downhill, noteFacadeFailure, type QuakeCollapse } from '../damage/behaviors/building';
+import { COMPONENT_ROUNDS, downhill, type QuakeCollapse } from '../damage/behaviors/building';
+import { blastGovernsStructure } from '../seismic/SeismicState';
 import { accumulate, capacities, CRACK_LEVELS, failPart, isDriftPart } from '../damage/behaviors/seismic';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 import type { DamageCause, Hazard } from '../analysis/DamageEvent';
@@ -44,16 +49,8 @@ import { scaleShape } from '../RuntimeBuilder';
 
 /** ± scatter of member drift capacities (deterministic per object seed + member id). */
 const SCATTER = 0.25;
-/** Debris bodies spawned for individually failing members of one building. */
-const DEBRIS_BUDGET = 24;
-/** Damage events recorded per building for individual members. */
-const EVENT_BUDGET = 60;
-/** Load-path re-analysis rounds per failure batch. */
-const ROUNDS = 6;
-/** Utilization above which a vertical member fails under redistributed gravity load. */
-const OVERLOAD = 1.25;
-/** A story collapses when its surviving vertical members carry less than this share of its capacity. */
-const STORY_LOSS = 0.4;
+/** Damage events recorded per building for individual member failures (the full sequence is in the collapse model). */
+export const EVENT_BUDGET = 60;
 
 export interface ModularRuntime {
   design: BuildingDesign;
@@ -91,10 +88,12 @@ export interface ModularRuntime {
   windShare: number;
   /** Members failing at the first evaluation (unsupported / overloaded in the original world). */
   pending: number[];
-  debrisLeft: number;
-  eventsLeft: number;
   /** Bumped on member state changes (renderers). */
   rev: number;
+  /** Structural destruction state (Phase 25; created with the first structural change). */
+  structure?: StructureState;
+  /** Member index of each facade component (−1: none). */
+  memberOfComp: Int32Array;
 }
 
 const scatterOf = (seed: number, id: string) => 1 + (seededRandom((seed ^ hashString(`member:${id}`)) >>> 0)() * 2 - 1) * SCATTER;
@@ -114,8 +113,10 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
   const capacity = new Float64Array(n).fill(Infinity);
   const storyMembers: number[][] = Array.from({ length: floors }, () => []);
   const pending: number[] = [];
+  const memberOfComp = new Int32Array(o.components.length).fill(-1);
   design.members.forEach((m, i) => {
     comp[i] = byComp.get(m.id) ?? -1;
+    if (comp[i] >= 0) memberOfComp[comp[i]] = i;
     damage[i] = Math.min(1, m.initialDamage ?? 0);
     if (damage[i] >= 0.999) {
       // Broken in the original world: absent from the start (no event, no debris).
@@ -138,7 +139,7 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
     design, floors, scale, initial, current: initial, comp, damage, failed, failedSet, capacity, storyMembers,
     storyDrift: new Float64Array(floors), storyPeak: new Float64Array(floors), storyPeakAxis: new Float64Array(2 * floors), evalPeak: new Float64Array(floors),
     unit: null, unitIndex: -1, modelK: new Float64Array(0), modelFy: new Float64Array(0),
-    collapsedFrom: Infinity, reserve: strengthReserve(initial, initial), windShare: 1, pending, debrisLeft: DEBRIS_BUDGET, eventsLeft: EVENT_BUDGET, rev: 0,
+    collapsedFrom: Infinity, reserve: strengthReserve(initial, initial), windShare: 1, pending, rev: 0, memberOfComp,
   };
 }
 
@@ -198,6 +199,17 @@ function memberDemand(mr: ModularRuntime, i: number): number {
   return mr.storyPeak[s];
 }
 
+/**
+ * Raise a member's damage index (any hazard): through the collapse model when it exists (state
+ * DAMAGED / SEVERE, gravity capacity × (1 − 0.3·D)); otherwise the array the model starts from.
+ */
+export function raiseDamage(mr: ModularRuntime, i: number, d: number, hazard: string) {
+  if (d <= mr.damage[i] || mr.failed[i]) return;
+  if (mr.structure) mr.structure.model.setDamage(i, Math.min(0.999, d), hazard);
+  else mr.damage[i] = Math.min(0.999, d);
+  mr.rev++;
+}
+
 /** Members whose story peak drift grew since the last evaluation; returns the newly failed. */
 function evaluateDrift(mr: ModularRuntime): number[] {
   const out: number[] = [];
@@ -209,133 +221,103 @@ function evaluateDrift(mr: ModularRuntime): number[] {
     for (const i of mr.storyMembers[s]) {
       if (mr.failed[i]) continue;
       const d = memberDemand(mr, i) / mr.capacity[i];
-      if (d > mr.damage[i]) {
-        mr.damage[i] = Math.min(1, d);
-        mr.rev++;
-      }
+      if (d > mr.damage[i] && d < 1) raiseDamage(mr, i, d, 'earthquake');
       if (d >= 1) out.push(i);
     }
   }
   return out;
 }
 
-const memberCenter = (e: RuntimeEntity, mr: ModularRuntime, i: number): Vec3 => {
-  const b = mr.initial.members[i].box;
-  const local: Vec3 = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
-  return vAdd(e.initialPose.position, qRotate(e.initialPose.quaternion, local));
-};
-
 interface FailOpts {
   hazard: Hazard;
   cause: DamageCause;
   response: number;
-  /** Horizontal push direction for debris (world). */
+  /** Horizontal push direction (world) — informational (fragments carry their own velocity). */
   dir: Vec3;
+  /** Velocity of each failing member (building frame, m/s) when it is known (wall blown out by a wave). */
+  velocity?: (i: number) => Vec3 | undefined;
+  /** The velocity is an impulse a wave gave it (fragment momentum origin), not the structure's motion. */
+  impulse?: boolean;
 }
 
-/** Remove one member (state, facade component, debris, event). */
-function markFailed(e: RuntimeEntity, ctx: SystemContext, i: number, o: FailOpts, record: boolean) {
-  const mr = e.modular!;
-  if (mr.failed[i]) return;
-  const m = mr.design.members[i];
-  mr.failed[i] = 1;
-  mr.failedSet.add(m.id);
-  mr.damage[i] = 1;
-  const ci = mr.comp[i];
-  if (ci >= 0) {
-    const c = e.components[ci];
-    if (c.condition === 'intact') {
-      c.condition = m.type === 'window' ? 'broken' : 'detached';
-      c.health = 0;
-      c.state = DamageState.DESTROYED;
-      noteFacadeFailure(e);
-    }
-  }
-  const pos = memberCenter(e, mr, i);
-  const a = mr.initial.members[i];
-  if (mr.debrisLeft > 0 && m.type !== 'window' && m.level >= 0) {
-    mr.debrisLeft--;
-    const k = mr.scale;
-    spawnDebris(ctx, e, {
-      kind: m.type === 'wall' && ci >= 0 ? 'cladding' : 'structure',
-      position: pos,
-      size: [m.size[0] * k[0], m.size[1] * k[1], m.size[2] * k[2]],
-      mass: Math.min(80000, Math.max(20, a.mass)),
-      color: MATERIALS[m.material].color,
-      push: vScale(o.dir, 0.3),
-      hazard: o.hazard === 'wind' ? undefined : o.hazard,
-    });
-  }
-  if (record && mr.eventsLeft > 0 && (m.type !== 'window' && m.type !== 'door')) {
-    mr.eventsLeft--;
-    ctx.recordDamage(e, {
-      eventType: 'FAILED', cause: o.cause, hazard: o.hazard, componentId: m.id, memberType: m.type, worldPosition: pos,
-      response: o.response, damageBefore: 0, damageAfter: 1, localWindSpeed: o.hazard === 'wind' ? e.localWind.speed : 0,
-    });
-  }
-}
+const FAIL_CAUSE: Partial<Record<DamageCause, FailCause>> = { drift: 'drift', overpressure: 'overpressure', gravity: 'support', foundation: 'foundation', impact: 'impact' };
+
+/** Hazard name used inside the collapse model for members failing in the ORIGINAL world. */
+export const ORIGINAL_WORLD = 'original';
 
 /**
- * Fail members and propagate: stiffness / strength out of the structural model, load-path
- * re-analysis (unsupported members fall, overloaded vertical members fail), story collapse.
+ * Members failed by a hazard model (drift capacity, out-of-plane wall failure …): they leave the
+ * structure now; the collapse engine redistributes their load from the next round on (one round per
+ * fixed step), lets what lost its support fall, and records the sequence.
  */
 export function failMembers(e: RuntimeEntity, ctx: SystemContext, list: number[], o: FailOpts) {
   const mr = e.modular!;
-  let batch = list.filter((i) => !mr.failed[i]);
+  const batch = list.filter((i) => !mr.failed[i]);
   if (!batch.length) return;
-  let first = true;
-  for (let round = 0; batch.length && round < ROUNDS; round++) {
-    for (const i of batch) markFailed(e, ctx, i, round === 0 ? o : { ...o, cause: 'gravity' }, first || mr.design.members[i].type === 'column');
-    first = false;
-    mr.current = analyzeBuilding(mr.design, { scale: mr.scale, failed: mr.failedSet });
-    const next: number[] = [];
-    mr.design.members.forEach((m, i) => {
-      if (mr.failed[i] || m.level < 0 || m.level >= mr.collapsedFrom) return;
-      const a = mr.current.members[i];
-      if (!a.supported) next.push(i);
-      else if (a.bearing && (m.type === 'column' || m.type === 'wall') && a.utilization > OVERLOAD) next.push(i);
-    });
-    batch = next;
-  }
-  if (batch.length) for (const i of batch) markFailed(e, ctx, i, { ...o, cause: 'gravity' }, false);
-  if (batch.length) mr.current = analyzeBuilding(mr.design, { scale: mr.scale, failed: mr.failedSet });
-  mr.reserve = strengthReserve(mr.initial, mr.current);
+  const st = structureOf(e, ctx);
+  const kin = kinematics(e, ctx);
+  const tmp: Vec3 = [0, 0, 0];
+  const pending = o.cause === 'gravity' && o.response === 0;
+  st.model.fail(batch, FAIL_CAUSE[o.cause] ?? 'story', pending ? ORIGINAL_WORLD : o.hazard, ctx.time, {
+    u: o.response,
+    impulse: o.impulse,
+    velocity: (i) => o.velocity?.(i) ?? (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3),
+  });
+  for (const i of batch) { mr.failed[i] = 1; mr.failedSet.add(mr.design.members[i].id); }
+  st.lateralDirty = true;
+  st.analysisDirty = true;
   mr.rev++;
   e.rev++;
-  const lost = lostStory(mr);
-  if (lost !== null) {
-    collapseFrom(e, ctx, lost, o);
-    return;
+  activate(e, ctx);
+  if (!st.noted.has('memberLog')) {
+    st.noted.add('memberLog');
+    ctx.log(e.id, 'warn', { key: 'log.building.memberFailed', params: { n: batch.length } });
   }
-  syncModel(e, ctx);
-  ctx.log(e.id, 'warn', { key: 'log.building.memberFailed', params: { n: mr.failedSet.size } });
 }
 
-/** Lowest story that lost most of its vertical capacity (null = none). */
-function lostStory(mr: ModularRuntime): number | null {
-  for (let s = 0; s < Math.min(mr.floors, mr.collapsedFrom); s++) {
-    let all = 0, left = 0;
-    mr.design.members.forEach((m, i) => {
-      if (m.level !== s || (m.type !== 'column' && !(m.type === 'wall' && m.role === 'bearing'))) return;
-      const mat = material(m.material);
-      if (!mat.structural) return;
-      const a = mr.initial.members[i];
-      const cap = mat.compressive * a.size[0] * a.size[2] * mat.fill[m.type === 'column' ? 'column' : 'wall'];
-      all += cap;
-      if (!mr.failed[i] && mr.current.members[i].supported) left += cap;
-    });
-    if (all > 0 && left < STORY_LOSS * all) return s;
+/** Current story stiffness / strength from the members still standing (original contributions). */
+export function currentStories(mr: ModularRuntime): { kx: number[]; kz: number[]; vx: number[]; vz: number[] } {
+  const n = mr.floors;
+  const out = { kx: new Array(n).fill(0), kz: new Array(n).fill(0), vx: new Array(n).fill(0), vz: new Array(n).fill(0) };
+  const model = mr.structure?.model;
+  if (!model) {
+    mr.initial.stories.forEach((s, k) => { out.kx[k] = s.kx; out.kz[k] = s.kz; out.vx[k] = s.vx; out.vz[k] = s.vz; });
+    return out;
   }
-  return null;
+  const g = model.g;
+  for (let i = 0; i < g.n; i++) {
+    const L = g.level[i];
+    if (L < 0 || L >= n || !(g.kx[i] || g.kz[i] || g.vx[i] || g.vz[i])) continue;
+    if (model.state[i] > MS.SEVERE) continue;
+    // Damaged members keep less of their contribution (k·(1−0.4D), F·(1−0.3D) — as initial damage).
+    const d = Math.min(1, mr.damage[i]) - Math.min(1, mr.design.members[i].initialDamage ?? 0);
+    const kd = 1 - 0.4 * Math.max(0, d), vd = 1 - 0.3 * Math.max(0, d);
+    out.kx[L] += g.kx[i] * kd; out.kz[L] += g.kz[i] * kd; out.vx[L] += g.vx[i] * vd; out.vz[L] += g.vz[i] * vd;
+  }
+  return out;
+}
+
+/** min over stories of the current / initial lateral strength (per axis). */
+export function updateReserve(mr: ModularRuntime) {
+  const c = currentStories(mr);
+  let r = 1;
+  mr.initial.stories.forEach((s, i) => {
+    if (i >= mr.collapsedFrom) return;
+    if (s.vx > 0) r = Math.min(r, c.vx[i] / s.vx);
+    if (s.vz > 0) r = Math.min(r, c.vz[i] / s.vz);
+  });
+  mr.reserve = Math.max(0.05, r);
 }
 
 /** Write the current story stiffness / strength into the structural model (if it exists). */
-function syncModel(e: RuntimeEntity, ctx: SystemContext) {
+export function syncModel(e: RuntimeEntity, ctx: SystemContext) {
   const mr = e.modular!;
   const sr = ctx.runtime.seismic;
+  updateReserve(mr);
   if (!mr.unit || !sr || mr.unitIndex < 0) return;
-  const st = mr.current.stories;
-  const L = lumpStories(st.map((s) => s.mass), st.map((s) => s.height), st.map((s) => s.kx), st.map((s) => s.kz), st.map((s) => s.vx), st.map((s) => s.vz));
+  const st = mr.initial.stories;
+  const c = currentStories(mr);
+  const L = lumpStories(st.map((s) => s.mass), st.map((s) => s.height), c.kx, c.kz, c.vx, c.vz);
   const U = mr.unit;
   for (let j = 0; j < L.kx.length; j++) {
     if (mr.unit.lumps.first[j] >= mr.collapsedFrom) break;
@@ -355,90 +337,30 @@ function syncModel(e: RuntimeEntity, ctx: SystemContext) {
 }
 
 /**
- * Collapse of story `s` and everything above it. Ground story → the whole building (existing
- * collapse). Otherwise the upper part falls as chunks, the lower stories keep standing: their
- * collider, wind obstacle and structural model are cut at the story's base.
+ * The stories from `s` up no longer stand (story mechanism, or crushed from above): shorter
+ * collider, wind obstacle and lumped structural model (Phase 17 truncation).
  */
-export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number, o: FailOpts, quake?: QuakeCollapse) {
+export function truncate(e: RuntimeEntity, ctx: SystemContext, s: number) {
   const mr = e.modular!;
-  // The lumped structural model resolves collapse per dof group.
-  let s = story;
-  if (mr.unit) s = mr.unit.lumps.first[mr.unit.lumps.dof[Math.min(mr.floors - 1, story)] - 1];
-  if (s <= 0) {
-    mr.design.members.forEach((m, i) => {
-      if (!mr.failed[i]) {
-        mr.failed[i] = 1;
-        mr.failedSet.add(m.id);
-        mr.damage[i] = 1;
-      }
-    });
-    mr.collapsedFrom = 0;
-    mr.reserve = 0.05;
-    mr.rev++;
-    collapse(e, ctx, quake ?? (o.hazard === 'wind' ? undefined : { dir: o.dir, speed: 0.3, cause: o.cause, response: o.response, hazard: o.hazard === 'flood' ? 'flood' : o.hazard === 'ground' ? 'ground' : 'earthquake' }));
-    return;
-  }
   if (s >= mr.collapsedFrom) return;
   mr.collapsedFrom = s;
+  if (s <= 0) return;
   const k = mr.scale;
   const base = mr.initial.stories[s].base;
-  // Members of the collapsed stories leave without individual debris (chunks below).
-  let lo: Vec3 = [Infinity, Infinity, Infinity], hi: Vec3 = [-Infinity, -Infinity, -Infinity];
-  let mass = 0;
-  mr.design.members.forEach((m, i) => {
-    if (m.level < s) return;
-    const a = mr.initial.members[i];
-    if (!mr.failed[i]) mass += a.mass;
-    for (let d = 0; d < 3; d++) {
-      lo[d] = Math.min(lo[d], a.box.min[d]);
-      hi[d] = Math.max(hi[d], a.box.max[d]);
-    }
-    if (!mr.failed[i]) {
-      mr.failed[i] = 1;
-      mr.failedSet.add(m.id);
-      mr.damage[i] = 1;
-      const ci = mr.comp[i];
-      if (ci >= 0 && e.components[ci].condition === 'intact') {
-        e.components[ci].condition = 'detached';
-        e.components[ci].health = 0;
-        e.components[ci].state = DamageState.DESTROYED;
-        noteFacadeFailure(e);
-      }
-    }
-  });
   // Rooftop units / sign above the cut go too.
   for (const c of e.components) {
-    if (c.spec.kind !== 'structure' && c.condition === 'intact' && c.spec.position[1] * k[1] >= base) {
+    if (c.spec.kind !== 'structure' && c.condition === 'intact' && c.spec.position[1] * k[1] >= base && mr.memberOfComp[e.components.indexOf(c)] < 0) {
       c.condition = 'detached';
       c.state = DamageState.DESTROYED;
     }
   }
-  const layers = Math.max(1, Math.min(4, mr.floors - s));
-  const H = hi[1] - lo[1];
-  for (let ly = 0; ly < layers; ly++) {
-    for (let ix = 0; ix < 2; ix++) {
-      for (let iz = 0; iz < 2; iz++) {
-        const local: Vec3 = [lo[0] + (hi[0] - lo[0]) * (0.25 + ix * 0.5), lo[1] + (H * (ly + 0.5)) / layers, lo[2] + (hi[2] - lo[2]) * (0.25 + iz * 0.5)];
-        spawnDebris(ctx, e, {
-          kind: 'structure',
-          position: vAdd(e.pose.position, qRotate(e.pose.quaternion, local)),
-          size: [((hi[0] - lo[0]) / 2) * 0.97, (H / layers) * 0.97, ((hi[2] - lo[2]) / 2) * 0.97],
-          mass: Math.min(80000, Math.max(100, mass / (layers * 4))),
-          color: mr.design.spec.color,
-          push: vScale(o.dir, 0.3 + ly * 0.25),
-          hazard: o.hazard === 'wind' ? undefined : o.hazard,
-        });
-      }
-    }
-  }
-  // The remaining lower stories: shorter collider, wake and structural model.
   if (e.body !== null) {
     ctx.physics.removeBody(e.body);
     const plinth = foundationPlinth(e.source, ctx.env.terrain);
     const shapes = [scaleShape({ type: 'box', halfExtents: [e.dims[0] / 2 / k[0], base / 2 / k[1], e.dims[2] / 2 / k[2]], offset: [0, base / 2 / k[1], 0] }, k)];
     if (plinth > 0) shapes.push({ type: 'box', halfExtents: [e.dims[0] / 2 + 0.1, plinth / 2, e.dims[2] / 2 + 0.1], offset: [0, -plinth / 2, 0] });
     e.body = ctx.physics.createBody({
-      kind: 'fixed', position: e.initialPose.position, quaternion: e.initialPose.quaternion, shapes, mass: e.source.physics.mass,
+      kind: 'fixed', position: e.pose.position, quaternion: e.pose.quaternion, shapes, mass: e.source.physics.mass,
       friction: e.source.physics.friction, restitution: e.source.physics.restitution, linearDamping: 0.05, angularDamping: 0.35, userData: { entityId: e.id },
     });
   }
@@ -448,13 +370,103 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
   ctx.env.windField.updateObstacle(e.id, { height: base });
   const sr = ctx.runtime.seismic;
   if (sr && mr.unit && mr.unitIndex >= 0) sr.model.truncateFrom(mr.unitIndex, mr.unit.lumps.dof[s], GRAVITY);
-  mr.current = analyzeBuilding(mr.design, { scale: mr.scale, failed: mr.failedSet });
-  mr.reserve = strengthReserve(mr.initial, mr.current);
-  e.flags.partialCollapse = s;
+  e.flags.partialCollapse = e.flags.partialCollapse === undefined ? s : Math.min(e.flags.partialCollapse, s);
+  updateReserve(mr);
   mr.rev++;
   e.rev++;
+}
+
+/**
+ * Total collapse of a modular building (the ground story's mechanism — earthquake, wind, water,
+ * ground, impact): recorded now with its cause, as the Phase 0–24 collapse; the superstructure then
+ * falls through the collapse engine (crushed onto the ground floor, rubble pile, fragments).
+ */
+export function modularCollapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeCollapse) {
+  if (e.flags.collapsed) return;
+  const mr = e.modular!;
+  const st = structureOf(e, ctx);
+  st.storyCause = quake ? quake.cause : e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue';
+  e.flags.collapsed = true;
+  e.state = DamageState.DESTROYED;
+  if (e.body !== null) ctx.physics.removeBody(e.body);
+  e.body = null;
+  ctx.env.windField.removeObstacle(e.id);
+  ctx.env.flood?.removeObstacle(e.id);
+  st.globalRecorded = true;
+  const hazard: Hazard = quake ? (quake.hazard ?? 'earthquake') : 'wind';
+  if (quake) {
+    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : hazard === 'impact' ? 'log.impact.collapsed' : blastGovernsStructure(e.seismic) ? 'log.blast.collapsed' : 'log.quake.collapsed' });
+    ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard, response: quake.response, damageAfter: 1, ...quake.extra });
+  } else {
+    ctx.log(e.id, 'danger', { key: 'log.building.collapsed' });
+    ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', damageAfter: 1 });
+  }
+  mr.collapsedFrom = 0;
+  mr.reserve = 0.05;
+  // Direction / speed of the sway (fragments leave with the structure's velocity, not this).
+  const kin = kinematics(e, ctx);
+  const tmp: Vec3 = [0, 0, 0];
+  st.model.failStory(0, 'story', hazard, ctx.time, quake?.response ?? e.loadRatio, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  syncFailed(mr);
+  mr.rev++;
+  e.rev++;
+  activate(e, ctx);
+}
+
+/**
+ * Damage level of the structure from the collapse model (folded into the building's state with
+ * worst()): partial collapse → CRITICAL, failed structural members → DAMAGED, damaged members → STRESSED.
+ */
+export function structureLevel(mr: ModularRuntime): DamageState {
+  const st = mr.structure;
+  if (!st) return DamageState.NORMAL;
+  const l = st.level ?? st.model.collapseLevel();
+  return l === 'global' ? DamageState.DESTROYED : l === 'partial' ? DamageState.CRITICAL : l === 'local' ? DamageState.DAMAGED : l === 'damaged' ? DamageState.STRESSED : DamageState.NORMAL;
+}
+
+/** Phase 17 failed flags from the collapse model's states. */
+export function syncFailed(mr: ModularRuntime) {
+  const m = mr.structure?.model;
+  if (!m) return;
+  for (let i = 0; i < m.n; i++) {
+    if (m.state[i] > MS.SEVERE && !mr.failed[i]) {
+      mr.failed[i] = 1;
+      mr.failedSet.add(mr.design.members[i].id);
+      mr.damage[i] = 1;
+    }
+  }
+}
+
+/**
+ * Collapse of story `s` (the lumped model's mechanism: earthquake damage index, wind fatigue,
+ * water or sediment load on the weakest story): its vertical members fail; what they carried
+ * falls and strikes the stories below (collapse engine). Ground story → total collapse.
+ */
+export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number, o: FailOpts, quake?: QuakeCollapse) {
+  const mr = e.modular!;
+  // The lumped structural model resolves collapse per dof group.
+  let s = story;
+  if (mr.unit) s = mr.unit.lumps.first[mr.unit.lumps.dof[Math.min(mr.floors - 1, story)] - 1];
+  if (s <= 0) {
+    modularCollapse(e, ctx, quake ?? (o.hazard === 'wind' ? undefined : { dir: o.dir, speed: 0.3, cause: o.cause, response: o.response, hazard: o.hazard === 'flood' ? 'flood' : o.hazard === 'ground' ? 'ground' : o.hazard === 'impact' ? 'impact' : 'earthquake' }));
+    return;
+  }
+  if (s >= mr.collapsedFrom || e.flags.collapsed) return;
+  const st = structureOf(e, ctx);
+  st.storyCause = o.cause;
   ctx.recordDamage(e, { eventType: 'STORY_COLLAPSED', cause: o.cause, hazard: o.hazard, response: s + 1, damageAfter: 1 - e.health, localWindSpeed: o.hazard === 'wind' ? e.localWind.speed : 0 });
   ctx.log(e.id, 'danger', { key: 'log.building.storyCollapsed', params: { story: s + 1 } });
+  st.noted.add(`story:${s}`);
+  truncate(e, ctx, s);
+  const kin = kinematics(e, ctx);
+  const tmp: Vec3 = [0, 0, 0];
+  st.model.failStory(s, 'story', o.hazard, ctx.time, o.response, (i) => (kin(i, tmp), [tmp[0], tmp[1], tmp[2]] as Vec3));
+  syncFailed(mr);
+  st.lateralDirty = true;
+  st.analysisDirty = true;
+  mr.rev++;
+  e.rev++;
+  activate(e, ctx);
 }
 
 /** Members that fall at the very start (no load path / over capacity in the original world). */
@@ -583,8 +595,7 @@ export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, healt
   if (d > 0.12 && weak < mr.collapsedFrom) {
     for (const i of mr.storyMembers[weak] ?? []) {
       if (!mr.failed[i] && d * 0.9 > mr.damage[i] + 0.02) {
-        mr.damage[i] = d * 0.9;
-        mr.rev++;
+        raiseDamage(mr, i, d * 0.9, 'wind');
         e.rev++;
       }
     }
@@ -614,16 +625,16 @@ const WET_TIME = 3600;
  */
 export function modularFloodCapacity(e: RuntimeEntity, exposure: number, speed: number): { capacity: number; finish: number } {
   const mr = e.modular!;
-  const s0 = mr.current.stories[0];
+  const c = currentStories(mr);
   const f = e.source.seismic?.structure.strengthFactor ?? 1;
-  let cap = Math.max(0, Math.min(s0?.vx ?? 0, s0?.vz ?? 0)) * f;
+  let cap = Math.max(0, Math.min(c.vx[0] ?? 0, c.vz[0] ?? 0)) * f;
   // Ground-story materials: lateral members for strength loss, walls for finishes.
   let wetW = 0, wetSum = 0, finW = 0, finSum = 0;
   mr.design.members.forEach((m, i) => {
     if (m.level !== 0 || mr.failed[i]) return;
     const mat = MATERIALS[m.material];
     if (isLateralRole(m.role)) {
-      const w = mr.current.members[i].vx + mr.current.members[i].vz;
+      const w = mr.initial.members[i].vx + mr.initial.members[i].vz;
       wetW += w;
       if (m.material === 'timber' || m.material === 'masonry') wetSum += w;
     }

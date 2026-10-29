@@ -33,6 +33,7 @@ import { residualStrength } from '../interactions/integrity';
 import { footprint, groundLevel, stateOf } from '../deformation/response';
 import { knockDown } from '../damage/behaviors/human';
 import type { GroundFailureChannel } from './GroundFailureChannel';
+import { currentStories } from '../buildings/modular';
 
 export const AIR = 1.225;
 /** Dynamic pressure coefficient of debris impact (lower end of the published range). */
@@ -72,8 +73,9 @@ const sample: FlowSample = { h: 0, ux: 0, uz: 0, rho: 0, deposit: 0, phi: 0 };
 /** Lateral strength of a building's structure (N) — as the flood model. */
 export function lateralCapacity(e: RuntimeEntity): number {
   if (e.modular) {
-    const s0 = e.modular.current.stories[0];
-    return Math.max(0, Math.min(s0?.vx ?? 0, s0?.vz ?? 0)) * (e.source.seismic?.structure.strengthFactor ?? 1);
+    // Ground-story strength of the members still standing (Phase 25: the collapse engine's state).
+    const c = currentStories(e.modular);
+    return Math.max(0, Math.min(c.vx[0] ?? 0, c.vz[0] ?? 0)) * (e.source.seismic?.structure.strengthFactor ?? 1);
   }
   const seismic = seismicOf(e.source);
   const cy = seismic ? STRUCTURAL_SYSTEMS[seismic.structure.system].cy * seismic.structure.strengthFactor : 0.25;

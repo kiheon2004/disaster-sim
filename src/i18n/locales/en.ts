@@ -11,6 +11,7 @@ import { enDeformation } from './en.deformation';
 import { enGround } from './en.ground';
 import { enImpact } from './en.impact';
 import { enBlast } from './en.blast';
+import { enStructure } from './en.structure';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -598,4 +599,5 @@ export const en: Record<MessageKey, string> = {
   ...enGround,
   ...enImpact,
   ...enBlast,
+  ...enStructure,
 };

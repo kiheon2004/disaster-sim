@@ -18,6 +18,7 @@
  * Inactive (and free) without an impact.
  */
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
+import { collapseFrom } from '../buildings/modular';
 import { DEFORM_INTERVAL } from './DeformationSystem';
 import { GRAVITY } from '@/core/units';
 import { WORLD_SIZE } from '@/core/units';
@@ -217,6 +218,11 @@ export class ImpactSystem implements SimulationSystem {
       e.health = Math.min(e.health, 1 - st.damage);
       e.lastHazard = 'impact';
       e.lastCause = 'ejecta';
+    }
+    // Phase 25: a modular building whose ground story's lateral capacity the ejecta curtain exhausted
+    // collapses through the structural engine (legacy buildings keep the Phase 23 damage state).
+    if (st.damage >= 1 && e.modular && !e.flags.collapsed) {
+      collapseFrom(e, ctx, 0, { hazard: 'impact', cause: 'ejecta', response: r, dir: [l.dirX, 0, l.dirZ] });
     }
   }
 

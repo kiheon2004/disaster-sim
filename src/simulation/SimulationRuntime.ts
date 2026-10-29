@@ -132,11 +132,17 @@ export interface DebrisPiece {
   lastEta?: number;
   /** ForceLedger record (Phase 15). */
   forces?: Float64Array;
+  /**
+   * Fragment of the structural destruction engine (Phase 25): the member it is, the chain root and
+   * primary hazard of its failure, whether it came to rest (fixed body) and when.
+   */
+  structural?: { owner: EntityId; member: number; root: number; hazard: string; settled: boolean; quiet: number };
 }
 
 /** Short-lived visual particles (glass shards, leaves) — integrated without the physics engine. */
 export interface Particle {
-  kind: 'glass' | 'leaf';
+  /** dust: visual-only cloud of a collapse / impact (Phase 25) — never read by the simulation. */
+  kind: 'glass' | 'leaf' | 'dust';
   position: Vec3;
   velocity: Vec3;
   rotation: Quat;
@@ -175,4 +181,8 @@ export interface SimulationRuntime {
   roads?: import('./roads/RoadRuntime').RoadRuntime;
   /** Vegetation options of this run (Phase 19). */
   vegetation?: { flood: boolean };
+  /** The run has modular buildings (Phase 25: the structural destruction engine may act — contact damage per strike episode). */
+  hasModular?: boolean;
+  /** Structural destruction (Phase 25): active collapse models, fragments, rubble (lazily created). */
+  structures?: import('./structure/state').StructuresRuntime;
 }

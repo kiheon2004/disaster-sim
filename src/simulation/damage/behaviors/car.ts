@@ -6,7 +6,7 @@ import { healthLevel, loadLevel } from '../fatigue';
 import { floodLevel } from '../floodLevels';
 import { pushHazard } from '../../flood/FloodState';
 import { pushedByBlast, pushedByImpact, pushedBySediment } from '../../forces/ForceLedger';
-import type { DamageCause } from '../../analysis/DamageEvent';
+import { HAZARDS, type DamageCause } from '../../analysis/DamageEvent';
 
 export function updateCar(e: RuntimeEntity, ctx: SystemContext) {
   // Flood (Phase 14): when the water dominated the push, blame it (undefined in dry runs).
@@ -18,9 +18,14 @@ export function updateCar(e: RuntimeEntity, ctx: SystemContext) {
   const ground = !hit && !blast && !pushHazard(e) && (pushedBySediment(e, ctx.forces.step) || (e.ground !== undefined && e.localWind.speed < 1)) ? 'ground' as const : undefined;
   // Shaking (Phase 23): moved by the ground motion (earthquake or impact shock — the recorder maps
   // it to the impact where the impact's peak governs), never by a calm wind.
-  const shaken = !hit && !blast && !ground && !pushHazard(e) && e.localWind.speed < 1 && (e.seismic?.pga ?? 0) > 0 ? 'earthquake' as const : undefined;
-  const flood = pushHazard(e) ?? hit ?? blast ?? ground ?? shaken;
-  const pushCause: DamageCause = e.lastCause === 'impact' ? 'impact' : hit ? 'ejecta' : blast ? 'blast' : ground ? 'debris' : shaken ? 'shaking' : flood ? (e.flood!.buoyancyRatio >= 1 ? 'buoyancy' : 'hydrodynamic') : 'push';
+  // Phase 25: pushed by a fragment of a collapsing building (its primary hazard), never a calm wind.
+  const frag = !hit && !blast && !ground && !pushHazard(e) && e.counters.fragStep !== undefined && ctx.step - e.counters.fragStep < 120 && e.localWind.speed < 1 ? HAZARDS[e.counters.fragHazard] : undefined;
+  // Afloat in calm air (Phase 25): whatever nudges it (other floating bodies, contacts too weak to
+  // report) moves in the water — the flood's, never the calm wind's.
+  const afloat = !hit && !blast && !ground && !frag && !pushHazard(e) && e.localWind.speed < 1 && (e.flood?.submerged ?? 0) > 0 ? 'flood' as const : undefined;
+  const shaken = !hit && !blast && !ground && !frag && !afloat && !pushHazard(e) && e.localWind.speed < 1 && (e.seismic?.pga ?? 0) > 0 ? 'earthquake' as const : undefined;
+  const flood = pushHazard(e) ?? hit ?? blast ?? ground ?? frag ?? afloat ?? shaken;
+  const pushCause: DamageCause = e.lastCause === 'impact' || frag ? 'impact' : hit ? 'ejecta' : blast ? 'blast' : ground ? 'debris' : shaken ? 'shaking' : pushHazard(e) || afloat ? (e.flood!.buoyancyRatio >= 1 ? 'buoyancy' : 'hydrodynamic') : 'push';
   const up = qRotate(e.pose.quaternion, [0, 1, 0]);
   if (!e.flags.overturned && up[1] < 0.35) {
     e.flags.overturned = true;

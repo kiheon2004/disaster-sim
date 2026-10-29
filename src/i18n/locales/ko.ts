@@ -14,6 +14,7 @@ import { koDeformation } from './ko.deformation';
 import { koGround } from './ko.ground';
 import { koImpact } from './ko.impact';
 import { koBlast } from './ko.blast';
+import { koStructure } from './ko.structure';
 
 export const ko = {
   // App
@@ -601,6 +602,7 @@ export const ko = {
   ...koGround,
   ...koImpact,
   ...koBlast,
+  ...koStructure,
 } as const;
 
 export type MessageKey = keyof typeof ko;

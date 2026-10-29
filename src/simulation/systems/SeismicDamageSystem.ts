@@ -11,6 +11,8 @@ export class SeismicDamageSystem implements SimulationSystem {
   readonly phase = 'postPhysics' as const;
   readonly reads = ['structure', 'poses'] as const;
   readonly writes = ['damage', 'debris'] as const;
+  /** Phase 25: structural collapse of a step is resolved later in it (StructuralCollapseSystem) — seen on the next step. */
+  readonly lagged = ['structure'] as const;
 
   isActive(ctx: SystemContext) {
     const sr = ctx.runtime.seismic;

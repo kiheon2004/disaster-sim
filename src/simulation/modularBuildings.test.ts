@@ -102,11 +102,22 @@ describe('earthquake integration', { timeout: 300_000 }, () => {
   it('a soft ground story concentrates drift there and collapses before an otherwise identical building', async () => {
     const base = design('apartment', { core: false });
     const soft = design('apartment', { core: false, groundFloorHeight: 5.5 });
-    const a = await run(doc([B(base)]), [quake(0.6)], 24);
-    const b = await run(doc([B(soft)]), [quake(0.6)], 24);
-    const ea = only(a).modular!, eb = only(b).modular!;
+    // Phase 25: a building may collapse progressively (rubble then loads the ground story), so the
+    // drift DISTRIBUTION is compared while both still stand — up to the first member failure of either.
+    const a = await run(doc([B(base)]), [quake(0.6)], 0);
+    const b = await run(doc([B(soft)]), [quake(0.6)], 0);
+    let pa = new Float64Array(0), pb = new Float64Array(0);
+    for (let t = 0; t < 24; t += 0.25) {
+      a.advance(0.25);
+      b.advance(0.25);
+      if (only(a).modular!.failedSet.size || only(b).modular!.failedSet.size) break;
+      pa = only(a).modular!.storyPeak.slice();
+      pb = only(b).modular!.storyPeak.slice();
+    }
+    const ea = { storyPeak: pa }, eb = { storyPeak: pb };
     // Ground-story share of the peak drift is larger in the soft-story building.
     const share = (m: typeof ea) => m.storyPeak[0] / Math.max(...m.storyPeak);
+    expect(Math.max(...pa)).toBeGreaterThan(0);
     expect(share(eb)).toBeGreaterThan(share(ea));
     expect(eb.storyPeak[0]).toBeGreaterThan(ea.storyPeak[0]);
     a.unload();

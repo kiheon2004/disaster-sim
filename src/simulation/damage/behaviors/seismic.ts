@@ -34,6 +34,7 @@ import { seismicDamageIndex } from '../seismicLevels';
 import { infraProps } from '../../seismic/structuralProps';
 import { MATERIALS, type MaterialId } from '@/buildings/materials';
 import { updateModularQuake } from '../../buildings/modular';
+import { detachFacadeMember } from '../../structure/facade';
 
 const ONSET = 0.75;
 const INSTANT = 1.3;
@@ -123,6 +124,8 @@ export function failPart(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemConte
   model.topVelocity(st.unit, vel);
   const f = Math.max(0, Math.min(1, (pos[1] - e.pose.position[1]) / H));
   const sway: Vec3 = [vel[0] * f, 0, vel[1] * f];
+  // Modular buildings (Phase 25): the member leaves with the floor's sway velocity only.
+  const modular = e.modular !== undefined && detachFacadeMember(ctx, e, c, 'earthquake', sway);
   if (c.spec.kind === 'window') {
     c.condition = 'broken';
     // Glass falls out of the frame and down the facade.
@@ -131,7 +134,7 @@ export function failPart(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemConte
     return;
   }
   c.condition = 'detached';
-  spawnDebris(ctx, e, {
+  if (!modular) spawnDebris(ctx, e, {
     kind: c.spec.kind,
     position: pos,
     size,

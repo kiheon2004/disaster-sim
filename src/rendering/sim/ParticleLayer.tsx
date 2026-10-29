@@ -38,6 +38,11 @@ export function ParticleLayer() {
       dummy.rotation.set(p.rotation[0], p.rotation[1], p.rotation[2]);
       const s = p.size * fade;
       if (p.kind === 'leaf') dummy.scale.set(s * 1.6, s * 0.15, s);
+      else if (p.kind === 'dust') {
+        // Visual only: a puff that grows as it disperses.
+        const g = p.size * (1 + 2.5 * (1 - p.life / p.maxLife)) * Math.min(1, p.life / 2);
+        dummy.scale.set(g, g * 0.7, g);
+      }
       else dummy.scale.set(s, s, s * 0.3);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
