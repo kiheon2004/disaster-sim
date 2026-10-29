@@ -281,7 +281,11 @@ describe('ash, bombs and the world ledger', () => {
 
   it('mass of every product is conserved and the energy ledger closes', () => {
     const { w, env } = world({ bombFraction: 0.1, ashFraction: 0.1, plumeHeight: 30 });
-    for (let k = 0; k < 900; k++) w.step(k * 0.1, 0.1, env);
+    for (let k = 0; k < 900; k++) {
+      w.step(k * 0.1, 0.1, env);
+      // Closed at every moment, also while bombs fly and ash is still at the vents.
+      if (k % 97 === 0) { const M = w.ledger(); expect(Math.abs(M.mass.residual) / Math.max(1, M.mass.supplied)).toBeLessThan(1e-10); expect(Math.abs(M.energy.residual) / Math.max(1, M.energy.supplied)).toBeLessThan(1e-10); }
+    }
     const L = w.ledger();
     expect(L.mass.supplied).toBeCloseTo(0.5 * 60 * basalt.thermal.bulk, 3);
     expect(Math.abs(L.mass.residual) / L.mass.supplied).toBeLessThan(1e-10);

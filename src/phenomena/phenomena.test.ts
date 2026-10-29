@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire']); // Phase 27: + fire
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano']); // Phase 27: + fire, Phase 28: + volcano
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -64,7 +64,7 @@ describe('registration', () => {
       for (const c of d.channels) expect(CHANNELS[c].status).not.toBe('interface');
     }
     // (meteor → implemented as 'impact' since Phase 23)
-    for (const type of ['blackHole', 'tornado', 'volcano', 'gravityChange', 'atmosphereLoss']) {
+    for (const type of ['blackHole', 'tornado', 'gravityChange', 'atmosphereLoss']) {
       const d = phenomena.get(type)!;
       expect(d.status).toBe('planned');
       expect(() => createEvent({ event: type } as unknown as EventSpec, 0, CTX)).toThrow(/Unsupported/);
@@ -75,6 +75,7 @@ describe('registration', () => {
     expect(phenomena.matchPlanned('폭발을 일으켜')).toBeFalsy();
     expect(phenomena.get('blast')?.status).toBe('implemented');
     expect(phenomena.get('fire')?.status).toBe('implemented');
+    expect(phenomena.get('volcano')?.status).toBe('implemented');
     expect(phenomena.matchPlanned('create a black hole')?.type).toBe('blackHole');
   });
 
@@ -245,7 +246,7 @@ describe('unified damage and interactions', () => {
     expect(residualStrength(fake({ eq: 0.5 }), 'earthquake')).toBe(1); // own damage is in its own model
     expect(residualStrength(fake({ eq: 0.4, flood: 0.6 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.6, 12);
     expect(residualStrength(fake({ eq: 3 }), 'flood')).toBeCloseTo(1 - STRENGTH_LOSS, 12);
-    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0 }); // Phase 23: + impact, Phase 24: + blast, Phase 26: + thermal, Phase 27: + fire (both always 0 — heat acts through the material factor)
+    expect(hazardDamage(fake({ wind: 0.2, eq: 0.1 }))).toEqual({ wind: expect.closeTo(0.2, 12), earthquake: 0.1, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0, volcano: 0 }); // Phase 23: + impact, Phase 24: + blast, Phase 26: + thermal, Phase 27: + fire (both always 0 — heat acts through the material factor), Phase 28: + volcano (lava load index)
     expect(residualStrength(fake({ eq: 0.2, ground: 0.5 }), 'wind')).toBeCloseTo(1 - STRENGTH_LOSS * 0.5, 12); // ground joins the envelope
   });
 

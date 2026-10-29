@@ -100,6 +100,13 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
     },
     { id: 'thermalSources', owner: 'ThermalChannel + ThermalRuntime', kind: 'state', holds: 'heat sources (from the plan) and how far each was integrated (local time), impact heat deposits done; receiver geometry (derived)', present: env.thermal.active, bytes: env.thermal.sources.length * 64 },
     { id: 'thermalLedger', owner: 'ThermalLedger', kind: 'state', holds: 'added / boundary / impact / lost (8 accounts) / transfers, per-source totals and contributions', present: !!env.thermal.rt, bytes: 256 },
+    // Phase 28: volcano state (only in runs with an eruption) — separate from the document; never saved.
+    {
+      id: 'volcanoLava', owner: 'VolcanoWorld.field', kind: 'state', holds: 'mobile lava mass / energy / crust age per vertex, deposit layer (lava / bomb / ash mass, energy, age), applied deposit (terrain share), obstacles, peaks, active lists',
+      present: !!env.volcano.rt, bytes: env.volcano.rt ? env.volcano.rt.world.field.n * 96 : 0,
+    },
+    { id: 'volcanoAir', owner: 'VolcanoWorld.bombs / puffs', kind: 'state', holds: 'bombs in flight (parcel paths), ash puffs (position, mass, spread), vent accumulators', present: !!env.volcano.rt, bytes: env.volcano.rt ? env.volcano.rt.world.bombs.length * 400 + env.volcano.rt.world.puffs.length * 64 : 0 },
+    { id: 'volcanoLedger', owner: 'VolcanoWorld / LavaField ledgers', kind: 'state', holds: 'supplied / held / outflow mass of lava, bombs, ash, gas; heat to ground / objects / water / air / radiation, plume heat; eruption progress (local time, launches, releases)', present: !!env.volcano.rt, bytes: 512 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

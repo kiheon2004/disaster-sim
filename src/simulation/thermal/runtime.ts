@@ -84,7 +84,7 @@ export interface BuildingThermal {
   bounds: { x0: number; z0: number; x1: number; z1: number; top: number };
 }
 
-interface EntityThermal {
+export interface EntityThermal {
   e: RuntimeEntity;
   kind: 'modular' | 'building' | 'car' | 'tree' | 'wall' | 'pole';
   body: number;

@@ -17,6 +17,7 @@ import { koBlast } from './ko.blast';
 import { koStructure } from './ko.structure';
 import { koThermal } from './ko.thermal';
 import { koFire } from './ko.fire';
+import { koVolcano } from './ko.volcano';
 
 export const ko = {
   // App
@@ -607,6 +608,7 @@ export const ko = {
   ...koStructure,
   ...koThermal,
   ...koFire,
+  ...koVolcano,
 } as const;
 
 export type MessageKey = keyof typeof ko;

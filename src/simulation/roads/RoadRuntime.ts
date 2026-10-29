@@ -65,6 +65,8 @@ export interface RoadSegmentState {
   deform?: import('../deformation/response').RoadDeformState;
   /** Collapse rubble on the carriageway (Phase 25): thickest point (m), blocked, building it came from. */
   rubble?: { height: number; blocked: boolean; source: string | null };
+  /** Volcano (Phase 28): lava / solidified deposit / ash on the carriageway (m), surface temperature (K). */
+  volcanic?: { lava: number; deposit: number; ash: number; surfaceT: number; peakLava: number; peakT: number; blocked: boolean; impassable: boolean };
 }
 
 export interface Inlet {

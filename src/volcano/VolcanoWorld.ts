@@ -288,11 +288,12 @@ export class VolcanoWorld {
     return s;
   }
 
-  bombsInFlight(): { mass: number; energy: number } {
-    let m = 0, e = 0;
+  /** Bombs launched and not landed yet, plus the bomb share erupted since the last launch (still at the vents). */
+  bombsInFlight(): { mass: number; energy: number; pendingMass: number; pendingEnergy: number } {
+    let m = 0, e = 0, pm = 0, pe = 0;
     for (const b of this.bombs) if (!b.landed) { m += b.parcel.mass; e += b.energy; }
-    for (const er of this.eruptions) for (const v of er.vents) { m += v.bombMass; e += v.bombEnergy; }
-    return { mass: m, energy: e };
+    for (const er of this.eruptions) for (const v of er.vents) { pm += v.bombMass; pe += v.bombEnergy; }
+    return { mass: m + pm, energy: e + pe, pendingMass: pm, pendingEnergy: pe };
   }
 
   /** Ash erupted but not yet released (between releases). */
@@ -307,9 +308,9 @@ export class VolcanoWorld {
     const fl = this.bombsInFlight();
     const mobile = f.mobileMass(), solid = f.depositMass(), bombsDep = f.bombDeposit(), ashDep = f.ashDeposit();
     const ashAir = this.airborneAsh() + this.pendingAsh();
-    const supplied = L.suppliedMass + T.bombsLaunched + fl.mass + T.ashReleased + this.pendingAsh();
+    const supplied = L.suppliedMass + T.bombsLaunched + fl.pendingMass + T.ashReleased + this.pendingAsh();
     const massHeld = mobile + solid + fl.mass + bombsDep + T.bombsCaught + ashAir + ashDep + T.ashCaught + L.outMass + T.outBombs + T.outAsh;
-    const eSup = L.suppliedEnergy + T.bombEnergyLaunched + fl.energy + T.plumeHeat;
+    const eSup = L.suppliedEnergy + T.bombEnergyLaunched + fl.pendingEnergy + T.plumeHeat;
     const internal = f.mobileEnergy() + f.depositEnergy();
     const eOut = internal + fl.energy + L.toGround + L.toObjects + T.bombCaughtEnergy + L.toWater + L.toAir + L.radiated + L.outEnergy + T.outBombEnergy + T.plumeHeat;
     // Latent heat released so far: what came in as melt minus what the lava still holds.
@@ -320,7 +321,7 @@ export class VolcanoWorld {
     for (const i of f.mobile) pe += f.M[i] * GRAVITY * (f.bed(i) + 0.5 * f.depth(i));
     return {
       mass: {
-        supplied, lavaSupplied: L.suppliedMass, bombsLaunched: T.bombsLaunched + fl.mass, ashReleased: T.ashReleased + this.pendingAsh(),
+        supplied, lavaSupplied: L.suppliedMass, bombsLaunched: T.bombsLaunched + fl.pendingMass, ashReleased: T.ashReleased + this.pendingAsh(),
         mobile, solidified: solid, bombsInFlight: fl.mass, bombsDeposited: bombsDep, bombsCaught: T.bombsCaught,
         ashAirborne: ashAir, ashDeposited: ashDep, ashCaught: T.ashCaught, outLava: L.outMass, outBombs: T.outBombs, outAsh: T.outAsh, gas: T.gas,
         residual: supplied - massHeld,

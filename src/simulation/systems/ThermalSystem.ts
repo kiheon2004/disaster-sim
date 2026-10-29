@@ -16,6 +16,7 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { ThermalRuntime } from '../thermal/runtime';
 import { FireRuntime } from '../fire/runtime';
+import { VolcanoRuntime } from '../volcano/runtime';
 import { simProfiler } from '../profiling/SimProfiler';
 
 /** Thermal solver period in fixed steps (6 × 1/60 s = 0.1 s). Deterministic: the step counter only. */
@@ -31,7 +32,7 @@ export class ThermalSystem implements SimulationSystem {
   readonly lagged = ['debris', 'structure'] as const;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.thermal.active || ctx.env.fire.active;
+    return ctx.env.thermal.active || ctx.env.fire.active || ctx.env.volcano.active;
   }
 
   update(ctx: SystemContext, dt: number) {
@@ -45,10 +46,22 @@ export class ThermalSystem implements SimulationSystem {
     const rt = ch.rt;
     for (const s of ch.sources) ctx.milestone?.({ time: s.start, kind: 'heatSource', hazard: 'thermal', subject: 'heatSource', label: { key: 'milestone.heatSource', params: { id: s.name, kind: s.spec.kind } } }, `heat:${s.id}`);
     const steps = rt.prepare(ctx, dt);
-    // Phase 27: combustion on top of the thermal state (created with the first ignition).
+    // Phase 28: the volcano (created with the first eruption) — its heat joins the step's sources
+    // before the fire model reads the incident fluxes, so lava heat is judged by the normal ignition rules.
+    const vc = ctx.env.volcano;
+    if (!vc.rt && vc.eruptions.length) vc.rt = new VolcanoRuntime(ctx, rt);
+    const volcano = vc.rt;
+    if (volcano) {
+      const tv = simProfiler.now();
+      steps.push(...volcano.prepare(ctx, dt));
+      simProfiler.add('volcano.prepare', tv);
+    }
+    // Phase 27: combustion on top of the thermal state (created with the first ignition; with a volcano
+    // the combustion model runs too — lava heat may ignite fuel).
     const fc = ctx.env.fire;
-    if (!fc.rt && fc.wanted()) fc.rt = new FireRuntime(ctx, rt);
+    if (!fc.rt && (fc.wanted() || volcano)) fc.rt = new FireRuntime(ctx, rt);
     const fire = fc.rt;
+    if (fire && volcano) volcano.attachFire(fire);
     if (fire) {
       const tf = simProfiler.now();
       steps.push(...fire.prepare(ctx, dt, steps));
@@ -61,6 +74,11 @@ export class ThermalSystem implements SimulationSystem {
       const tf = simProfiler.now();
       fire.after(ctx, dt);
       simProfiler.add('fire.after', tf);
+    }
+    if (volcano) {
+      const tv = simProfiler.now();
+      volcano.after(ctx, dt);
+      simProfiler.add('volcano.after', tv);
     }
     const t2 = simProfiler.now();
     rt.after(ctx);

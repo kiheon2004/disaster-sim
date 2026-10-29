@@ -173,7 +173,7 @@ export class FireRuntime {
   /** Item → owning object (id), its building (−1) and member (−1). */
   readonly owner: EntityId[] = [];
   readonly itemBuilding: number[] = [];
-  private readonly bodyItems = new Map<number, number[]>();
+  readonly bodyItems = new Map<number, number[]>();
   private readonly roomOfComp = new Map<number, number>();
   readonly rooms: RoomInfo[] = [];
   private readonly heapItem = new Map<number, number>();
@@ -211,6 +211,8 @@ export class FireRuntime {
    * here bypasses fuel, oxygen, moisture or the ledgers.
    */
   readonly incidentProviders: ((rt: FireRuntime, qInc: Float32Array, pilot: Uint8Array) => void)[] = [];
+  /** Phase 28: label of what heated an item that ignites from its incident flux ('lava'), null = 'flux'. */
+  ignitionSource: ((i: number) => string | null) | null = null;
   contact(P: Vec3, radius: number, cause: string): number {
     const fw = this.fw;
     let lit = 0;
@@ -1130,7 +1132,9 @@ export class FireRuntime {
         e.lastCause = 'fire';
         e.lastHazard = 'fire';
         e.rev++;
-        ctx.recordDamage(e, { eventType: level === 2 ? 'DESTROYED' : 'DAMAGED', cause: 'fire', hazard: 'fire', damageBefore: before, damageAfter: 1 - e.health, worldPosition: [...e.pose.position] });
+        // Phase 28: a crown lit by lava heat is a secondary fire of the volcano (hazard fire, source volcano).
+        const byLava = this.cause[i] === 'lava';
+        ctx.recordDamage(e, { eventType: level === 2 ? 'DESTROYED' : 'DAMAGED', cause: 'fire', hazard: 'fire', damageBefore: before, damageAfter: 1 - e.health, worldPosition: [...e.pose.position], ...(byLava ? { source: 'volcano' } : {}) });
         if (level === 2) this.stats.treesBurned++;
       }
     }
@@ -1158,7 +1162,7 @@ export class FireRuntime {
   private onChange(ctx: SystemContext, i: number, from: number, to: number) {
     const fw = this.fw;
     if (to === FS.ignited) {
-      if (this.cause[i] === '') this.cause[i] = 'flux';
+      if (this.cause[i] === '') this.cause[i] = this.ignitionSource?.(i) ?? 'flux';
       const first = !this.ignitedOwners.has(this.owner[i]);
       this.ignitedOwners.add(this.owner[i]);
       this.markInvolved(i);
@@ -1166,7 +1170,7 @@ export class FireRuntime {
         this.th.spread = true;
         ctx.milestone?.({ time: ctx.time, kind: 'fireSpread', hazard: 'fire', subject: 'fire', label: { key: 'milestone.fireSpread', params: { what: fw.kind[i] } } }, 'fire:spread');
       }
-      if (this.cause[i] === 'debris' && !this.th.secondary) {
+      if ((this.cause[i] === 'debris' || this.cause[i] === 'lava') && !this.th.secondary) {
         this.th.secondary = true;
         ctx.milestone?.({ time: ctx.time, kind: 'secondaryIgnition', hazard: 'fire', subject: 'fire', label: { key: 'milestone.secondaryIgnition' } }, 'fire:secondary');
       }

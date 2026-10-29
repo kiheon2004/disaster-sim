@@ -34,7 +34,9 @@ import { boundaryLayer, rigidPart, surfaceTemperature, surfaceUnderWater, H_WATE
 import { crystalFraction, lockTemperature, specificEnergy, temperatureFromEnergy, viscosity, yieldStrength, type LavaMaterial } from './materials';
 
 export const MAX_SUB = 48;
-const NO_TOP = { rad: 0, conv: 0, water: 0, sink: Infinity };
+const NO_TOP = { rad: 0, conv: 0, water: 0, sink: Infinity, source: -Infinity };
+/** Deposits thinner than this (m) hand their heat to the ground and are not computed (grams of spatter). */
+const THIN_DEPOSIT = 1e-4;
 /** Fraction of the surface difference a face may move per sub-step (explicit diffusion bound with margin). */
 const FACE_SHARE = 0.2;
 /** Mobile lava thinner than this (m) is a residual film: it does not flow (it cools and locks). */
@@ -43,6 +45,8 @@ export const FILM = 0.005;
 export const RETIRE_DT = 2;
 /** Bulk density of a fresh ash fall deposit (kg/m³; 500–1500 reported) — assumed. */
 export const ASH_DEPOSIT_DENSITY = 1000;
+/** Deposits are cooled every DEP_EVERY calls with the accumulated time (their time constants are hours). */
+export const DEP_EVERY = 10;
 /** Vertices without flow for this many sub-steps fall asleep until something flows into them. */
 const SLEEP_AFTER = 4;
 
@@ -115,6 +119,10 @@ export class LavaField {
   readonly qAir: Float64Array;
   readonly qRad: Float64Array;
   readonly qWater: Float64Array;
+  /** Of qRad: the part radiated by the exposed margins (flow fronts), and their outward normal × area (m²). */
+  readonly qSide: Float64Array;
+  readonly nSideX: Float32Array;
+  readonly nSideZ: Float32Array;
   /** Peak mobile depth (m) and peak interior temperature (K) ever seen per vertex (overlays, inspector). */
   readonly hPeak: Float32Array;
   readonly Tpeak: Float32Array;
@@ -166,6 +174,7 @@ export class LavaField {
     this.depAge = new Float32Array(n); this.depT = new Float32Array(n).fill(Tref); this.dep = new Float32Array(n); this.applied = new Float32Array(n);
     this.obstacle = new Float32Array(n);
     this.qGround = new Float64Array(n); this.qAir = new Float64Array(n); this.qRad = new Float64Array(n); this.qWater = new Float64Array(n);
+    this.qSide = new Float64Array(n); this.nSideX = new Float32Array(n); this.nSideZ = new Float32Array(n);
     this.hPeak = new Float32Array(n); this.Tpeak = new Float32Array(n);
     this.inMobile = new Uint8Array(n); this.inHot = new Uint8Array(n); this.still = new Uint8Array(n); this.heatTouched = new Uint8Array(n);
     this.outV = new Float64Array(n);
@@ -278,12 +287,21 @@ export class LavaField {
   /** Cached temperatures of a vertex from its energy. */
   private refresh(i: number) {
     if (this.M[i] > 0) {
-      const T = temperatureFromEnergy(this.mat, this.E[i] / this.M[i], this.Tref);
+      const T = this.clampT(temperatureFromEnergy(this.mat, this.E[i] / this.M[i], this.Tref));
       this.T[i] = T;
       if (T > this.Tpeak[i]) this.Tpeak[i] = T;
     }
     const dm = this.depM[i] + this.depB[i];
-    if (dm > 0) this.depT[i] = temperatureFromEnergy(this.mat, this.depE[i] / dm, this.Tref);
+    if (dm > 0) this.depT[i] = this.clampT(temperatureFromEnergy(this.mat, this.depE[i] / dm, this.Tref));
+  }
+
+  /**
+   * Temperatures of vanishing masses (grams) can be off by round-off of E / M; nothing physical lies outside
+   * [reference − 50 K, liquidus + 300 K], so the cached temperature is bounded (the energy itself is untouched).
+   */
+  private clampT(T: number): number {
+    const lo = this.Tref - 50, hi = this.mat.thermal.TL + 300;
+    return T < lo ? lo : T > hi ? hi : T;
   }
 
   // ── Flow ───────────────────────────────────────────────
@@ -295,7 +313,7 @@ export class LavaField {
     const Ti = this.T[i];
     if (Ti <= this.Tlock) return 0;
     const d = boundaryLayer(this.kappa, this.age[i], h);
-    const below = this.dep[i] > 0.01 ? this.depT[i] : Ti; // base boundary layer judged only on a deposit (ground side below)
+    const below = this.depThicknessLava(i) > 0.01 ? this.depT[i] : Ti; // base boundary layer judged only on a lava deposit (ground side below)
     const top = rigidPart(d, Ti, this.Ts[i], this.Tlock);
     const base = rigidPart(d, Ti, Math.min(below, Ti), this.Tlock);
     return Math.max(0, h - top - base);
@@ -384,7 +402,9 @@ export class LavaField {
       for (let f = 0; f < nf; f++) {
         const i = this.fFrom[f], j = this.fTo[f], v = this.fV[f];
         if (v <= 0) continue;
-        const dm = Math.min(this.M[i], v * rho), de = dm * this.eSnap[i];
+        // Emptying the donor moves exactly what it holds (no round-off remnant of energy without mass).
+        const all = v * rho >= this.M[i] * (1 - 1e-9);
+        const dm = all ? this.M[i] : v * rho, de = all ? this.E[i] : dm * this.eSnap[i];
         this.M[i] -= dm; this.E[i] -= de;
         if (j < 0) { this.ledger.outMass += dm; this.ledger.outEnergy += de; continue; }
         const mj = this.M[j];
@@ -457,34 +477,54 @@ export class LavaField {
     for (const i of this.mobile) {
       const m = this.M[i];
       if (m <= 0) continue;
-      const onDep = this.dep[i] > 0.01 && this.depM[i] + this.depB[i] > 0;
+      const onDep = this.depThicknessLava(i) > 0.01;
       const t = this.top(i, this.T[i], this.depth(i), this.age[i], dt, env);
       const d = boundaryLayer(this.kappa, this.age[i], this.depth(i));
       const k = mat.thermal.k;
       const Tb = onDep ? this.depT[i] : env.groundT(i);
-      const base = onDep
+      let base = onDep
         ? ((this.T[i] - Tb) / (d / k + boundaryLayer(this.kappa, this.depAge[i], this.depThicknessLava(i)) / k)) * this.area * dt
         : ((this.T[i] - Tb) / (d / k + env.groundR(i))) * this.area * dt;
-      const f = this.limit(this.E[i], m, this.T[i], Math.min(t.sink, Tb), t.rad + t.conv + t.water + base, env.Tref);
+      if (onDep) {
+        // Lava ↔ lava: never more than half of the way to the common temperature (either direction —
+        // a thin film over a hot deposit must not overshoot). Sensible c_p only: a safe (smaller) bound.
+        const cp = mat.thermal.cp, Cm = m * cp, Cd = (this.depM[i] + this.depB[i]) * cp;
+        const half = 0.5 * Math.abs(this.T[i] - Tb) * ((Cm * Cd) / (Cm + Cd));
+        if (base > half) base = half; else if (base < -half) base = -half;
+      }
+      const f = this.limit(this.E[i], m, this.T[i], Math.min(t.sink, Tb), Math.max(t.source, Tb), t.rad + t.conv + t.water + base, env.Tref);
       this.E[i] -= (t.rad + t.conv + t.water + base) * f;
       this.book(i, t.rad * f, t.conv * f, t.water * f, onDep ? 0 : base * f);
+      if (this.sideNow.J > 0) { this.qSide[i] += this.sideNow.J * f; this.nSideX[i] += this.sideNow.nx; this.nSideZ[i] += this.sideNow.nz; }
       if (onDep) { this.depE[i] += base * f; this.heat(i); }
       this.refresh(i);
       if (crystalFraction(mat, this.T[i]) >= mat.phiLock) this.lock(i);
     }
     // Hot deposits: top to air / water (unless mobile lava covers them — that exchange is above), base to the ground.
+    this.depAcc += dt;
+    if (++this.depCount < DEP_EVERY) return;
+    dt = this.depAcc;
+    this.depAcc = 0;
+    this.depCount = 0;
     const keep: number[] = [];
     for (const i of this.hot) {
       const dm = this.depM[i] + this.depB[i];
       if (dm <= 0 || this.depE[i] === 0) { this.inHot[i] = 0; continue; }
       this.refresh(i);
       const Td = this.depT[i], hD = this.depThicknessLava(i);
+      if (hD < THIN_DEPOSIT && this.M[i] <= 0) {
+        this.book(i, 0, 0, 0, this.depE[i]);
+        this.depE[i] = 0;
+        this.depT[i] = env.groundT(i);
+        this.inHot[i] = 0;
+        continue;
+      }
       const covered = this.M[i] > 0;
       const t = covered ? NO_TOP : this.top(i, Td, hD, this.depAge[i], dt, env);
       const Tg = env.groundT(i);
       const d = boundaryLayer(this.kappa, this.depAge[i], hD);
       const base = ((Td - Tg) / (d / this.mat.thermal.k + env.groundR(i))) * this.area * dt;
-      const f = this.limit(this.depE[i], dm, Td, Math.min(t.sink, Tg), t.rad + t.conv + t.water + base, env.Tref);
+      const f = this.limit(this.depE[i], dm, Td, Math.min(t.sink, Tg), Math.max(t.source, Tg), t.rad + t.conv + t.water + base, env.Tref);
       this.depE[i] -= (t.rad + t.conv + t.water + base) * f;
       this.book(i, t.rad * f, t.conv * f, t.water * f, base * f);
       this.refresh(i);
@@ -503,32 +543,65 @@ export class LavaField {
   }
 
   /** Top losses of a column (J over dt) and its surface temperature (kept in Ts). */
-  private top(i: number, Ti: number, h: number, age: number, dt: number, env: LavaSurroundings): { rad: number; conv: number; water: number; sink: number } {
+  private top(i: number, Ti: number, h: number, age: number, dt: number, env: LavaSurroundings): { rad: number; conv: number; water: number; sink: number; source: number } {
     const { k, emissivity: eps } = this.mat.thermal;
     const d = boundaryLayer(this.kappa, age, h);
     const A = this.area;
+    this.sideNow.J = 0;
     if (env.waterDepth(i) > 1e-3) {
       const Tw = env.waterT(i);
       const Ts = surfaceUnderWater(Ti, d, k, Tw);
       this.Ts[i] = Ts;
-      return { rad: 0, conv: 0, water: H_WATER * (Ts - Tw) * A * dt, sink: Tw };
+      return { rad: 0, conv: 0, water: H_WATER * (Ts - Tw) * A * dt, sink: Tw, source: Tw };
     }
     const Ta = env.airT(i), Tsky = env.Tref;
     const hc = hGround(Math.max(this.Ts[i], Ta), Ta, env.wind(i));
     const Ts = surfaceTemperature(Ti, d, k, eps, Tsky, hc, Ta);
     this.Ts[i] = Ts;
-    return { rad: eps * SIGMA * (Ts ** 4 - Tsky ** 4) * A * dt, conv: hc * (Ts - Ta) * A * dt, water: 0, sink: Math.min(Ta, Tsky) };
+    const q = eps * SIGMA * (Ts ** 4 - Tsky ** 4);
+    // Margins: the faces standing above lava-free neighbours radiate sideways (same crust temperature).
+    let side = 0, nx = 0, nz = 0;
+    if (this.M[i] > 0) {
+      const ix = i % this.nx, iz = (i / this.nx) | 0, S = this.surface(i);
+      for (let dd = 0; dd < 4; dd++) {
+        const jx = ix + (dd === 0 ? 1 : dd === 1 ? -1 : 0), jz = iz + (dd === 2 ? 1 : dd === 3 ? -1 : 0);
+        if (jx < 0 || jz < 0 || jx >= this.nx || jz >= this.nz) continue;
+        const j = jz * this.nx + jx;
+        if (this.M[j] > 0) continue;
+        const e = Math.min(h, S - this.bed(j));
+        if (e <= 0) continue;
+        const a = e * this.dx;
+        side += a;
+        nx += (jx - ix) * a; nz += (jz - iz) * a;
+      }
+    }
+    const sideJ = q * side * dt;
+    this.sideNow.J = sideJ; this.sideNow.nx = nx; this.sideNow.nz = nz;
+    return { rad: q * A * dt + sideJ, conv: hc * (Ts - Ta) * A * dt, water: 0, sink: Math.min(Ta, Tsky), source: Math.max(Ta, Tsky) };
   }
 
   /**
-   * Factor (≤ 1) on this step's losses so a column gives at most 90 % of what it holds above its coldest
-   * surroundings (thin films over a 0.1 s step) — the terms are scaled together and booked as scaled.
+   * Factor (≤ 1) on this step's exchanges so a column gives at most 90 % of what it holds above its coldest
+   * surroundings — or, when it gains (hotter air / ground / deposit around a cooled film), at most 90 % of the
+   * way to its hottest surroundings (thin films over a 0.1 s step). The terms are scaled together and booked
+   * as scaled, so the ledgers stay exact.
    */
-  private limit(E: number, m: number, Ti: number, sink: number, lost: number, Tref: number): number {
-    if (!(lost > 0)) return 1;
-    const avail = E - m * specificEnergy(this.mat, Math.max(Tref - 50, Math.min(Ti, sink)), this.Tref);
-    return lost > 0.9 * avail ? Math.max(0, 0.9 * avail) / lost : 1;
+  private limit(E: number, m: number, Ti: number, sink: number, source: number, lost: number, Tref: number): number {
+    if (lost > 0) {
+      const avail = E - m * specificEnergy(this.mat, Math.max(Tref - 50, Math.min(Ti, sink)), this.Tref);
+      return lost > 0.9 * avail ? Math.max(0, 0.9 * avail) / lost : 1;
+    }
+    if (lost < 0) {
+      const room = m * specificEnergy(this.mat, Math.max(Ti, source), this.Tref) - E;
+      return -lost > 0.9 * room ? Math.max(0, 0.9 * room) / -lost : 1;
+    }
+    return 1;
   }
+
+  private depAcc = 0;
+  private depCount = 0;
+  /** Margin radiation of the column just evaluated by top() (J, outward normal × area). */
+  private readonly sideNow = { J: 0, nx: 0, nz: 0 };
 
   private book(i: number, rad: number, conv: number, water: number, ground: number) {
     const L = this.ledger;
@@ -548,6 +621,7 @@ export class LavaField {
     for (const i of this.touched) {
       f(i, this.qGround[i], this.qAir[i], this.qRad[i], this.qWater[i]);
       this.qGround[i] = 0; this.qAir[i] = 0; this.qRad[i] = 0; this.qWater[i] = 0;
+      this.qSide[i] = 0; this.nSideX[i] = 0; this.nSideZ[i] = 0;
       this.heatTouched[i] = 0;
     }
     this.touched = [];

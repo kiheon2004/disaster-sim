@@ -25,7 +25,9 @@ export type DamageEventType =
   | 'FAILED'
   | 'STORY_COLLAPSED'
   // Phase 22: covered by deposited sediment (people, vehicles, small structures).
-  | 'BURIED';
+  | 'BURIED'
+  // Phase 28: touched by lava (recorded once; the effects are separate events / exposure).
+  | 'LAVA_CONTACT';
 
 /**
  * Why it happened:
@@ -49,7 +51,9 @@ export type DamageCause =
   // Phase 26: heat — strength lost with temperature / restrained thermal expansion (thermal buckling).
   | 'thermal'
   // Phase 27: burned (fuel consumed by flaming combustion).
-  | 'fire';
+  | 'fire'
+  // Phase 28: pushed / damaged by lava standing against it; weight of volcanic ash on a roof.
+  | 'lava' | 'ashLoad';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -64,9 +68,9 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire';
-/** Order matters only for ties (origin); 'thermal' and 'fire' are last so earlier hazards keep their indices. */
-export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire'];
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire' | 'volcano';
+/** Order matters only for ties (origin); later phases append so earlier hazards keep their indices. */
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire', 'volcano'];
 
 export interface DamageEventRecord {
   id: number;

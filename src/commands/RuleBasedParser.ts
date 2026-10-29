@@ -356,6 +356,13 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       result.warnings.push({ key: 'parse.fire.editor' });
       continue;
     }
+    // Phase 28: an eruption is recognized but placed in the experiment editor (vents are placed on the
+    // terrain the user picks) — text never starts an eruption.
+    if (phenomena.implemented('volcano')!.keywords.test(raw)) {
+      result.unsupported.push({ event: 'volcano', params: {} });
+      result.warnings.push({ key: 'parse.volcano.editor' });
+      continue;
+    }
     // Phase 15: a phenomenon that is not implemented is reported, never executed.
     const planned = phenomena.matchPlanned(raw);
     if (planned) {

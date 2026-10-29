@@ -232,6 +232,36 @@ export const MODELS: Record<string, ModelInfo> = {
     units: ['kg', 'kg/m³', 'm'], validRange: 'soot mass in rooms and the 5 m air-layer columns; visibility by the mass extinction coefficient',
     limitations: ['model.lim.noSpecies', 'model.lim.noCfd'], reference: 'docs/FIRE_COMBUSTION.md §20–21',
   }),
+  lavaFlow: m({
+    id: 'lavaFlow', labelKey: 'model.lavaFlow', level: 'physics',
+    assumptions: ['model.as.bingham', 'model.as.grdViscosity', 'model.as.einsteinRoscoe', 'model.as.yieldStrength', 'model.as.donorCell'],
+    units: ['m', 'm/s', 'Pa·s', 'Pa'], validRange: 'basaltic / andesitic lava 900–1250 °C on a 1 m vertex grid; depth-averaged plate flow without inertia',
+    limitations: ['model.lim.noLavaTubes', 'model.lim.noInflation', 'model.lim.noCfd', 'model.lim.notForecast'], reference: 'docs/VOLCANO.md §5–7',
+  }),
+  lavaCooling: m({
+    id: 'lavaCooling', labelKey: 'model.lavaCooling', level: 'physics',
+    assumptions: ['model.as.enthalpyLava', 'model.as.latentRange', 'model.as.crustLayer', 'model.as.lockup'],
+    units: ['K', 'J', 'W/m²', 'm'], validRange: 'one mean temperature per column with conductive boundary layers at the top and the base',
+    limitations: ['model.lim.noVerticalProfile', 'model.lim.noVesicles', 'model.lim.noBoiling'], reference: 'docs/VOLCANO.md §8–9',
+  }),
+  volcanicDeposition: m({
+    id: 'volcanicDeposition', labelKey: 'model.volcanicDeposition', level: 'physics',
+    assumptions: ['model.as.depositTerrain', 'model.as.sameVolume', 'model.as.noRemobilize'],
+    units: ['m', 'kg'], validRange: 'deposit thickness on the heightfield (no overhangs, caves or vertical cliffs)',
+    limitations: ['model.lim.heightfield', 'model.lim.noCompaction'], reference: 'docs/VOLCANO.md §10–11',
+  }),
+  volcanicEjecta: m({
+    id: 'volcanicEjecta', labelKey: 'model.volcanicEjecta', level: 'empirical',
+    assumptions: ['model.as.bombParcels', 'model.as.bombLaunch', 'model.as.dragFlight'],
+    units: ['kg', 'm/s', 'J'], validRange: 'Strombolian-type bombs 0.06–0.4 m at 8–25 m/s (assumed ranges)',
+    limitations: ['model.lim.noExplosion', 'model.lim.noBombCooling'], reference: 'docs/VOLCANO.md §12',
+  }),
+  volcanicAsh: m({
+    id: 'volcanicAsh', labelKey: 'model.volcanicAsh', level: 'empirical',
+    assumptions: ['model.as.ashPuffs', 'model.as.settling', 'model.as.eddy', 'model.as.scavenging'],
+    units: ['kg', 'm/s', 'kPa'], validRange: 'ash released at a prescribed plume height ≤ 300 m, carried by the mean wind',
+    limitations: ['model.lim.noPlumeDynamics', 'model.lim.noAggregation', 'model.lim.noGasChemistry'], reference: 'docs/VOLCANO.md §13–14',
+  }),
 };
 
 export function modelInfo(id: string): ModelInfo | undefined {

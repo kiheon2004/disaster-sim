@@ -99,6 +99,8 @@ export interface RuntimeEntity {
   blast?: import('./blast/state').BlastEntityState;
   /** Member-level state of a modular building (Phase 17); absent on every other entity. */
   modular?: import('./buildings/modular').ModularRuntime;
+  /** Volcano response (Phase 28): lava at the object, lateral load damage, ash on the roof, bombs. */
+  volcano?: import('./volcano/objects').VolcanoEntityState;
   components: RuntimeComponent[];
   visual: VisualState;
   flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean; partialCollapse?: number };

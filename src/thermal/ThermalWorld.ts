@@ -55,6 +55,8 @@ export interface Deposit {
   w: number;
   /** Area the absorbed energy arrives through (m²: projected / face area) — incident flux of a body (Phase 27). */
   a?: number;
+  /** Phase 28: into the body's CORE node (contact at a tree trunk's base) instead of its skin. */
+  core?: boolean;
 }
 
 /** A receiver of a prescribed-temperature sphere. */
@@ -88,6 +90,11 @@ export interface SourceStep {
   from?: { kind: TargetKind; index: number };
   /** Phase 27: the body receivers are the first `bodies` deposits (incident-flux scan of the fire model). */
   bodies?: number;
+  /**
+   * Phase 28: heat given up by lava / volcanic deposits (booked `volcanic`, equal to the volcano ledger's
+   * transferred heat); what no receiver absorbs left as radiation to the sky.
+   */
+  volcanic?: boolean;
 }
 
 /** Building room (one story of a modular building). */
@@ -283,7 +290,8 @@ export class ThermalWorld {
           // A receiver that merged / left since the geometry was built: its share stays unresolved.
           if (d.kind === TK.body && !this.bodies.alive[d.index]) continue;
           const J = s.energy * d.w;
-          this.deposit(d.kind, d.index, J);
+          if (d.core && d.kind === TK.body) { const B = this.bodies; B.EC[d.index] += J; B.Esrc[d.index] += J; B.refresh(d.index); }
+          else this.deposit(d.kind, d.index, J);
           used += J;
         }
         const above = s.energy * (s.aboveLayer ?? 0);
@@ -293,6 +301,13 @@ export class ThermalWorld {
           if (s.from.kind === TK.body) this.bodies.Esrc[s.from.index] += s.energy;
           L.lost.aboveLayer += above;
           L.lost.radiationSky += s.energy - used - above;
+          continue;
+        }
+        if (s.volcanic) {
+          L.volcanic += s.energy;
+          L.lost.aboveLayer += above;
+          L.lost.radiationSky += s.energy - used - above;
+          L.bySource.set(s.id, (L.bySource.get(s.id) ?? 0) + s.energy);
           continue;
         }
         if (s.combustion) { L.combustion += s.energy; L.combustionUnresolved += s.energy - used; }
