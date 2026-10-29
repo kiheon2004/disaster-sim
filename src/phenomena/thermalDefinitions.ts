@@ -23,7 +23,7 @@ const put = (s: EventSpec, patch: Partial<HeatSourceSpec>) => ({ ...H(s), ...pat
 const opt = <T extends string>(prefix: string, values: readonly T[]) => values.map((v) => ({ value: v, labelKey: `${prefix}.${v}` as MessageKey }));
 
 export const heatSource = implemented<HeatSourceSpec>({
-  type: 'heatSource', labelKey: 'phen.heatSource', icon: 'warning', status: 'implemented',
+  type: 'heatSource', labelKey: 'phen.heatSource', icon: 'heat', status: 'implemented',
   channels: ['temperature'],
   models: ['heatTransfer', 'thermalStructure'],
   keywords: /열원|가열|히터|발열|열\s*(?:실험|전달)|온도\s*(?:경계|지정)|heat\s*source|heater|heating|thermal/,

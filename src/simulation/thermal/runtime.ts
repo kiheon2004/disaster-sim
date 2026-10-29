@@ -33,6 +33,7 @@ import { BK, type BodyInit } from '@/thermal/ThermalBodies';
 import { intervalEnergy, intervalTemperature, radiativeFraction, amplitude } from '@/thermal/sources';
 import { pointFraction, projectedArea, sphereViewFactor } from '@/thermal/radiation';
 import { IRRADIANCE_FLOOR } from '@/thermal/types';
+import { groundReceivers, sourceReach, type GroundGrid } from '@/thermal/geometry';
 import { beamAxialCapacity, columnFactor, meanTemp, restrainedForce, restraintDegree, sectionFactors, thermalStrain, bowingCurvature, type NodeTemps } from '@/thermal/structural';
 import { SIGMA, BOILING, RHO_WATER, C_WATER, toC } from '@/thermal/units';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
@@ -107,6 +108,7 @@ export interface ThermalStats {
   heatedArea: number;
   maxAirT: number;
   maxWaterT: number;
+  maxRoomT: number;
   maxFlux: number;
   bodies: number;
   buildings: number;
@@ -130,7 +132,7 @@ export class ThermalRuntime {
   /** Body → fragment it follows (structural fragments). */
   private fragOf = new Map<number, DebrisPiece>();
   private bodiesAtGeom = -1;
-  readonly stats: ThermalStats = { maxT: 0, maxWhere: 'none', meanHeatedT: 0, heatedArea: 0, maxAirT: 0, maxWaterT: 0, maxFlux: 0, bodies: 0, buildings: 0, activeTiles: 0, damagedStructures: 0, failedMembers: 0, minFactor: 1, maxUtil: 0 };
+  readonly stats: ThermalStats = { maxT: 0, maxWhere: 'none', meanHeatedT: 0, heatedArea: 0, maxAirT: 0, maxWaterT: 0, maxRoomT: 0, maxFlux: 0, bodies: 0, buildings: 0, activeTiles: 0, damagedStructures: 0, failedMembers: 0, minFactor: 1, maxUtil: 0 };
   private thresholds = { T: 0, flux: 0, factor: 0, stress: false, failure: false, boil: false };
   /** Wall-clock cost of the last step (ms) and the run total. */
   ms = 0;
@@ -612,7 +614,7 @@ export class ThermalRuntime {
     const exchanges: Exchange[] = [];
     let aboveLayer = 0;
     // Bring every object in reach into the network first (so it can receive).
-    const reach = this.reach(spec, P);
+    const reach = sourceReach(spec, w.Tref);
     for (const te of this.ents) {
       if (te.active) continue;
       const p = te.e.pose.position;
@@ -620,17 +622,10 @@ export class ThermalRuntime {
     }
     const inside = this.buildingContaining(P);
     const shield = this.shields(P, reach);
-    const forCells = (r: number, f: (c: number, x: number, z: number, y: number) => void) => {
-      const i0 = Math.max(0, Math.floor((P[0] - r - tr.originX) / tr.cell)), i1 = Math.min(tr.nx - 1, Math.floor((P[0] + r - tr.originX) / tr.cell));
-      const k0 = Math.max(0, Math.floor((P[2] - r - tr.originZ) / tr.cell)), k1 = Math.min(tr.nz - 1, Math.floor((P[2] + r - tr.originZ) / tr.cell));
-      for (let iz = k0; iz <= k1; iz++) for (let ix = i0; ix <= i1; ix++) {
-        const x = tr.originX + (ix + 0.5) * tr.cell, z = tr.originZ + (iz + 0.5) * tr.cell;
-        if ((x - P[0]) ** 2 + (z - P[2]) ** 2 > r * r) continue;
-        const c = iz * tr.nx + ix;
-        f(c, x, z, this.groundY(ctx, x, z));
-      }
+    const grid: GroundGrid = {
+      nx: tr.nx, nz: tr.nz, cell: tr.cell, originX: tr.originX, originZ: tr.originZ, height: (x, z) => this.groundY(ctx, x, z), covered: (c) => tr.covered[c] === 1,
+      emissivity: (c) => (w.water && w.water.h[c] > WATER_MERGE ? 0.96 : tr.emiss[c]),
     };
-    const emiss = (c: number) => (w.water && w.water.h[c] > WATER_MERGE ? 0.96 : tr.emiss[c]);
     switch (spec.kind) {
       case 'point': {
         const frac = radiativeFraction(spec);
@@ -653,16 +648,8 @@ export class ThermalRuntime {
         }
         const ground: Deposit[] = [];
         let gsum = 0;
-        if (P[1] - yg > 0.01) forCells(reach, (c, x, z, y) => {
-          if (tr.covered[c]) return;
-          const dy = P[1] - y;
-          if (dy <= 0) return;
-          const r = Math.hypot(x - P[0], dy, z - P[2]);
-          const f = (frac * tr.area * (dy / r)) / (4 * Math.PI * r * r);
-          if ((f * P0) / tr.area < IRRADIANCE_FLOOR) return;
-          ground.push({ kind: TK.ground, index: c, w: f * emiss(c) });
-          gsum += f;
-        });
+        // Inside a room the walls stand between the source and the ground outside.
+        if (!inside) for (const r of groundReceivers(spec, grid, w.Tref)) { ground.push({ kind: TK.ground, index: r.cell, w: r.w }); gsum += r.w / r.eps; }
         // Objects below the source shade the ground they stand on (conservative uniform reduction).
         const shade = gsum > 0 ? Math.max(0, (gsum - down) / gsum) : 0;
         for (const d of ground) d.w *= shade;
@@ -676,10 +663,9 @@ export class ThermalRuntime {
         break;
       }
       case 'area': {
-        const cells: number[] = [];
-        forCells(spec.radius, (c) => { if (!tr.covered[c]) cells.push(c); });
-        if (!cells.length) { const c = tr.index(P[0], P[2]); if (c >= 0) cells.push(c); }
-        for (const c of cells) deposits.push({ kind: TK.ground, index: c, w: 1 / cells.length });
+        const rs = groundReceivers(spec, grid, w.Tref);
+        if (!rs.length) { const c = tr.index(P[0], P[2]); if (c >= 0) rs.push({ cell: c, w: 1, aConv: 0, eps: 1 }); }
+        for (const r of rs) deposits.push({ kind: TK.ground, index: r.cell, w: r.w });
         break;
       }
       case 'surface': {
@@ -693,11 +679,7 @@ export class ThermalRuntime {
           items.push({ kind: TK.body, index: i, w: A });
           total += A;
         }
-        forCells(spec.radius, (c, _x, _z, y) => {
-          if (tr.covered[c] || Math.abs(y - P[1]) > spec.radius) return;
-          items.push({ kind: TK.ground, index: c, w: tr.area });
-          total += tr.area;
-        });
+        for (const r of groundReceivers(spec, grid, w.Tref)) { items.push({ kind: TK.ground, index: r.cell, w: r.w }); total += r.w; }
         if (total <= 0) { const c = tr.index(P[0], P[2]); if (c >= 0) { items.push({ kind: TK.ground, index: c, w: 1 }); total = 1; } }
         for (const d of items) deposits.push({ ...d, w: d.w / total });
         break;
@@ -729,15 +711,7 @@ export class ThermalRuntime {
           const Ap = this.projected(i, -dx / r, -dy / r, -dz / r) * vis;
           exchanges.push({ kind: TK.body, index: i, aRad: Ap * sphereViewFactor(R, r), aConv: 0, eps, L: B.Lv[i] });
         }
-        forCells(far + R, (c, x, z, y) => {
-          if (tr.covered[c]) return;
-          const dy = P[1] - y;
-          const r = Math.hypot(x - P[0], dy, z - P[2]);
-          const eps = emiss(c);
-          if (r <= R) { exchanges.push({ kind: TK.ground, index: c, aRad: tr.area, aConv: tr.area, eps, L: 1 }); return; }
-          if (dy <= 0) return;
-          exchanges.push({ kind: TK.ground, index: c, aRad: tr.area * (dy / r) * sphereViewFactor(R, r), aConv: 0, eps, L: 1 });
-        });
+        if (!inside) for (const r of groundReceivers(spec, grid, w.Tref)) exchanges.push({ kind: TK.ground, index: r.cell, aRad: r.w, aConv: r.aConv, eps: r.eps, L: 1 });
         // The sphere's surface convects into the air (or the room) it occupies.
         const As = 4 * Math.PI * R * R;
         if (inside) exchanges.push({ kind: TK.comp, index: inside.comp, aRad: 0, aConv: As, eps: 1, L: R });
@@ -746,21 +720,6 @@ export class ThermalRuntime {
       }
     }
     return { deposits, exchanges, aboveLayer, builtAt: ctx.time, bodies: B.n };
-  }
-
-  /** Horizontal reach of a source's direct heating (m). */
-  private reach(spec: SourceRecord['spec'], P: Vec3): number {
-    if (spec.kind === 'point') {
-      const P0 = spec.profile === 'instant' ? (spec.energy ?? 0) : amplitude(spec);
-      // Irradiance P_rad/(4πr²) ≥ the floor.
-      return Math.min(100, Math.sqrt((radiativeFraction(spec) * P0) / (4 * Math.PI * IRRADIANCE_FLOOR)));
-    }
-    if (spec.kind === 'temperature') {
-      const E4 = SIGMA * Math.abs((spec.temperature ?? 300) ** 4 - this.world.Tref ** 4);
-      return Math.min(60, spec.radius * Math.sqrt(E4 / IRRADIANCE_FLOOR)) + spec.radius;
-    }
-    void P;
-    return spec.radius;
   }
 
   /** Air-layer columns overlapped by a disc (fractions of the disc area, summing to 1). */
@@ -1030,6 +989,9 @@ export class ThermalRuntime {
     let maxA = Tref;
     for (let a = 0; a < w.air.count; a++) { const T = w.air.T(a); if (T > maxA) maxA = T; if (T > w.air.Tpeak[a]) w.air.Tpeak[a] = T; }
     if (maxA > maxT) { maxT = maxA; where = 'air'; }
+    let maxR = Tref;
+    for (let c = 0; c < w.comps.length; c++) if (w.comps[c].alive) maxR = Math.max(maxR, w.compT(c));
+    if (maxR > maxT) { maxT = maxR; where = 'air'; }
     const B = w.bodies;
     let nb = 0;
     for (let i = 0; i < B.n; i++) {
@@ -1045,7 +1007,7 @@ export class ThermalRuntime {
       minF = Math.min(minF, bt.minFactor);
       for (let i = 0; i < bt.g.n; i++) if (bt.util[i] > maxU) maxU = bt.util[i];
     }
-    Object.assign(s, { maxT, maxWhere: where, meanHeatedT: heated ? sumT / heated : Tref, heatedArea: heated * g.area, maxAirT: maxA, maxWaterT: maxW, bodies: nb, buildings: this.buildings.length, activeTiles: g.tiles.length, damagedStructures: damaged, failedMembers: failed, minFactor: minF, maxUtil: maxU });
+    Object.assign(s, { maxT, maxWhere: where, meanHeatedT: heated ? sumT / heated : Tref, heatedArea: heated * g.area, maxAirT: maxA, maxWaterT: maxW, maxRoomT: maxR, bodies: nb, buildings: this.buildings.length, activeTiles: g.tiles.length, damagedStructures: damaged, failedMembers: failed, minFactor: minF, maxUtil: maxU });
     // Timeline milestones (each threshold once).
     const th = this.thresholds;
     const levels = [100, 300, 600, 1000];

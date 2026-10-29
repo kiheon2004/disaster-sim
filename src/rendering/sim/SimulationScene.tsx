@@ -23,6 +23,7 @@ import { DeformationPicker, DeformationPreview } from '../deformation/Deformatio
 import { GroundOverlay } from '../ground/GroundOverlay';
 import { ImpactLayer } from '../impact/ImpactLayer';
 import { BlastLayer } from '../blast/BlastLayer';
+import { ThermalLayer } from '../thermal/ThermalLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
@@ -44,9 +45,9 @@ function GroundDeselect() {
         if (e.delta > 5) return;
         useEditorStore.getState().select(null);
         // The point on the actual terrain under the cursor (Phase 14).
-        // Flood, deformation (Phase 21), ground-failure (Phase 22) and air-blast (Phase 24) inspectors.
+        // Flood, deformation (Phase 21), ground-failure (Phase 22), air-blast (Phase 24) and thermal (Phase 26) inspectors.
         const ss = useSimStore.getState();
-        if (!ss.flood && !ss.deform && !ss.ground && !ss.blasts) return;
+        if (!ss.flood && !ss.deform && !ss.ground && !ss.blasts && !ss.thermal) return;
         const o = e.ray.origin;
         const d = e.ray.direction;
         const terrain = simulationController.getEnvironment().terrain;
@@ -86,6 +87,7 @@ export function SimulationScene() {
       <GroundOverlay />
       <ImpactLayer />
       <BlastLayer />
+      <ThermalLayer />
       <ShaderWarmup />
       <SceneCompile version={version} />
       <DeformationPreview />

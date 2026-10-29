@@ -48,6 +48,8 @@ import { MemberLayer, interiorMask, type MemberOffset, type MemberSet } from './
 import { MS, OVERLOAD } from '@/structure/types';
 import { hashString } from '@/core/math';
 import { useViewStore, type StructureColorMode } from '../viewStore';
+import type { ThermalRuntime } from '@/simulation/thermal/runtime';
+import { factorColor, temperatureColor, utilColor } from '../thermal/thermalColors';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
 export const LOD_FAR = 110;
@@ -547,6 +549,31 @@ export class SimRenderAdapter {
   }
 
   private colorMode: StructureColorMode = 'normal';
+  /** Thermal state of the run (Phase 26) for the thermal member colors; set by the layer. */
+  thermal: (() => ThermalRuntime | null) | null = null;
+  private thermalScale = 300;
+
+  private static readonly THERMAL_MODES = new Set<StructureColorMode>(['temperature', 'thermalStress', 'strength']);
+
+  /** Member colors from the computed thermal state (render-only): temperature, thermal stress, strength. */
+  private thermalColor(v: EntityView, mode: StructureColorMode): ((i: number, out: THREE.Color) => boolean) | undefined {
+    const rt = this.thermal?.();
+    const bt = rt?.entity(v.e.id)?.b;
+    if (!rt || !bt) return (_i, out) => { out.copy(DEMAND_NONE); return true; };
+    const B = rt.world.bodies, scale = this.thermalScale;
+    const model = v.e.modular?.structure?.model;
+    return (i, out) => {
+      const b = bt.body[i];
+      if (b < 0) { out.copy(DEMAND_NONE); return true; }
+      // Members within 1 K of the ambient keep their material look (the scale starts at 0 °C).
+      if (mode === 'temperature') { if (Math.abs(B.TS[b] - rt.world.Tref) < 1) return false; temperatureColor(B.TS[b] - 273.15, scale, out); return true; }
+      if (model && model.state[i] > MS.SEVERE) { out.copy(FAILED_RED); return true; }
+      if (!bt.g.structural[i]) { out.copy(DEMAND_NONE); return true; }
+      if (mode === 'strength') factorColor(bt.fApplied[i], out);
+      else utilColor(bt.util[i], out);
+      return true;
+    };
+  }
 
   /**
    * Member colors of the structural views (Phase 25) — all from computed state: demand / capacity
@@ -556,6 +583,7 @@ export class SimRenderAdapter {
   private structureColor(v: EntityView): ((i: number, out: THREE.Color) => boolean) | undefined {
     const mode = this.colorMode;
     if (mode === 'normal') return undefined;
+    if (SimRenderAdapter.THERMAL_MODES.has(mode)) return this.thermalColor(v, mode);
     const mr = v.e.modular;
     const model = mr?.structure?.model;
     const g = model?.g;
@@ -607,10 +635,15 @@ export class SimRenderAdapter {
    */
   update(camera: THREE.Camera, elapsed: number, storm: number, quake: QuakeRenderOptions | null = null) {
     this.frame++;
-    const mode = useViewStore.getState().structureViz.color;
-    if (mode !== this.colorMode) {
+    const vs = useViewStore.getState();
+    const mode = vs.structureViz.color;
+    // Thermal member colors follow the changing temperatures: refreshed every 15 frames (Phase 26).
+    const thermalRefresh = SimRenderAdapter.THERMAL_MODES.has(mode) && this.frame % 15 === 0;
+    if (mode !== this.colorMode || thermalRefresh || vs.thermalViz.scale !== this.thermalScale) {
       this.colorMode = mode;
-      if (this.memberLayer) for (const v of this.views) if (v.members) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
+      this.thermalScale = vs.thermalViz.scale;
+      const rt = this.thermal?.();
+      if (this.memberLayer) for (const v of this.views) if (v.members && (!thermalRefresh || rt?.entity(v.e.id)?.b)) this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
     }
     camera.getWorldPosition(this.camPos);
     // Earthquake drawing only once the earthquake systems exist (wind-only runs: unchanged path).

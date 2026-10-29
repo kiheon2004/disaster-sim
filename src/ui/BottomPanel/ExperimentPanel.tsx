@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { translateMessage, useLocale, useT, type MessageKey } from '@/i18n/i18n';
+import { isMessageKey, translateMessage, useLocale, useT, type MessageKey } from '@/i18n/i18n';
 import { phenomena } from '@/phenomena/registry';
 import { resolveSchedule } from '@/phenomena/schedule';
 import { CHANNELS } from '@/phenomena/channels';
@@ -20,6 +20,7 @@ import { DeformationTools } from './DeformationTools';
 import { GroundTools } from './GroundTools';
 import { ImpactTools } from './ImpactTools';
 import { BlastTools } from './BlastTools';
+import { ThermalTools } from './ThermalTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -189,11 +190,12 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         </div>
         <NumberField label={after ? t('exp.start.offset') : t('exp.start.time')} value={after ? after.offset : 'at' in inst.start ? inst.start.at : 0} min={after ? -3600 : 0} max={86400} step={1} precision={1} unit="s"
           onChange={(n, live) => !live && updatePhenomenon(inst.id, { start: after ? { ...after, offset: n } : { at: n } })} />
-        {!valid.success && <div className={x.issue} data-testid="exp-invalid">⚠ {valid.error.issues[0]?.message}</div>}
+        {!valid.success && <div className={x.issue} data-testid="exp-invalid">⚠ {valid.error.issues.map((i) => (isMessageKey(i.message) ? t(i.message) : i.message)).join(' · ')}</div>}
         {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
         {(inst.type === 'sinkhole' || inst.type === 'landslide') && <GroundTools inst={inst} />}
         {inst.type === 'impact' && <ImpactTools inst={inst} />}
         {inst.type === 'blast' && <BlastTools inst={inst} />}
+        {inst.type === 'heatSource' && <ThermalTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

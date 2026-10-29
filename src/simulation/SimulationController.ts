@@ -1,4 +1,6 @@
-import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive } from './simStore';
+import type { BlastLive, DeformLive, GroundLive, ImpactLive, StructureLive, ThermalLive } from './simStore';
+import { activeIn, amplitude, intervalTemperature } from '@/thermal/sources';
+import { shapeAt } from '@/thermal/profiles';
 import { runtimeStateManifest } from './runtimeState';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
@@ -232,6 +234,7 @@ export class SimulationController {
       impacts: null,
       blasts: null,
       structure: null,
+      thermal: null,
       floodSeries: null,
       milestones: [],
     });
@@ -596,6 +599,7 @@ export class SimulationController {
     patch.impacts = this.impactLive();
     patch.blasts = this.blastLive();
     patch.structure = this.structureLive();
+    patch.thermal = this.thermalLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -741,6 +745,30 @@ export class SimulationController {
       out.residual += m.ledger.residual();
     }
     return out;
+  }
+
+  /** Live thermal summary (Phase 26; null until heat enters the run). */
+  thermalLive(): ThermalLive | null {
+    const ch = this.env.thermal;
+    const rt = ch.rt;
+    if (!rt) return null;
+    const w = rt.world, L = w.ledger, s = rt.stats;
+    return {
+      ambient: w.Tref,
+      sources: ch.sources.map((r) => {
+        const local = this.time - r.start, sp = r.spec;
+        const on = activeIn(sp, local, local + 1e-6) || (sp.profile !== 'instant' && local >= 0 && local < sp.duration);
+        return {
+          id: r.id, name: r.name, kind: sp.kind, on, power: sp.kind === 'temperature' || sp.profile === 'instant' ? 0 : amplitude(sp) * shapeAt(sp, local),
+          temperature: sp.kind === 'temperature' ? intervalTemperature(sp, local, local + 0.1, w.Tref) : null, added: L.bySource.get(r.id) ?? 0,
+        };
+      }),
+      maxT: s.maxT, maxWhere: s.maxWhere, meanHeatedT: s.meanHeatedT, heatedArea: s.heatedArea, maxAirT: s.maxAirT, maxWaterT: s.maxWaterT, maxRoomT: s.maxRoomT, maxFlux: s.maxFlux,
+      added: L.added, boundarySupply: L.boundarySupply, impactDeposit: L.impactDeposit, lost: L.totalLost(), losses: { ...L.lost }, transfers: { ...L.transfers },
+      internal: L.final, residual: L.residual(), relativeResidual: L.relativeResidual(),
+      bodies: s.bodies, buildings: s.buildings, activeTiles: s.activeTiles, substeps: w.last.substeps, maxSubsteps: w.maxSubsteps, ms: rt.ms, msTotal: rt.msTotal,
+      damagedStructures: s.damagedStructures, failedMembers: s.failedMembers, minFactor: s.minFactor, maxUtil: s.maxUtil, restraint: w.settings.restraint,
+    };
   }
 
   /** Live ground-failure summary (Phase 22): model states, sediment budget, cost. */

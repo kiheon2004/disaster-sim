@@ -1,3 +1,5 @@
+import { energyText } from '@/thermal/units';
+import { THERMAL_MATERIAL_IDS } from '@/thermal/materials';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocale, useT, type MessageKey, type TFunction } from '@/i18n/i18n';
 import type { ObjectType } from '@/core/types';
@@ -110,6 +112,7 @@ function ResultsDialog() {
     floodModel: metrics?.flood ? 'local-inertial shallow-water approximation (educational, not a validated hydraulic model)' : undefined,
     metrics, seismicSeries: series ?? undefined, floodSeries: floodSeries ?? undefined, events,
     structure: useSimStore.getState().structure ?? undefined, collapseSequences: collapseSequences(),
+    thermal: useSimStore.getState().thermal ?? undefined, thermalMembers: thermalMembers(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -137,6 +140,7 @@ function ResultsDialog() {
           <ExperimentSummary t={t} />
           {m?.flood && <FloodSummary f={m.flood} t={t} objects={objects} series={floodSeries} events={events} name={name} />}
           {m?.earthquake && <QuakeSummary q={m.earthquake} t={t} objects={objects} series={series} events={events} />}
+          <ThermalSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />
           {m ? (
             <div className={styles.cards}>
@@ -521,6 +525,62 @@ function StructureSummary({ t, name }: { t: TFunction; name: string }) {
         <Card label={t('results.struct.secondary')} value={String(s.secondary)} />
         <Card label={t('results.struct.residual')} value={s.residual.toExponential(1)} unit="kg" sub={t('results.struct.residualSub')} />
       </div>
+    </div>
+  );
+}
+
+/** Thermal state of every heated member (Phase 26): temperatures, strength factor, thermal force. */
+function thermalMembers() {
+  const rt = simulationController.getEnvironment().thermal.rt;
+  if (!rt) return [];
+  const B = rt.world.bodies;
+  const out: { building: string; member: string; type: string; material: string; T_skin_C: number; T_core_C: number; T_max_C: number; factor: number; thermalForce_kN: number; utilization: number; restraint: number; freeStrain: number }[] = [];
+  for (const bt of rt.buildings) {
+    const ids = bt.e.modular!.design.members;
+    for (let i = 0; i < bt.g.n; i++) {
+      const b = bt.body[i];
+      if (b < 0 || Math.max(B.TmaxS[b], B.TmaxC[b]) - rt.world.Tref < 1) continue;
+      out.push({
+        building: bt.e.id, member: ids[i].id, type: ids[i].type, material: THERMAL_MATERIAL_IDS[bt.tmat[i]],
+        T_skin_C: +(B.TS[b] - 273.15).toFixed(2), T_core_C: +(B.TC[b] - 273.15).toFixed(2), T_max_C: +(Math.max(B.TmaxS[b], B.TmaxC[b]) - 273.15).toFixed(2),
+        factor: +bt.fApplied[i].toFixed(4), thermalForce_kN: +(bt.nApplied[i] / 1000).toFixed(2), utilization: +bt.util[i].toFixed(3), restraint: +bt.restraint[i].toFixed(5), freeStrain: +bt.strain[i].toExponential(4),
+      });
+    }
+  }
+  return out;
+}
+
+function ThermalSummary({ t, name }: { t: TFunction; name: string }) {
+  const s = useSimStore((x) => x.thermal);
+  if (!s) return null;
+  const C = (K: number) => fmt(K - 273.15, 1);
+  const exportCsv = () => {
+    const ledger = [
+      ['added_sources_J', s.added], ['boundary_supply_J', s.boundarySupply], ['impact_deposit_J', s.impactDeposit],
+      ...Object.entries(s.losses).map(([k, v]) => [`lost_${k}_J`, v]), ['lost_total_J', s.lost], ['internal_final_J', s.internal], ['residual_J', s.residual],
+      ...Object.entries(s.transfers).map(([k, v]) => [`transfer_${k}_J`, v]),
+    ].map(([k, v]) => `${k},${v}`);
+    const head = 'building,member,type,material,T_skin_C,T_core_C,T_max_C,strength_factor,thermal_force_kN,utilization,restraint,free_strain';
+    const rows = thermalMembers().map((r) => [r.building, r.member, r.type, r.material, r.T_skin_C, r.T_core_C, r.T_max_C, r.factor, r.thermalForce_kN, r.utilization, r.restraint, r.freeStrain].join(','));
+    download(`${name || 'simulation'}-thermal.csv`, ['# thermal energy ledger (J, sensible heat above the ambient reference)', 'quantity,value', ...ledger, '', '# heated members', head, ...rows].join('\n'), 'text/csv');
+  };
+  return (
+    <div className={styles.box} data-testid="thermal-results">
+      <div className={styles.boxTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {t('results.thermal.title')}
+        <button className={styles.btn} style={{ marginLeft: 'auto' }} onClick={exportCsv} data-testid="thermal-csv"><Icon name="save" size={13} /> {t('results.thermal.csv')}</button>
+      </div>
+      <div className={styles.cards}>
+        <Card label={t('results.thermal.max')} value={C(s.maxT)} unit="°C" sub={t(`thermal.where.${s.maxWhere}` as MessageKey)} />
+        <Card label={t('results.thermal.mean')} value={C(s.meanHeatedT)} unit="°C" sub={t('results.thermal.meanSub', { amb: C(s.ambient) })} />
+        <Card label={t('results.thermal.area')} value={fmt(s.heatedArea, 0)} unit="m²" />
+        <Card label={t('results.thermal.added')} value={energyText(s.added + s.boundarySupply + s.impactDeposit)} sub={t('results.thermal.addedSub', { s: energyText(s.added), b: energyText(s.boundarySupply), i: energyText(s.impactDeposit) })} />
+        <Card label={t('results.thermal.lost')} value={energyText(s.lost)} sub={t('results.thermal.lostSub', { r: energyText(s.losses.radiationSky + s.losses.unresolvedRadiation), a: energyText(s.losses.atmosphere + s.losses.airAdvection + s.losses.aboveLayer), g: energyText(s.losses.deepGround) })} />
+        <Card label={t('results.thermal.residual')} value={s.residual.toExponential(1)} unit="J" sub={t('results.thermal.residualSub', { pct: (s.relativeResidual * 100).toExponential(1) })} />
+        <Card label={t('results.thermal.damaged')} value={String(s.damagedStructures)} sub={t('results.thermal.damagedSub', { f: fmt(s.minFactor * 100, 0), n: s.failedMembers })} />
+        <Card label={t('results.thermal.flux')} value={fmt(s.maxFlux / 1000, 2)} unit="kW/m²" />
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{t('results.thermal.note')}</div>
     </div>
   );
 }

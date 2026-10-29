@@ -161,6 +161,41 @@ export interface StructureLive {
   /** Simulation cost of the engine (ms per step, last profiled). */
 }
 
+/** Live thermal summary (Phase 26) for the HUD, results and verification. Temperatures in K. */
+export interface ThermalLive {
+  ambient: number;
+  sources: { id: string; name: string; kind: string; on: boolean; power: number; temperature: number | null; added: number }[];
+  maxT: number;
+  maxWhere: string;
+  meanHeatedT: number;
+  heatedArea: number;
+  maxAirT: number;
+  maxWaterT: number;
+  maxRoomT: number;
+  maxFlux: number;
+  added: number;
+  boundarySupply: number;
+  impactDeposit: number;
+  lost: number;
+  losses: import('@/thermal/ledger').ThermalLosses;
+  transfers: import('@/thermal/ledger').ThermalTransfers;
+  internal: number;
+  residual: number;
+  relativeResidual: number;
+  bodies: number;
+  buildings: number;
+  activeTiles: number;
+  substeps: number;
+  maxSubsteps: number;
+  ms: number;
+  msTotal: number;
+  damagedStructures: number;
+  failedMembers: number;
+  minFactor: number;
+  maxUtil: number;
+  restraint: string;
+}
+
 export interface BlastLive {
   id: string;
   name: string;
@@ -239,6 +274,7 @@ export interface SimState {
   impacts: ImpactLive[] | null;
   blasts: BlastLive[] | null;
   structure: StructureLive | null;
+  thermal: ThermalLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -274,6 +310,7 @@ export const useSimStore = create<SimState>((set) => ({
   impacts: null,
   blasts: null,
   structure: null,
+  thermal: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

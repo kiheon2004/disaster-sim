@@ -67,6 +67,8 @@ import { useMemberStore } from '@/editor/memberStore';
 import { removalPreview } from '@/structure/preview';
 import { graphOf } from '@/structure/graph';
 import { qRotate } from '@/core/math';
+import type { HeatSourceSpec } from '@/thermal/types';
+import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -152,6 +154,11 @@ export function installDevtools() {
       impactPlan: (spec: ImpactSpec) => { const d = useWorldStore.getState().doc; return planImpact(spec, d.terrain, spec.seed ?? d.settings.simulation.seed); },
       blastPlan: (spec: BlastSpec) => { const d = useWorldStore.getState().doc; return planBlast(spec, d.terrain, d.settings.airDensity); },
       blastField: (spec: BlastSpec) => { const d = useWorldStore.getState().doc; return previewField(planBlast(spec, d.terrain, d.settings.airDensity), d.terrain, d.objects); },
+    },
+    /** Phase 26 thermal physics (benchmarks / browser verification): the run's thermal state and the preview model. */
+    thermalLib: {
+      rt: () => simulationController.getEnvironment().thermal.rt,
+      outlook: (spec: HeatSourceSpec) => { const d = useWorldStore.getState().doc; return thermalOutlook(spec, d.terrain, d.settings.simulation.thermal?.ambient, d.objects); },
     },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {

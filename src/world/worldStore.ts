@@ -1,3 +1,4 @@
+import { defaultThermalSettings } from '@/thermal/ThermalWorld';
 import { create, type StateCreator } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { EntityId, Transform } from '@/core/types';
@@ -148,7 +149,7 @@ export interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>> }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>> }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -586,6 +587,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
               wind: { ...cur.wind, ...(patch.wind ?? {}) },
               water: { ...(cur.water ?? defaultWaterSettings()), ...(patch.water ?? {}) },
               interactions: { enabled: patch.interactions ?? cur.interactions?.enabled ?? true },
+              ...(patch.thermal || cur.thermal ? { thermal: { ...defaultThermalSettings(), ...(cur.thermal ?? {}), ...(patch.thermal ?? {}) } } : {}),
               ...(patch.vegetation || cur.vegetation ? { vegetation: { canopyShelter: false, floodResponse: false, ...(cur.vegetation ?? {}), ...(patch.vegetation ?? {}) } } : {}),
             },
           },

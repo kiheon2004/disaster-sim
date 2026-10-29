@@ -87,7 +87,9 @@ export const FRONT_GLOWS = [1, 3] as const;
  *  - debris: fragments colored by state (moving / at rest), rubble piles;
  *  - dust: visual-only dust amount (0 hides it; never changes a result).
  */
-export type StructureColorMode = 'normal' | 'demand' | 'failure' | 'sequence';
+export type StructureColorMode = 'normal' | 'demand' | 'failure' | 'sequence'
+  // Phase 26: member temperature (fixed °C scale), restrained thermal-stress utilization, strength factor.
+  | 'temperature' | 'thermalStress' | 'strength';
 export interface StructureViz {
   color: StructureColorMode;
   loadPath: boolean;
@@ -96,6 +98,27 @@ export interface StructureViz {
   debris: boolean;
   rubble: boolean;
   dust: number;
+}
+
+/**
+ * Thermal views (Phase 26, render-only — never read by the simulation):
+ *  - field: ground / water surface temperature, the air-layer temperature, the peak surface temperature
+ *    so far, or the horizontal temperature gradient of the surface (K/m);
+ *  - scale: the fixed °C range of the color legend (no automatic rescaling); unit shown °C or K;
+ *  - vectors: conductive heat-flux arrows in the ground surface (−λ∇T), isotherms (50 / 100 / 300 /
+ *    600 °C), objects: a ring above every object colored by its surface temperature;
+ *  - glow: a visual-only incandescent tint of the source and of members above 500 °C (NOT the
+ *    computed radiation, which is invisible infrared).
+ */
+export type ThermalFieldMode = 'off' | 'surface' | 'air' | 'peak' | 'gradient';
+export interface ThermalViz {
+  field: ThermalFieldMode;
+  scale: number;
+  unit: 'C' | 'K';
+  vectors: boolean;
+  isotherms: boolean;
+  objects: boolean;
+  glow: boolean;
 }
 
 export interface GroundPick {
@@ -158,6 +181,8 @@ interface ViewState {
   setBlastViz: (patch: Partial<BlastViz>) => void;
   structureViz: StructureViz;
   setStructureViz: (patch: Partial<StructureViz>) => void;
+  thermalViz: ThermalViz;
+  setThermalViz: (patch: Partial<ThermalViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -208,6 +233,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setBlastViz: (patch) => set((s) => ({ blastViz: { ...s.blastViz, ...patch } })),
   structureViz: { color: 'normal', loadPath: false, connections: false, support: true, debris: false, rubble: true, dust: 1 },
   setStructureViz: (patch) => set((s) => ({ structureViz: { ...s.structureViz, ...patch } })),
+  thermalViz: { field: 'surface', scale: 300, unit: 'C', vectors: false, isotherms: true, objects: true, glow: false },
+  setThermalViz: (patch) => set((s) => ({ thermalViz: { ...s.thermalViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

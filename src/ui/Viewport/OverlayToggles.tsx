@@ -7,6 +7,7 @@ import { Segmented } from '@/ui/common/Segmented';
 import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS, FRAGMENT_SCALES, FRONT_GLOWS } from '@/rendering/viewStore';
 import { ARRIVAL_GRADIENT, cssLogGradient, IMPULSE_STOPS, PRESSURE_STOPS } from '@/rendering/blast/blastColors';
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
+import { FACTOR_GRADIENT, TEMPERATURE_GRADIENT, THERMAL_SCALES, UTIL_GRADIENT } from '@/rendering/thermal/thermalColors';
 import { useSimStore } from '@/simulation/simStore';
 import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
@@ -277,6 +278,7 @@ export function OverlayToggles() {
           </div>
         </>
       )}
+      <ThermalToggles />
       <StructureToggles />
     </div>
   );
@@ -320,6 +322,59 @@ function StructureToggles() {
           <Segmented size="small" value={viz.dust} onChange={(d) => set({ dust: d })} options={[0, 1, 2].map((d) => ({ value: d, label: d === 0 ? t('overlay.struct.off') : `${d}×` }))} />
         </div>
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.struct.note')}</span>
+      </div>
+    </>
+  );
+}
+
+/** Thermal views (Phase 26): shown once heat enters the run. Fixed °C scales, never auto-rescaled. */
+function ThermalToggles() {
+  const t = useT();
+  const live = useSimStore((s) => s.thermal);
+  const hasModular = useSimStore((s) => (s.structure?.modular ?? 0) > 0);
+  const viz = useViewStore((s) => s.thermalViz);
+  const color = useViewStore((s) => s.structureViz.color);
+  const set = useViewStore.getState().setThermalViz;
+  if (!live) return null;
+  const lab = (C: number) => (viz.unit === 'K' ? `${(C + 273.15).toFixed(0)} K` : `${C} °C`);
+  return (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#ffb36b', marginTop: 2 }}>{t('overlay.thermal')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="thermal-overlay">
+        <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.thermal.field')}</span>
+        <Segmented size="small" value={viz.field} onChange={(f) => set({ field: f })} ariaLabel={t('overlay.thermal.field')}
+          options={(['off', 'surface', 'air', 'peak', 'gradient'] as const).map((f) => ({ value: f, label: t(`overlay.thermal.f.${f}`), title: t(`overlay.thermal.ft.${f}`) }))} />
+        {viz.field !== 'off' && (
+          <div data-testid="thermal-legend">
+            <div style={{ height: 6, borderRadius: 3, background: TEMPERATURE_GRADIENT }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+              {viz.field === 'gradient'
+                ? <><span>0</span><span>25</span><span>50 K/m</span></>
+                : <><span>{lab(0)}</span><span>{lab(viz.scale / 2)}</span><span>{lab(viz.scale)}</span></>}
+            </div>
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{t('overlay.thermal.legendNote')}</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.thermal.scale')}</span>
+          <Segmented size="small" value={viz.scale} onChange={(k) => set({ scale: k })} options={THERMAL_SCALES.map((k) => ({ value: k, label: `${k}` }))} />
+          <Segmented size="small" value={viz.unit} onChange={(u) => set({ unit: u })} options={[{ value: 'C' as const, label: '°C' }, { value: 'K' as const, label: 'K' }]} />
+        </div>
+        <Toggle checked={viz.isotherms} onChange={(b) => set({ isotherms: b })} label={t('overlay.thermal.isotherms')} />
+        <Toggle checked={viz.vectors} onChange={(b) => set({ vectors: b })} label={t('overlay.thermal.vectors')} />
+        <Toggle checked={viz.objects} onChange={(b) => set({ objects: b })} label={t('overlay.thermal.objects')} />
+        <Toggle checked={viz.glow} onChange={(b) => set({ glow: b })} label={t('overlay.thermal.glow')} />
+        {hasModular && (
+          <>
+            <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.thermal.members')}</span>
+            <Segmented size="small" value={(['temperature', 'thermalStress', 'strength'] as const).includes(color as 'temperature') ? color : 'normal'}
+              onChange={(c) => useViewStore.getState().setStructureViz({ color: c })} ariaLabel={t('overlay.thermal.members')}
+              options={(['normal', 'temperature', 'thermalStress', 'strength'] as const).map((c) => ({ value: c, label: t(`overlay.thermal.m.${c}`), title: t(`overlay.thermal.mt.${c}`) }))} />
+            {color === 'strength' && <div style={{ height: 6, borderRadius: 3, background: FACTOR_GRADIENT }} title={t('overlay.thermal.mt.strength')} />}
+            {color === 'thermalStress' && <div style={{ height: 6, borderRadius: 3, background: UTIL_GRADIENT }} title={t('overlay.thermal.mt.thermalStress')} />}
+          </>
+        )}
+        <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.thermal.note')}</span>
       </div>
     </>
   );
