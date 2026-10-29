@@ -210,13 +210,13 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 - 잔여 강도는 지진 시작 시점의 손상으로 항복강도를 한 번 축소(지진 중 생긴 바람 손상은 health `min()`으로만 반영).
 - 바람 피해 응답은 아직 응답 레지스트리가 아닌 기존 DamageSystem 경로.
 - 비교 실행은 메인 스레드에서 양보하며 실행(Web Worker 아님) — 큰 장면은 시나리오당 수 초~수십 초.
-- 인터페이스만 있는 채널(압력·온도·지형 변형·대기·공간 중력)은 동작하지 않습니다.
+- 인터페이스만 있는 채널(압력·온도·대기·공간 중력)은 동작하지 않습니다. 지형 변형(Phase 21)과 지반 지지·토사(Phase 22) 채널은 구현됨 — TERRAIN_DEFORMATION.md, GROUND_FAILURE.md.
 
 ## 19. Phase 16 이후 확장 (필요 시스템 vs 재사용)
 
 | 현상 | 새로 필요한 시스템 | 재사용 가능한 시스템 |
 |---|---|---|
-| Sinkhole | 실행 중 지형 변형(`TerrainDeformationRequest` → `setTerrain` + 물 바닥고 재계산), 지지력 상실 모델(기초 아래 공동) | Rapier heightfield 재생성, 물 솔버(구멍으로 물 유입), 파편, 구조 기초 기울어짐 |
+| Sinkhole | **구현됨(Phase 22)** — 실행 중 지형 변형은 Phase 21 엔진, 공동·플러그 파괴·벽 붕괴 모델, 산사태(무한사면·Newmark·Voellmy 흐름)와 함께 [GROUND_FAILURE.md](GROUND_FAILURE.md) | — |
 | Meteor Impact | 압력파 장(과압·충격량, 거리 감쇠), 크레이터 지형 변형, 열 | ForceLedger 충격량, 지진 지반 운동장(충돌 지진), 외장재·파편, 비교 실행 |
 | Explosion | 압력파 장(Friedlander 파형), 열 플럭스 | 외장재 피해(압력 대 용량 — 홍수 창문과 같은 구조), ForceLedger, 파편, 사람 넘어짐 |
 | Volcano | 열·온도장, 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |

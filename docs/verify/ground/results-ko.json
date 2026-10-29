@@ -1,0 +1,317 @@
+{
+  "lang": "ko",
+  "url": "http://localhost:4191/",
+  "results": [
+    {
+      "name": "1 add sinkhole; parameters follow the initiation mode",
+      "ok": true,
+      "detail": {
+        "f1a": [
+          "x",
+          "z",
+          "cavityRadius",
+          "cavityHeight",
+          "cover",
+          "material",
+          "initiation",
+          "growthRate",
+          "duration",
+          "variability"
+        ],
+        "f1b": [
+          "x",
+          "z",
+          "cavityRadius",
+          "cavityHeight",
+          "cover",
+          "material",
+          "initiation",
+          "supportLoss",
+          "duration",
+          "variability"
+        ]
+      }
+    },
+    {
+      "name": "2 sinkhole centre picked by a world click",
+      "ok": true,
+      "detail": {
+        "center": [
+          6,
+          2
+        ]
+      }
+    },
+    {
+      "name": "3 sinkhole parameters edited; predicted critical radius, FS and pit shown",
+      "ok": true,
+      "detail": {
+        "sum3": "임계 반경 a_c 1.7 m · 지붕 안전율 0.43 → 0.04예상 낙하 7.25 m · 예상 함몰 반경 ≈ 13.3 m예측: 실행 시 파괴가 시작됨",
+        "spec": {
+          "supportLoss": 0.9,
+          "event": "sinkhole",
+          "center": [
+            6,
+            2
+          ],
+          "cavityRadius": 4,
+          "cavityHeight": 8,
+          "cover": 5,
+          "initiation": "supportLoss",
+          "growthRate": 0.2,
+          "duration": 1
+        }
+      }
+    },
+    {
+      "name": "4 sinkhole preview drawn (cavity / critical / pit); world unchanged",
+      "ok": true,
+      "detail": {
+        "prev4": 1
+      }
+    },
+    {
+      "name": "5 sinkhole collapses on the runtime ground; document untouched; HUD shows its phase",
+      "ok": true,
+      "detail": {
+        "phase": "collapsed",
+        "h5": -6.313153266906738
+      }
+    },
+    {
+      "name": "6 rendered terrain mesh matches the runtime heights",
+      "ok": true,
+      "detail": {
+        "worst": 0,
+        "n": 40401
+      }
+    },
+    {
+      "name": "7 ground overlay modes shown; dust labelled as a visual effect only",
+      "ok": true,
+      "detail": {
+        "stability": true,
+        "sediment": true,
+        "deposit": true,
+        "change": true
+      }
+    },
+    {
+      "name": "8 building near the pit: ground response in the inspector",
+      "ok": true,
+      "detail": "평균 침하(+ 위)−0.004 m기울기0.10° (1/595)각변위 β1/22 (최대 1/22)부등침하 등급파괴 수준(> 1/50, 외삽)기초 접촉96 % (최저 96 %)지반 지지력변화 없음지지력 이용률(초기 → 현재)0.03 → 0.04지반 손상 지수1.000"
+    },
+    {
+      "name": "9 ground probe: material, slope, water, FS, height change, source",
+      "ok": true,
+      "detail": "위치4.5, 6.1지반 재료조밀한 사질토·자갈 (c′ 0 kPa, φ′ 38°)경사0.0°토층 두께5.00 m지하수위 비 m0 %안전율∞이동 토사–퇴적 토사–높이 변화+0.000 m변형 원인p1 · 싱크홀"
+    },
+    {
+      "name": "10 sinkhole milestones on the timeline; log translated",
+      "ok": true,
+      "detail": {
+        "ms10": [
+          "start",
+          "sinkholeInit",
+          "supportLoss",
+          "firstDamage",
+          "collapse",
+          "foundationFailure",
+          "end",
+          "sinkholeExpansion",
+          "sinkholeExpansion"
+        ]
+      }
+    },
+    {
+      "name": "11 save during a run: original world saved, mid-run state explicitly not saved",
+      "ok": true,
+      "detail": {
+        "manifest11": [
+          [
+            "clock",
+            "state",
+            true
+          ],
+          [
+            "document",
+            "document",
+            true
+          ],
+          [
+            "events",
+            "derived",
+            true
+          ],
+          [
+            "entities",
+            "state",
+            true
+          ],
+          [
+            "debris",
+            "state",
+            true
+          ],
+          [
+            "bodies",
+            "external",
+            true
+          ],
+          [
+            "roads",
+            "state",
+            false
+          ],
+          [
+            "water",
+            "state",
+            false
+          ],
+          [
+            "deformation",
+            "derived",
+            true
+          ],
+          [
+            "groundFailure",
+            "state",
+            true
+          ],
+          [
+            "metrics",
+            "state",
+            true
+          ]
+        ]
+      }
+    },
+    {
+      "name": "12 reset restores the original ground; fingerprint unchanged on exit",
+      "ok": true,
+      "detail": {
+        "field": false,
+        "flat": true
+      }
+    },
+    {
+      "name": "13 landslide source area drawn as a polygon (4 corners, Enter)",
+      "ok": true,
+      "detail": {
+        "kind": "polygon",
+        "points": [
+          [
+            -42,
+            -12
+          ],
+          [
+            -18,
+            -12
+          ],
+          [
+            -18,
+            12
+          ],
+          [
+            -42,
+            12
+          ]
+        ]
+      }
+    },
+    {
+      "name": "14 FS map preview of the area with min FS and unstable share; ramp edited",
+      "ok": true,
+      "detail": "최소 안전율 0.67 · 불안정 576/576 격자점 · 예상 붕괴 체적 ≈ 1,152 m³예측: 실행 시 파괴가 시작됨"
+    },
+    {
+      "name": "15 slope fails when saturated; sediment moves (flow arrows), budget closes",
+      "ok": true,
+      "detail": {
+        "released": 1324.7999999999859,
+        "arrows15": 184,
+        "residual": -0.000032138209974164056
+      }
+    },
+    {
+      "name": "16 sediment comes to rest as a deposit at the toe; original world kept",
+      "ok": true,
+      "detail": {
+        "mobile": 0.6444606292061508,
+        "released": 1324.7999999999859,
+        "toe16": 139.76742367446423
+      }
+    },
+    {
+      "name": "17 road at the toe blocked by the deposit; network unchanged; no wind attribution",
+      "ok": true,
+      "detail": {
+        "blocked": 1,
+        "hazards17": []
+      }
+    },
+    {
+      "name": "18 landslide into a lake: sediment enters the water, water mass exact",
+      "ok": true,
+      "detail": {
+        "v18a": 12757.741445699236,
+        "v": 12757.741445698295,
+        "err": 7.357090094862153e-14,
+        "sub": 417.3255953229964
+      }
+    },
+    {
+      "name": "19 earthquake: Newmark displacement accumulates on the slope (HUD)",
+      "ok": true,
+      "detail": {
+        "newmark": 0.05365613102912903,
+        "failed": 709
+      }
+    },
+    {
+      "name": "20 all hazards: ground damage reported separately; nothing attributed to wind (calm)",
+      "ok": true,
+      "detail": {
+        "hazards": [
+          "ground",
+          "flood"
+        ]
+      }
+    },
+    {
+      "name": "21 sinkholes and polygon landslides saved and reloaded (schema 7)",
+      "ok": true,
+      "detail": {
+        "version": 7,
+        "ok": true,
+        "inst": [
+          [
+            "rain",
+            null
+          ],
+          [
+            "earthquake",
+            null
+          ],
+          [
+            "sinkhole",
+            "supportLoss"
+          ],
+          [
+            "landslide",
+            "polygon"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "22 disabled sinkhole / landslide do nothing (no ground field, no HUD)",
+      "ok": true,
+      "detail": {
+        "active": false,
+        "hud": false
+      }
+    }
+  ],
+  "errors": []
+}
