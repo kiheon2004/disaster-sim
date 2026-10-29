@@ -33,10 +33,18 @@ export interface Natural {
   ground(i: number): number;
 }
 
+const underlayMaps = new WeakMap<RoadNetwork['underlay'], { hu: Map<number, number>; gu: Map<number, number> }>();
+
 export function naturalOf(t: TerrainData, n: RoadNetwork): Natural {
-  const hu = new Map<number, number>();
-  const gu = new Map<number, number>();
-  n.underlay.idx.forEach((v, k) => { hu.set(v, n.underlay.h[k]); gu.set(v, n.underlay.g[k]); });
+  // Underlays are immutable values: their lookup maps are built once per underlay object.
+  let maps = underlayMaps.get(n.underlay);
+  if (!maps) {
+    maps = { hu: new Map(), gu: new Map() };
+    const { hu: h, gu: g } = maps;
+    n.underlay.idx.forEach((v, k) => { h.set(v, n.underlay.h[k]); g.set(v, n.underlay.g[k]); });
+    underlayMaps.set(n.underlay, maps);
+  }
+  const { hu, gu } = maps;
   return {
     height: (i) => hu.get(i) ?? t.heights[i],
     ground: (i) => gu.get(i) ?? t.ground[i],
@@ -144,7 +152,8 @@ function rectOf(t: TerrainData, x0: number, z0: number, x1: number, z1: number):
 /** Outer reach of a segment's influence (m): sidewalks + cut / fill blend. */
 export function reach(s: RoadSegment): number {
   const side = s.profile.sidewalk === 'none' ? 0 : s.profile.sidewalkWidth;
-  return s.profile.width / 2 + side + (s.profile.elevation === 'follow' ? 0 : MAX_BLEND) + 1;
+  // (A follow road with fixed node elevations is graded too: the blend is always included.)
+  return s.profile.width / 2 + side + MAX_BLEND + 1;
 }
 
 /** World-space bounding box of a segment's influence. */
@@ -168,7 +177,6 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
     const cur = out.get(i);
     if (!cur || c.rank < cur.rank || (c.rank === cur.rank && c.dist < cur.dist)) out.set(i, c);
   };
-  const inRect = (ix: number, iz: number) => ix >= rect.x0 && ix <= rect.x1 && iz >= rect.z0 && iz <= rect.z1;
   const segs = Object.values(n.segments).sort((a, b) => (a.id < b.id ? -1 : 1));
   const ints = intersectionsOf(n);
   for (const s of segs) {
@@ -186,39 +194,35 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
     const g = ROAD_MATERIAL_PROPS[p.material].ground;
     const trimA = ints.get(s.a)?.trim.get(s.id) ?? 0;
     const trimB = ints.get(s.b)?.trim.get(s.id) ?? 0;
-    // Vertices near the centerline (sample neighbourhoods, deduplicated per segment).
-    const seen = new Set<number>();
-    for (const smp of line.samples) {
-      const r = rectOf(t, smp.x - R, smp.z - R, smp.x + R, smp.z + R);
-      if (!r) continue;
-      for (let iz = r.z0; iz <= r.z1; iz++) {
-        for (let ix = r.x0; ix <= r.x1; ix++) {
-          if (!inRect(ix, iz)) continue;
-          const i = iz * t.nx + ix;
-          if (seen.has(i)) continue;
-          seen.add(i);
-          const x = t.originX + ix * t.cellSize;
-          const z = t.originZ + iz * t.cellSize;
-          const hit = nearest(line, x, z);
-          // Beyond the trimmed ends: the intersection polygon decides (or nothing at free ends).
-          const atEndA = hit.s <= 1e-6, atEndB = hit.s >= line.length - 1e-6;
-          if ((atEndA && endBeyond(line, 0, x, z)) || (atEndB && endBeyond(line, line.length, x, z))) continue;
-          if (hit.s < trimA - 0.5 || hit.s > line.length - trimB + 0.5) continue;
-          const hc = prof ? profileAt(line, prof, hit.s) : NaN;
-          const side = hit.side > 0 ? swR : swL;
-          if (hit.dist <= w) put(i, { rank: 0, dist: hit.dist, h: hc, g });
-          // Sidewalks stand a curb above the carriageway (follow roads: above the natural ground).
-          else if (hit.dist <= p.width / 2 + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : hc) + p.curbHeight, g: SIDEWALK_GROUND });
-          else if (blend > 0 && !Number.isNaN(hc)) {
-            const edge = p.width / 2 + side;
-            const edgeH = hc + (side > 0 ? p.curbHeight : 0);
-            const natH = nat.height(i);
-            const bw = Math.min(MAX_BLEND, Math.max(1, 2 * Math.abs(edgeH - natH)));
-            const d = hit.dist - edge;
-            if (d > 0 && d <= bw) {
-              const w2 = d / bw;
-              put(i, { rank: 2, dist: hit.dist, h: edgeH * (1 - w2) + natH * w2, g: -1 });
-            }
+    // Every vertex of the segment's reach box inside the rectangle, once.
+    const r0 = rectOf(t, bx0, bz0, bx1, bz1)!;
+    const zA = Math.max(r0.z0, rect.z0), zB = Math.min(r0.z1, rect.z1);
+    const xA = Math.max(r0.x0, rect.x0), xB = Math.min(r0.x1, rect.x1);
+    for (let iz = zA; iz <= zB; iz++) {
+      for (let ix = xA; ix <= xB; ix++) {
+        const i = iz * t.nx + ix;
+        const x = t.originX + ix * t.cellSize;
+        const z = t.originZ + iz * t.cellSize;
+        const hit = nearest(line, x, z);
+        if (hit.dist > R) continue;
+        // Beyond the trimmed ends: the intersection polygon decides (or nothing at free ends).
+        const atEndA = hit.s <= 1e-6, atEndB = hit.s >= line.length - 1e-6;
+        if ((atEndA && endBeyond(line, 0, x, z)) || (atEndB && endBeyond(line, line.length, x, z))) continue;
+        if (hit.s < trimA - 0.5 || hit.s > line.length - trimB + 0.5) continue;
+        const hc = prof ? profileAt(line, prof, hit.s) : NaN;
+        const side = hit.side > 0 ? swR : swL;
+        if (hit.dist <= w) put(i, { rank: 0, dist: hit.dist, h: hc, g });
+        // Sidewalks stand a curb above the carriageway (follow roads: above the natural ground).
+        else if (hit.dist <= p.width / 2 + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : hc) + p.curbHeight, g: SIDEWALK_GROUND });
+        else if (blend > 0 && !Number.isNaN(hc)) {
+          const edge = p.width / 2 + side;
+          const edgeH = hc + (side > 0 ? p.curbHeight : 0);
+          const natH = nat.height(i);
+          const bw = Math.min(MAX_BLEND, Math.max(1, 2 * Math.abs(edgeH - natH)));
+          const d = hit.dist - edge;
+          if (d > 0 && d <= bw) {
+            const w2 = d / bw;
+            put(i, { rank: 2, dist: hit.dist, h: edgeH * (1 - w2) + natH * w2, g: -1 });
           }
         }
       }
@@ -285,8 +289,8 @@ export interface BakeResult {
 export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork, rect: GridRect): BakeResult {
   const nat = naturalOf(t, prev);
   const cl = claims(t, nat, next, rect);
-  const under = new Map<number, [number, number]>();
-  prev.underlay.idx.forEach((v, k) => under.set(v, [prev.underlay.h[k], prev.underlay.g[k]]));
+  // New underlay entries inside the rectangle, generated in increasing vertex order.
+  const inIdx: number[] = [], inH: number[] = [], inG: number[] = [];
   let changed: GridRect | null = null;
   const touch = (ix: number, iz: number) => {
     changed = changed ? { x0: Math.min(changed.x0, ix), z0: Math.min(changed.z0, iz), x1: Math.max(changed.x1, ix), z1: Math.max(changed.z1, iz) } : { x0: ix, z0: iz, x1: ix, z1: iz };
@@ -302,9 +306,11 @@ export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork,
         if (!Number.isNaN(c.h)) h = Math.fround(Math.round(c.h / HEIGHT_QUANTUM) * HEIGHT_QUANTUM);
         if (c.g >= 0) g = c.g;
       }
-      const claimed = !!c && (h !== nh || g !== ng);
-      if (claimed) under.set(i, [nh, ng]);
-      else under.delete(i);
+      if (c && (h !== nh || g !== ng)) {
+        inIdx.push(i);
+        inH.push(nh);
+        inG.push(ng);
+      }
       if (t.heights[i] !== h || t.ground[i] !== g) {
         t.heights[i] = h;
         t.ground[i] = g;
@@ -313,33 +319,59 @@ export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork,
     }
   }
   if (changed) t.revision++;
-  const idx = [...under.keys()].sort((a, b) => a - b);
-  return { rect: changed, underlay: { idx, h: idx.map((i) => under.get(i)![0]), g: idx.map((i) => under.get(i)![1]) } };
+  // Merge: previous entries outside the rectangle (sorted) + the new ones inside (sorted).
+  const u = prev.underlay;
+  const inside = (i: number) => {
+    const ix = i % t.nx, iz = (i - ix) / t.nx;
+    return ix >= rect.x0 && ix <= rect.x1 && iz >= rect.z0 && iz <= rect.z1;
+  };
+  const idx: number[] = [], hs: number[] = [], gs: number[] = [];
+  let k = 0;
+  for (let j = 0; j < u.idx.length; j++) {
+    const i = u.idx[j];
+    if (inside(i)) continue;
+    while (k < inIdx.length && inIdx[k] < i) { idx.push(inIdx[k]); hs.push(inH[k]); gs.push(inG[k]); k++; }
+    idx.push(i); hs.push(u.h[j]); gs.push(u.g[j]);
+  }
+  for (; k < inIdx.length; k++) { idx.push(inIdx[k]); hs.push(inH[k]); gs.push(inG[k]); }
+  return { rect: changed, underlay: { idx, h: hs, g: gs } };
 }
 
-/** Vertex rectangle covering every segment that differs between two networks (+ their junctions). */
+/**
+ * Vertex rectangle covering everything a change a → b can touch: the segments that differ or
+ * end at a moved node (whole reach, both versions), plus the junction areas at their end nodes
+ * (intersection polygons + the trimmed ends of the neighbouring roads, both versions). Only one
+ * ring of neighbours: a neighbour's graded profile depends on its own nodes, which did not move.
+ */
 export function dirtyRect(t: TerrainData, a: RoadNetwork, b: RoadNetwork): GridRect | null {
   const boxes: [number, number, number, number][] = [];
-  const nodesChanged = new Set<string>();
+  const moved = new Set<string>();
   for (const id of new Set([...Object.keys(a.nodes), ...Object.keys(b.nodes)])) {
     const p = a.nodes[id], q = b.nodes[id];
-    if (!p || !q || p.x !== q.x || p.z !== q.z || p.y !== q.y) nodesChanged.add(id);
+    if (!p || !q || p.x !== q.x || p.z !== q.z || p.y !== q.y) moved.add(id);
   }
+  const junctions = new Set<string>();
   const consider = (n: RoadNetwork, other: RoadNetwork) => {
     for (const s of Object.values(n.segments)) {
-      const o = other.segments[s.id];
-      const affected = o !== s || nodesChanged.has(s.a) || nodesChanged.has(s.b);
-      if (affected) {
-        boxes.push(segmentBounds(n, s));
-        nodesChanged.add(s.a);
-        nodesChanged.add(s.b);
-      }
+      if (other.segments[s.id] === s && !moved.has(s.a) && !moved.has(s.b)) continue;
+      boxes.push(segmentBounds(n, s));
+      junctions.add(s.a);
+      junctions.add(s.b);
     }
   };
   consider(a, b);
   consider(b, a);
-  // Junction neighbours: their trims / intersection polygons change with the edited roads.
-  for (const n of [a, b]) for (const s of Object.values(n.segments)) if (nodesChanged.has(s.a) || nodesChanged.has(s.b)) boxes.push(segmentBounds(n, s));
+  for (const n of [a, b]) {
+    const ints = intersectionsOf(n);
+    for (const id of junctions) {
+      const ix = ints.get(id);
+      if (!ix) continue;
+      let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, r = 0;
+      for (const poly of [ix.surface, ...ix.corners.map((c) => c.poly)]) for (const [x, z] of poly) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); }
+      for (const road of ix.roads) r = Math.max(r, reach(road.segment));
+      if (Number.isFinite(x0)) boxes.push([x0 - r, z0 - r, x1 + r, z1 + r]);
+    }
+  }
   if (!boxes.length) return null;
   let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
   for (const bb of boxes) { x0 = Math.min(x0, bb[0]); z0 = Math.min(z0, bb[1]); x1 = Math.max(x1, bb[2]); z1 = Math.max(z1, bb[3]); }

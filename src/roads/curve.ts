@@ -113,22 +113,26 @@ export function pointAt(c: Centerline, s: number): CenterSample {
 
 /** Nearest point on the centerline to (x, z): arc length, distance, side (+1 right of travel). */
 export function nearest(c: Centerline, x: number, z: number): { s: number; dist: number; side: number } {
-  let best = { s: 0, dist: Infinity, side: 1 };
+  // Squared distances (no sqrt / hypot in the loop) — this runs for every baked vertex.
+  let bestD2 = Infinity, bestS = 0, bestSide = 1;
   const S = c.samples;
   for (let i = 0; i < S.length - 1; i++) {
     const a = S[i], b = S[i + 1];
     const dx = b.x - a.x, dz = b.z - a.z;
     const L2 = dx * dx + dz * dz || 1e-12;
-    const w = Math.min(1, Math.max(0, ((x - a.x) * dx + (z - a.z) * dz) / L2));
+    let w = ((x - a.x) * dx + (z - a.z) * dz) / L2;
+    w = w < 0 ? 0 : w > 1 ? 1 : w;
     const px = a.x + dx * w, pz = a.z + dz * w;
-    const d = Math.hypot(x - px, z - pz);
-    if (d < best.dist) {
-      // Right of travel: cross(t, p − c) < 0 in x/z with +z south (screen-right when looking along t).
-      const cross = dx * (z - pz) - dz * (x - px);
-      best = { s: a.s + (b.s - a.s) * w, dist: d, side: cross >= 0 ? 1 : -1 };
+    const ex = x - px, ez = z - pz;
+    const d2 = ex * ex + ez * ez;
+    if (d2 < bestD2) {
+      bestD2 = d2;
+      bestS = a.s + (b.s - a.s) * w;
+      // Right of travel: cross(t, p − c) ≥ 0 in x/z with +z south (screen-right looking along t).
+      bestSide = dx * ez - dz * ex >= 0 ? 1 : -1;
     }
   }
-  return best;
+  return { s: bestS, dist: Math.sqrt(bestD2), side: bestSide };
 }
 
 /** Signed curvature radius at a sample (m, Infinity on straights) — from the tangent change. */
