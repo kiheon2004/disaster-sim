@@ -17,8 +17,8 @@ import { composeRect, createLandscape, expandForRivers, rectOfBox, unionRects } 
 import type { Landscape } from './types';
 
 export function naturalProvider(land: Landscape): Natural {
-  const { heights, ground } = land.natural;
-  return { height: (i) => heights[i], ground: (i) => ground[i] };
+  const { heights, ground, culvert, roadBase } = land.natural;
+  return { height: (i) => heights[i], ground: (i) => ground[i], open: (i) => culvert[i] === 1, profile: (i) => roadBase[i] };
 }
 
 const overlaps = (a: GridRect, b: GridRect) => a.x0 <= b.x1 && b.x0 <= a.x1 && a.z0 <= b.z1 && b.z0 <= a.z1;
@@ -67,7 +67,7 @@ export function recompose(t: TerrainData, land: Landscape, roads: RoadNetwork, r
 
 // ── Layer patches (undo / redo of the per-vertex layers) ─────────────────────────────
 
-type LayerName = 'baseHeights' | 'baseGround' | 'sculpt' | 'paint' | 'naturalHeights' | 'naturalGround';
+type LayerName = 'baseHeights' | 'baseGround' | 'sculpt' | 'paint' | 'naturalHeights' | 'naturalGround' | 'naturalCulvert' | 'naturalRoadBase';
 
 function layer(land: Landscape, name: LayerName): Float32Array | Uint8Array {
   switch (name) {
@@ -77,13 +77,15 @@ function layer(land: Landscape, name: LayerName): Float32Array | Uint8Array {
     case 'paint': return land.paint;
     case 'naturalHeights': return land.natural.heights;
     case 'naturalGround': return land.natural.ground;
+    case 'naturalCulvert': return land.natural.culvert;
+    case 'naturalRoadBase': return land.natural.roadBase;
   }
 }
 
 export type LayerSnapshot = Partial<Record<LayerName, Float32Array | Uint8Array>>;
 
 /** Full copies of the named layers (taken before an edit). */
-export function snapshotLandscape(land: Landscape, names: LayerName[] = ['sculpt', 'paint', 'naturalHeights', 'naturalGround']): LayerSnapshot {
+export function snapshotLandscape(land: Landscape, names: LayerName[] = ['sculpt', 'paint', 'naturalHeights', 'naturalGround', 'naturalCulvert', 'naturalRoadBase']): LayerSnapshot {
   const out: LayerSnapshot = {};
   for (const n of names) out[n] = layer(land, n).slice();
   return out;

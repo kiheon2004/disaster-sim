@@ -20,7 +20,7 @@ export function createLandscape(t: Pick<TerrainData, 'heights' | 'ground'>): Lan
     paint: new Uint8Array(n).fill(NO_PAINT),
     features: [],
     next: 1,
-    natural: { heights: t.heights.slice(), ground: t.ground.slice() },
+    natural: { heights: t.heights.slice(), ground: t.ground.slice(), culvert: new Uint8Array(n), roadBase: t.heights.slice() },
   };
 }
 
@@ -88,7 +88,7 @@ export function expandForRivers(land: Landscape, g: Grid, rect: GridRect): GridR
 /** River profiles of a composition (computed once per compose call). */
 function prepareCarves(land: Landscape, g: Grid, rect: GridRect, seaLevel: number) {
   const L = landformSampler(land, g);
-  const carves: { box: Box; at: (x: number, z: number) => Carve | null }[] = [];
+  const carves: { box: Box; at: (x: number, z: number) => Carve | null; culvert: boolean; embankment: boolean }[] = [];
   for (const f of land.features) {
     if (isLandform(f)) continue;
     const r = rectOfBox(g, featureBounds(f));
@@ -96,9 +96,9 @@ function prepareCarves(land: Landscape, g: Grid, rect: GridRect, seaLevel: numbe
     const box = featureBounds(f);
     if (f.kind === 'river') {
       const prof: RiverProfile = riverProfile(f, L);
-      carves.push({ box, at: (x, z) => riverCarve(f, prof, x, z) });
-    } else if (f.kind === 'lake') carves.push({ box, at: (x, z) => lakeCarve(f, x, z) });
-    else carves.push({ box, at: (x, z) => coastCarve(f, seaLevel, x, z) });
+      carves.push({ box, at: (x, z) => riverCarve(f, prof, x, z), culvert: f.crossing === 'culvert', embankment: f.crossing === 'embankment' });
+    } else if (f.kind === 'lake') carves.push({ box, at: (x, z) => lakeCarve(f, x, z), culvert: false, embankment: false });
+    else carves.push({ box, at: (x, z) => coastCarve(f, seaLevel, x, z), culvert: false, embankment: false });
   }
   return { L, carves };
 }
@@ -120,16 +120,21 @@ export function composeRect(land: Landscape, g: Grid, rect: GridRect, seaLevel: 
         if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3]) L += landformDelta(landforms[k], x, z);
       }
       let h = L;
-      let gc = -1, hMat = Infinity;
+      let gc = -1, hMat = Infinity, culvert = 0, hRoad = L;
       for (const c of carves) {
         const b = c.box;
         if (x < b[0] || x > b[2] || z < b[1] || z > b[3]) continue;
         const r = c.at(x, z);
         if (!r) continue;
         if (r.h < h) h = r.h;
+        if (!c.embankment && r.h < hRoad) hRoad = r.h;
         if (r.g >= 0 && r.h <= hMat) { hMat = r.h; gc = r.g; }
+        // Culvert: the channel (bed + banks lowered by ≥ 0.2 m) stays open under roads.
+        if (c.culvert && r.h < L - 0.2) culvert = 1;
       }
       natural.heights[i] = quantizeHeight(h);
+      natural.culvert[i] = culvert;
+      natural.roadBase[i] = quantizeHeight(hRoad);
       natural.ground[i] = paint[i] !== NO_PAINT ? paint[i] : gc >= 0 ? gc : base.ground[i];
     }
   }

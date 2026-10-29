@@ -64,7 +64,7 @@ function edges(line: Centerline, half: number): [P2[], P2[]] {
 }
 
 /** Imperative group of preview lines (rebuilt as a whole: a handful of lines). */
-class PreviewLines {
+export class PreviewLines {
   readonly root = new THREE.Group();
   private mats = new Map<string, THREE.LineBasicMaterial>();
   clear() {

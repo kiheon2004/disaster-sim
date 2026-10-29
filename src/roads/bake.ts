@@ -31,6 +31,10 @@ const EDGE_MARGIN = 0.35;
 export interface Natural {
   height(i: number): number;
   ground(i: number): number;
+  /** Phase 19: vertices road grading must leave natural (culvert river channels). */
+  open?(i: number): boolean;
+  /** Phase 19: height graded road profiles follow (natural without embankment channels). */
+  profile?(i: number): number;
 }
 
 const underlayMaps = new WeakMap<RoadNetwork['underlay'], { hu: Map<number, number>; gu: Map<number, number> }>();
@@ -58,7 +62,8 @@ function naturalAt(t: TerrainData, nat: Natural, x: number, z: number): number {
   const ix = Math.floor(fx), iz = Math.floor(fz);
   const ax = fx - ix, az = fz - iz;
   const i = iz * t.nx + ix;
-  const h00 = nat.height(i), h10 = nat.height(i + 1), h01 = nat.height(i + t.nx), h11 = nat.height(i + t.nx + 1);
+  const H = nat.profile ?? nat.height;
+  const h00 = H(i), h10 = H(i + 1), h01 = H(i + t.nx), h11 = H(i + t.nx + 1);
   return (h00 * (1 - ax) + h10 * ax) * (1 - az) + (h01 * (1 - ax) + h11 * ax) * az;
 }
 
@@ -307,7 +312,7 @@ export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork,
     for (let ix = rect.x0; ix <= rect.x1; ix++) {
       const i = iz * t.nx + ix;
       const nh = nat.height(i), ng = nat.ground(i);
-      const c = cl.get(i);
+      const c = nat.open?.(i) ? undefined : cl.get(i);
       let h = nh, g = ng;
       if (c) {
         // Stored as float32: compare in the storage precision so a re-bake is a no-op.

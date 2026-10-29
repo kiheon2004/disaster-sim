@@ -15,7 +15,9 @@ import { samplerFor } from '@/terrain/TerrainSampler';
 import { clickSelect } from '@/app/buildActions';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
-import { TerrainTool } from './tools/TerrainTool';
+import { TerrainTool, isBrushTool } from './tools/TerrainTool';
+import { NatureTool } from './tools/NatureTool';
+import { StaticWaterLayer } from '@/rendering/landscape/StaticWaterLayer';
 import { RoadTool } from './tools/RoadTool';
 import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
 import { PasteTool } from './tools/PasteTool';
@@ -162,6 +164,7 @@ const EMPTY = new Set<EntityId>();
 export function EditorScene() {
   const objects = useWorldStore((s) => s.doc.objects);
   const tool = useEditorStore((s) => s.tool);
+  const terrainTool = useEditorStore((s) => s.terrainTool);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const selectedId = useEditorStore((s) => s.selectedId);
   const hoveredId = useEditorStore((s) => s.hoveredId);
@@ -194,6 +197,7 @@ export function EditorScene() {
   return (
     <>
       <EditorBatchLayer hide={hide} interactive={interactive} />
+      <StaticWaterLayer />
       {live.map((o) => (
         <EditorEntity
           key={o.id}
@@ -212,7 +216,7 @@ export function EditorScene() {
       {tool === 'line' && <LineTool />}
       {tool === 'area' && <AreaTool />}
       {tool === 'paste' && <PasteTool />}
-      {tool === 'terrain' && <TerrainTool />}
+      {tool === 'terrain' && (isBrushTool(terrainTool) || terrainTool === 'inspect' ? <TerrainTool /> : <NatureTool />)}
       {tool === 'road' && <RoadTool />}
       {editingBuilding && <BuildingEditor />}
       {interactive && single && <TransformGizmo />}

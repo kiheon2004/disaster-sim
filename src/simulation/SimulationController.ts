@@ -28,6 +28,7 @@ import { GRAVITY } from '@/core/units';
 import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
 import { isWaterEvent } from '@/events/specs';
 import { RoadRuntime } from './roads/RoadRuntime';
+import { hydrologyPlan } from '@/landscape/hydrology';
 import { floodFeatures } from './water/floodFeatures';
 import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
 import type { FloodLive } from './simStore';
@@ -121,7 +122,12 @@ export class SimulationController {
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     const terrain = new TerrainSampler(this.snapshot.terrain);
     this.runtime = buildRuntime(this.snapshot, physics, terrain);
-    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, sim.water ?? defaultWaterSettings());
+    // Phase 19: water of the natural features (initial depth, river inflows, outlets). Edge
+    // overrides apply to this run only — the document's settings are never written.
+    const water = sim.water ?? defaultWaterSettings();
+    const hydro = this.snapshot.landscape ? hydrologyPlan(this.snapshot.landscape, this.snapshot.terrain, water) : null;
+    const runWater = hydro && Object.keys(hydro.boundaries).length ? { ...water, boundaries: { ...water.boundaries, ...hydro.boundaries } } : water;
+    this.env = createEnvironment(this.snapshot.settings.airDensity, sim.wind, sim.seed, terrain, runWater);
     const obstacles = [];
     for (const e of this.runtime.entities.values()) {
       const o = obstacleFromEntity(e);
@@ -160,6 +166,16 @@ export class SimulationController {
     this.ended = new Set();
     this.lastMilestones = -1;
     for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, this.eventDefaults()));
+    if (hydro) {
+      for (const src of hydro.sources) this.scheduler.add(createEvent(src, 0, this.eventDefaults()));
+      for (const issue of hydro.issues) this.log(null, 'warn', { key: `nature.hydro.${issue.code}`, params: { id: issue.feature, v: (issue.value ?? 0).toFixed(2) } });
+      // Water already in lakes / rivers: the water model runs from t = 0 (a saved mid-run water
+      // state, if one was loaded, takes precedence over the features' initial water).
+      if (hydro.initial || hydro.sources.length) {
+        this.env.flood.landscapeWater = this.initialWater ? null : hydro.initial;
+        this.env.flood.activate(0);
+      }
+    }
     this.status = 'paused';
     if (!this.headless) useSimStore.getState().set({ runtimeVersion: useSimStore.getState().runtimeVersion + 1 });
     this.publish(true);

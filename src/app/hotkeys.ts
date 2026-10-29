@@ -10,6 +10,9 @@ import { degToRad } from '@/core/math';
 import { useMemberStore } from '@/editor/memberStore';
 import { deleteRoadSegments, finishDraft } from '@/app/roadActions';
 import { useRoadStore, EMPTY_SELECTION } from '@/editor/roadStore';
+import { useNatureStore } from '@/editor/natureStore';
+import { deleteFeature, finishNatureDraft } from '@/app/natureActions';
+import type { TerrainToolId } from '@/editor/editorStore';
 import { deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, modularBuilding } from '@/app/buildingActions';
 
 /** Building Edit Mode keys. Returns true when the key was handled. */
@@ -109,6 +112,38 @@ function roadKeys(e: KeyboardEvent, key: string): boolean {
   return false;
 }
 
+/** Natural-feature tool keys (Phase 19). Returns true when the key was handled. */
+function natureKeys(e: KeyboardEvent, key: string, tool: TerrainToolId): boolean {
+  const ns = useNatureStore.getState();
+  switch (key) {
+    case 'enter':
+      if (ns.draft.length) {
+        e.preventDefault();
+        finishNatureDraft(tool);
+        return true;
+      }
+      return false;
+    case 'backspace':
+      if (ns.draft.length) {
+        e.preventDefault();
+        ns.popPoint();
+        return true;
+      }
+      return false;
+    case 'escape':
+      if (ns.draft.length) { ns.clearDraft(); return true; }
+      if (ns.selected) { ns.select(null); return true; }
+      return false;
+    case 'delete':
+      if (tool === 'feature' && ns.selected) {
+        deleteFeature(ns.selected);
+        return true;
+      }
+      return false;
+  }
+  return false;
+}
+
 /** Tool keys (Phase 16). Chosen not to collide with W/E/R/F/G/T, Space, [ ], Shift+P. */
 const TOOL_KEYS: Record<string, 'select' | 'place' | 'brush' | 'line' | 'area'> = { v: 'select', p: 'place', b: 'brush', l: 'line', a: 'area' };
 
@@ -200,6 +235,8 @@ export function useEditorHotkeys() {
         return;
       }
 
+      // Natural features (Phase 19): drawing / selection keys of the terrain feature tools.
+      if (ed.tool === 'terrain' && natureKeys(e, key, ed.terrainTool)) return;
       // Road Editing Mode (Phase 18): draft / selection keys.
       if (ed.tool === 'road' && roadKeys(e, key)) return;
       if (ed.tool !== 'terrain' && ed.tool !== 'road' && TOOL_KEYS[key] && !e.altKey) {

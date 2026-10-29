@@ -29,6 +29,8 @@ export class FloodEnvironment {
   private obstacles: Footprint[] = [];
   private roads: Footprint[] = [];
   private inlets: Inlet[] = [];
+  /** Phase 19: water of lakes / rivers (depth per cell) added at activation, or null. */
+  landscapeWater: Float64Array | null = null;
   /** Optional initial water state (mid-simulation snapshot) applied at activation. */
   initialState: WaterStateSnapshot | null = null;
   /** Simulation time of activation (s). */
@@ -58,6 +60,15 @@ export class FloodEnvironment {
     const forcing = new WaterForcing(this.settings, t);
     if (this.initialState) applyWaterState(field, this.initialState);
     else if (this.settings.initialFromReference) fillFromBoundaries(field, forcing);
+    const lw = this.landscapeWater;
+    if (lw && lw.length === field.count) {
+      for (let i = 0; i < lw.length; i++) {
+        if (lw[i] <= field.h[i] || field.blocked[i]) continue;
+        field.h[i] = lw[i];
+        const ix = i % field.nx;
+        field.touch(ix, (i - ix) / field.nx);
+      }
+    }
     field.budget.initial = field.totalVolume();
     field.updateStats();
     this.field = field;

@@ -136,6 +136,8 @@ interface WorldState {
   beginTerrainStroke: () => void;
   terrainDab: (opts: DabOptions) => GridRect | null;
   endTerrainStroke: () => void;
+  /** Height change of the stroke in progress: max raise / lowering (m) and changed area (m²). */
+  strokeDelta: () => { up: number; down: number; area: number } | null;
   applyTerrainPreset: (preset: TerrainPresetId, seed: number) => void;
   setWaterLevel: (level: number | null) => void;
   /** Replace the natural features (one undo step; the terrain is recomposed locally). */
@@ -305,7 +307,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     const t = doc.terrain;
     const land = doc.landscape;
     const before = snapshotLayers(t);
-    const lb = snapshotLandscape(land, e.base ? ['baseHeights', 'baseGround', 'sculpt', 'paint', 'naturalHeights', 'naturalGround'] : undefined);
+    const lb = snapshotLandscape(land, e.base ? ['baseHeights', 'baseGround', 'sculpt', 'paint', 'naturalHeights', 'naturalGround', 'naturalCulvert', 'naturalRoadBase'] : undefined);
     const featuresBefore = land.features, nextBefore = land.next;
     try {
       let rect: GridRect | null = null;
@@ -350,7 +352,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       t.soil.set(before.soil);
       t.settings = before.settings;
       for (const [k, v] of Object.entries(lb) as [string, Float32Array | Uint8Array][]) {
-        const dst = k === 'baseHeights' ? land.base.heights : k === 'baseGround' ? land.base.ground : k === 'sculpt' ? land.sculpt : k === 'paint' ? land.paint : k === 'naturalHeights' ? land.natural.heights : land.natural.ground;
+        const dst = k === 'baseHeights' ? land.base.heights : k === 'baseGround' ? land.base.ground : k === 'sculpt' ? land.sculpt : k === 'paint' ? land.paint : k === 'naturalHeights' ? land.natural.heights : k === 'naturalGround' ? land.natural.ground : k === 'naturalCulvert' ? land.natural.culvert : land.natural.roadBase;
         dst.set(v);
       }
       land.features = featuresBefore;
@@ -554,6 +556,22 @@ export const useWorldStore = create<WorldState>((set, get) => {
       terrainStats.dabMs += performance.now() - t0;
       stroke!.rect = unionRect(stroke!.rect, rect);
       return rect;
+    },
+
+    strokeDelta: () => {
+      const s = stroke;
+      if (!s?.rect) return null;
+      const t = get().doc.terrain;
+      let up = 0, down = 0, n = 0;
+      const r = s.rect;
+      for (let iz = r.z0; iz <= r.z1; iz++) for (let ix = r.x0; ix <= r.x1; ix++) {
+        const i = iz * t.nx + ix;
+        const d = t.heights[i] - s.before.heights[i];
+        if (d > up) up = d;
+        if (d < down) down = d;
+        if (d !== 0 || t.ground[i] !== s.before.ground[i]) n++;
+      }
+      return { up, down, area: n * t.cellSize * t.cellSize };
     },
 
     endTerrainStroke: () => {

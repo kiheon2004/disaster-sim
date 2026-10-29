@@ -134,8 +134,14 @@ export interface Landscape {
   features: Feature[];
   /** Next feature id number (f<k>). */
   next: number;
-  /** Derived: the composed natural terrain (no roads). Not saved. */
-  natural: { heights: Float32Array; ground: Uint8Array };
+  /**
+   * Derived: the composed natural terrain (no roads) and the culvert mask — vertices of a river
+   * channel with the 'culvert' crossing policy, which road grading leaves alone so the water
+   * passes under the road (approximation of a culvert / bridge opening). `roadBase`: the natural
+   * height WITHOUT 'embankment' river channels — what graded road profiles follow, so a road
+   * crosses such a channel on a level fill (an embankment) instead of dipping into it. Not saved.
+   */
+  natural: { heights: Float32Array; ground: Uint8Array; culvert: Uint8Array; roadBase: Float32Array };
 }
 
 /** Narrowest channel the 1 m water grid can carry (three cells across). */

@@ -15,7 +15,12 @@ export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste
 export const PLACEMENT_TOOLS: readonly EditorTool[] = ['place', 'brush', 'line', 'area'];
 export const isPlacementTool = (t: EditorTool) => (PLACEMENT_TOOLS as readonly string[]).includes(t);
 /** Terrain Editing Mode tools: sculpt, paint ground, or read values at a point. */
-export type TerrainToolId = 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'soil' | 'inspect';
+export type TerrainToolId =
+  | 'raise' | 'lower' | 'flatten' | 'smooth' | 'paint' | 'soil' | 'inspect'
+  // Phase 19 landscape brushes
+  | 'plateau' | 'ridge' | 'valley' | 'slope' | 'noise' | 'erode'
+  // Phase 19 natural features (placed / drawn in the viewport)
+  | 'mountain' | 'hill' | 'ridgeLine' | 'valleyLine' | 'canyon' | 'river' | 'lake' | 'coast' | 'forest' | 'feature';
 
 export const BRUSH_RADIUS_RANGE: [number, number] = [1, 40];
 export type TransformMode = 'translate' | 'rotate' | 'scale';
@@ -47,6 +52,15 @@ interface EditorState {
   soilType: SoilProfileId;
   /** Point picked with the inspect tool (world x/z). */
   terrainProbe: { x: number; z: number } | null;
+  /** Phase 19 brush settings. */
+  brushFalloff: import('@/terrain/TerrainEditor').BrushFalloff;
+  brushShape: import('@/terrain/TerrainEditor').BrushShape;
+  brushSeed: number;
+  /** Height limits of raising / lowering brushes (null = none). */
+  brushMin: number | null;
+  brushMax: number | null;
+  /** Height change of the current / last stroke (m): max raise, max lowering, touched area (m²). */
+  strokeDelta: { up: number; down: number; area: number } | null;
   /** Building Edit Mode (Phase 17): the modular building whose members are being edited. */
   buildingId: EntityId | null;
 
@@ -69,6 +83,8 @@ interface EditorState {
   /** Enter Terrain Editing Mode with a tool (null = back to select). */
   setTerrainTool: (t: TerrainToolId | null) => void;
   setBrush: (patch: { radius?: number; strength?: number }) => void;
+  setBrushOptions: (patch: Partial<Pick<EditorState, 'brushFalloff' | 'brushShape' | 'brushSeed' | 'brushMin' | 'brushMax'>>) => void;
+  setStrokeDelta: (d: EditorState['strokeDelta']) => void;
   setPaintType: (t: GroundTypeId) => void;
   setSoilType: (t: SoilProfileId) => void;
   setTerrainProbe: (p: { x: number; z: number } | null) => void;
@@ -94,6 +110,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   paintType: 3,
   soilType: 2,
   terrainProbe: null,
+  brushFalloff: 'smooth',
+  brushShape: 'circle',
+  brushSeed: 1,
+  brushMin: null,
+  brushMax: null,
+  strokeDelta: null,
   buildingId: null,
 
   setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null, buildingId: null }),
@@ -127,6 +149,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       brushStrength: strength === undefined ? get().brushStrength : Math.min(1, Math.max(0.05, strength)),
     }),
   setPaintType: (paintType) => set({ paintType }),
+  setBrushOptions: (patch) => set(patch),
+  setStrokeDelta: (strokeDelta) => set({ strokeDelta }),
   setSoilType: (soilType) => set({ soilType }),
   setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
   setRoadEdit: (on) =>
