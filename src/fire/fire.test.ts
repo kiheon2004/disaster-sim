@@ -218,3 +218,37 @@ describe('FireWorld on a thermal world', () => {
     expect(SIGMA).toBeGreaterThan(0);
   });
 });
+
+describe('fire ledgers under transport and moves', () => {
+  it('smoke carried by the wind and vented stays accounted (produced = rooms + air + vented + out)', () => {
+    const tw = world();
+    const fw = new FireWorld(tw);
+    for (let a = 0; a < tw.air.count; a += 7) fw.soot[a] = 0.01;
+    let total = 0;
+    for (let a = 0; a < tw.air.count; a++) total += fw.soot[a];
+    fw.ledger.smokeProduced = total;
+    tw.air.E.fill(tw.air.C * 30);
+    for (let k = 0; k < 600; k++) fw.transportOutdoor(0.1, 6, -2);
+    expect(fw.ledger.smokeAdvected).toBeGreaterThan(0);
+    expect(fw.ledger.smokeVented).toBeGreaterThan(0);
+    expect(Math.abs(fw.ledger.smokeResidual())).toBeLessThan(1e-12 * Math.max(1, total) + 1e-15);
+  });
+
+  it('burning debris moving into a heap and fuel leaving the world keep fuel and chemical energy closed', () => {
+    const tw = world();
+    const fw = new FireWorld(tw);
+    const a = fw.add({ kind: IK.member, mat: FM.timber, body: -1, core: false, home: -1, fuel: 40, water: 0, area: 2, size: 2, solid: 50, volume: 0.1, x: 0, y: 0, z: 0, ref: 0, sub: 0 });
+    const h = fw.add({ kind: IK.heap, mat: FM.timber, body: -1, core: false, home: -1, fuel: 0, water: 0, area: 10, size: 3, solid: 0, volume: 1, x: 0, y: 0, z: 0, ref: -1, sub: -2 });
+    const b = fw.add({ kind: IK.member, mat: FM.timber, body: -1, core: false, home: -1, fuel: 25, water: 0, area: 2, size: 2, solid: 30, volume: 0.1, x: 0, y: 0, z: 0, ref: 0, sub: 1 });
+    expect(fw.ignite(a, false)).toBe(true);
+    fw.transfer(a, h);
+    fw.leave(b);
+    fw.tally();
+    expect(fw.m[h]).toBe(40);
+    expect(isBurning(fw.state[h])).toBe(true);
+    expect(fw.gone[a]).toBe(1);
+    expect(fw.ledger.fuelLeft).toBe(25);
+    expect(Math.abs(fw.ledger.fuelResidual())).toBeLessThan(1e-9);
+    expect(Math.abs(fw.ledger.chemResidual())).toBeLessThan(1e-3);
+  });
+});

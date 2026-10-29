@@ -195,6 +195,27 @@ export class FireRuntime {
   msTotal = 0;
   private hrrHist: number[] = [];
 
+  /**
+   * Phase 28 extension points (volcano / lava — not implemented here). A later model adds heat the
+   * same way every heat does — as thermal source steps / exchanges (lava as a hot surface, radiation
+   * of a lava front, hot debris bodies, heated ground cells) — and its incident flux reaches the fuel
+   * through these providers before ignition is judged; `contact` lights fuel touched by something hot
+   * (a lava front reaching a tree) through the same state machine, with its own cause label. Nothing
+   * here bypasses fuel, oxygen, moisture or the ledgers.
+   */
+  readonly incidentProviders: ((rt: FireRuntime, qInc: Float32Array, pilot: Uint8Array) => void)[] = [];
+  contact(P: Vec3, radius: number, cause: string): number {
+    const fw = this.fw;
+    let lit = 0;
+    for (let i = 0; i < fw.n; i++) {
+      if (fw.gone[i] || fw.m[i] <= 0 || fw.kind[i] === IK.contents) continue;
+      const p = fw.pos(i);
+      if (Math.hypot(p[0] - P[0], p[1] - P[1], p[2] - P[2]) > radius + fw.size[i] / 2) continue;
+      if (fw.ignite(i, false)) { lit++; this.cause[i] = cause; this.ignitedOwners.add(this.owner[i]); this.markInvolved(i); }
+    }
+    return lit;
+  }
+
   constructor(ctx: SystemContext, trt: ThermalRuntime) {
     this.trt = trt;
     this.settings = ctx.env.fire.settings;
@@ -577,6 +598,7 @@ export class FireRuntime {
         if (d <= rz) for (const i of items) fw.pilot[i] = 1;
       });
     }
+    for (const prov of this.incidentProviders) prov(this, fw.qInc, fw.pilot);
     // Water: submerged share of the body, rain on its exposed faces.
     const f = ctx.env.flood.field;
     const rains = ctx.env.flood.forcing?.rains ?? [];

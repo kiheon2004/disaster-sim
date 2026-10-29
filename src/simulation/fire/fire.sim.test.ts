@@ -255,3 +255,23 @@ describe('determinism, ids, restoration, save / load', () => {
     expect(r2.ok && r2.doc.settings.simulation.fire).toBeFalsy();
   });
 });
+
+describe('Phase 28 extension points', () => {
+  it('an external incident-flux provider ignites fuel through the normal ignition rules; contact ignition uses the state machine', async () => {
+    const c = await load(doc([tree(0, 0)], { foliageMoisture: 0.2 }), [ignite({ position: [60, 60], radius: 0.5 })]);
+    c.advance(1);
+    const fr = frOf(c);
+    // The tree joins the thermal network when something heats near it; it is brought in directly here.
+    const te = fr.trt.ents.find((x) => x.kind === 'tree')!;
+    fr.trt.activate({ env: c.getEnvironment(), runtime: c.getRuntime()!, time: c.getTime() } as never, te);
+    let calls = 0;
+    fr.incidentProviders.push((rt, q, pilot) => { calls++; for (let i = 0; i < rt.fw.n; i++) if (rt.fw.kind[i] === IK.foliage) { q[i] += 60e3; pilot[i] = 1; } });
+    c.advance(20);
+    const fw = fr.fw;
+    const f = [...Array(fw.n).keys()].find((i) => fw.kind[i] === IK.foliage)!;
+    expect(calls).toBeGreaterThan(0);
+    expect(fw.m[f]).toBeLessThan(fw.m0[f]);
+    expect(fr.contact([100, 0, 100], 1, 'lava')).toBe(0);
+    c.unload();
+  });
+});
