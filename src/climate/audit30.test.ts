@@ -10,13 +10,15 @@ import { WaterField } from '@/simulation/water/WaterField';
 import { WaterForcing } from '@/simulation/water/WaterForcing';
 import { WaterSolver } from '@/simulation/water/WaterSolver';
 import { ThermalWorld, defaultThermalSettings } from '@/thermal/ThermalWorld';
+import { emptyRates } from '@/thermal/TerrainThermal';
+import { hGround } from '@/thermal/convection';
 import { dewPointChecked, esWater, humidityFromRH, qSat, saturationAdjust, specificHumidity } from './psychro';
 import { ClimateForcing } from './forcing';
 import { climateOutlook } from './outlook';
 import { snowAlbedo } from './snow';
 import { defaultClimateSpec, type ClimateSpec } from './types';
 import { ClimateWorld, computeShade, STORE, type ClimateWaterLink } from './ClimateWorld';
-import { CP_AIR, L_V, RHO_ICE, T_MELT } from './constants';
+import { CP_AIR, L_V, RHO_ICE, SIGMA, T_MELT } from './constants';
 
 const K = (c: number) => c + 273.15;
 
@@ -169,5 +171,35 @@ describe('audit: psychrometrics', () => {
   it('fresh snow restores the share P/10 of the gap to the maximum albedo (Douville et al. 1995)', () => {
     expect(snowAlbedo(0.7, 0, false, 5)).toBeCloseTo(0.7 + 0.5 * (0.85 - 0.7), 12);
     expect(snowAlbedo(0.5, 0, false, 10)).toBeCloseTo(0.85, 12);
+  });
+});
+
+describe('audit: bare-surface longwave of a hot surface', () => {
+  it('the sky loss of a 1300 K surface layer matches the exact quartic surface balance (before: +74 %)', () => {
+    const r = setup(spec({ temperature: K(15), target: K(15), humidity: 0.5, soilMoisture: 0 }));
+    const tw = r.tw, tr = tw.terrain, cw = r.cw;
+    const c = 20 * 40 + 20, j = c * tr.nl;
+    const cx = tr.originX + 0.5 * tr.cell, cz = tr.originZ + 0.5 * tr.cell;
+    const env = (acc: ReturnType<typeof emptyRates>) => ({ closed: false, u2: 0, water: null, airIndex: (ix: number, iz: number) => tw.air.index(cx + ix * tr.cell, cz + iz * tr.cell), airT: (a: number) => tw.air.T(a), toAir: () => {}, acc, climate: cw.surf });
+    const sky = (T0: number) => {
+      tr.E[j] = tr.C[j] * (T0 - tw.Tref);
+      const acc = emptyRates();
+      tr.fluxes(env(acc));
+      return acc.radiationSky;
+    };
+    const base = sky(tw.Tref);
+    const hot = sky(1300) - base;
+    // Independent reference: (T0 − Ts)/r0 = h_c(Ts − Ta) + εσ(Ts⁴ − T_sky⁴), Newton on Ts.
+    const r0 = (tr as unknown as { R0: Float64Array }).R0[c], eps = tr.emiss[c], Tsky = cw.surf.Tsky, Ta = tw.air.T(cw.cellAir(c));
+    const hc = hGround(1300, Ta, 0);
+    let Ts = 900;
+    for (let k = 0; k < 50; k++) {
+      const f = (1300 - Ts) / r0 - hc * (Ts - Ta) - eps * SIGMA * (Ts ** 4 - Tsky ** 4);
+      const d = -1 / r0 - hc - 4 * eps * SIGMA * Ts ** 3;
+      Ts -= f / d;
+    }
+    const exact = eps * SIGMA * (Ts ** 4 - Tsky ** 4) * tr.area;
+    // The cold cell's own share in `base` is subtracted with it (≈ 0.3 % of the hot value).
+    expect(Math.abs(hot / exact - 1)).toBeLessThan(0.01);
   });
 });

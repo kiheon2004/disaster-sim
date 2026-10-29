@@ -485,14 +485,19 @@ export class TerrainThermal {
             const s = k > 0 ? dqSatdT(T0, pa, ice) : 0;
             // Surface temperature of the linearized balance (latent flux linear in Ts about T0).
             let Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - L * k * (qs0 - s * T0 - qa)) / (1 / r0 + hc + hr + L * k * s);
-            // The longwave secant belongs to the SURFACE temperature: far from the layer's (lava under a cold sky, a
-            // sun-heated crust) it is re-evaluated at Ts — εσ(Ts⁴ − T_sky⁴) exactly at the converged Ts (a fixed point,
-            // contracting since h_r grows with Ts); within 2 K of T0 the layer value is already within ≈ 2 %.
-            for (let it = 0; it < 4 && !closed && Math.abs(Ts - T0) > 2; it++) {
-              const h2 = eps * SIGMA * (Ts * Ts + Tsky * Tsky) * (Ts + Tsky);
-              if (Math.abs(h2 - hr) < 1e-6 * hr) break;
-              hr = h2;
-              Ts = (T0 / r0 + hc * Ta + hr * Tsky + cl.solar[c] - L * k * (qs0 - s * T0 - qa)) / (1 / r0 + hc + hr + L * k * s);
+            // The longwave belongs to the SURFACE temperature: far from the layer's (lava under a cold sky, a sun-heated
+            // crust) the quartic balance is solved by Newton (F concave, from the linearized Ts) and the secant is taken
+            // at the converged Ts, so εσ(Ts⁴ − T_sky⁴) is booked exactly; within 2 K of T0 the layer value is within ≈ 2 %.
+            if (!closed && Math.abs(Ts - T0) > 2) {
+              const lin = T0 / r0 + hc * Ta + cl.solar[c] - L * k * (qs0 - s * T0 - qa), G = 1 / r0 + hc + L * k * s, es = eps * SIGMA, T4 = Tsky4;
+              for (let it = 0; it < 8; it++) {
+                const t3 = Ts * Ts * Ts;
+                const F = lin - G * Ts - es * (t3 * Ts - T4);
+                const d = F / (G + 4 * es * t3);
+                Ts += d;
+                if (Math.abs(d) < 1e-6) break;
+              }
+              hr = es * (Ts * Ts + Tsky * Tsky) * (Ts + Tsky);
             }
             let Ev = k * area * (qs0 + s * (Ts - T0) - qa);
             if (Ev > cl.evapMax[c]) {
