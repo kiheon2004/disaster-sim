@@ -37,9 +37,23 @@ export class ImpactEvent implements SimulationEvent<ImpactSpec> {
     this.channel = `impact:${this.id}`;
   }
 
+  /** Plan computed ahead on the run's initial terrain (see prepare()). */
+  private prepared: ImpactPlan | null = null;
+
+  /**
+   * Computes the plan when the event is scheduled (before the clock runs). Valid only while the run's
+   * terrain is still the initial one: onStart checks that no deformation has been applied yet.
+   */
+  prepare(terrain: import('@/core/model').TerrainData) {
+    this.prepared = planImpact(this.spec, terrain, this.spec.seed ?? this.seed);
+  }
+
   onStart({ env }: EventContext) {
     const name = this.spec.name ?? this.id;
-    const plan = (this.plan = planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed));
+    // Same function and inputs as computing it now — unless earlier phenomena already changed the ground.
+    const unchanged = this.prepared !== null && (env.deformation.engine?.rev ?? 0) === 0;
+    const plan = (this.plan = unchanged ? this.prepared! : planImpact(this.spec, env.terrain.data, this.spec.seed ?? this.seed));
+    this.prepared = null;
     const ch = env.groundFailure;
     const f = ch.ensure();
     const model = (this.model = new ImpactModel(this.id, name, plan, this.startTime, f, ch.nextIndex()));

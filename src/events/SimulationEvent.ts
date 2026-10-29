@@ -16,6 +16,13 @@ export interface SimulationEvent<TSpec extends EventSpec = EventSpec> {
   readonly spec: TSpec;
   readonly startTime: number;
   readonly duration: number;
+  /**
+   * Optional preparation when the event is scheduled (outside the simulation clock): expensive,
+   * deterministic precomputation on the run's INITIAL terrain (Phase 24 residual: an impact's plan
+   * used to be computed inside the step it started in). onStart reuses it only if it would get the
+   * same inputs — the result is bit-identical either way.
+   */
+  prepare?(terrain: import('@/core/model').TerrainData): void;
   onStart?(ctx: EventContext): void;
   update(ctx: EventContext, localTime: number, dt: number): void;
   onEnd?(ctx: EventContext, reason: 'finished' | 'superseded'): void;

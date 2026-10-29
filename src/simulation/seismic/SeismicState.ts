@@ -93,6 +93,12 @@ export interface SeismicRuntime {
   /** Fixed-base periods are only informative; this is the run's structural step counter. */
   steps: number;
   byId: Map<EntityId, RuntimeEntity>;
+  /**
+   * Whether the first ground motion / external load has reached the model (Phase 24): the model may
+   * be built ahead of time (before the clock), but the residual strength of objects damaged by other
+   * hazards is applied only at that moment — exactly when the lazy build used to happen.
+   */
+  activated: boolean;
 }
 
 function createState(): SeismicEntityState {
@@ -281,7 +287,7 @@ export function buildSeismicRuntime(runtime: SimulationRuntime, terrain: Terrain
     }
   }
   model.finalize();
-  return { model, units, entities, wasActive: false, freeVibration: 0, steps: 0, byId };
+  return { model, units, entities, wasActive: false, freeVibration: 0, steps: 0, byId, activated: false };
 }
 
 /**
@@ -290,10 +296,21 @@ export function buildSeismicRuntime(runtime: SimulationRuntime, terrain: Terrain
  * (residual strength, Phase 15).
  */
 export function ensureSeismicRuntime(runtime: SimulationRuntime, terrain: TerrainSampler, gravity: number, interactions = false): SeismicRuntime {
-  if (runtime.seismic) return runtime.seismic;
-  const sr = buildSeismicRuntime(runtime, terrain, gravity);
-  if (interactions) sr.units.forEach((e, ui) => sr.model.scaleStrength(ui, residualStrength(e, 'earthquake')));
-  return (runtime.seismic = sr);
+  const sr = (runtime.seismic ??= buildSeismicRuntime(runtime, terrain, gravity));
+  if (!sr.activated) {
+    sr.activated = true;
+    if (interactions) sr.units.forEach((e, ui) => sr.model.scaleStrength(ui, residualStrength(e, 'earthquake')));
+  }
+  return sr;
+}
+
+/**
+ * Build the structural model before the clock starts (Phase 24 residual 2.1: the lazy build at the
+ * first ground shock was part of the long simulation step at an impact). Nothing is activated —
+ * see SeismicRuntime.activated — so the run is unchanged.
+ */
+export function prepareSeismicRuntime(runtime: SimulationRuntime, terrain: TerrainSampler, gravity: number): SeismicRuntime {
+  return (runtime.seismic ??= buildSeismicRuntime(runtime, terrain, gravity));
 }
 
 /** Whether impact ground shocks, rather than an earthquake, govern an object's shaking (Phase 23). */

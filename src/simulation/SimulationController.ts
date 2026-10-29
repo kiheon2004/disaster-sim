@@ -8,6 +8,7 @@ import type { PhysicsEngine } from '@/physics/PhysicsEngine';
 import { EventScheduler } from '@/events/EventScheduler';
 import { createEvent } from '@/events/eventRegistry';
 import type { EventSpec } from '@/events/specs';
+import type { SimulationEvent } from '@/events/SimulationEvent';
 import { createEnvironment, type EnvironmentState } from './environment/EnvironmentState';
 import { buildRuntime } from './RuntimeBuilder';
 import type { SimulationRuntime } from './SimulationRuntime';
@@ -36,6 +37,8 @@ import { floodFeatures } from './water/floodFeatures';
 import { captureWaterState, type WaterStateSnapshot } from './water/waterStateCodec';
 import type { FloodLive } from './simStore';
 import { ForceLedger } from './forces/ForceLedger';
+import { prepareSeismicRuntime } from './seismic/SeismicState';
+import { capacities } from './damage/behaviors/seismic';
 import { validatePipeline } from './systems/pipeline';
 
 const MAX_STEPS_PER_FRAME = 16;
@@ -49,6 +52,8 @@ const MIN_TIMELINE = 30; // s
 /** Longest extension of a run past its planned end while sediment is still moving (s). */
 const RUNOUT_EXTENSION = 300;
 const LOG_LIMIT = 300;
+/** Phenomena that load structures through the structural model (ground motion, air pressure). */
+const STRUCTURAL_EVENTS = new Set<string>(['earthquake', 'impact', 'blast']);
 
 /**
  * Owns the simulation lifecycle: snapshot → runtime/physics → fixed-step loop → reset.
@@ -176,7 +181,7 @@ export class SimulationController {
     this.endSeenRev = -1;
     this.ended = new Set();
     this.lastMilestones = -1;
-    for (const spec of this.scenario) this.scheduler.add(createEvent(spec, 0, this.eventDefaults()));
+    for (const spec of this.scenario) this.schedule(createEvent(spec, 0, this.eventDefaults()));
     if (hydro) {
       for (const src of hydro.sources) this.scheduler.add(createEvent(src, 0, this.eventDefaults()));
       for (const issue of hydro.issues) this.log(null, 'warn', { key: `nature.hydro.${issue.code}`, params: { id: issue.feature, v: (issue.value ?? 0).toFixed(2) } });
@@ -255,9 +260,31 @@ export class SimulationController {
   addEvent(spec: EventSpec) {
     const absolute: EventSpec = { ...spec, startTime: spec.startTime ?? this.time };
     this.scenario.push(absolute);
-    this.scheduler.add(createEvent(absolute, this.time, this.eventDefaults()));
+    this.schedule(createEvent(absolute, this.time, this.eventDefaults()));
     if (this.status === 'finished') this.status = 'paused';
     this.publish(true);
+  }
+
+  /**
+   * Schedule an event, letting it precompute on the run's terrain first (outside the clock; Phase 24
+   * residual 2.1). Skipped once the ground has changed — the event then computes at its start.
+   */
+  private schedule(ev: SimulationEvent) {
+    if (ev.prepare && (this.env.deformation.engine?.rev ?? 0) === 0) ev.prepare(this.env.terrain.data);
+    if (STRUCTURAL_EVENTS.has(ev.type)) this.prepareStructures();
+    this.scheduler.add(ev);
+  }
+
+  /**
+   * Build the structural model and the facade capacities of every structure ahead of the clock
+   * (Phase 24 residual 2.1) for runs whose phenomena load structures; activation (residual strength)
+   * still happens at the first load, so results are identical to the lazy build.
+   */
+  prepareStructures() {
+    const rt = this.runtime;
+    if (!rt || rt.seismic) return;
+    const sr = prepareSeismicRuntime(rt, this.env.terrain, GRAVITY);
+    for (const e of sr.units) if (e.source.type === 'building') capacities(e);
   }
 
   private seed() {
