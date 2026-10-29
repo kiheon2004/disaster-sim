@@ -1,0 +1,60 @@
+/**
+ * A/B identity (Phase 26): the same no-heat scenes run on this build and on the Phase 25 build must give
+ * bit-identical results. Writes one SHA-256 per scene (damage events, collapse records, rubble, poses,
+ * water) to IDENTITY_OUT.
+ */
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { describe, it } from 'vitest';
+import type { Vec3 } from '@/core/types';
+import { useWorldStore } from '@/world/worldStore';
+import { createEmptyDocument } from '@/world/WorldDocument';
+import { SimulationController } from '@/simulation/SimulationController';
+import { createDesign } from '@/buildings/design';
+import { presetSpec } from '@/buildings/spec';
+import type { WorldDocument } from '@/core/model';
+import type { EventSpec } from '@/events/specs';
+
+const S = () => useWorldStore.getState();
+const tf = (x: number, z: number) => ({ position: [x, 0, z] as Vec3, rotation: [0, 0, 0] as Vec3, scale: [1, 1, 1] as Vec3 });
+const D = (id: string) => createDesign(presetSpec(id)!, id);
+function world(add: { type: string; building?: ReturnType<typeof D>; seed: number; transform: ReturnType<typeof tf> }[]): WorldDocument {
+  S().setLocked(false);
+  S().replaceDocument(createEmptyDocument('identity'));
+  if (add.length) S().applyEdit({ add: add as never });
+  return structuredClone(S().doc);
+}
+const houses = (n: number) => Array.from({ length: n }, (_, k) => ({ type: 'building', building: D('house'), seed: k + 1, transform: tf(-30 + (k % 6) * 12, k < 6 ? 12 : -12) }));
+const SCENES: { name: string; doc: () => WorldDocument; events: EventSpec[]; seconds: number }[] = [
+  { name: 'street earthquake 1.1 g', doc: () => world([{ type: 'building', building: D('apartment'), seed: 1, transform: tf(0, 0) }, { type: 'building', building: D('house'), seed: 2, transform: tf(18, 0) }, ...[0, 1, 2, 3].map((k) => ({ type: 'car', seed: 20 + k, transform: tf(-12 + k * 6, 10) }))]), events: [{ event: 'earthquake', magnitude: 7.5, pga: 1.1, duration: 20, seed: 3 } as EventSpec], seconds: 20 },
+  { name: 'blast 12 houses', doc: () => world(houses(12)), events: [{ event: 'blast', position: [0, 0], height: 1, energy: 2e9, model: 'weakShock', waveform: 'nWave', startTime: 0.5 } as EventSpec], seconds: 8 },
+  { name: 'flood + rain', doc: () => world([0, 1, 2].map((k) => ({ type: 'building', building: D('house'), seed: k + 1, transform: tf(-20 + k * 14, 0) }))), events: [{ event: 'rain', intensity: 200, duration: 60 } as EventSpec, { event: 'waterSource', position: [0, 20], rate: 6, duration: 60, radius: 3 } as EventSpec], seconds: 30 },
+  { name: 'wind cladding', doc: () => world([{ type: 'building', building: D('office'), seed: 1, transform: tf(0, 0) }, { type: 'tree', seed: 4, transform: tf(20, 5) }]), events: [{ event: 'wind', speed: 48, direction: 'E', duration: 40 } as EventSpec], seconds: 20 },
+  { name: 'impact', doc: () => world([{ type: 'building', building: D('house'), seed: 1, transform: tf(30, 0) }]), events: [{ event: 'impact', target: [6, 6], material: 'stony', diameter: 1, speed: 15000, angle: 70, azimuth: 45, entry: 'direct', airBlast: true } as EventSpec], seconds: 12 },
+];
+
+describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
+  it('scenes', { timeout: 3_600_000 }, async () => {
+    const out: Record<string, string> = {};
+    for (const sc of SCENES) {
+      const c = new SimulationController({ headless: true });
+      await c.load(sc.doc());
+      for (const e of sc.events) c.addEvent(e);
+      c.advance(sc.seconds);
+      const rt = c.getRuntime()!;
+      const lines: string[] = [];
+      lines.push(...c.getDamageEvents().map((e) => [e.time, e.objectType, e.eventType, e.componentId ?? '', e.hazard, e.cause, ...e.worldPosition].join('|')));
+      for (const e of rt.entities.values()) {
+        lines.push([e.source.type, e.state, ...e.pose.position, ...e.pose.quaternion].join('|'));
+        const m = e.modular?.structure?.model;
+        if (m) lines.push(...m.records.map((r) => [r.i, r.time, r.cause, r.trigger, r.root, r.u, r.hazard].join('|')), Array.from(m.dy).join(','));
+      }
+      if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
+      const f = c.getEnvironment().flood.field;
+      if (f) lines.push(Array.from(f.h).reduce((a, b) => a + b, 0).toString(), JSON.stringify(f.budget));
+      out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
+      c.unload();
+    }
+    fs.writeFileSync(process.env.IDENTITY_OUT!, JSON.stringify(out, null, 1));
+  });
+});
