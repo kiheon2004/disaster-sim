@@ -247,8 +247,10 @@ check('14 reset restores the original ground exactly; fingerprint unchanged on e
 // ── 15. Wide uplift + ridge, staged / cyclic profiles ─────────────────────────────────────────
 await ev((id) => { const a = window.__ds.actions; a.updatePhenomenon(id, { spec: { event: 'terrainDeformation', kind: 'uplift', center: [0, 0], radius: 90, amount: 1, duration: 4, profile: 'staged', stages: 4, falloff: 'smooth' } }); a.addPhenomenon('terrainDeformation', { event: 'terrainDeformation', kind: 'ridge', center: [30, -30], radius: 6, length: 60, bearing: 45, amount: 1.2, duration: 6, profile: 'cyclic', period: 3 }); }, id);
 await enterRun();
-const steps15 = [];
-for (const t of [0.6, 1.6, 2.6, 4.2]) { await waitSim(t); steps15.push(+(await runtimeHeight(0, 0)).toFixed(3)); }
+// Record (sim time, height at the centre) every frame, then read the samples (robust to load).
+await ev(() => { window.__h15 = []; const f = () => { const s = window.__ds.sim; if (!s.isLoaded()) return; window.__h15.push([s.getTime(), s.getEnvironment().terrain.sampleHeight(0, 0)]); if (s.getTime() < 5) requestAnimationFrame(f); }; requestAnimationFrame(f); });
+await waitSim(5);
+const steps15 = await ev(() => [0.6, 1.6, 2.6, 4.2].map((t) => { const s = window.__h15.filter((p) => Math.abs(p[0] - t) < 0.3); return s.length ? +s[Math.floor(s.length / 2)][1].toFixed(3) : null; }));
 await view(10, -10, 120, 160);
 await shot('15-uplift-ridge');
 await exitSim();

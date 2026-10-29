@@ -1,7 +1,7 @@
 /**
  * Compiles, while the simulation scene loads, the shader programs a terrain deformation needs
- * later (Phase 21): the heightfield terrain material (the flat world draws a plain plane) and the
- * RGBA vertex-color overlay. Without this the first deformation update stalls one frame by
+ * later (Phase 21): the heightfield terrain material, its skirt, outline and surroundings (the flat
+ * world draws a plain plane) and the RGBA vertex-color overlay. Without this the first deformation update stalls one frame by
  * ~100 ms on shader compilation. Two tiny triangles far below the world, drawn for a few frames,
  * then removed; materials with the same shader share the compiled program.
  */
@@ -24,12 +24,16 @@ export function ShaderWarmup() {
     const terrain = createTerrainMaterial().material;
     const overlay = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
     const skirt = new THREE.MeshStandardMaterial({ color: '#7a6249', roughness: 1, side: THREE.DoubleSide });
-    return { terrain, overlay, skirt, g3: tri(3), g4: tri(4) };
+    const outline = new THREE.LineBasicMaterial({ color: '#f5f8ff', transparent: true, opacity: 0.35 });
+    const ring = new THREE.MeshStandardMaterial({ color: '#56703f', roughness: 1 });
+    return { terrain, overlay, skirt, outline, ring, g3: tri(3), g4: tri(4) };
   }, []);
   useEffect(() => () => {
     parts.terrain.dispose();
     parts.overlay.dispose();
     parts.skirt.dispose();
+    parts.outline.dispose();
+    parts.ring.dispose();
     parts.g3.dispose();
     parts.g4.dispose();
   }, [parts]);
@@ -42,6 +46,8 @@ export function ShaderWarmup() {
       <mesh geometry={parts.g3} material={parts.terrain} frustumCulled={false} receiveShadow castShadow />
       <mesh geometry={parts.g4} material={parts.overlay} frustumCulled={false} />
       <mesh geometry={parts.g3} material={parts.skirt} frustumCulled={false} receiveShadow />
+      <mesh geometry={parts.g3} material={parts.ring} frustumCulled={false} receiveShadow />
+      <lineSegments geometry={parts.g3} material={parts.outline} frustumCulled={false} />
     </group>
   );
 }

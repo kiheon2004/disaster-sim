@@ -1,0 +1,239 @@
+{
+ "date": "2026-10-13",
+ "note": "Phase 20 build = e597e49 (git worktree, vite preview :4192), Phase 21 build = this branch (:4191), runs alternated on the same machine. The machine carried heavy unrelated load (load average 5\u201333: the user's own Chrome and system services), so browser FPS is noisy; best-of-runs is the least load-affected figure. Headless: src/bench/natureTick.bench.test.ts in both checkouts, alternated 3x (3 reps each), ms per 1/60 s step after 2 s warm-up, rain + wind.",
+ "headlessTick": {
+  "p20": {
+   "mixedUrbanNatural": [
+    5.61,
+    2.69,
+    3.41,
+    2.57,
+    9.8,
+    10.89,
+    2.24,
+    2.14,
+    2.14
+   ],
+   "mountainValley": [
+    2.1,
+    2.07,
+    2.07,
+    2.39,
+    2.33,
+    2.72,
+    2.06,
+    2.07,
+    2.19
+   ]
+  },
+  "p21": {
+   "mixedUrbanNatural": [
+    7.98,
+    11.98,
+    2.56,
+    6.09,
+    2.96,
+    2.24,
+    4.39,
+    2.25,
+    3.46
+   ],
+   "mountainValley": [
+    3.11,
+    2.09,
+    2.05,
+    2.03,
+    2.04,
+    2.04,
+    2.14,
+    2.07,
+    3.61
+   ]
+  },
+  "bestOf": {
+   "p20": {
+    "mixedUrbanNatural": 2.14,
+    "mountainValley": 2.06
+   },
+   "p21": {
+    "mixedUrbanNatural": 2.24,
+    "mountainValley": 2.03
+   }
+  }
+ },
+ "browserBaselineScene": {
+  "scene": "scripts/bench-ab-baseline.mjs: two avenues + 1000 modular houses (Phase 18 baseline)",
+  "runs": [
+   {
+    "url": "http://localhost:4192/",
+    "label": "P20",
+    "load": 5.7,
+    "buildingsCommitMs": 1228,
+    "editorFps": 60,
+    "strokeToFrameMs": 189.5,
+    "loadMs": 275,
+    "heapMB": 44.1,
+    "simFps": 35.6
+   },
+   {
+    "url": "http://localhost:4191/",
+    "label": "P21",
+    "load": 4.9,
+    "buildingsCommitMs": 187,
+    "editorFps": 60,
+    "strokeToFrameMs": 78.9,
+    "loadMs": 64,
+    "heapMB": 44.8,
+    "simFps": 22.6
+   },
+   {
+    "url": "http://localhost:4192/",
+    "label": "P20",
+    "load": 3.8,
+    "buildingsCommitMs": 443,
+    "editorFps": 60,
+    "strokeToFrameMs": 165.8,
+    "loadMs": 226,
+    "heapMB": 44.1,
+    "simFps": 39.3
+   },
+   {
+    "url": "http://localhost:4191/",
+    "label": "P21",
+    "load": 4.7,
+    "buildingsCommitMs": 198,
+    "editorFps": 60,
+    "strokeToFrameMs": 72,
+    "loadMs": 62,
+    "heapMB": 44.4,
+    "simFps": 44.8
+   },
+   {
+    "url": "http://localhost:4192/",
+    "load": [
+     4.7,
+     7.6,
+     9.3
+    ],
+    "buildingsCommitMs": 449,
+    "editorFps": 60,
+    "drawCalls": 72,
+    "strokeCommitMs": 8.6,
+    "strokeToFrameMs": 169.4,
+    "saveMs": 13,
+    "loadMs": 232,
+    "fileKB": 780,
+    "heapMB": 44.1,
+    "simFps": 28.1,
+    "tickMs": 24.46,
+    "simSpeed": 0.45,
+    "label": "P20"
+   },
+   {
+    "url": "http://localhost:4191/",
+    "load": [
+     9.8,
+     8.6,
+     9.6
+    ],
+    "buildingsCommitMs": 390,
+    "editorFps": 59.6,
+    "drawCalls": 75,
+    "strokeCommitMs": 10.7,
+    "strokeToFrameMs": 169.8,
+    "saveMs": 33,
+    "loadMs": 142,
+    "fileKB": 780,
+    "heapMB": 44.5,
+    "simFps": 14.2,
+    "tickMs": 36.03,
+    "simSpeed": 0.26,
+    "label": "P21"
+   },
+   {
+    "url": "http://localhost:4192/",
+    "load": [
+     14.5,
+     9.7,
+     10
+    ],
+    "buildingsCommitMs": 549,
+    "editorFps": 60,
+    "drawCalls": 75,
+    "strokeCommitMs": 11.4,
+    "strokeToFrameMs": 294.6,
+    "saveMs": 16,
+    "loadMs": 344,
+    "fileKB": 780,
+    "heapMB": 43.9,
+    "simFps": 13.3,
+    "tickMs": 47.56,
+    "simSpeed": 0.22,
+    "label": "P20"
+   },
+   {
+    "url": "http://localhost:4191/",
+    "load": [
+     24.3,
+     12.7,
+     11.1
+    ],
+    "buildingsCommitMs": 376,
+    "editorFps": 60,
+    "drawCalls": 70,
+    "strokeCommitMs": 11.6,
+    "strokeToFrameMs": 101.4,
+    "saveMs": 16,
+    "loadMs": 116,
+    "fileKB": 780,
+    "heapMB": 44.8,
+    "simFps": 39.5,
+    "tickMs": 17.72,
+    "simSpeed": 0.67,
+    "label": "P21"
+   },
+   {
+    "url": "http://localhost:4192/",
+    "load": [
+     19.8,
+     12.4,
+     11
+    ],
+    "buildingsCommitMs": 437,
+    "editorFps": 60,
+    "drawCalls": 65,
+    "strokeCommitMs": 11.6,
+    "strokeToFrameMs": 250.4,
+    "saveMs": 17,
+    "loadMs": 286,
+    "fileKB": 780,
+    "heapMB": 44.8,
+    "simFps": 18.7,
+    "tickMs": 33.81,
+    "simSpeed": 0.31,
+    "label": "P20"
+   },
+   {
+    "url": "http://localhost:4191/",
+    "load": [
+     21.1,
+     13.2,
+     11.3
+    ],
+    "buildingsCommitMs": 624,
+    "editorFps": 57.7,
+    "drawCalls": 73,
+    "strokeCommitMs": 16.2,
+    "strokeToFrameMs": 207.9,
+    "saveMs": 35,
+    "loadMs": 228,
+    "fileKB": 780,
+    "heapMB": 44.7,
+    "simFps": 26.7,
+    "tickMs": 24.98,
+    "simSpeed": 0.44,
+    "label": "P21"
+   }
+  ]
+ }
+}

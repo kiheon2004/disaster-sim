@@ -1,0 +1,266 @@
+{
+  "lang": "en",
+  "url": "http://localhost:5199/",
+  "results": [
+    {
+      "name": "1 add deformation; only applicable parameters shown",
+      "ok": true,
+      "detail": {
+        "f0": [
+          "kind",
+          "x",
+          "z",
+          "radius",
+          "amount",
+          "profile",
+          "duration",
+          "falloff",
+          "supportLoss"
+        ],
+        "f1": [
+          "kind",
+          "x",
+          "z",
+          "radius",
+          "amount",
+          "profile",
+          "duration",
+          "falloff",
+          "stages",
+          "supportLoss"
+        ],
+        "f2": [
+          "kind",
+          "x",
+          "z",
+          "radius",
+          "amount",
+          "profile",
+          "duration",
+          "stages",
+          "length",
+          "bearing",
+          "supportLoss"
+        ]
+      }
+    },
+    {
+      "name": "2 centre picked by a world click",
+      "ok": true,
+      "detail": {
+        "center": [
+          -15,
+          10
+        ],
+        "sel2": []
+      }
+    },
+    {
+      "name": "3 parameters edited in the GUI; predicted numbers shown",
+      "ok": true,
+      "detail": {
+        "spec": {
+          "event": "terrainDeformation",
+          "kind": "subsidence",
+          "center": [
+            -15,
+            10
+          ],
+          "radius": 22,
+          "amount": 1.6,
+          "duration": 4,
+          "profile": "smooth",
+          "falloff": "smooth"
+        },
+        "summary3": "Predicted max |w| 1.60 m · steepest slope 6° · net volume -723 m³"
+      }
+    },
+    {
+      "name": "4 preview drawn; nothing in the world changed",
+      "ok": true,
+      "detail": {
+        "preview": 1
+      }
+    },
+    {
+      "name": "5 validation: steep-slope warning with its reason; invalid radius flagged",
+      "ok": true,
+      "detail": {
+        "invalid5": true
+      }
+    },
+    {
+      "name": "6 run: runtime ground lowered by the prescribed amount, document untouched",
+      "ok": true,
+      "detail": {
+        "maxAbs": 1.600000023841858,
+        "h6": -1.600000023841858
+      }
+    },
+    {
+      "name": "7 rendered terrain mesh matches the runtime heights",
+      "ok": true,
+      "detail": {
+        "worst": 0,
+        "n": 40401
+      }
+    },
+    {
+      "name": "8 overlay modes; exaggeration applies to arrows only and is labelled",
+      "ok": true,
+      "detail": {
+        "arrows8": 80
+      }
+    },
+    {
+      "name": "9 car followed the ground down by contact",
+      "ok": true,
+      "detail": {
+        "y": -1.2508525848388672,
+        "g": -1.2896650214713645,
+        "y0": 0
+      }
+    },
+    {
+      "name": "10 building ground response in the inspector (settlement, tilt, β, contact, class)",
+      "ok": true,
+      "detail": "Mean settlement (+ up)−0.599 mTilt1.83° (1/31)Angular distortion β1/47 (peak 1/47)Differential settlement classFailure level (> 1/50, extrapolated)Foundation co"
+    },
+    {
+      "name": "11 foundation contact rings drawn for buildings on moving ground",
+      "ok": true,
+      "detail": {
+        "rings11": 1
+      }
+    },
+    {
+      "name": "12 ground probe shows original / current elevation, displacement and its source",
+      "ok": true,
+      "detail": "Position-15.0, 10.0Original elevation0.000 mCurrent elevation-1.600 mDisplacement (+ up)−1.600 mGround supportunchangedDeformation sourcep1 · Subsidence −1.60 m (prescribed input)Nearby building · 5 m"
+    },
+    {
+      "name": "13 deformation milestones on the timeline; log entries translated",
+      "ok": true,
+      "detail": {
+        "ms13": [
+          "start",
+          "firstDamage",
+          "collapse",
+          "deformPeak",
+          "end"
+        ]
+      }
+    },
+    {
+      "name": "14 reset restores the original ground exactly; fingerprint unchanged on exit",
+      "ok": true,
+      "detail": {
+        "engine": false,
+        "flat": true,
+        "mesh": true
+      }
+    },
+    {
+      "name": "15 staged uplift steps (0.25 m increments) and a cyclic ridge",
+      "ok": true,
+      "detail": {
+        "steps15": [
+          0,
+          0.25,
+          0.5,
+          1
+        ]
+      }
+    },
+    {
+      "name": "16 road cut by a step (impassable), shown in the road panel; network unchanged",
+      "ok": true,
+      "detail": {
+        "cut": 1
+      }
+    },
+    {
+      "name": "17 lake over subsiding ground: water moves with the bed, mass budget closes, designs unchanged",
+      "ok": true,
+      "detail": {
+        "bed": 302.88656051953416,
+        "err": 3.7525953419393346e-14
+      }
+    },
+    {
+      "name": "18 flood + deformation: rain collects in the subsided bowl",
+      "ok": true,
+      "detail": {
+        "c": 0.006827200808804168,
+        "o": 0.0011437927406164439
+      }
+    },
+    {
+      "name": "19 multi-hazard: ground damage reported separately from the earthquake",
+      "ok": true,
+      "detail": {
+        "hazards": [
+          "ground",
+          "earthquake"
+        ]
+      }
+    },
+    {
+      "name": "20 experiment saved and reloaded (schema unchanged); mid-run water over deformed ground refused with a reason",
+      "ok": true,
+      "detail": {
+        "version": 7,
+        "ok": true,
+        "inst": [
+          [
+            "earthquake",
+            null
+          ],
+          [
+            "terrainDeformation",
+            "subsidence"
+          ]
+        ]
+      }
+    },
+    {
+      "name": "21 a disabled deformation does nothing (no engine, no HUD)",
+      "ok": true,
+      "detail": {
+        "engine": false,
+        "hud": false
+      }
+    },
+    {
+      "name": "residual B: left-panel tabs fully visible",
+      "ok": true,
+      "detail": [
+        {
+          "text": "Objects",
+          "clipped": false
+        },
+        {
+          "text": "Building",
+          "clipped": false
+        },
+        {
+          "text": "Terrain",
+          "clipped": false
+        },
+        {
+          "text": "Roads",
+          "clipped": false
+        },
+        {
+          "text": "Blueprints",
+          "clipped": false
+        },
+        {
+          "text": "Scene (0)",
+          "clipped": false
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
