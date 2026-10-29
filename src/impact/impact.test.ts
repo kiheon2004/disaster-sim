@@ -18,6 +18,8 @@ import { fly, generateParcels } from './ejecta';
 import { createShock, peakAcceleration, peakVelocity, addShock, SEISMIC_EFFICIENCY } from './shock';
 import { planImpact } from './plan';
 import { TNT_J_PER_TONNE } from './energy';
+import { GeoField } from '@/ground/GeoField';
+import { ImpactModel } from './ImpactModel';
 import type { ImpactSpec } from './types';
 
 const spec = (x: Partial<ImpactSpec> = {}): ImpactSpec => ({ event: 'impact', target: [0, 0], material: 'iron', diameter: 2, speed: 12000, angle: 60, azimuth: 90, entry: 'atmosphere', ...x });
@@ -218,5 +220,30 @@ describe('plan', () => {
     expect(rock.crater!.regime).toBe('strength');
     expect(sand.crater!.regime).toBe('gravity');
     expect(rock.crater!.radius).not.toBeCloseTo(sand.crater!.radius, 1);
+  });
+});
+
+describe('crater on the grid', () => {
+  it('converges with the grid: the cut bowl volume approaches the analytic paraboloid πR²d/2; cut − uplift = ejected and all mass lands on every grid', () => {
+    const errs: number[] = [];
+    for (const dx of [2, 1, 0.5]) {
+      const t = createFlatTerrain(200, dx);
+      const plan = planImpact(spec({ entry: 'direct', material: 'stony', diameter: 1, speed: 8000, angle: 90 }), t, 1);
+      const f = new GeoField(t);
+      const m = new ImpactModel('i', 'p1', plan, 0, f, 0);
+      for (let k = 0; k <= 600; k++) m.update(plan.timeToImpact + k * 0.05);
+      const b = f.budget;
+      const c = plan.crater!;
+      errs.push(Math.abs(b.excavated - c.volume) / c.volume);
+      expect(Math.abs(b.excavated - b.uplifted - b.ejectedInSitu) / b.excavated).toBeLessThan(1e-9);
+      expect(b.airborne).toBeLessThan(1e-9 * b.released);
+      expect(Math.abs(b.deposited + b.outflow - b.released) / b.released).toBeLessThan(1e-9);
+      let g = 0;
+      for (let i = 0; i < f.n; i++) g += f.bed[i] + f.h[i];
+      expect(Math.abs(g * f.dx * f.dx - f.expectedTerrainChange()) / b.excavated).toBeLessThan(1e-6);
+    }
+    expect(errs[1]).toBeLessThan(errs[0]);
+    expect(errs[2]).toBeLessThan(errs[1]);
+    expect(errs[2]).toBeLessThan(0.02);
   });
 });

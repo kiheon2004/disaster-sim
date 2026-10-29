@@ -80,6 +80,13 @@ const SCENARIOS = {
     ds.actions.addPhenomenon('rain', { ...ds.deformLib.phenomena.implemented('rain').defaults(), intensity: 100, duration: 60 });
     ds.actions.addPhenomenon('landslide', { event: 'landslide', area: { kind: 'circle', center: [-30, 0], radius: 20 }, thickness: 2, saturation: 1, trigger: 'user', duration: 0 });
   },
+  impactTown: () => {
+    const ds = window.__ds, L = ds.roadLib, d = L.presetDesign('house', 1), add = [];
+    for (let z = -50; z <= 50; z += 12) for (let x = -50; x <= 50; x += 12) add.push({ type: 'building', building: d, seed: add.length + 1, transform: { position: [x, 0, z], rotation: [0, 0, 0], scale: [1, 1, 1] } });
+    ds.world.getState().applyEdit({ add });
+    ds.actions.addPhenomenon('impact', { event: 'impact', target: [6, 6], material: 'stony', diameter: 1.2, speed: 8000, angle: 70, azimuth: 45, entry: 'direct' });
+    ds.actions.addPhenomenon('impact', { event: 'impact', target: [-30, 20], material: 'stony', diameter: 0.8, speed: 7000, angle: 60, azimuth: 200, entry: 'direct', startTime: 3 });
+  },
   allHazards: () => {
     const ds = window.__ds;
     ds.world.getState().replaceDocument(ds.blueprintLib.buildTemplate('mountainVillage', 3));

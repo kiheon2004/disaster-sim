@@ -622,6 +622,12 @@ export class SimulationController {
     };
   }
 
+  /** Height of the physics collider surface under (x, z), or null (verification: collider = render). */
+  colliderHeight(x: number, z: number): number | null {
+    const d = this.physics?.castGroundRay([x, 500, z], [0, -1, 0], 2000);
+    return d === undefined || d === null ? null : 500 - d;
+  }
+
   /** What the runtime state of this run consists of (mid-run saving is not supported; see runtimeState.ts). */
   runtimeState() {
     return runtimeStateManifest(this.env, this.runtime, this.time);

@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { useWorldStore } from '@/world/worldStore';
 import { landslideOutlook, sinkholeOutlook } from '@/phenomena/groundDefinitions';
+import { planImpact } from '@/impact/plan';
+import type { ImpactSpec } from '@/impact/types';
 import { useEditorStore } from '@/editor/editorStore';
 import { useBuildStore } from '@/editor/buildStore';
 import * as buildActions from './buildActions';
@@ -120,7 +122,11 @@ export function installDevtools() {
       return () => [...live.entries()].map(([g, stack]) => ({ type: g.type, name: g.name, vertices: g.attributes.position?.count ?? 0, attrs: Object.keys(g.attributes).join(','), stack }));
     },
     /** Phase 22 ground failure (benchmarks / browser verification). */
-    groundLib: { sinkholeOutlook, landslideOutlook },
+    groundLib: {
+      sinkholeOutlook, landslideOutlook,
+      /** Phase 23: the impact plan of a spec on the document terrain (same function as the run). */
+      impactPlan: (spec: ImpactSpec) => { const d = useWorldStore.getState().doc; return planImpact(spec, d.terrain, spec.seed ?? d.settings.simulation.seed); },
+    },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {
       const doc = useWorldStore.getState().doc;
