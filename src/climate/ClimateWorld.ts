@@ -90,6 +90,8 @@ export interface WaterLedger {
   vaporIn: number;
   vaporOut: number;
   removed: number;
+  /** Snow / ice set down outside the climate grid (a roof packet or store landing beyond the world's cells, Phase 31 audit). */
+  boundaryOut: number;
   floodIn: number;
   floodOut: number;
   crownIn: number;
@@ -109,6 +111,8 @@ export interface EnergyLedger {
   vaporIn: number;
   vaporOut: number;
   removed: number;
+  /** Enthalpy of the snow / ice that left the grid with `water.boundaryOut` (J). */
+  boundaryOut: number;
   /** Energy the climate put into thermal nodes (the thermal accounts latent + cover + waterMass), J. */
   toThermal: number;
   /** Heat deposited on covered surfaces that the covers took (J; the thermal ledger booked it as cover −). */
@@ -280,8 +284,8 @@ export class ClimateWorld {
     this.bg = this.forcing.background(0);
     // Initial vapour: the background humidity in every column.
     for (let a = 0; a < this.na; a++) this.vap[a] = this.bg.q * this.layerMass(a) / (1 - this.bg.q);
-    this.water = { initial: 0, precipitation: 0, blownIn: 0, blownOut: 0, vaporIn: 0, vaporOut: 0, removed: 0, floodIn: 0, floodOut: 0, crownIn: 0, final: 0, transfers: { evaporation: 0, condensation: 0, airCondensation: 0, airEvaporation: 0, freezing: 0, melting: 0, sublimation: 0, deposition: 0, drainage: 0, internalPrecip: 0, transpiration: 0, blowing: 0, soilFreezing: 0, soilThaw: 0, boiling: 0 } };
-    this.energy = { initial: 0, solar: 0, longwave: 0, precip: 0, vaporIn: 0, vaporOut: 0, removed: 0, toThermal: 0, final: 0, transfers: { vaporization: 0, fusion: 0 } };
+    this.water = { initial: 0, precipitation: 0, blownIn: 0, blownOut: 0, vaporIn: 0, vaporOut: 0, removed: 0, boundaryOut: 0, floodIn: 0, floodOut: 0, crownIn: 0, final: 0, transfers: { evaporation: 0, condensation: 0, airCondensation: 0, airEvaporation: 0, freezing: 0, melting: 0, sublimation: 0, deposition: 0, drainage: 0, internalPrecip: 0, transpiration: 0, blowing: 0, soilFreezing: 0, soilThaw: 0, boiling: 0 } };
+    this.energy = { initial: 0, solar: 0, longwave: 0, precip: 0, vaporIn: 0, vaporOut: 0, removed: 0, boundaryOut: 0, toThermal: 0, final: 0, transfers: { vaporization: 0, fusion: 0 } };
     tw.ledger.hasClimate = true;
   }
 
@@ -603,6 +607,7 @@ export class ClimateWorld {
     this.sGone[k] = 1;
     const M = this.sM[k], U = this.sU[k], ice = this.sIce[k], rho = this.sRho[k];
     const cells = this.stores[k].cells;
+    if (M > 0 && !cells.length) this.leaveGrid(M, U);
     if (!(M > 0) || !cells.length) { this.sM[k] = 0; this.sU[k] = 0; this.sIce[k] = 0; return; }
     const share = 1 / cells.length;
     for (let i = 0; i < cells.length; i++) {
@@ -634,9 +639,9 @@ export class ClimateWorld {
    * seconds; documented) and is counted in the storages, so the ledgers stay closed; it is deposited on ground cells
    * like a dropped store. The same snow is never on the roof and on the ground at once.
    */
-  readonly packets: { m: number; U: number; ice: number; rho: number; done: boolean }[] = [];
+  readonly packets: { m: number; U: number; ice: number; rho: number; done: boolean; to?: 'ground' | 'outflow' }[] = [];
 
-  /** Move a share (0–1] of store k into a new packet; returns its index (−1 when the store is empty). */
+  /** Move a share (0–1] of store k into a new packet; returns its index (the packet's id; −1 when the store is empty). */
   splitStore(k: number, share: number): number {
     if (this.sGone[k] || !(this.sM[k] > 0) || !(share > 0)) return -1;
     const f = Math.min(1, share);
@@ -647,23 +652,38 @@ export class ClimateWorld {
     return this.packets.length - 1;
   }
 
-  /** Deposit a packet on ground cells (equal shares). */
+  /**
+   * Deposit a packet on ground cells (equal shares). Without a cell under it (it came down outside the climate grid)
+   * its mass and enthalpy leave the world as a boundary outflow — never dropped from the books. The packet is done only
+   * once its content is booked at the destination.
+   */
   depositPacket(p: number, cells: readonly number[]) {
     const pk = this.packets[p];
     if (!pk || pk.done) return;
-    pk.done = true;
-    if (!(pk.m > 0) || !cells.length) return;
-    const share = 1 / cells.length;
-    for (const c of cells) {
-      const sn = Math.max(0, this.cM[c] - this.cIce[c]);
-      const add = (pk.m - pk.ice) * share;
-      if (add > 0) this.cRho[c] = sn > 0 ? (sn + add) / (sn / this.cRho[c] + add / pk.rho) : pk.rho;
-      this.cM[c] += pk.m * share;
-      this.cU[c] += pk.U * share;
-      this.cIce[c] += pk.ice * share;
-      this.markCover(c);
+    if (pk.m > 0 && cells.length) {
+      const share = 1 / cells.length;
+      for (const c of cells) {
+        const sn = Math.max(0, this.cM[c] - this.cIce[c]);
+        const add = (pk.m - pk.ice) * share;
+        if (add > 0) this.cRho[c] = sn > 0 ? (sn + add) / (sn / this.cRho[c] + add / pk.rho) : pk.rho;
+        this.cM[c] += pk.m * share;
+        this.cU[c] += pk.U * share;
+        this.cIce[c] += pk.ice * share;
+        this.markCover(c);
+      }
+      pk.to = 'ground';
+    } else if (pk.m > 0) {
+      this.leaveGrid(pk.m, pk.U);
+      pk.to = 'outflow';
     }
     pk.m = 0; pk.U = 0; pk.ice = 0;
+    pk.done = true;
+  }
+
+  /** Snow / ice (kg, enthalpy J) leaving the grid: booked as a boundary outflow in both ledgers. */
+  private leaveGrid(m: number, U: number) {
+    this.water.boundaryOut += m;
+    this.energy.boundaryOut += this.coverEnergy(m, U);
   }
 
   /** Snow in transit (kg). */
@@ -706,12 +726,12 @@ export class ClimateWorld {
 
   waterExpected(): number {
     const L = this.water;
-    return L.initial + L.precipitation + L.blownIn - L.blownOut + L.vaporIn - L.vaporOut - L.removed + L.floodIn - L.floodOut + L.crownIn;
+    return L.initial + L.precipitation + L.blownIn - L.blownOut + L.vaporIn - L.vaporOut - L.removed - L.boundaryOut + L.floodIn - L.floodOut + L.crownIn;
   }
 
   energyExpected(): number {
     const E = this.energy;
-    return E.initial + E.solar - E.longwave + E.precip + E.vaporIn - E.vaporOut - E.removed - E.toThermal;
+    return E.initial + E.solar - E.longwave + E.precip + E.vaporIn - E.vaporOut - E.removed - E.boundaryOut - E.toThermal;
   }
 
   /** Refresh the flood-side external terms of the water ledger and the finals. */

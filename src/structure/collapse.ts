@@ -377,6 +377,9 @@ export class CollapseModel {
   /** Static surcharge (e.g. rubble resting on a member) — not dynamic. */
   addLoad(i: number, N: number, hazard?: string) {
     if (hazard) this.causeHazard[i] = this.hz(hazard);
+    // R1 for every hazard surcharge (Phase 31 audit M1): a spanning roof panel loaded by ash, snow or any other static
+    // surcharge is checked against its roof-system capacity — the failure depends on the load, not on its source.
+    if (N > 0 && this.g.roofCap[i] > 0) this.s.enableRoofCheck();
     this.s.addExtra(i, N);
   }
 
@@ -968,8 +971,9 @@ export class CollapseModel {
       this.restOn[i] = r;
       (this.resting.get(r) ?? this.resting.set(r, []).get(r)!).push(i);
       this.ledger.move('falling', 'resting', G.mass[i]);
-      // The rubble is what loads the floor now: a later overload failure is part of its chain.
-      this.s.addExtra(r, G.weight[i], i);
+      // The rubble is what loads the floor now: a later overload failure is part of its chain. Its carried mass (R2 roof
+      // snow) rests with it — the same weight every release path (resumeResting, a failing receiver) takes off again.
+      this.s.addExtra(r, G.weight[i] + this.carried[i] * GRAVITY, i);
     }
     for (const i of onGround) {
       const o = 6 * i;
