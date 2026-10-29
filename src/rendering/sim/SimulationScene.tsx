@@ -30,6 +30,7 @@ import { AtmosphereLayer } from '../atmosphere/AtmosphereLayer';
 import { ClimateLayer } from '../climate/ClimateLayer';
 import { GravityLayer } from '../gravity/GravityLayer';
 import { CelestialLayer } from '../celestial/CelestialLayer';
+import { HumanLayer } from '../human/HumanLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
@@ -100,6 +101,7 @@ export function SimulationScene() {
       <ClimateLayer />
       <GravityLayer />
       <CelestialLayer />
+      <HumanLayer />
       <ShaderWarmup />
       <SceneCompile version={version} />
       <DeformationPreview />

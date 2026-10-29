@@ -4,6 +4,10 @@ import { presetSpec as celestialPresetSpec } from '@/celestial/presets';
 import { celestialDemo } from '@/celestial/demos';
 import { celestialOutlook } from '@/celestial/outlook';
 import { celestialCsv } from '@/ui/Results/CelestialResults';
+import { HUMAN_PRESETS, humanPreset, type HumanPresetId } from '@/human/presets';
+import { aggregateHumans, humanCsv, humanEntities, humanJson, humanRow } from '@/simulation/human/summary';
+import { createInstance } from '@/phenomena/schedule';
+import type { PhenomenonInstance } from '@/phenomena/types';
 import { parseCommands } from '@/commands/RuleBasedParser';
 import { CLIMATE_PRESETS } from '@/climate/presets';
 import { GRAVITY_SCENARIOS, type GravityScenario, type GravitySpec } from '@/gravity/types';
@@ -219,6 +223,27 @@ export function installDevtools() {
       csv: () => { const c = simulationController.celestialLive(); return c ? celestialCsv(c) : ''; },
       /** The text-command parser's verdict on a sentence (black holes are pointed to the editor, never executed). */
       parse: (text: string) => parseCommands(text, { direction: 'E', duration: 60, gustStrength: 0.25 }),
+    },
+    /** Phase 33 human model (browser verification): the run's people, aggregate, the human CSV / JSON, the presets. */
+    humanLib: {
+      people: () => { const rt = simulationController.getRuntime(); return rt ? humanEntities(rt.entities.values()).map(humanRow) : []; },
+      aggregate: () => { const rt = simulationController.getRuntime(); return rt ? aggregateHumans(rt.entities.values()) : null; },
+      csv: () => { const rt = simulationController.getRuntime(); return rt ? humanCsv(rt.entities.values(), useSimStore.getState().damageEvents, simulationController.getTime()) : ''; },
+      json: () => { const rt = simulationController.getRuntime(); return rt ? humanJson(rt.entities.values(), useSimStore.getState().damageEvents) ?? null : null; },
+      presets: HUMAN_PRESETS.map((p) => ({ id: p.id, seed: p.seed, seconds: p.seconds, keys: p.keys })),
+      /** Replace the world with a preset's world, its events as experiment instances (no undo history). */
+      loadPreset: (id: HumanPresetId) => {
+        const p = humanPreset(id);
+        if (!p) return false;
+        const { doc, events } = p.build();
+        const instances: PhenomenonInstance[] = [];
+        for (const ev of events) instances.push(createInstance(ev.event, instances, ev));
+        doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+        useEditorStore.getState().select(null);
+        useWorldStore.getState().replaceDocument(doc);
+        useWorldStore.setState({ past: [], future: [] });
+        return true;
+      },
     },
     volcanoLib: {
       rt: () => simulationController.getEnvironment().volcano.rt,

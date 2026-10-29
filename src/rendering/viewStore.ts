@@ -208,6 +208,21 @@ export interface CelestialViz {
   tidal: boolean;
 }
 
+/**
+ * Human body overlay (Phase 33, extended model only; render-only — reads e.human, never writes): COM, support rectangle,
+ * local gravity, velocity, last contact point + impulse, per-segment risk markers, fall trajectory.
+ */
+export interface HumanViz {
+  enabled: boolean;
+  com: boolean;
+  support: boolean;
+  gravity: boolean;
+  velocity: boolean;
+  contact: boolean;
+  segments: boolean;
+  trail: boolean;
+}
+
 /** Gravity views (Phase 31): field arrows, a ground / building overlay on fixed SI legends, the local sources. */
 export interface GravityViz {
   overlay: import('./gravity/gravityColors').GravityOverlay;
@@ -297,6 +312,8 @@ interface ViewState {
   setGravityViz: (patch: Partial<GravityViz>) => void;
   celestialViz: CelestialViz;
   setCelestialViz: (patch: Partial<CelestialViz>) => void;
+  humanViz: HumanViz;
+  setHumanViz: (patch: Partial<HumanViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -361,6 +378,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setGravityViz: (patch) => set((s) => ({ gravityViz: { ...s.gravityViz, ...patch } })),
   celestialViz: { overlay: 'off', cores: true, bounds: true, disc: true, lens: true, particles: true, trails: true, tidal: false },
   setCelestialViz: (patch) => set((s) => ({ celestialViz: { ...s.celestialViz, ...patch } })),
+  humanViz: { enabled: false, com: true, support: true, gravity: true, velocity: true, contact: true, segments: true, trail: true },
+  setHumanViz: (patch) => set((s) => ({ humanViz: { ...s.humanViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

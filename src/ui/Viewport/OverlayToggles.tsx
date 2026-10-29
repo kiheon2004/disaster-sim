@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ATMOS_OVERLAYS, CLIMATE_OVERLAYS, type AtmosOverlay, type ClimateOverlay } from '@/rendering/viewStore';
 import { climateGradient, climateLabels } from '@/rendering/climate/climateColors';
 import { GRAVITY_OVERLAYS, gravityGradient, gravityLabels, type GravityOverlay } from '@/rendering/gravity/gravityColors';
@@ -14,6 +15,9 @@ import { ARRIVAL_GRADIENT, cssLogGradient, IMPULSE_STOPS, PRESSURE_STOPS } from 
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { FACTOR_GRADIENT, TEMPERATURE_GRADIENT, THERMAL_SCALES, UTIL_GRADIENT } from '@/rendering/thermal/thermalColors';
 import { useSimStore } from '@/simulation/simStore';
+import { simulationController } from '@/simulation/SimulationController';
+import { INJURY_LEVELS } from '@/human/injury';
+import { LEVEL_COLORS } from '@/ui/Inspector/HumanInspector';
 import { FUEL_GRADIENT, HRR_GRADIENT, ROOM_COLORS, STATE_COLORS, VISIBILITY_GRADIENT } from '@/rendering/fire/fireColors';
 import { FIRE_STATES } from '@/fire/FireWorld';
 import { GLOW_GRADIENT, OVERLAY_SCALE, overlayGradient } from '@/rendering/volcano/volcanoColors';
@@ -292,6 +296,7 @@ export function OverlayToggles() {
       <AtmosphereToggles />
       <GravityToggles />
       <CelestialToggles />
+      <HumanToggles />
       <ClimateToggles />
       <FireToggles />
       <StructureToggles />
@@ -466,6 +471,48 @@ function CelestialToggles() {
         <span style={{ fontSize: 10.5, color: '#ffb36b', lineHeight: 1.35 }} data-testid="celestial-illustrative">{t('overlay.celestial.illustrative')}</span>
         <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.celestial.note')}</span>
       </div>
+    </>
+  );
+}
+
+/** Human body overlay (Phase 33): shown while a run has extended-model people. Render-only; arrow scales are fixed. */
+function HumanToggles() {
+  const t = useT();
+  const version = useSimStore((s) => s.runtimeVersion);
+  const viz = useViewStore((s) => s.humanViz);
+  const set = useViewStore.getState().setHumanViz;
+  const live = useMemo(() => {
+    const rt = simulationController.getRuntime();
+    if (!rt) return false;
+    for (const e of rt.entities.values()) if (e.human) return true;
+    return false;
+  }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!live) return null;
+  return (
+    <>
+      <Toggle checked={viz.enabled} onChange={(b) => set({ enabled: b })} label={t('humanUi.overlay')} />
+      {viz.enabled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 38 }} data-testid="human-overlay">
+          <Toggle checked={viz.com} onChange={(b) => set({ com: b })} label={t('humanUi.overlay.com')} />
+          <Toggle checked={viz.support} onChange={(b) => set({ support: b })} label={t('humanUi.overlay.support')} />
+          <Toggle checked={viz.gravity} onChange={(b) => set({ gravity: b })} label={t('humanUi.overlay.gravity')} />
+          <Toggle checked={viz.velocity} onChange={(b) => set({ velocity: b })} label={t('humanUi.overlay.velocity')} />
+          <Toggle checked={viz.contact} onChange={(b) => set({ contact: b })} label={t('humanUi.overlay.contact')} />
+          <Toggle checked={viz.segments} onChange={(b) => set({ segments: b })} label={t('humanUi.overlay.segments')} />
+          <Toggle checked={viz.trail} onChange={(b) => set({ trail: b })} label={t('humanUi.overlay.trail')} />
+          {viz.segments && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {INJURY_LEVELS.map((l, i) => (
+                <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-1)', fontSize: 11 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: LEVEL_COLORS[i] }} />
+                  {t(`human.level.${l}`)}
+                </span>
+              ))}
+            </div>
+          )}
+          <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('humanUi.overlay.note')}</span>
+        </div>
+      )}
     </>
   );
 }

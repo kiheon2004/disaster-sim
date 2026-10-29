@@ -1,10 +1,18 @@
 import { useT } from '@/i18n/i18n';
 import { useWorldStore } from '@/world/worldStore';
-import { DEFAULT_WIND_MODEL } from '@/core/model';
+import { DEFAULT_WIND_MODEL, type HumanSettings } from '@/core/model';
 import { randomSeed } from '@/core/random';
 import { Section } from '@/ui/common/Panel';
 import { NumberField, ToggleField } from '@/ui/common/fields';
 import styles from './Inspector.module.css';
+
+/**
+ * Extended human model (Phase 33): `settings.simulation.humans` set / removed (absent = the legacy people). Written like
+ * the other optional simulation settings (a document edit, not an undo step).
+ */
+function setHumanSettings(h: HumanSettings | null) {
+  useWorldStore.getState().updateSimulationSettings({ humans: h });
+}
 
 /** Seed + approximate wind-model parameters, stored in the world document. */
 export function SimulationSettingsSection({ readOnly }: { readOnly: boolean }) {
@@ -35,6 +43,15 @@ export function SimulationSettingsSection({ readOnly }: { readOnly: boolean }) {
         <button className={styles.linkBtn} onClick={() => upd({ wind: { ...DEFAULT_WIND_MODEL } })}>{t('inspector.resetPhysics')}</button>
       )}
       <div className={styles.note}>{t('model.approximate')}</div>
+      <div data-testid="human-settings" style={{ display: 'contents' }}>
+        <ToggleField label={t('humanUi.settings.extended')} checked={!!sim.humans} disabled={readOnly}
+          hint={t('humanUi.settings.extended.hint')} onChange={(b) => setHumanSettings(b ? { model: 'extended', ...(sim.humans?.riskScale !== undefined ? { riskScale: sim.humans.riskScale } : {}) } : null)} />
+        {sim.humans && (
+          <NumberField label={t('humanUi.settings.riskScale')} value={sim.humans.riskScale ?? 1} min={0.5} max={2} step={0.05} precision={2} unit="×" disabled={readOnly}
+            hint={t('humanUi.settings.riskScale.hint')} onChange={(v) => setHumanSettings({ model: 'extended', ...(Math.abs(v - 1) > 1e-9 ? { riskScale: Math.min(2, Math.max(0.5, v)) } : {}) })} />
+        )}
+        {sim.humans && <div className={styles.note}>{t('humanUi.limitation')}</div>}
+      </div>
     </Section>
   );
 }

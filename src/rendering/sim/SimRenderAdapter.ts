@@ -52,6 +52,7 @@ import type { ThermalRuntime } from '@/simulation/thermal/runtime';
 import type { FireRuntime } from '@/simulation/fire/runtime';
 import { FS, isBurning } from '@/fire/FireWorld';
 import { factorColor, temperatureColor, utilColor } from '../thermal/thermalColors';
+import { leanQuaternion } from '../human/lean';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
 export const LOD_FAR = 110;
@@ -942,11 +943,17 @@ export class SimRenderAdapter {
         return;
       }
       case 'human': {
+        const h = e.human;
         const lean = !e.flags.fallen && e.dynamic;
-        const q = lean ? this.swayed(e, e.visual.swayAngle, e.pose.quaternion, true) : setQ(qA, e.pose.quaternion);
+        // Extended model (Phase 33): a standing person leans by its computed balance lean (instead of the wind sway); a
+        // released one follows the body pose. Rendering only — the physics body stays as it is.
+        const q = h ? (h.standing ? leanQuaternion(e.pose.quaternion, h.bal.th, qA, qB, euler) : setQ(qA, e.pose.quaternion))
+          : lean ? this.swayed(e, e.visual.swayAngle, e.pose.quaternion, true) : setQ(qA, e.pose.quaternion);
         this.compose(mRoot, this.shaken(e, e.pose.position), q, v.scale);
         if (animate && !v.far) {
-          const b = e.flags.fallen ? 0.3 : e.visual.brace;
+          // Arm brace: legacy from the wind load; extended from the balance demand, raised while falling / airborne.
+          const b = h ? (h.standing ? Math.min(1, Math.max(e.visual.brace, h.bal.demand)) : h.posture === 'falling' || h.posture === 'airborne' || h.posture === 'tumbling' ? 0.9 : 0.3)
+            : e.flags.fallen ? 0.3 : e.visual.brace;
           const t = elapsed * (4 + b * 6) + (e.source.seed % 1000) * 0.01;
           v.armL!.compose(v.shoulderL!, qB.setFromEuler(euler.set(-b * 2.2 + Math.sin(t) * 0.25 * b, 0, -b * 0.4)), vOne);
           v.armR!.compose(v.shoulderR!, qB.setFromEuler(euler.set(-b * 2.0 + Math.cos(t * 1.1) * 0.25 * b, 0, b * 0.4)), vOne);

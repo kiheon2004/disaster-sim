@@ -22,6 +22,7 @@ import { phenomena } from '@/phenomena/registry';
 import { ModelBadge } from '@/ui/common/ModelBadge';
 import styles from './ResultsPanel.module.css';
 import { CelestialSummary, celestialObjects } from './CelestialResults';
+import { HumanSummary, humanResultsJson } from './HumanResults';
 
 const PAGE = 400;
 
@@ -99,7 +100,8 @@ function ResultsDialog() {
 
   const exportCsv = () => {
     const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state', 'origin', 'damage_wind', 'damage_earthquake', 'damage_flood', 'damage_ground', 'source',
-      'failure', 'chain_trigger', 'chain_root', 'chain_depth', 'secondary_striker', 'secondary_source', 'secondary_member'];
+      'failure', 'chain_trigger', 'chain_root', 'chain_depth', 'secondary_striker', 'secondary_source', 'secondary_member',
+      'human_segment', 'human_impulse_Ns', 'human_dv_ms', 'human_decel_lower_bound_ms2', 'human_risk_index', 'human_level', 'human_partner', 'human_posture'];
     const rows = events.map((e) => [
       e.time.toFixed(2), e.objectId, objects[e.objectId] ? displayName(objects[e.objectId], t) : '', e.objectType, e.componentId ?? '', e.eventType, e.cause,
       ...e.worldPosition.map((v) => v.toFixed(2)), e.localWindSpeed.toFixed(2), e.globalWindSpeed.toFixed(2), e.force.toFixed(0),
@@ -108,6 +110,7 @@ function ResultsDialog() {
       (e.waterDepth ?? 0).toFixed(3), (e.flowSpeed ?? 0).toFixed(3), (e.exposure ?? 0).toFixed(1), DAMAGE_STATE_IDS[e.state ?? 0] ?? '',
       e.origin ?? e.hazard, ...(['wind', 'earthquake', 'flood', 'ground'] as const).map((h) => (e.contributors?.[h] ?? 0).toFixed(3)), e.source ?? '',
       e.failure ?? '', e.chain?.trigger ?? '', e.chain?.root ?? '', e.chain?.depth ?? '', e.secondary?.striker ?? '', e.secondary?.source ?? '', e.secondary?.member ?? '',
+      e.human?.segment ?? '', e.human?.impulse?.toFixed(2) ?? '', e.human?.dv?.toFixed(3) ?? '', e.human?.decel?.toFixed(1) ?? '', e.human?.index?.toFixed(3) ?? '', e.human?.level ?? '', e.human?.partner ?? '', e.human?.posture ?? '',
     ].map((v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(','));
     download(`${name || 'simulation'}-damage-events.csv`, [head.join(','), ...rows].join('\n'), 'text/csv');
   };
@@ -123,6 +126,7 @@ function ResultsDialog() {
     climate: useSimStore.getState().climate ?? undefined, climateObjects: climateObjects(), climateRoads: climateRoads(),
     gravity: useSimStore.getState().gravity ?? undefined, gravityObjects: gravityObjects(), gravityBuildings: gravityBuildings(),
     celestial: useSimStore.getState().celestial ? { ...useSimStore.getState().celestial, model: 'Newtonian softened point masses (real G); educational capture radius; no general relativity', units: { mass: 'kg', length: 'm', time: 's', energy: 'J', impulse: 'N·s' } } : undefined, celestialObjects: celestialObjects(),
+    humans: humanResultsJson(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -155,6 +159,7 @@ function ResultsDialog() {
           <AtmosphereSummary t={t} name={name} />
           <GravitySummary t={t} name={name} />
           <CelestialSummary t={t} name={name} />
+          <HumanSummary t={t} name={name} />
           <ClimateSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />

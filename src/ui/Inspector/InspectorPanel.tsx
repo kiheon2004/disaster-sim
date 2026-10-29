@@ -1,6 +1,7 @@
 import { ClimateObjectSection, ClimateProbeSection } from './ClimateInspector';
 import { GravityObjectSection, GravityProbeSection } from './GravityInspector';
 import { CelestialObjectSection, CelestialProbeSection } from './CelestialInspector';
+import { HumanObjectSection } from './HumanInspector';
 import { countRender } from '@/utils/renderCounter';
 import { useMemo } from 'react';
 import { useT } from '@/i18n/i18n';
@@ -53,6 +54,7 @@ export function InspectorPanel() {
       ) : obj ? (
         <>
           {inSim && <LiveStatusSection id={obj.id} />}
+          {inSim && <HumanObjectSection id={obj.id} />}
           {inSim && <QuakeLiveSection id={obj.id} />}
           {inSim && <FloodLiveSection id={obj.id} />}
           {inSim && <DeformationLiveSection id={obj.id} />}
