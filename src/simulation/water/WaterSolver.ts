@@ -227,6 +227,7 @@ export class WaterSolver {
     const { h, infilRate, infilStore, infiltrated, drainRate, nx } = f;
     const heat = f.heat;
     const ifac = f.infilFactor;
+    const keep = f.drainKeep;
     let inf = 0;
     let drn = 0;
     for (let iz = f.z0; iz <= f.z1; iz++) {
@@ -250,9 +251,9 @@ export class WaterSolver {
           }
         }
         const dr = drainRate[i];
-        if (dr > 0 && d > 0) {
+        if (dr > 0 && d > keep) {
           let a = dr * dt;
-          if (a > d) a = d;
+          if (a > d - keep) a = d - keep;
           d -= a;
           drn += a;
           aDrn = a;

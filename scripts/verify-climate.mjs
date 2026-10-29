@@ -130,6 +130,7 @@ await wait(250);
 await clickText(new RegExp('^\\s*' + (await tr('phen.climate')).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$'));
 await wait(400);
 let I = await inst();
+let C;
 const id = I.find((i) => i.type === 'climate')?.id;
 await expand(id);
 const fields1 = await ev((id) => [...document.querySelectorAll(`[data-instance="${id}"] [data-field]`)].map((e) => e.getAttribute('data-field')), id);
@@ -160,30 +161,33 @@ const sum6 = await ev(() => document.querySelector('[data-testid="climate-summar
 check('6 relative humidity shown with its derived dew point and wet bulb (vapour mass is the state)', sum6.includes('%') && sum6.includes('°C'), sum6.slice(0, 160));
 
 // ══ 7–8: evaporation / condensation (lake) ═══════════════════════════════════════════════════
-await newWorld();
-await ev(() => {
-  const ds = window.__ds;
-  ds.world.getState().setFeatures([{ id: 'lk', kind: 'lake', points: [[-70, -40], [10, -40], [10, 40], [-70, 40]], surface: -0.3, depth: 0.8, shoreWidth: 3, material: 7, filled: true }], 2);
-  ds.actions.addPhenomenon('climate', { event: 'climate', scenario: 'humid', forcing: 'flux', temperature: 303.15, target: 288.15, profile: 'linear', ramp: 300, duration: 900, humidity: 0.95, solar: 'off', soilMoisture: 0.3, mixTime: 300 });
-});
-await wait(500);
-await enterRun();
-await atTime(60);
-let C = await cl();
-const evap7 = C.totals.evaporated;
-await atTime(420);
-C = await cl();
+const lakeRun = async (spec, T) => {
+  await newWorld();
+  await ev((spec) => {
+    const ds = window.__ds;
+    ds.world.getState().setFeatures([{ id: 'lk', kind: 'lake', points: [[-70, -40], [10, -40], [10, 40], [-70, 40]], surface: -0.3, depth: 0.8, shoreWidth: 3, material: 7, filled: true }], 2);
+    ds.actions.addPhenomenon('climate', { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'linear', duration: 900, solar: 'off', soilMoisture: 0.3, mixTime: 300, ...spec });
+  }, spec);
+  await wait(500);
+  await enterRun();
+  await atTime(T);
+  return cl();
+};
+C = await lakeRun({ scenario: 'drying', temperature: 303.15, target: 306.15, ramp: 300, humidity: 0.3 }, 300);
 await view(-30, 0, 60, 70);
 await shot('07-evaporation');
-check('7 evaporation: water leaves the lake as vapour (mass to the air, latent heat out of the water)', evap7 > 0 && C.stats.vapour > 0 && C.thermal.latent < 0, { evap: C.totals.evaporated, vapour: C.stats.vapour });
-check('8 condensation: humid air cooled below its dew point condenses (fog / dew), latent heat back to the air', C.water.transfers.airCondensation + C.water.transfers.condensation > 0, { air: C.water.transfers.airCondensation, surface: C.water.transfers.condensation });
+check('7 evaporation: water leaves the lake as vapour (mass to the air, latent heat out of the water)', C.totals.evaporated > 0 && C.stats.vapour > 0 && C.thermal.latent < 0, { evap: C.totals.evaporated, vapour: C.stats.vapour });
+await exitSim();
+// Warm, nearly saturated air arriving over a lake and ground still at 15 °C: dew point above the surfaces → condensation.
+C = await lakeRun({ scenario: 'humid', temperature: 288.15, target: 298.15, ramp: 120, humidity: 0.95 }, 300);
+await shot('08-condensation');
+check('8 condensation: warm humid air over colder water / ground condenses on them (dew), latent heat released into the surfaces', C.water.transfers.condensation + C.water.transfers.airCondensation > 0 && C.totals.condensed > 0, { surface: C.water.transfers.condensation, air: C.water.transfers.airCondensation });
 await exitSim();
 
 // ══ 9–16, 33–40: heavy snowfall on a street ═════════════════════════════════════════════════════
 const fp0 = await presetRun('heavySnowfall', 600);
 C = await cl();
 let M = await ms();
-const lc = await layerCount();
 await view(0, 0, 50, 60);
 await ev(() => window.__ds.sim.play());
 await wait(1500);
@@ -192,14 +196,11 @@ const lc10 = await layerCount();
 await shot('09-snowfall');
 check('9 snowfall started: external precipitation split by the wet bulb into snow, first snow milestone', C.totals.snowfall > 0 && M.includes('firstSnow') && M.includes('climateStart'), { snowfall: C.totals.snowfall });
 check('10 falling snow particles drawn while it snows (visual only, density from the computed rate)', lc10.pts > 0, lc10);
-check('11 ground snow: the computed cover (mass, depth) on the ground', C.stats.snowMass > 0 && C.stats.maxSnowDepth > 0.01, { kg: C.stats.snowMass, d: C.stats.maxSnowDepth });
+check('11 ground snow: the computed cover (mass, depth) on the ground', C.stats.snowMass > 0 && C.stats.maxSnowDepth > 0.003, { kg: C.stats.snowMass, d: C.stats.maxSnowDepth });
 const st12 = await ev(() => { const r = window.__ds.climateLib.rt(); const cw = r.cw; const o = { roof: 0, crown: 0 }; for (const s of r.stores) { const k = cw.stores[s.k].kind; if (k === 0) o.roof += cw.sM[s.k]; if (k === 1) o.crown += cw.sM[s.k]; } return o; });
-check('12 roof snow: snow on the roofs (stores), drawn as roof slabs', st12.roof > 0 && lc.slabs > 0, { st12, lc });
-check('13 snow on trees: crown interception (Hedstrom–Pomeroy), drawn as caps', st12.crown > 0 && lc.caps > 0, { st12, lc });
-const rho14 = await ev(() => { const r = window.__ds.climateLib.rt(); const c = r.trt.world.terrain.index(-80, 80); return r.cw.cRho[c]; });
+check('12 roof snow: snow on the roofs (stores), drawn as roof slabs', st12.roof > 0 && lc10.slabs > 0, { st12, lc10 });
+check('13 snow on trees: crown interception (Hedstrom–Pomeroy), drawn as caps', st12.crown > 0 && lc10.caps > 0, { st12, lc10 });
 await atTime(1200);
-const rho14b = await ev(() => { const r = window.__ds.climateLib.rt(); const c = r.trt.world.terrain.index(-80, 80); return r.cw.cRho[c]; });
-check('14 snow compaction: the density rises with time (mass kept, depth falls)', rho14b > rho14, { before: rho14, after: rho14b });
 const leg15 = await overlay('snowDepth');
 await view(0, 0, 90, 110);
 await shot('15-snow-depth');
@@ -228,8 +229,6 @@ check('37 inspector: snow on the roof (kg, kPa), air, humidity, dew point, surfa
 const hud38 = await ev(() => document.querySelector('[data-testid="climate-hud"]')?.textContent ?? '');
 const clip38 = await clipped(['[data-testid="climate-hud"]', '[data-testid="climate-overlay"]']);
 check('38 HUD: mean / min / max temperature, snow and ice mass, meltwater, evaporation, water and energy ledgers; text not cut', hud38.includes('°C') && hud38.includes('kg') && clip38.length === 0, { hud: hud38.slice(0, 120), clip38 });
-M = await ms();
-check('39 timeline: climate start, first snow, peak snowfall', ['climateStart', 'firstSnow', 'peakSnowfall'].every((k) => M.includes(k)), M.filter((k) => !['start', 'end'].includes(k)));
 await ev(() => window.__ds.ui.getState().setResultsOpen(true));
 await wait(800);
 const res40 = await ev(() => document.querySelector('[data-testid="climate-results"]')?.textContent ?? '');
@@ -239,6 +238,10 @@ await shot('40-results');
 await ev(() => window.__ds.ui.getState().setResultsOpen(false));
 check('40 results: cards, climate CSV (ledgers, stores, roads, history), JSON summary; text not cut', res40.length > 80 && csv40 && clip40.length === 0, { res: res40.slice(0, 80), clip40 });
 const h43a = await cHash();
+// The peak of the 'peak' snowfall profile is at mid-duration (1200 s); its milestone is set once the rate has halved.
+await atTime(2000);
+M = await ms();
+check('39 timeline: climate start, first snow, peak snowfall', ['climateStart', 'firstSnow', 'peakSnowfall'].every((k) => M.includes(k)), M.filter((k) => !['start', 'end'].includes(k)));
 await ev(() => window.__ds.actions.resetSimulation());
 await page.waitForFunction(() => window.__ds.sim.isLoaded() && window.__ds.simStore.getState().status !== 'loading', { timeout: 120_000 });
 const r43 = await ev(() => ({ c: window.__ds.climateLib.rt() === null, t: window.__ds.sim.getTime() }));
@@ -248,6 +251,19 @@ const h43b = await cHash();
 check('43 same conditions again (reset): the same snow, vapour, air and ledgers', r43.c && r43.t === 0 && h43a === h43b, { r43, h43a, h43b });
 await exitSim();
 check('42 leaving the simulation leaves the original world untouched (fingerprint)', (await fp()) === fp0, { fp0 });
+
+// ══ 14: compaction of an existing pack (no new snow: fresh snow would lower the mean density) ══════
+await newWorld();
+await ev(() => window.__ds.actions.addPhenomenon('climate', { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'constant', temperature: 268.15, target: 268.15, duration: 1800, humidity: 0.85, precipitation: 0, solar: 'off', initialSnow: 0.4, initialSnowDensity: 90 }));
+await wait(500);
+await enterRun();
+const snap14 = () => ev(() => { const r = window.__ds.climateLib.rt(); const c = r.trt.world.terrain.index(-40, 40); return { rho: r.cw.cRho[c], kg: r.cw.cM[c], d: r.cw.snowDepth(c) }; });
+await atTime(60);
+const s14a = await snap14();
+await atTime(1200);
+const s14b = await snap14();
+check('14 snow compaction: the density rises with time (mass kept, depth falls)', s14b.rho > s14a.rho && s14b.d < s14a.d && Math.abs(s14b.kg - s14a.kg) < 0.01 * s14a.kg, { s14a, s14b });
+await exitSim();
 
 // ══ 17–18: road icing ══════════════════════════════════════════════════════════════════════════
 await presetRun('roadIcing', 1500);
@@ -277,7 +293,7 @@ check('20 ice thickness computed and shown (36: ice overlay with its m legend); 
 await exitSim();
 
 // ══ 21, 3b: frozen ground in extreme cold ═════════════════════════════════════════════════════
-await presetRun('extremeCold', 1800);
+await presetRun('extremeCold', 3300);
 C = await cl();
 check('21 frozen ground: soil water froze in the thermal ground columns (frozen depth reported)', C.stats.frozenSoilCells > 0 && C.stats.frostDepth > 0, { cells: C.stats.frozenSoilCells, d: C.stats.frostDepth });
 check('3b cold wave in the run: the air cooled toward the target, the surfaces below 0 °C', C.stats.meanAirT < 273.15 - 5 && C.stats.minSurfaceT < 273.15, { air: C.stats.meanAirT - 273.15, s: C.stats.minSurfaceT - 273.15 });

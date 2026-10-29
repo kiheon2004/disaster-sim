@@ -53,3 +53,12 @@ export const ICE_ALBEDO = 0.35;
 export const SNOW_ALBEDO_MAX = 0.85;
 export const SNOW_ALBEDO_MIN = 0.5;
 export const ASH_ALBEDO = 0.1;
+
+/**
+ * A soil layer counts as frozen once a quarter of its water is ice: its infiltration factor 10^(−7·0.25) ≈ 0.02 makes
+ * it effectively impermeable (Lundin 1990), which is what "frozen ground" means for runoff.
+ */
+export const FROZEN_ICE_FRACTION = 0.25;
+
+/** Water depth the storm drains leave on paved cells during a climate experiment (m): pavement depression storage. */
+export const PAVEMENT_FILM = 0.0005;

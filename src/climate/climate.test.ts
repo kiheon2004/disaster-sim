@@ -18,6 +18,7 @@ import { climateIssues, defaultClimateSpec, type ClimateSpec } from './types';
 import { ClimateWorld, type ClimateWaterLink } from './ClimateWorld';
 import { C_WATER, L_F, L_V, RHO_WATER, T_MELT } from './constants';
 import { snowFraction, frictionFactor } from './surfaceState';
+import { emptyResult, stepNode } from './cover';
 
 const K = (c: number) => c + T_MELT;
 
@@ -190,6 +191,21 @@ function residuals(r: Run) {
   const scale = Math.max(1, Math.abs(cw.energy.initial) + Math.abs(cw.energy.vaporIn) + Math.abs(cw.energy.toThermal) + Math.abs(tw.ledger.latent) + Math.abs(tw.ledger.climate) + tw.ledger.totalLost());
   return { water, energy: Math.abs(eStores + eThermal) / scale, thermal: tw.ledger.relativeResidual(), stores: Math.abs(eStores) / scale };
 }
+
+describe('cover node', () => {
+  it('fresh ice exactly at 0 °C on 0 °C water under −20 °C air draws its loss from the water, not from its own few grams', () => {
+    const M = 0.001, base = { snow: 0, ice: M, rho: 917, A: 1, Ta: T_MELT - 20, qa: 0.0005, p: 101325, u2: 6, pr: 1, Tsky: T_MELT - 55, S: 0, Tb: T_MELT, Gb: 1000, dt: 5, open: true };
+    const r = stepNode({ ...base, M, U: -L_F * M }, emptyResult());
+    // Strong contact with the water: the node sits just below 0 °C and the heat comes up from the water (it will freeze).
+    expect(r.qBottom).toBeLessThan(0);
+    const Tafter = phaseState(-L_F * M + r.dU, M).T;
+    expect(Tafter).toBeGreaterThan(T_MELT - 1);
+    expect(Tafter).toBeLessThanOrEqual(T_MELT);
+    // With 1 g of liquid left the node first freezes it (0 °C), then cools sensibly — never below its coldest sink.
+    const r2 = stepNode({ ...base, M, U: -L_F * M + 0.5 * L_F * M }, emptyResult());
+    expect(phaseState(-0.5 * L_F * M + r2.dU, M).T).toBeGreaterThan(base.Tsky);
+  });
+});
 
 describe('ClimateWorld: phase changes with exact ledgers', () => {
   it('snow on cold ground stays, sublimates a little into dry air; mass and energy close', () => {

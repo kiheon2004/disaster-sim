@@ -73,10 +73,22 @@ export function coverResistance(snow: number, ice: number, rho: number, A: numbe
 }
 
 export function stepNode(n: NodeInput, out: NodeResult): NodeResult {
+  const { M, U } = n;
+  const frozenU = -3.337e5 * M;
+  // Infinite capacity (pinned at 0 °C) only while there is liquid to freeze / ice melting; ice exactly at 0 °C
+  // without liquid has its sensible capacity (fresh ice on water: the water below supplies the heat, the ice grows
+  // from below — not by drawing the top loss out of a few grams of ice).
+  const melting = U > frozenU;
+  solveNode(n, out, melting);
+  // The step would freeze all the liquid: from there on the node cools sensibly — solve it that way.
+  if (melting && U + out.dU < frozenU) solveNode(n, out, false);
+  return out;
+}
+
+function solveNode(n: NodeInput, out: NodeResult, melting: boolean) {
   const { M, U, A, dt } = n;
   const ph = phaseState(U, M);
   const T = Math.min(ph.T, T_MELT);
-  const melting = U >= -3.337e5 * M; // at 0 °C with liquid (or exactly frozen at 0 °C)
   const C = melting ? Infinity : 2108 * M;
   const Rh = 0.5 * coverResistance(n.snow, n.ice, n.rho, A);
   const Gbot = n.Gb > 0 ? 1 / (1 / n.Gb + Rh / A) : 0;
@@ -128,7 +140,6 @@ export function stepNode(n: NodeInput, out: NodeResult): NodeResult {
   out.Ts = Ts;
   out.T = Tstar;
   out.L = L;
-  return out;
 }
 
 export const emptyResult = (): NodeResult => ({ dU: 0, qBottom: 0, qConv: 0, qRad: 0, qSolar: 0, evap: 0, qLatent: 0, Ts: T_MELT, T: T_MELT, L: L_S });

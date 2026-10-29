@@ -82,7 +82,8 @@ describe('climate in the simulation (Phase 30)', () => {
     c.advance(240);
     const r = crt(c), cw = r.cw;
     expect(c.getEnvironment().climate.experiments[1].reason).toBe('climate.reject.second');
-    const P = (15 / 3600) * 240; // kg/m² delivered
+    const P = (15 / 3600) * cw.precipTime; // kg/m² delivered up to the last precipitation step (every 5 s)
+    expect(cw.precipTime).toBeGreaterThan(234);
     expect(cw.water.precipitation).toBeCloseTo(P * cw.n * cw.cellArea, 0);
     // Ground away from objects: about the snowfall (a little sublimation / deposition).
     const g = r.trt.world.terrain;
@@ -127,6 +128,9 @@ describe('climate in the simulation (Phase 30)', () => {
     expect(f.iceLoad).not.toBeNull();
     const cl = r.trt.world.terrain.index(0, 0);
     expect(r.cw.iceThickness(cl)).toBeGreaterThan(0.001);
+    // Energy bound: the ice cannot outgrow the heat the surface can lose (≤ ~600 W/m² here: convection + longwave).
+    expect(r.cw.iceThickness(cl)).toBeLessThan((600 * 1500) / (917 * 334_000));
+    expect(r.cw.floorClamps).toBe(0);
     expect(c.getMilestones().map((m) => m.kind)).toContain('lakeIce');
     expectLedgers(c);
     c.unload();

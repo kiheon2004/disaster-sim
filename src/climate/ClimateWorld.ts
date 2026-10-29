@@ -23,15 +23,16 @@
  *                      every step: vapour transport, boundary mixing, saturation adjustment, Kessler precipitation
  */
 import type { TerrainData } from '@/core/model';
+import { groundMaterial } from '@/terrain/GroundMaterials';
 import type { ThermalWorld } from '@/thermal/ThermalWorld';
 import type { SurfaceClimate } from '@/thermal/TerrainThermal';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
 import { hWaterSide, hGround } from '@/thermal/convection';
-import { C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE } from './constants';
+import { C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
 import { ClimateForcing, type BackgroundState } from './forcing';
 import type { ClimateSpec } from './types';
 import { boilingPointWater, humidityFromRH, qSat, saturationAdjust, wetBulb } from './psychro';
-import { ashyAlbedo, compact, freshSnowDensity, intercept, interceptionMax, phaseState, snowAlbedo } from './snow';
+import { ashyAlbedo, compact, freshSnowDensity, initialSnowAlbedo, intercept, interceptionMax, phaseState, snowAlbedo } from './snow';
 import { autoconversion, snowFraction } from './surfaceState';
 import { emptyResult, stepNode, type NodeInput } from './cover';
 import type { SunState } from './solar';
@@ -56,6 +57,7 @@ export interface ClimateWaterLink {
   iceLoad: Float64Array | null;
   iceFric: Float32Array | null;
   frozen: Uint8Array | null;
+  drainKeep: number;
   totalVolume(): number;
 }
 
@@ -258,8 +260,15 @@ export class ClimateWorld {
     this.groundH = new Float32Array(n);
     this.obstacleTop = opts.obstacleTop ?? new Float32Array(n).fill(-Infinity);
     this.updateGeometry();
-    // Antecedent soil water (volumetric θ₀ × layer thickness).
-    for (let c = 0; c < n; c++) for (let l = 0; l < this.nl; l++) this.sW[c * this.nl + l] = spec.soilMoisture * g.layers[l] * this.cellArea * RHO_WATER;
+    // Antecedent soil water (volumetric θ₀ × layer thickness). The surface layers (top 8 cm — the surface material of
+    // Phase 26) hold it in proportion to the ground's permeability (paved surfaces and rock hold little: asphalt 0.11·θ₀).
+    const vx = terrain.nx;
+    for (let c = 0; c < n; c++) {
+      const ix = c % this.nx, iz = (c - ix) / this.nx;
+      const perm = groundMaterial(terrain.ground[(iz + 1) * vx + ix + 1]).permeability;
+      const surf = Math.min(1, perm / 0.45);
+      for (let l = 0; l < this.nl; l++) this.sW[c * this.nl + l] = spec.soilMoisture * g.layers[l] * this.cellArea * RHO_WATER * (g.depthOf(l) < 0.08 - 1e-9 ? surf : 1);
+    }
     this.bg = this.forcing.background(0);
     // Initial vapour: the background humidity in every column.
     for (let a = 0; a < this.na; a++) this.vap[a] = this.bg.q * this.layerMass(a) / (1 - this.bg.q);
@@ -333,6 +342,12 @@ export class ClimateWorld {
     g.activateCell(c);
   }
 
+  /** Coldest temperature a cell's surface exchanges heat with (its air, its ground surface layer, the sky). */
+  private coldestSink(c: number): number {
+    const a = this.cellAir(c);
+    return Math.min(a >= 0 ? this.tw.air.T(a) : Infinity, this.tw.terrain.T(c, 0), this.surf.Tsky);
+  }
+
   /** Group (0 … GROUPS − 1) of a cell: by its 10 × 10 tile — the per-cell surface work is spread over the ground steps. */
   private cellGroup(c: number): number {
     let m = this.groupOf;
@@ -345,6 +360,10 @@ export class ClimateWorld {
   }
   private groupOf: Uint8Array | null = null;
   private tileLast: Float64Array = new Float64Array(0);
+  /** Times the cover temperature floor acted (diagnostic; 0 when every node stays physical). */
+  floorClamps = 0;
+  /** End of the interval the precipitation has been delivered for (s; every 5 s with the all-world surface parts). */
+  precipTime = 0;
   private surfNow = 0;
 
   /** Add frozen mass m (kg) at temperature T (≤ T_m) as snow (density rho) or ice to a cell's cover. */
@@ -476,6 +495,7 @@ export class ClimateWorld {
         if (g.covered[c]) continue;
         if (w0 && w0.h[c] > 0.05) continue; // open water: no snow pack on it (ice may carry snow below)
         this.addFrozen(c, m, Ts, false, rho);
+        this.cAlb[c] = initialSnowAlbedo(rho);
       }
       for (let k = 0; k < this.stores.length; k++) {
         const st = this.stores[k];
@@ -787,6 +807,7 @@ export class ClimateWorld {
 
   /** External + internal precipitation over [t0, t1): split once into rain / snow, delivered to stores, covers, water. */
   private precipitate(t0: number, t1: number) {
+    this.precipTime = t1;
     const P = this.forcing.precipitation(Math.max(0, t0), Math.min(this.spec.duration, t1)); // kg/m²
     if (P > 0) this.externalPrecip(P);
     this.internalPrecip();
@@ -970,6 +991,15 @@ export class ClimateWorld {
           const k0 = g.k[c * nl];
           nd.Tb = g.T(c, 0); nd.Gb = this.cellArea / (g.layers[0] / (2 * k0));
         }
+        // Safety net: a passive cover cannot be colder than the coldest thing it exchanges heat with (air, bed, sky);
+        // a deficit beyond that goes, exactly, to what lies below it (the water, or the ground surface layer).
+        const Umin = nd.M * (C_ICE * (Math.min(nd.Ta, nd.Tb, nd.Tsky, T_MELT) - T_MELT) - L_F);
+        if (nd.U < Umin) {
+          const x = nd.U - Umin;
+          this.cU[c] = nd.U = Umin;
+          if (wet) this.depositWater(w!, c, x, 'cover'); else this.depositGround(c, x, 'cover');
+          this.floorClamps++;
+        }
         stepNode(nd, r);
         this.cU[c] += r.dU;
         // Below: water or ground surface layer takes the bottom flux.
@@ -1007,7 +1037,9 @@ export class ClimateWorld {
       this.cU[c] -= fromIce * (hsI - C_WATER * (T_MELT - this.Tref));
       const hs = m > 0 ? (fromLiq * hsL + fromIce * hsI) / m : hsL;
       this.vaporExchangeStore(a, m, hs, latentJ * (m / dm));
-      if (m < dm) this.vaporExchangeStore(a, 0, 0, latentJ * (1 - m / dm));
+      // The node paid the latent heat of the whole computed flux: the part with no mass behind it (a vanishing cover)
+      // goes back to the node — never to the air as heat without vapour.
+      if (m < dm) this.cU[c] += latentJ * (1 - m / dm);
       this.water.transfers.sublimation += m; this.last.sublimation += m;
     } else {
       const got = Math.min(-m, a >= 0 ? Math.max(0, this.vap[a]) : Infinity);
@@ -1015,7 +1047,7 @@ export class ClimateWorld {
       this.cM[c] += got;
       this.cU[c] += got * (hs - C_WATER * (T_MELT - this.Tref));
       this.vaporExchangeStore(a, -got, hs, latentJ * (got / -m));
-      if (got < -m) this.vaporExchangeStore(a, 0, 0, latentJ * (1 + got / m));
+      if (got < -m) this.cU[c] += latentJ * (1 + got / m);
       this.water.transfers.deposition += got;
     }
   }
@@ -1122,10 +1154,14 @@ export class ClimateWorld {
       w.budget.frozen += dm / RHO_WATER;
       this.addFrozen(c, dm, T_MELT, true, RHO_ICE);
       if (extraCold > 0) {
-        // Fully frozen: the remaining cold goes into the new ice (it cools below 0 °C).
+        // Fully frozen: the remaining cold belongs to what the water exchanged it with. A thin film (thermally merged
+        // with the ground, Phase 26) or a vanishing remnant gives it to the ground surface layer — a few grams of new
+        // ice must not carry the deficit of the whole film (that would put it thousands of kelvin below 0 °C); a real
+        // water body's ice takes it, down to the coldest of its surroundings.
         w.heat[c] += extraCold;
-        this.toThermal(extraCold, 'cover');
-        this.cU[c] -= extraCold;
+        const toIce = h > WATER_MERGE ? Math.min(extraCold, dm * C_ICE * Math.max(0, T_MELT - this.coldestSink(c))) : 0;
+        if (toIce > 0) { this.toThermal(toIce, 'cover'); this.cU[c] -= toIce; }
+        if (extraCold > toIce) { this.tw.terrain.E[c * this.nl] -= extraCold - toIce; this.tw.terrain.activateCell(c); }
       }
       if (w.h[c] === 0) { this.tw.terrain.E[c * this.nl] += w.heat[c]; w.heat[c] = 0; }
       this.water.transfers.freezing += dm; this.last.freeze += dm; this.totals.frozenWater += dm;
@@ -1236,7 +1272,7 @@ export class ClimateWorld {
           this.sM[k] -= m;
           this.sU[k] -= m * (hs - C_WATER * (T_MELT - this.Tref));
           this.vaporExchangeStore(a, m, hs, r.qLatent * dtg * (m / em));
-          if (m < em) this.vaporExchangeStore(a, 0, 0, r.qLatent * dtg * (1 - m / em));
+          if (m < em) this.sU[k] += r.qLatent * dtg * (1 - m / em);
           this.water.transfers.sublimation += m;
         } else {
           const got = Math.min(-em, a >= 0 ? Math.max(0, this.vap[a]) : Infinity);
@@ -1244,7 +1280,7 @@ export class ClimateWorld {
           this.sM[k] += got;
           this.sU[k] += got * (hs - C_WATER * (T_MELT - this.Tref));
           this.vaporExchangeStore(a, -got, hs, r.qLatent * dtg * (got / -em));
-          if (got < -em) this.vaporExchangeStore(a, 0, 0, r.qLatent * dtg * (1 + got / em));
+          if (got < -em) this.sU[k] += r.qLatent * dtg * (1 + got / em);
           this.water.transfers.deposition += got;
         }
       }
@@ -1290,13 +1326,18 @@ export class ClimateWorld {
     let anyIce = false, anyFrozenSoil = false;
     for (let c = 0; c < this.n; c++) if (this.cIce[c] > 0 && w.h[c] > 0) { anyIce = true; break; }
     for (let c = 0; c < this.n && !anyFrozenSoil; c++) if (this.sI[c * this.nl] > 0) anyFrozenSoil = true;
+    // Paved surfaces keep a wetting film the storm drains cannot take (depression storage of asphalt ≈ 0.5–1.5 mm,
+    // Rossman 2015 SWMM manual: 1.3–2.5 mm for impervious surfaces; the lower end): it is what freezes into road ice.
+    w.drainKeep = PAVEMENT_FILM;
     if (anyIce || w.iceLoad) {
       const L = (w.iceLoad ??= new Float64Array(w.count));
       const F = (w.iceFric ??= new Float32Array(w.count).fill(1));
       const Z = (w.frozen ??= new Uint8Array(w.count));
       for (let c = 0; c < this.n; c++) {
         const ice = this.cM[c] > 0 ? this.cM[c] : 0;
-        L[c] = ice / (RHO_WATER * w.cellArea);
+        // Floating ice presses with its draft; ice grounded on a thinner film rests on the bed, pressing the water at
+        // most with the film's own depth (continuous at h = draft; avoids metre-scale heads over 0.1 mm films).
+        L[c] = Math.min(ice / (RHO_WATER * w.cellArea), w.h[c]);
         const iceThick = this.cIce[c] / (RHO_ICE * this.cellArea);
         // Sabaneev composite roughness with ice n_i = 0.02 and half the hydraulic radius under a cover: n² × ≈ 2.5.
         F[c] = this.cIce[c] > 0 && iceThick > 0.005 ? 2.5 : 1;

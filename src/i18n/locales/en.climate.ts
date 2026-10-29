@@ -255,6 +255,7 @@ export const enClimate = {
   "climate.preset.as.initialSnow": "Starts with a snow cover (initial storage in the ledger)",
   "climate.preset.as.blowing": "Blowing snow: simplified saltation along the wind, drifts at obstacles",
   "climate.preset.as.interception": "Crown interception (Hedstrom & Pomeroy 1998)",
+  "climate.preset.as.frozenGround": "Ground frozen to 15 cm under the snow: little infiltration (factor 10^(−7·ice fraction)), the water runs off",
   "climate.preset.as.rainOnSnow": "Rain on snow enters the snowpack, refreezes or drains",
   "climate.preset.as.meltToFlood": "Meltwater enters the Phase 14 flood model (runoff, infiltration)",
   "climate.preset.as.wetThenFreeze": "A water film freezes when the road surface falls below 0 °C",

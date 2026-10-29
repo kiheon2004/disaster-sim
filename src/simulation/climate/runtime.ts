@@ -19,7 +19,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { ClimateRecord } from './ClimateChannel';
 import { ClimateWorld, STORE, type ClimateWaterLink, type StoreInit } from '@/climate/ClimateWorld';
 import { climateIssues, climateWarnings, type ClimateSpec } from '@/climate/types';
-import { C_WATER, L_V, RHO_WATER, T_MELT } from '@/climate/constants';
+import { C_WATER, FROZEN_ICE_FRACTION, L_V, RHO_WATER, T_MELT } from '@/climate/constants';
 import { frictionFactor, surfaceState, SURFACE_STATES, SURF } from '@/climate/surfaceState';
 import { dewPoint, qSat, vapourPressure } from '@/climate/psychro';
 import { qRotate } from '@/core/math';
@@ -598,7 +598,7 @@ export class ClimateRuntime {
     const wf = this.env.flood.field;
     const nl = cw.nl;
     let soilW = 0, soilI = 0, frost = 0;
-    for (let l = 0; l < nl; l++) { soilW += cw.sW[c * nl + l]; soilI += cw.sI[c * nl + l]; if (cw.sI[c * nl + l] > 0.5 * (cw.sI[c * nl + l] + cw.sW[c * nl + l])) frost = g.depthOf(l) + g.layers[l]; }
+    for (let l = 0; l < nl; l++) { soilW += cw.sW[c * nl + l]; soilI += cw.sI[c * nl + l]; if (cw.sI[c * nl + l] > FROZEN_ICE_FRACTION * (cw.sI[c * nl + l] + cw.sW[c * nl + l])) frost = g.depthOf(l) + g.layers[l]; }
     const hw = wf ? wf.h[c] : 0;
     return {
       airT: T, rh: cw.rh(a), q, dew: dewPoint(e), p, surfaceT: cw.cM[c] > 0 ? cw.coverT(c) : hw > WATER_MERGE ? w.waterT(c) : g.T(c, 0),
@@ -642,9 +642,9 @@ export class ClimateRuntime {
         const it = cw.iceThickness(c);
         if (it > 0.001) { nI++; if (it > maxI) maxI = it; }
       }
-      if (cw.sI[c * nl] > 0.5 * (cw.sI[c * nl] + cw.sW[c * nl])) {
+      if (cw.sI[c * nl] > FROZEN_ICE_FRACTION * (cw.sI[c * nl] + cw.sW[c * nl])) {
         frozen++;
-        for (let l = 0; l < nl; l++) if (cw.sI[c * nl + l] > 0.5 * (cw.sI[c * nl + l] + cw.sW[c * nl + l])) frost = Math.max(frost, g.depthOf(l) + g.layers[l]);
+        for (let l = 0; l < nl; l++) if (cw.sI[c * nl + l] > FROZEN_ICE_FRACTION * (cw.sI[c * nl + l] + cw.sW[c * nl + l])) frost = Math.max(frost, g.depthOf(l) + g.layers[l]);
       }
       ft = Math.max(ft, cw.ftCycles[c]);
     }
@@ -702,7 +702,8 @@ export class ClimateRuntime {
     }
     if (this.peakSnow > 0 && dS < 0.5 * this.peakSnow && ctx.time > this.peakSnowT + 5) this.once(ctx, 'peakSnow', 'peakSnowfall', { rate: ((this.peakSnow / (cw.n * cw.cellArea)) * 3600).toFixed(2) }, this.peakSnowT);
     if (cw.totals.frozenWater > 0 || s.frozenSoilCells > 0) this.once(ctx, 'firstFreeze', 'firstFreezing', { kg: cw.totals.frozenWater.toFixed(0) });
-    if (s.maxIce > 0.01) this.once(ctx, 'lakeIce', 'lakeIce', { cm: (s.maxIce * 100).toFixed(1) });
+    // First measurable ice on water (1 mm): growth is limited by the heat the surface loses (≈ 2–3 mm per 25 min at −20 °C).
+    if (s.maxIce > 0.001) this.once(ctx, 'lakeIce', 'lakeIce', { cm: (s.maxIce * 100).toFixed(1) });
     if (s.maxRoofLoad >= ROOF_SCREEN_KPA) this.once(ctx, 'roofLoad', 'snowLoadDamage', { what: 'roof', kPa: s.maxRoofLoad.toFixed(2) });
     const melt = cw.totals.melt;
     const dM = melt - this.lastMelt; this.lastMelt = melt;

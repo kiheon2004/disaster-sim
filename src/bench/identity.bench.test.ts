@@ -136,10 +136,10 @@ describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
       if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
       const f = c.getEnvironment().flood.field;
       if (f) { const b = f.budget as unknown as Record<string, number>; lines.push(Array.from(f.h).reduce((a, x) => a + x, 0).toString(), JSON.stringify(['initial', 'rain', 'sources', 'boundaryIn', 'boundaryOut', 'infiltration', 'drainage', 'current', 'error'].map((k) => b[k]))); }
-      if (HEAT) lines.push(...thermalLines(c));
-      if (FIRE) lines.push(...fireLines(c));
-      if (ATM) lines.push(...volcanoLines(c));
-      if (CLI) lines.push(...atmosLines(c));
+      if (HEAT) for (const l of thermalLines(c)) lines.push(l);
+      if (FIRE) for (const l of fireLines(c)) lines.push(l);
+      if (ATM) for (const l of volcanoLines(c)) lines.push(l);
+      if (CLI) for (const l of atmosLines(c)) lines.push(l);
       out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
       c.unload();
     }

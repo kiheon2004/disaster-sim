@@ -157,11 +157,14 @@ export class WaterField {
    *  iceLoad      floating ice per cell as water depth (m): its weight presses on the water surface
    *  iceFric      Manning n² multiplier under an ice cover (Sabaneev composite roughness)
    *  frozen       1: the water is frozen to the bed (liquid under the ice too thin to flow) — no flow
+   *  drainKeep    depth the storm drains leave on paved cells (m): the pavement's depression storage / wetting film
+   *               (0 = the Phase 14 drains, which take everything up to their capacity)
    */
   infilFactor: Float32Array | null = null;
   iceLoad: Float64Array | null = null;
   iceFric: Float32Array | null = null;
   frozen: Uint8Array | null = null;
+  drainKeep = 0;
 
   /** Inclusive cell range that may hold water (empty when x0 > x1). */
   x0 = 1;

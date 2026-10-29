@@ -96,3 +96,12 @@ export function intercept(I: number, P: number, Imax: number): number {
   if (!(P > 0) || !(Imax > I)) return 0;
   return (Imax - I) * (1 - Math.exp(-P / Imax));
 }
+
+/**
+ * Albedo of a pack that exists at the start: its density stands in for its age (fresh 100 kg/m³ → 0.85, settled
+ * 400 kg/m³ → ≈ 0.62, the old-snow values of Douville et al. 1995 / Gray & Male 1981).
+ */
+export function initialSnowAlbedo(rho: number): number {
+  const f = Math.max(0, Math.min(1, (rho - 100) / 450));
+  return SNOW_ALBEDO_MAX - f * (SNOW_ALBEDO_MAX - SNOW_ALBEDO_MIN);
+}

@@ -255,6 +255,7 @@ export const koClimate = {
   "climate.preset.as.initialSnow": "적설로 시작 (장부의 초기 저장량)",
   "climate.preset.as.blowing": "날림 눈: 바람 방향 단순 도약 수송, 장애물 앞 퇴적",
   "climate.preset.as.interception": "수관 차단 (Hedstrom & Pomeroy 1998)",
+  "climate.preset.as.frozenGround": "눈 아래 지면 15 cm 동결: 침투가 거의 없어(계수 10^(−7·얼음 분율)) 물이 유출",
   "climate.preset.as.rainOnSnow": "눈 위 비는 적설로 들어가 재결빙하거나 배수",
   "climate.preset.as.meltToFlood": "융설수는 Phase 14 홍수 모델로 (유출·침투)",
   "climate.preset.as.wetThenFreeze": "노면이 0 °C 아래로 내려가면 수막이 얼음",

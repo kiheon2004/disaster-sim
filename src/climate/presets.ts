@@ -56,7 +56,7 @@ export function scenarioDefaults(s: ClimateScenario): Partial<ClimateSpec> {
     case 'snowfall': return { temperature: K(-3), target: K(-3), profile: 'constant', humidity: 0.9, precipitation: 10, precipPhase: 'auto', precipProfile: 'peak', solar: 'off' };
     case 'freezingRain': return { temperature: K(-3), target: K(-3), profile: 'constant', humidity: 0.95, precipitation: 3, precipPhase: 'rain', solar: 'off', initialFrost: 0.1 };
     case 'frost': return { temperature: K(3), target: K(-4), profile: 'smooth', ramp: 2400, humidity: 0.9, precipitation: 0, solar: 'off', cloud: 0 };
-    case 'roadIcing': return { temperature: K(2), target: K(-6), profile: 'linear', ramp: 1800, humidity: 0.9, precipitation: 2, precipPhase: 'rain', precipStart: 0, precipDuration: 600, solar: 'off' };
+    case 'roadIcing': return { temperature: K(2), target: K(-6), profile: 'linear', ramp: 1200, humidity: 0.9, precipitation: 3, precipPhase: 'rain', precipStart: 0, precipDuration: 1800, solar: 'off' };
     case 'lakeFreezing': return { temperature: K(0.5), target: K(-20), profile: 'smooth', ramp: 900, humidity: 0.7, precipitation: 0, solar: 'off' };
     case 'snowmelt': return { temperature: K(2), target: K(14), profile: 'linear', ramp: 1800, humidity: 0.85, initialSnow: 0.4, initialSnowDensity: 300, solar: 'clearSky', hour: 11, dayOfYear: 100 };
     case 'thawing': return { temperature: K(-2), target: K(10), profile: 'linear', ramp: 1800, humidity: 0.7, initialFrost: 0.3, solar: 'clearSky', hour: 11, dayOfYear: 90 };
@@ -92,8 +92,8 @@ export function climatePreset(id: ClimatePresetId): ClimatePreset {
     case 'snowmeltFlood': {
       const valley = (x: number, z: number) => round(Math.min(18, Math.abs(z) * 0.25 + Math.max(0, x + 20) * 0.05));
       return { height: valley, objects: [building(60, -25, 7), building(70, 25, 8), car(50, 8, 9), conifer(-40, 40, 3), conifer(-50, -40, 4)], seconds: 3600,
-        events: [climate({ scenario: 'snowmelt', temperature: K(4), target: K(14), profile: 'linear', ramp: 1200, duration: 3600, humidity: 0.9, initialSnow: 0.6, initialSnowDensity: 350, precipitation: 12, precipPhase: 'rain', precipStart: 600, precipDuration: 2400, solar: 'clearSky', hour: 11, dayOfYear: 100, cloud: 0.4 }), wind(6)],
-        assumptions: ['climate.preset.as.rainOnSnow', 'climate.preset.as.meltToFlood', 'climate.preset.as.strongRate'] };
+        events: [climate({ scenario: 'snowmelt', temperature: K(1), target: K(12), profile: 'linear', ramp: 1200, duration: 3600, humidity: 0.95, humidityTarget: 0.95, initialSnow: 0.3, initialSnowDensity: 400, initialFrost: 0.15, precipitation: 25, precipPhase: 'rain', precipStart: 300, precipDuration: 2700, solar: 'clearSky', hour: 11, dayOfYear: 100, cloud: 0.7 }), wind(6)],
+        assumptions: ['climate.preset.as.rainOnSnow', 'climate.preset.as.meltToFlood', 'climate.preset.as.frozenGround', 'climate.preset.as.strongRate'] };
     }
     case 'roadIcing':
       return { height: flat, ground: (_x, z) => (Math.abs(z) <= 5 ? ASPHALT : 0), objects: [road(-40, 0, 1), road(0, 0, 2), road(40, 0, 3), car(-30, -2, 5), car(-10, 2, 6, Math.PI), car(15, -2, 7), person(25, 7, 11), building(0, -25, 8)], seconds: 2400,
