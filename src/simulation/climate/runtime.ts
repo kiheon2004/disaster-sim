@@ -122,6 +122,7 @@ export class ClimateRuntime {
   private seriesEvery = 1;
   private nextSample = 0;
   private nextSecond = 0;
+  private nextMilestones = 0;
   private milestonesDone = new Set<string>();
   private readonly st: ClimateStats;
   private statsAt = -1;
@@ -343,7 +344,7 @@ export class ClimateRuntime {
     const t0 = performance.now();
     const w = this.trt.world;
     const local = ctx.time - this.rec.start;
-    this.cw.after(dt, local, { surface: () => this.surface(ctx) });
+    this.cw.after(dt, local, { surface: (dtg) => this.surface(ctx, dtg) });
     w.ledger.final = w.internalEnergy();
     if (ctx.time + 1e-9 >= this.nextSecond) {
       this.nextSecond = ctx.time + 1;
@@ -351,9 +352,13 @@ export class ClimateRuntime {
       this.objects(ctx);
       this.roads(ctx);
       P.add('climate.objects', tp);
-      const tm = P.now();
-      this.milestones(ctx);
-      P.add('climate.stats', tm);
+      // Milestones read the full statistics (a sweep of every cell): every 5 s (precipitation arrives in 5 s steps).
+      if (ctx.time + 1e-9 >= this.nextMilestones) {
+        this.nextMilestones = ctx.time + 5;
+        const tm = P.now();
+        this.milestones(ctx);
+        P.add('climate.stats', tm);
+      }
     }
     if (ctx.time + 1e-9 >= this.nextSample) {
       this.nextSample = ctx.time + this.seriesEvery;
@@ -375,9 +380,8 @@ export class ClimateRuntime {
   private windAt = -Infinity;
 
   /** After each surface step (1 s): blowing snow, crowns' water (transpiration, drying, fire model sync). */
-  private surface(ctx: SystemContext) {
+  private surface(ctx: SystemContext, dtg: number) {
     const cw = this.cw, w = this.trt.world, B = w.bodies;
-    const dtg = w.groundStepDt;
     if (this.spec.blowingSnow !== false && ctx.env.wind.baseSpeed > 4 && cw.stats0()) {
       const air = w.air;
       if (!this.windCol || ctx.time - this.windAt >= 10) {

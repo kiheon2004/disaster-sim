@@ -72,7 +72,7 @@ function street(): Add[] {
   return out;
 }
 const forest = (n: number): Add[] => Array.from({ length: n }, (_, k) => tree(-40 + (k % 10) * 8, -36 + Math.floor(k / 10) * 8, 30 + k));
-const base = { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'constant', humidity: 0.6, soilMoisture: 0.25, solar: 'off', precipitation: 0, mixTime: 900, startTime: 0 };
+const base = { event: 'climate', scenario: 'custom', forcing: 'flux', profile: 'constant', humidity: 0.6, soilMoisture: 0.25, solar: 'off', latitude: 37.5, dayOfYear: 172, hour: 12, cloud: 0, precipitation: 0, mixTime: 900, startTime: 0 };
 const cl = (p: Record<string, unknown>): EventSpec => ({ ...base, duration: 7200, temperature: K(15), target: K(15), ...p } as EventSpec);
 const wind = (speed: number): EventSpec => ({ event: 'wind', speed, direction: 'W', duration: 7200 } as EventSpec);
 const erupt = (p: Record<string, unknown> = {}): EventSpec => ({ event: 'volcano', vents: [{ kind: 'central', position: [-70, 0], radius: 2 }], material: 'basalt', temperature: 1150, rate: 2, duration: 3600, profile: 'constant', ...p } as EventSpec);

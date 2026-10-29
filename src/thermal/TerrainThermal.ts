@@ -534,7 +534,7 @@ export class TerrainThermal {
       const { evapRate, latRate, evap, latent } = climate;
       this.forActive((c) => {
         if (evapRate[c] !== 0) { evap[c] += evapRate[c] * dt; evapRate[c] = 0; }
-        if (latRate[c] !== 0) { latent[c] += latRate[c] * dt; latRate[c] = 0; }
+        if (latRate[c] !== 0) { latent[c] += latRate[c] * dt; climate.latentSum += latRate[c] * dt; latRate[c] = 0; }
       });
     }
     for (const t of this.tiles) {
@@ -588,6 +588,8 @@ export interface SurfaceClimate {
   latRate: Float64Array;
   evap: Float64Array;
   latent: Float64Array;
+  /** Σ of the latent heat applied since the climate last booked it (J). */
+  latentSum: number;
 }
 
 /** What the ground needs from its surroundings during a flux evaluation. */

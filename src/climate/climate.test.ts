@@ -251,8 +251,9 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
 
   it('snowfall: the water-equivalent total does not depend on the thermal step, density from the air temperature', () => {
     const r = setup(spec({ temperature: K(-5), target: K(-5), precipitation: 6, precipPhase: 'snow', humidity: 0.9 }));
-    r.step(600);
-    const expected = (6 / 3600) * 600 * 40 * 40; // kg
+    // Surface steps run every 5 s from the first second: 601 s delivers precipitation up to 601 s.
+    r.step(601);
+    const expected = (6 / 3600) * 601 * 40 * 40; // kg
     expect(r.cw.water.precipitation).toBeCloseTo(expected, 3);
     expect(r.cw.totals.snowfall).toBeCloseTo(expected, 3);
     const c = 20 * 40 + 20;
@@ -279,7 +280,8 @@ describe('ClimateWorld: phase changes with exact ledgers', () => {
     // Heat the water to 105 °C at 1 atm.
     const f = r.field!;
     for (let c = 0; c < f.count; c++) { const E = f.h[c] * RHO_WATER * f.cellArea * C_WATER * (K(105) - r.tw.Tref); r.tw.ledger.added += E - f.heat![c]; f.heat![c] = E; }
-    r.step(1);
+    // Every cell group passes the phase-change projection once in 5 s.
+    r.step(5);
     expect(r.cw.water.transfers.boiling).toBeGreaterThan(0);
     const T = r.tw.waterT(100);
     expect(T).toBeLessThanOrEqual(boilingPointWater(101325) + 0.5);

@@ -115,6 +115,10 @@ export interface EnergyLedger {
 const KLE_AREA = 1 / (CP_AIR * Math.pow(0.85, 2 / 3));
 /** Contact conductance of an ice cover with the water under it (W/(m²K)) — the interface is held at 0 °C by the phase change. */
 export const ICE_WATER_H = 1000;
+/** Interval of the surface step (s). */
+export const SURFACE_DT = 5;
+/** Cell groups the per-cell surface work is spread over (one group per ground step, each every SURFACE_DT). */
+export const GROUPS = 5;
 
 export class ClimateWorld {
   readonly tw: ThermalWorld;
@@ -246,7 +250,7 @@ export class ClimateWorld {
     this.tmpA = new Float64Array(this.na);
     this.surf = {
       covered: new Uint8Array(n), solar: new Float32Array(n), Tsky: this.Tref, qAir: new Float64Array(this.na), pAir: new Float64Array(this.na).fill(this.p0),
-      soilWet: new Float32Array(n), evapMax: new Float32Array(n), evapRate: new Float64Array(n), latRate: new Float64Array(n), evap: new Float64Array(n), latent: new Float64Array(n),
+      soilWet: new Float32Array(n), evapMax: new Float32Array(n), evapRate: new Float64Array(n), latRate: new Float64Array(n), evap: new Float64Array(n), latent: new Float64Array(n), latentSum: 0,
     };
     // Geometry: albedo, normals (two-triangle mean slope), ground heights.
     this.baseAlbedo = new Float32Array(n); this.cosN = new Float32Array(n); this.shade = new Uint8Array(n);
@@ -323,9 +327,25 @@ export class ClimateWorld {
     const g = this.tw.terrain;
     this.surf.covered[c] = 1;
     const ix = c % g.nx, iz = (c - ix) / g.nx;
-    this.coverTile[((iz / 10) | 0) * g.ntx + ((ix / 10) | 0)] = 1;
+    const t = ((iz / 10) | 0) * g.ntx + ((ix / 10) | 0);
+    // A tile whose cover starts now is integrated from now (never over time it had no cover).
+    if (!this.coverTile[t]) { this.coverTile[t] = 1; this.tileLast[t] = this.surfNow; }
     g.activateCell(c);
   }
+
+  /** Group (0 … GROUPS − 1) of a cell: by its 10 × 10 tile — the per-cell surface work is spread over the ground steps. */
+  private cellGroup(c: number): number {
+    let m = this.groupOf;
+    if (!m) {
+      const g = this.tw.terrain;
+      m = this.groupOf = new Uint8Array(this.n);
+      for (let i = 0; i < this.n; i++) { const ix = i % g.nx, iz = (i - ix) / g.nx; m[i] = (((iz / 10) | 0) * g.ntx + ((ix / 10) | 0)) % GROUPS; }
+    }
+    return m[c];
+  }
+  private groupOf: Uint8Array | null = null;
+  private tileLast: Float64Array = new Float64Array(0);
+  private surfNow = 0;
 
   /** Add frozen mass m (kg) at temperature T (≤ T_m) as snow (density rho) or ice to a cell's cover. */
   private addFrozen(c: number, m: number, T: number, asIce: boolean, rho: number) {
@@ -394,6 +414,7 @@ export class ClimateWorld {
     const vol = kg / RHO_WATER;
     if (kind === 'rain') { w.budget.rain += vol; this.climateRain += vol; }
     else w.budget[kind] += vol;
+    if (kind === 'melt') this.totals.meltToFlood += kg;
     this.depositWater(w, j, J, 'waterMass');
   }
 
@@ -432,8 +453,9 @@ export class ClimateWorld {
     if (a >= 0) this.vap[a] += dm;
     // Vapour store: L_v per kg (latent).
     const airJ = latentJ - L_V * dm + hs * dm;
-    // Thermal side: the latent removed from a thermal node (in-step) was booked by the caller via `latentInThermal`.
+    // The latent removed from a thermal node: of the ground step → already booked (in transit), else booked here.
     if (latentInThermal) this.toThermal(-latentJ, 'latent');
+    else this.latentPending -= latentJ;
     this.depositAir(a, airJ, 'latent');
     this.energy.transfers.vaporization += Math.abs(L_V * dm);
   }
@@ -558,7 +580,7 @@ export class ClimateWorld {
     for (let j = 0; j < this.sI.length; j++) e -= L_F * this.sI[j];
     for (let k = 0; k < this.stores.length; k++) if (this.sM[k] > 0) e += this.coverEnergy(this.sM[k], this.sU[k]);
     for (let a = 0; a < this.na; a++) e += this.ipErain[a] + this.ipEsnow[a];
-    return e;
+    return e + this.latentPending;
   }
 
   waterExpected(): number {
@@ -622,16 +644,36 @@ export class ClimateWorld {
     this.time = t1;
   }
 
+  private surfAcc = 0;
+  /** Latent heat taken by the ground step, not yet turned into vapour (J). */
+  latentPending = 0;
   /** Free-atmosphere temperature change from an atmosphere experiment (K) — set by the adapter. */
   atmosShift = 0;
 
   // ── After the thermal step ─────────────────────────────
 
-  after(dt: number, t: number, extra?: { surface?: () => void }) {
+  /**
+   * Surface processes run every SURFACE_DT (s) of ground steps: covers, precipitation delivery, water / soil phase
+   * changes and stores are slow (snow covers have time constants of tens of minutes) and every one of them is exact in
+   * mass and energy over any interval (implicit cover node, exact precipitation integral, projected enthalpy); the
+   * evaporation of the ground steps in between accumulates and is reconciled with it. The first step runs at once.
+   */
+  after(dt: number, t: number, extra?: { surface?: (dtg: number) => void }) {
     const tw = this.tw;
     if (tw.groundStepped) {
-      this.surfaceStep(tw.groundStepDt, t + dt);
-      extra?.surface?.();
+      // The latent heat the ground step took from (gave to) thermal nodes is booked now; until the surface step turns
+      // it into vapour / condensate it is held as latent energy in transit (a store of this ledger).
+      const d = this.surf.latentSum;
+      this.surf.latentSum = 0;
+      if (d !== 0) { this.toThermal(-d, 'latent'); this.latentPending += d; }
+      this.surfAcc += tw.groundStepDt;
+      // Every ground step: one group of cells (covers, water / soil phase, shortwave); every SURFACE_DT the
+      // all-world parts (precipitation, object stores, ice arrays) — all exact over their own interval.
+      const full = this.surfAcc >= SURFACE_DT - 1e-9 || this.surfaceSteps === 0;
+      const dtg = this.surfAcc;
+      if (full) this.surfAcc = 0;
+      this.surfaceStep(dtg, t + dt, full);
+      if (full) extra?.surface?.(dtg);
     }
     const t0 = this.prof ? this.now() : 0;
     this.airStep(dt);
@@ -640,30 +682,38 @@ export class ClimateWorld {
 
   // ── Surface step ───────────────────────────────────────
 
-  private surfaceStep(dtg: number, tEnd: number) {
+  private surfaceStep(dtg: number, tEnd: number, full: boolean) {
     const L = this.last;
-    L.evaporation = L.condensation = L.melt = L.freeze = L.sublimation = L.precipitation = L.snowfall = L.rain = L.drained = L.boiled = 0;
-    this.surfaceSteps++;
+    if (full) L.evaporation = L.condensation = L.melt = L.freeze = L.sublimation = L.precipitation = L.snowfall = L.rain = L.drained = L.boiled = 0;
+    const group = this.groundSteps++ % GROUPS;
+    this.surfNow = tEnd;
+    if (this.tileLast.length !== this.coverTile.length) { this.tileLast = new Float64Array(this.coverTile.length).fill(tEnd - 1); }
     const P = this.prof;
     let t0 = P ? this.now() : 0;
     const mark = (k: string) => { if (P) { P(k, t0); t0 = this.now(); } };
     this.reconcileEvaporation();
     mark('climate.evap');
-    this.precipitate(tEnd - dtg, tEnd);
-    mark('climate.precip');
-    this.updateCovers(dtg);
+    if (full) {
+      this.surfaceSteps++;
+      this.precipitate(tEnd - dtg, tEnd);
+      mark('climate.precip');
+    }
+    this.updateCovers(group, tEnd);
     mark('climate.covers');
-    this.freezeWater();
-    this.boilWater();
+    this.freezeWater(group);
+    this.boilWater(group);
     mark('climate.water');
-    this.soilPhase();
+    this.soilPhase(group);
     mark('climate.soil');
-    this.updateStoresStep(dtg);
-    mark('climate.stores');
-    this.syncIce();
-    this.prepareSurface(dtg, tEnd);
+    if (full) {
+      this.updateStoresStep(dtg);
+      mark('climate.stores');
+      this.syncIce();
+    }
+    this.prepareSurface(SURFACE_DT, tEnd, group);
     mark('climate.shortwave');
   }
+  private groundSteps = 0;
 
   /** Mass of the ground step's evaporation / condensation into / out of the stores and the vapour. */
   private reconcileEvaporation() {
@@ -687,7 +737,7 @@ export class ClimateWorld {
         w!.h[c] = Math.max(0, w!.h[c] - dh);
         if (m > 0) { w!.budget.evaporated += m / RHO_WATER; this.water.transfers.evaporation += m; this.totals.evaporated += m; this.last.evaporation += m; }
         else { w!.budget.condensed += -m / RHO_WATER; this.water.transfers.condensation += -m; this.totals.condensed += -m; this.last.condensation += -m; if (w!.h[c] > 0) w!.touch(c % w!.nx, (c / w!.nx) | 0); }
-        this.vaporExchange(a, m, hs, lat, true);
+        this.vaporExchange(a, m, hs, lat, false);
         continue;
       }
       const T0 = g.T(c, 0);
@@ -708,9 +758,9 @@ export class ClimateWorld {
         const hs = C_WATER * (T0 - this.Tref);
         this.depositGround(c, -hs * from, 'waterMass');
         this.water.transfers.evaporation += from; this.totals.evaporated += from; this.last.evaporation += from;
-        this.vaporExchange(a, from, hs, lat * (dm > 0 ? from / dm : 1), true);
+        this.vaporExchange(a, from, hs, lat * (dm > 0 ? from / dm : 1), false);
         // Latent of the part that found no water stays with the air (a tiny mismatch only when water ran out).
-        if (from < dm) this.vaporExchange(a, 0, 0, lat * (1 - from / dm), true);
+        if (from < dm) this.vaporExchange(a, 0, 0, lat * (1 - from / dm), false);
       } else {
         const m = -dm;
         const vapAvail = a >= 0 ? this.vap[a] : Infinity;
@@ -720,16 +770,16 @@ export class ClimateWorld {
           const hs = C_WATER * (T_MELT - this.Tref) - L_F + C_ICE * (T0 - T_MELT);
           this.addFrozen(c, got, T0, true, RHO_ICE);
           this.water.transfers.deposition += got;
-          this.vaporExchange(a, -got, hs, lat * (got / m), true);
-          if (got < m) this.vaporExchange(a, 0, 0, lat * (1 - got / m), true);
+          this.vaporExchange(a, -got, hs, lat * (got / m), false);
+          if (got < m) this.vaporExchange(a, 0, 0, lat * (1 - got / m), false);
         } else {
           // Dew: into the antecedent water of the surface layer.
           const hs = C_WATER * (T0 - this.Tref);
           this.sW[c * nl] += got;
           this.depositGround(c, hs * got, 'waterMass');
           this.water.transfers.condensation += got; this.totals.condensed += got; this.last.condensation += got;
-          this.vaporExchange(a, -got, hs, lat * (got / m), true);
-          if (got < m) this.vaporExchange(a, 0, 0, lat * (1 - got / m), true);
+          this.vaporExchange(a, -got, hs, lat * (got / m), false);
+          if (got < m) this.vaporExchange(a, 0, 0, lat * (1 - got / m), false);
         }
       }
     }
@@ -877,13 +927,17 @@ export class ClimateWorld {
   }
 
   /** Implicit update of every cover; drainage of liquid beyond the holding capacity into the water. */
-  private updateCovers(dtg: number) {
+  private updateCovers(group: number, now: number) {
     const g = this.tw.terrain, air = this.tw.air, w = this.link.water(), nd = this.node, r = this.res, nl = this.nl;
     const ntx = g.ntx;
     const sun = this.sun;
     const sinB = Math.max(0, Math.sin(sun.elevation));
-    for (let t = 0; t < this.coverTile.length; t++) {
+    for (let t = group; t < this.coverTile.length; t += GROUPS) {
       if (!this.coverTile[t]) continue;
+      // This tile's own interval since its last update (exact for the implicit node over any interval).
+      const dtg = now - this.tileLast[t];
+      this.tileLast[t] = now;
+      if (!(dtg > 0)) continue;
       const tx = t % ntx, tz = (t / ntx) | 0;
       let any = false;
       for (let iz = tz * 10; iz < Math.min(this.nz, tz * 10 + 10); iz++) for (let ix = tx * 10; ix < Math.min(this.nx, tx * 10 + 10); ix++) {
@@ -1021,7 +1075,6 @@ export class ClimateWorld {
   private drainToWater(c: number, kg: number, J: number, wet: boolean) {
     void wet;
     this.toFlood(c, kg, J, 'melt');
-    this.totals.meltToFlood += kg;
   }
 
   private clearCover(c: number, wet: boolean) {
@@ -1045,11 +1098,12 @@ export class ClimateWorld {
   }
 
   /** Water colder than 0 °C freezes by the deficit (projected enthalpy): dm = (E(0 °C) − E)/L_f. */
-  private freezeWater() {
+  private freezeWater(group: number) {
     const w = this.link.water();
     if (!w || !w.heat) return;
     const A = w.cellArea;
     for (let c = 0; c < this.n; c++) {
+      if (this.cellGroup(c) !== group) continue;
       const h = w.h[c];
       if (!(h > 0) || w.blocked[c]) continue;
       const M = h * RHO_WATER * A;
@@ -1079,12 +1133,13 @@ export class ClimateWorld {
   }
 
   /** Water hotter than its local boiling point turns the excess enthalpy into vapour (limited phase change). */
-  private boilWater() {
+  private boilWater(group: number) {
     const w = this.link.water();
-    this.boilingCells = 0;
+    if (group === 0) this.boilingCells = 0;
     if (!w || !w.heat) return;
     const A = w.cellArea;
     for (let c = 0; c < this.n; c++) {
+      if (this.cellGroup(c) !== group) continue;
       const h = w.h[c];
       // Films thinner than 10 µm share the ground surface temperature (Phase 26 merge) — not boiling water.
       if (!(h > 1e-5) || w.heat[c] <= 0) continue;
@@ -1112,9 +1167,10 @@ export class ClimateWorld {
   }
 
   /** Soil water of the thermal ground layers freezes / thaws by the projected enthalpy at 0 °C. */
-  private soilPhase() {
+  private soilPhase(group: number) {
     const g = this.tw.terrain, nl = this.nl;
     g.forActive((c) => {
+      if (this.cellGroup(c) !== group) return;
       for (let l = 0; l < nl; l++) {
         const j = c * nl + l;
         const T = this.Tref + g.E[j] / g.C[j];
@@ -1258,22 +1314,24 @@ export class ClimateWorld {
   }
 
   /** Shortwave of the bare surfaces, soil wetness and evaporation caps for the next ground step. */
-  private prepareSurface(dtg: number, t: number) {
+  private prepareSurface(dtg: number, t: number, group: number) {
     const sun = (this.sun = this.forcing.sun(t));
     const d = sun.dir, o = this.sunDirAt;
     if (sun.elevation > 0 && (o[1] === 0 || d[0] * o[0] + d[1] * o[1] + d[2] * o[2] < Math.cos((1 * Math.PI) / 180))) this.updateShade(d);
     const w = this.link.water(), sf = this.surf, nl = this.nl;
     const up = sun.elevation > 0;
+    const all = this.groundSteps <= 1;
     for (let c = 0; c < this.n; c++) {
+      if (!all && this.cellGroup(c) !== group) continue;
       const wet = !!w && w.h[c] > WATER_MERGE;
       const alb = wet ? WATER_ALBEDO : this.baseAlbedo[c];
       sf.solar[c] = up ? (1 - alb) * (sun.direct * (this.shade[c] ? 0 : this.cosN[c]) + sun.diffuse) : 0;
-      if (wet) { sf.evapMax[c] = (w!.h[c] * RHO_WATER * w!.cellArea) / dtg; sf.soilWet[c] = 0; continue; }
+      if (wet) { sf.evapMax[c] = (w!.h[c] * RHO_WATER * w!.cellArea) / Math.max(dtg, SURFACE_DT); sf.soilWet[c] = 0; continue; }
       // Soil: water of the top 8 cm (antecedent + the flood's infiltrated water), Sellers et al. (1992) resistance.
       const top = this.sW[c * nl] + (nl > 1 ? this.sW[c * nl + 1] : 0) + (w ? w.infiltrated[c] * RHO_WATER * w.cellArea : 0);
       const cap = 0.45 * 0.08 * RHO_WATER * this.cellArea;
       const W = Math.min(1, top / cap);
-      sf.evapMax[c] = top / dtg;
+      sf.evapMax[c] = top / Math.max(dtg, SURFACE_DT);
       if (!(top > 0)) { sf.soilWet[c] = 0; continue; }
       const rs = Math.exp(8.206 - 4.255 * W);
       // Share of the free-water transfer: 1/(1 + r_s·h_m/ρ) with h_m/ρ ≈ (5 W/(m²K)) / (c_p·Le^(2/3)) / 1.2.
