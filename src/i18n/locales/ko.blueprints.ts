@@ -2,6 +2,7 @@
 export const koBlueprints = {
   'panel.blueprints': '설계도',
   'build.tool.blueprint': '설계도',
+  'help.key.blueprint': '설계도 배치: 90° 회전 / 미세 회전 / 배치 확정 (Esc: 고정 해제·닫기)',
   'topbar.newWorld': '새 월드…',
   'bp.untitled': '이름 없는 설계도',
   'bp.locked': '시뮬레이션 중에는 설계도를 만들거나 배치할 수 없습니다. 편집 모드로 돌아가세요.',

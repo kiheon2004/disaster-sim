@@ -20,7 +20,7 @@
 import type { P2 } from '@/landscape/types';
 import type { WorldDocument, WorldObject, PhysicalProperties } from '@/core/model';
 import type { BuildingDesign } from '@/buildings/types';
-import { deriveFields } from '@/buildings/design';
+import { analysisOf, designPhysics, designSeismic } from '@/buildings/design';
 import { createId } from '@/core/id';
 import { getDefinition } from '@/objects/registry';
 import { defaultSeismic } from '@/simulation/seismic/structuralProps';
@@ -86,9 +86,21 @@ const sortIds = (a: string, b: string) => {
 
 const kindOf = (o: WorldObject): 'buildings' | 'vegetation' | 'objects' => (o.type === 'building' ? 'buildings' : o.type === 'tree' ? 'vegetation' : 'objects');
 
+/** Default physics / seismic of a design (seed-independent; cached per immutable design). */
+const designDefaults = new WeakMap<BuildingDesign, { physics: PhysicalProperties; seismic: string }>();
+function defaultsOf(d: BuildingDesign) {
+  let v = designDefaults.get(d);
+  if (!v) {
+    const a = analysisOf(d);
+    v = { physics: designPhysics(d, a), seismic: JSON.stringify(designSeismic(d, a, undefined)) };
+    designDefaults.set(d, v);
+  }
+  return v;
+}
+
 /** Physics keys that differ from what the object would get by default (designs / definitions). */
 function customPhysics(o: WorldObject): Partial<PhysicalProperties> | undefined {
-  const def = o.building ? deriveFields(o.building, o.seed, o.seismic).physics : getDefinition(o.type).defaultPhysics(o.params);
+  const def = o.building ? defaultsOf(o.building).physics : getDefinition(o.type).defaultPhysics(o.params);
   const out: Partial<PhysicalProperties> = {};
   let any = false;
   for (const k of Object.keys(o.physics) as (keyof PhysicalProperties)[]) {
@@ -288,7 +300,7 @@ export function captureBlueprint(doc: WorldDocument, sel: CaptureSelection, opts
     } else item.params = { ...o.params };
     const phys = customPhysics(o);
     if (phys) item.physics = phys;
-    if (o.seismic && JSON.stringify(o.seismic) !== JSON.stringify(o.building ? deriveFields(o.building, o.seed, undefined).seismic : defaultSeismic(o.type))) item.seismic = structuredClone(o.seismic);
+    if (o.seismic && JSON.stringify(o.seismic) !== (o.building ? defaultsOf(o.building).seismic : JSON.stringify(defaultSeismic(o.type)))) item.seismic = structuredClone(o.seismic);
     if (o.terrainAlign !== undefined) item.terrainAlign = o.terrainAlign;
     if (o.group) {
       if (!groupKey.has(o.group)) groupKey.set(o.group, `g${groupKey.size + 1}`);
@@ -537,12 +549,9 @@ function featureTouches(f: Feature, poly: readonly P2[]): boolean {
   if (f.kind === 'lake') {
     if (f.points.some(([x, z]) => inside(poly, x, z))) return true;
     // Area entirely inside the lake?
-    return poly.some(([x, z]) => pointInLake(f.points, x, z));
+    return poly.some(([x, z]) => inside(f.points, x, z));
   }
   const line = featureLine(f as LineLandformFeature | RiverFeature);
   return line.samples.some((p) => inside(poly, p.x, p.z));
 }
 
-function pointInLake(pts: readonly P2[], x: number, z: number) {
-  return inside(pts, x, z);
-}

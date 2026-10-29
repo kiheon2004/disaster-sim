@@ -34,6 +34,9 @@ import type { UnifiedBlueprint } from '@/blueprints/types';
 import { RoadOutlines } from './RoadTool';
 import { DrapedLine, GroundCatcher, groundHitOf, useOrbitLock, useSampler } from './shared';
 
+/** Above this many objects the pinned preview keeps the rigid ghost (see PlaceTool). */
+const EXACT_GHOST_LIMIT = 600;
+
 const COLOR = { area: '#6fd28a', draft: '#ffd36b', ok: '#5ad37e', warn: '#ffb347', bad: '#ff5d5d', busy: '#7aa7ff', water: '#58a6ff', link: '#e6e6e6' };
 
 export function BlueprintTool() {
@@ -208,12 +211,19 @@ function PlaceTool() {
     return perimeterMean(footprintOf(bp, { x: at[0], z: at[1], yaw: p.yaw }), (x, z) => preFeatureAt(doc, cx(x), cz(z)), 2) + p.options.heightOffset;
   }, [bp, at, p.yaw, p.options.terrainSnap, p.options.heightOffset, doc]);
   const plan = p.pinned ? p.plan : null;
+  // Pinned: objects drawn where they will stand. Very large blueprints keep the rigid ghost
+  // (rebuilding thousands of ghosts per option change would stall) and show only the
+  // colliding objects exactly.
   const exact = useMemo(() => {
     if (!plan) return null;
     const bad = new Set(plan.report.collisions);
+    const all = plan.edit.add.length <= EXACT_GHOST_LIMIT;
     const ok: WorldObject[] = [], warn: WorldObject[] = [];
-    plan.edit.add.forEach((inp, i) => (bad.has(i) ? warn : ok).push({ ...createWorldObject(inp, 0), id: `pin_${i}` }));
-    return { ok, warn };
+    plan.edit.add.forEach((inp, i) => {
+      if (bad.has(i)) warn.push({ ...createWorldObject(inp, 0), id: `pin_${i}` });
+      else if (all) ok.push({ ...createWorldObject(inp, 0), id: `pin_${i}` });
+    });
+    return { ok, warn, all };
   }, [plan]);
   const status = !p.plan ? COLOR.busy : p.plan.report.errors.length ? COLOR.bad : p.plan.report.warnings.length ? COLOR.warn : COLOR.ok;
   if (!bp) return null;
@@ -241,7 +251,7 @@ function PlaceTool() {
           if (useBlueprintStore.getState().place.pinned) confirmPlacement();
         }}
       />
-      {at && !exact && (
+      {at && !exact?.all && (
         <group position={[at[0], datum, at[1]]} rotation={[0, p.yaw, 0]}>
           <Ghost objects={objects} mode="ghost" local />
           <LocalOutlines bp={bp} color={status} />
@@ -264,9 +274,7 @@ function PlaceTool() {
 }
 
 function PinMarker({ at }: { at: P2 }) {
-  const sampler = useSampler();
   const pts = useMemo(() => Array.from({ length: 25 }, (_, i) => [at[0] + Math.cos((i / 24) * Math.PI * 2) * 1.2, at[1] + Math.sin((i / 24) * Math.PI * 2) * 1.2] as P2), [at]);
-  void sampler;
   return <DrapedLine points={pts} color="#ffffff" closed />;
 }
 

@@ -128,6 +128,7 @@ export function snapEndpoints(net: RoadNetwork, inserted: { nodes: readonly stri
     const view = existingView(n);
     let target: string | null = findNode(view, p.x, p.z, SNAP_NODE)?.id ?? null;
     let next = n;
+    let splitId: string | null = null;
     if (!target) {
       const hit = findSegment(view, p.x, p.z, SNAP_SEGMENT);
       if (!hit) continue;
@@ -135,7 +136,7 @@ export function snapEndpoints(net: RoadNetwork, inserted: { nodes: readonly stri
         const r = splitSegment(n, hit.segment.id, hit.x, hit.z);
         next = r.network;
         target = r.node;
-        split.push(hit.segment.id);
+        splitId = hit.segment.id;
       } catch {
         // Too close to an end of that road: use its nearer end node when it is in reach.
         const a = n.nodes[hit.segment.a], b = n.nodes[hit.segment.b];
@@ -143,6 +144,14 @@ export function snapEndpoints(net: RoadNetwork, inserted: { nodes: readonly stri
         if (Math.hypot(near.x - p.x, near.z - p.z) > SNAP_NODE + SNAP_SEGMENT) continue;
         target = near.id;
       }
+    }
+    // The split may have put its junction node on our end itself (the end lies on the road
+    // within the merge distance): the end is connected already.
+    if (target === nodeId) {
+      n = next;
+      snapped++;
+      if (splitId) split.push(splitId);
+      continue;
     }
     if (target === other || Object.values(next.segments).some((s) => s.id !== seg.id && ((s.a === target && s.b === other) || (s.b === target && s.a === other)))) continue;
     const segments = { ...next.segments, [seg.id]: { ...next.segments[seg.id], a: seg.a === nodeId ? target : next.segments[seg.id].a, b: seg.b === nodeId ? target : next.segments[seg.id].b } };
@@ -156,6 +165,7 @@ export function snapEndpoints(net: RoadNetwork, inserted: { nodes: readonly stri
     }
     n = candidate;
     snapped++;
+    if (splitId) split.push(splitId);
   }
   return { network: n, snapped, split };
 }

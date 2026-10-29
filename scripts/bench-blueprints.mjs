@@ -72,8 +72,10 @@ async function scene(name, kind, n, opts) {
   const row = { scene: name };
   // Source → blueprint (saved to the library like the UI does).
   Object.assign(row, await ev(async (kind, n) => {
+    window.__source(kind, n);
+    const area = kind === 'nature' ? [-99, -99, 99, 40] : [-99, -99, 99, 99];
     const t0 = performance.now();
-    const bp = window.__source(kind, n);
+    const bp = window.__ds.blueprintLib.captureBlueprint(window.__ds.world.getState().doc, { shape: { kind: 'rect', x0: area[0], z0: area[1], x1: area[2], z1: area[3] } }, { roads: 'clip', nature: 'clip' }).blueprint;
     const captureMs = Math.round(performance.now() - t0);
     const text = window.__ds.blueprintLib.serializeBlueprint(bp);
     await window.__ds.library.getState().init();

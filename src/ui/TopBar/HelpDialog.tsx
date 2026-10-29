@@ -16,6 +16,7 @@ const KEYS: [string, MessageKey][] = [
   ['Enter', 'shortcut.apply'],
   ['W / E / R', 'shortcut.transform'],
   ['R (placing)', 'help.key.rotateGhost'],
+  ['R / T / Enter (blueprint)', 'help.key.blueprint'],
   ['F', 'shortcut.focus'],
   ['G', 'shortcut.snap'],
   ['Ctrl/⌘ + D', 'shortcut.duplicate'],

@@ -4,6 +4,7 @@ import type { koBlueprints } from './ko.blueprints';
 export const enBlueprints: Record<keyof typeof koBlueprints, string> = {
   'panel.blueprints': 'Blueprints',
   'build.tool.blueprint': 'Blueprint',
+  'help.key.blueprint': 'Blueprint placement: turn 90° / fine turn / confirm (Esc: unpin · close)',
   'topbar.newWorld': 'New world…',
   'bp.untitled': 'Untitled blueprint',
   'bp.locked': 'Blueprints cannot be created or placed while a simulation runs. Return to edit mode.',

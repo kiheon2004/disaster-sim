@@ -85,8 +85,28 @@ export async function deleteEntry(id: string) {
   toast('info', { key: 'bp.toast.deleted', params: { name: entryName(e) } });
 }
 
-/** Render and store a missing thumbnail (built-ins: generated on first view). */
-export async function ensureThumbnail(id: string) {
+/**
+ * Render and store a missing thumbnail (built-ins: generated on first view). Jobs run one at a
+ * time with a frame between them, so opening the wizard / library never freezes the UI while
+ * eight template worlds are generated.
+ */
+let thumbQueue: Promise<void> = Promise.resolve();
+const queued = new Set<string>();
+export function ensureThumbnail(id: string): Promise<void> {
+  if (queued.has(id)) return thumbQueue;
+  queued.add(id);
+  thumbQueue = thumbQueue.then(async () => {
+    await new Promise((r) => setTimeout(r, 16));
+    try {
+      await renderThumbnail(id);
+    } finally {
+      queued.delete(id);
+    }
+  });
+  return thumbQueue;
+}
+
+async function renderThumbnail(id: string) {
   const e = L().all().find((x) => x.id === id);
   if (!e || e.thumbnail) return;
   if (e.kind === 'blueprint') {

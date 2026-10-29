@@ -315,6 +315,18 @@ describe('roads: connection policies', () => {
     expect(plan.report.errors).toEqual([]);
   });
 
+  it('snap: an open end lying exactly ON a road becomes a T-junction (split reuses the end node)', () => {
+    const bp = stub();
+    corridor();
+    // Left end (local x = −20) at world x = −30: exactly on the corridor's centerline.
+    const { plan } = commit(bp, { x: -10, z: 0, roads: 'snap' });
+    expect(plan.report.roads.snapped).toBe(1);
+    expect(plan.report.roads.split).toHaveLength(1);
+    const net = S().doc.roads;
+    const deg = (id: string) => Object.values(net.segments).filter((s) => s.a === id || s.b === id).length;
+    expect(Object.keys(net.nodes).some((id) => deg(id) === 3 && Math.abs(net.nodes[id].x + 30) < 0.01)).toBe(true);
+  });
+
   it('connect: crossings become junctions like hand-drawn roads; split roads are reported', () => {
     const bp = stub();
     corridor();
