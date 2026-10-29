@@ -1,0 +1,9 @@
+{
+  "note": "Phase 18 baseline scene (two crossing avenues + 1000 modular houses), Phase 18 build (commit 9cce58f, port 4174) vs Phase 19 build (port 4173), alternating P18, P19, P18, P19. The machine alternated between a fast state and a throttled ~30 Hz state during the runs: compare rows in the same state (editorFps 60 vs 30).",
+  "rows": [
+    {"build":"phase18","run":1,"load":[12.3,28.4,30.8],"buildingsCommitMs":1114,"editorFps":30.3,"drawCalls":74,"strokeCommitMs":26.3,"strokeToFrameMs":322.2,"saveMs":20,"loadMs":541,"fileKB":779,"heapMB":43.1,"simFps":15.7,"tickMs":39.93,"simSpeed":0.26},
+    {"build":"phase19","run":1,"load":[12,26.5,30.1],"buildingsCommitMs":477,"editorFps":60,"drawCalls":65,"strokeCommitMs":9.4,"strokeToFrameMs":323.8,"saveMs":22,"loadMs":449,"fileKB":780,"heapMB":44,"simFps":32.3,"tickMs":20.96,"simSpeed":0.54},
+    {"build":"phase18","run":2,"load":[12,25.6,29.6],"buildingsCommitMs":467,"editorFps":60,"drawCalls":71,"strokeCommitMs":15.1,"strokeToFrameMs":190.9,"saveMs":8,"loadMs":223,"fileKB":779,"heapMB":43.3,"simFps":31.8,"tickMs":21.21,"simSpeed":0.52},
+    {"build":"phase19","run":2,"load":[10.1,24.2,29.1],"buildingsCommitMs":602,"editorFps":30.6,"drawCalls":69,"strokeCommitMs":8.7,"strokeToFrameMs":187.3,"saveMs":12,"loadMs":337,"fileKB":780,"heapMB":43.5,"simFps":17.3,"tickMs":36.34,"simSpeed":0.29}
+  ]
+}
