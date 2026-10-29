@@ -357,7 +357,7 @@ describe('save / load (schema v5+)', () => {
     const p2 = { ...createInstance('earthquake', [p1]), start: { after: p1.id, anchor: 'start' as const, offset: 10 }, seed: 9 };
     d.scenario.experiment = { instances: [p1, p2], notes: 'A vs B', compareDuration: 30 };
     const res = parseDocument(serializeDocument(d));
-    expect(res.ok && res.doc.schemaVersion).toBe(6);
+    expect(res.ok && res.doc.schemaVersion).toBe(7);
     if (!res.ok) return;
     expect(res.doc.scenario.experiment).toEqual(d.scenario.experiment);
     expect(res.doc.settings.simulation.interactions).toEqual({ enabled: true });

@@ -255,7 +255,7 @@ export interface WorldSettings {
 
 /** Ground type ids (index into the GroundMaterialRegistry; stored as bytes). */
 /** 5 = gravel (Phase 18, road material). */
-export type GroundTypeId = 0 | 1 | 2 | 3 | 4 | 5;
+export type GroundTypeId = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /** Soil profile ids (index into the SoilProfileRegistry; stored as bytes). Independent of the surface. */
 export type SoilProfileId = 0 | 1 | 2 | 3;
@@ -326,7 +326,7 @@ export interface ScenarioSettings {
 }
 
 export interface WorldDocument {
-  schemaVersion: 6;
+  schemaVersion: 7;
   meta: { name: string; createdAt: string; updatedAt: string };
   settings: WorldSettings;
   terrain: TerrainData;
@@ -337,4 +337,9 @@ export interface WorldDocument {
    * keeps the natural terrain values under the roads so edits can restore them.
    */
   roads: import('@/roads/types').RoadNetwork;
+  /**
+   * Non-destructive terrain layers (Phase 19): base terrain, user sculpt / paint, natural
+   * features. `terrain` = roads baked on the composition of these layers (landscape/types.ts).
+   */
+  landscape: import('@/landscape/types').Landscape;
 }

@@ -12,14 +12,14 @@
 import * as THREE from 'three';
 import type { TerrainData } from '@/core/model';
 import type { GridRect } from '@/terrain/TerrainData';
-import { groundMaterial } from '@/terrain/GroundMaterials';
+import { GROUND_MATERIALS } from '@/terrain/GroundMaterials';
 import { soilProfile } from '@/terrain/SoilProfiles';
 import { terrainStats } from '@/terrain/terrainStats';
 
 export type TerrainViewMode = 'surface' | 'elevation' | 'ground' | 'soil';
 
 const tmpColor = new THREE.Color();
-const groundColors = Array.from({ length: 5 }, (_, i) => new THREE.Color(groundMaterial(i).color));
+const groundColors = GROUND_MATERIALS.map((g) => new THREE.Color(g.color));
 const soilColors = Array.from({ length: 4 }, (_, i) => new THREE.Color(soilProfile(i).color));
 
 /** Low → high: shore green, grass, olive, ochre, brown, rock, snow-ish. */

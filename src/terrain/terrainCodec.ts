@@ -100,7 +100,7 @@ const unzig = (v: number) => (v % 2 === 0 ? v / 2 : -(v + 1) / 2);
 
 // ── elevation ───────────────────────────────────────────────────────────────
 
-function encodeElevation(h: Float32Array, nx: number): string {
+export function encodeElevation(h: Float32Array, nx: number): string {
   const out = new Bytes();
   // Deltas of the centimeter values along each row (first value of a row vs. the previous row start).
   let runValue = NaN;
@@ -129,7 +129,7 @@ function encodeElevation(h: Float32Array, nx: number): string {
   return toBase64(out.bytes());
 }
 
-function decodeElevation(data: string, out: Float32Array, nx: number) {
+export function decodeElevation(data: string, out: Float32Array, nx: number) {
   const r = new Reader(fromBase64(data));
   let i = 0;
   let prev = 0;
@@ -148,7 +148,7 @@ function decodeElevation(data: string, out: Float32Array, nx: number) {
 
 // ── ground ──────────────────────────────────────────────────────────────────
 
-function encodeGround(g: Uint8Array): string {
+export function encodeGround(g: Uint8Array): string {
   const out = new Bytes();
   let i = 0;
   while (i < g.length) {
@@ -162,7 +162,7 @@ function encodeGround(g: Uint8Array): string {
   return toBase64(out.bytes());
 }
 
-function decodeGround(data: string, out: Uint8Array) {
+export function decodeGround(data: string, out: Uint8Array) {
   const b = fromBase64(data);
   const r = new Reader(b);
   let i = 0;

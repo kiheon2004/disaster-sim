@@ -18,7 +18,7 @@ export const TERRAIN_PRESETS: TerrainPresetId[] = ['flat', 'gentleHills', 'valle
 export const LOWLAND_RIVER_LEVEL = -0.6;
 
 /** Smooth value noise on a seeded lattice, summed over octaves (fbm), roughly in [-1, 1]. */
-class ValueNoise {
+export class ValueNoise {
   private readonly size = 64;
   private readonly lattice: Float64Array;
 

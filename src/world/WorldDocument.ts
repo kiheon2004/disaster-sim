@@ -9,15 +9,17 @@ import { defaultExperiment } from '@/phenomena/types';
 import type { BuildingDesign } from '@/buildings/types';
 import { deriveFields, regenerate, withDesign } from '@/buildings/design';
 import { emptyNetwork } from '@/roads/types';
+import { createLandscape } from '@/landscape/compose';
 
 /**
+ * 7 = Phase 19 (terrain layers: base, sculpt, paint, natural features).
  * 6 = Phase 18 (road network; modular building designs stored once in a design table).
  * 5 = Phase 15 (experiment: phenomenon instances + timing + seeds; interaction setting).
  * 4 = Phase 14 (water settings, saved flood scenario, lowland preset).
  * 3 = Phase 13 (soil layer, seismic properties, saved earthquake scenario).
  * 2 = Phase 12 (heightfield terrain). 1 = Phase 0–11 (flat). Older files are migrated on load.
  */
-export const SCHEMA_VERSION = 6 as const;
+export const SCHEMA_VERSION = 7 as const;
 
 export function defaultScenario(): ScenarioSettings {
   return { earthquake: null, flood: defaultFloodScenario(), experiment: defaultExperiment() };
@@ -25,14 +27,16 @@ export function defaultScenario(): ScenarioSettings {
 
 export function createEmptyDocument(name = ''): WorldDocument {
   const now = new Date().toISOString();
+  const terrain = createFlatTerrain();
   return {
     schemaVersion: SCHEMA_VERSION,
     meta: { name, createdAt: now, updatedAt: now },
     settings: { size: [WORLD_SIZE, WORLD_SIZE], gravity: GRAVITY, airDensity: AIR_DENSITY, simulation: defaultSimulationSettings() },
-    terrain: createFlatTerrain(),
+    terrain,
     objects: {},
     scenario: defaultScenario(),
     roads: emptyNetwork(),
+    landscape: createLandscape(terrain),
   };
 }
 

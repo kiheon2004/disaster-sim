@@ -14,6 +14,11 @@ import { deriveFields } from '@/buildings/design';
 import type { BuildingDesign } from '@/buildings/types';
 import { parseLink, parseNetwork, serializeNetwork, type RoadLoadReport } from '@/roads/schema';
 import { rebakeAll } from '@/roads/sync';
+import { bakeRegion } from '@/roads/bake';
+import { fullRect } from '@/terrain/TerrainData';
+import { parseLandscape, serializeLandscape, type LandscapeLoadReport } from '@/landscape/schema';
+import { composeAll } from '@/landscape/compose';
+import { adoptTerrain, naturalProvider } from '@/landscape/apply';
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -110,7 +115,7 @@ function normalizeWater(raw: z.infer<typeof waterSchema> | undefined): WaterSett
 }
 
 const documentSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7)]),
   meta: z.object({ name: z.string(), createdAt: z.string(), updatedAt: z.string() }),
   settings: z.object({
     size: z.tuple([z.number(), z.number()]),
@@ -149,6 +154,8 @@ const documentSchema = z.object({
   // Phase 18 (v6): road network and the shared modular-design table.
   roads: z.unknown().optional(),
   designs: z.record(z.string(), z.unknown()).optional(),
+  // Phase 19 (v7): terrain layers and natural features.
+  landscape: z.unknown().optional(),
 });
 
 /**
@@ -162,7 +169,7 @@ export interface DesignLoadReport {
   repairedMembers: number;
 }
 
-export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport; roads: RoadLoadReport } | { ok: false; error: string };
+export type LoadResult = { ok: true; doc: WorldDocument; skipped: number; designs: DesignLoadReport; roads: RoadLoadReport; landscape: LandscapeLoadReport & { recomposedVertices: number } } | { ok: false; error: string };
 
 /** Reference to an entry of the shared design table (v6). */
 const DESIGN_REF = '$design';
@@ -195,7 +202,7 @@ export function toSerializable(doc: WorldDocument) {
     const ref = o.building ? refOf.get(o.building) : undefined;
     objects[id] = ref ? { ...rest, building: { [DESIGN_REF]: ref } } : rest;
   }
-  const out: Record<string, unknown> = { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain), objects, roads: serializeNetwork(doc.roads) };
+  const out: Record<string, unknown> = { ...doc, schemaVersion: SCHEMA_VERSION, terrain: encodeTerrain(doc.terrain), objects, roads: serializeNetwork(doc.roads), landscape: serializeLandscape(adoptTerrain(doc.terrain, doc.roads, doc.landscape), doc.terrain.nx) };
   if (refOf.size) out.designs = table;
   return out;
 }
@@ -331,10 +338,26 @@ export function parseDocument(json: string): LoadResult {
   }
   // Links to segments that do not exist are dropped (the object stays where it is).
   for (const obj of Object.values(objects)) if (obj.roadLink && !net.segments[obj.roadLink.segment]) delete obj.roadLink;
-  const { designs: _table, roads: _rawRoads, ...data } = res.data;
+  // Terrain layers (v7). Older files: the natural terrain (saved terrain with the road underlay
+  // put back) becomes the base — no sculpt, paint or features; the terrain itself is unchanged.
+  const natural = { heights: terrain.heights.slice(), ground: terrain.ground.slice() };
+  net.underlay.idx.forEach((i, k) => { natural.heights[i] = net.underlay.h[k]; natural.ground[i] = net.underlay.g[k]; });
+  const { landscape, report: lrep } = parseLandscape(res.data.landscape, terrain, natural);
+  let recomposedVertices = 0;
+  if (res.data.landscape !== undefined && !lrep.rebuilt) {
+    // The layers are the truth: compose them and bake the roads on top; count any vertex that
+    // differs from the saved terrain (0 for files written by this version).
+    composeAll(landscape, terrain, terrain.settings.waterLevel ?? 0);
+    const saved = { h: terrain.heights.slice(), g: terrain.ground.slice() };
+    const r = bakeRegion(terrain, net, net, fullRect(terrain), naturalProvider(landscape));
+    net = { ...net, underlay: r.underlay };
+    for (let i = 0; i < saved.h.length; i++) if (saved.h[i] !== terrain.heights[i] || saved.g[i] !== terrain.ground[i]) recomposedVertices++;
+  }
+  const { designs: _table, roads: _rawRoads, landscape: _rawLand, ...data } = res.data;
   void _table;
   void _rawRoads;
-  return { ok: true, doc: { ...data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario, roads: net }, skipped, designs, roads };
+  void _rawLand;
+  return { ok: true, doc: { ...data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario, roads: net, landscape }, skipped, designs, roads, landscape: { ...lrep, recomposedVertices } };
 }
 
 const SAVE_KEY = 'ds.project';

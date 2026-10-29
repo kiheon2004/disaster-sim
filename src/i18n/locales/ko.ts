@@ -8,6 +8,7 @@ import { koPhenomena } from './ko.phenomena';
 import { koBuild } from './ko.build';
 import { koBuilding } from './ko.building';
 import { koRoads } from './ko.roads';
+import { koNature } from './ko.nature';
 
 export const ko = {
   // App
@@ -589,6 +590,7 @@ export const ko = {
   ...koBuild,
   ...koBuilding,
   ...koRoads,
+  ...koNature,
 } as const;
 
 export type MessageKey = keyof typeof ko;

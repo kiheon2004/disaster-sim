@@ -292,8 +292,10 @@ export interface BakeResult {
  * the road values, the rest gets its natural value back; the underlay keeps the natural values
  * of claimed vertices. `prev` is the network whose underlay describes the current terrain.
  */
-export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork, rect: GridRect): BakeResult {
-  const nat = naturalOf(t, prev);
+export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork, rect: GridRect, natural?: Natural): BakeResult {
+  // Phase 19: the natural terrain comes from the landscape layers when given; otherwise from
+  // the previous underlay (Phase 18 behaviour — identical while the two agree).
+  const nat = natural ?? naturalOf(t, prev);
   const cl = claims(t, nat, next, rect);
   // New underlay entries inside the rectangle, generated in increasing vertex order.
   const inIdx: number[] = [], inH: number[] = [], inG: number[] = [];
@@ -309,7 +311,7 @@ export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork,
       let h = nh, g = ng;
       if (c) {
         // Stored as float32: compare in the storage precision so a re-bake is a no-op.
-        if (!Number.isNaN(c.h)) h = Math.fround(Math.round(c.h / HEIGHT_QUANTUM) * HEIGHT_QUANTUM);
+        if (!Number.isNaN(c.h)) h = Math.fround(Math.round(c.h / HEIGHT_QUANTUM) * HEIGHT_QUANTUM) + 0; // (+ 0: no −0)
         if (c.g >= 0) g = c.g;
       }
       if (c && (h !== nh || g !== ng)) {

@@ -14,7 +14,7 @@ import {
   nextSerial,
   type CreateObjectInput,
 } from './WorldDocument';
-import { applyPatch, fullRect, makePatch, snapshotLayers, unionRect, type GridRect, type TerrainPatch } from '@/terrain/TerrainData';
+import { applyPatch, makePatch, snapshotLayers, unionRect, type GridRect, type TerrainPatch } from '@/terrain/TerrainData';
 import { applyDab, type DabOptions } from '@/terrain/TerrainEditor';
 import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
@@ -25,7 +25,10 @@ import type { RoadNetwork } from '@/roads/types';
 import { assertValid } from '@/roads/network';
 import { bakeRegion, dirtyRect } from '@/roads/bake';
 import { followRoads } from '@/roads/links';
-import { rebakeAfterTerrainEdit, rebakeAll } from '@/roads/sync';
+import type { Feature } from '@/landscape/types';
+import { NO_PAINT } from '@/landscape/types';
+import { featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
+import { adoptTerrain, applyLayerPatch, makeLayerPatch, naturalProvider, recompose, snapshotLandscape, type LayerPatch, type LayerSnapshot } from '@/landscape/apply';
 import { roadStats } from '@/roads/stats';
 
 const HISTORY_LIMIT = 100;
@@ -41,6 +44,23 @@ export interface HistoryEntry {
   objects: Objects;
   terrain: TerrainPatch | null;
   roads: RoadNetwork;
+  /** Terrain layers (Phase 19): features as they were + the layer arrays' patch (if any). */
+  landscape: LandscapeEntry;
+}
+
+export interface LandscapeEntry {
+  features: Feature[];
+  next: number;
+  patch: LayerPatch | null;
+}
+
+/** Landscape part of a WorldEdit (Phase 19). */
+export interface LandscapeEdit {
+  /** The new feature list (immutable values; unchanged features keep their object). */
+  features?: Feature[];
+  next?: number;
+  /** Replace the base terrain (environment presets); sculpt and paint are cleared. */
+  base?: { heights: Float32Array; ground: Uint8Array; soil?: Uint8Array; settings?: TerrainData['settings'] };
 }
 
 /** Live brush stroke (terrain arrays are edited in place; one history entry at the end). */
@@ -67,6 +87,8 @@ export interface WorldEdit {
    * — all in the same single undo step as the object changes.
    */
   roads?: RoadNetwork;
+  /** Terrain layer changes (Phase 19), applied before the roads (roads bake on the new natural ground). */
+  landscape?: LandscapeEdit;
 }
 
 export interface MutationOptions {
@@ -116,6 +138,8 @@ interface WorldState {
   endTerrainStroke: () => void;
   applyTerrainPreset: (preset: TerrainPresetId, seed: number) => void;
   setWaterLevel: (level: number | null) => void;
+  /** Replace the natural features (one undo step; the terrain is recomposed locally). */
+  setFeatures: (features: Feature[], next?: number) => void;
   /** Record the current state as an undo step (call once before a continuous edit). */
   checkpoint: () => void;
   undo: () => void;
@@ -159,6 +183,15 @@ function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainS
   return out ?? objects;
 }
 
+const seaLevel = (t: TerrainData) => t.settings.waterLevel ?? 0;
+
+const landEntry = (doc: WorldDocument, patch: LayerPatch | null): LandscapeEntry => ({ features: doc.landscape.features, next: doc.landscape.next, patch });
+
+/** World-space box of a vertex rectangle. */
+function rectArea(t: TerrainData, r: GridRect): [number, number, number, number] {
+  return [t.originX + r.x0 * t.cellSize, t.originZ + r.z0 * t.cellSize, t.originX + r.x1 * t.cellSize, t.originZ + r.z1 * t.cellSize];
+}
+
 /** Sampler over a copy of the layers (the terrain as it was before an edit). */
 function samplerOver(t: TerrainData, layers: ReturnType<typeof snapshotLayers>): TerrainSampler {
   return new TerrainSampler({ ...t, heights: layers.heights, ground: layers.ground, soil: layers.soil, settings: layers.settings, revision: -1 });
@@ -172,29 +205,49 @@ export const useWorldStore = create<WorldState>((set, get) => {
     if (opts?.history === false) {
       set({ doc: touch(doc, next) });
     } else {
-      set({ doc: touch(doc, next), past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads }].slice(-HISTORY_LIMIT), future: [] });
+      set({ doc: touch(doc, next), past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
     }
   };
 
   /**
-   * Finish a terrain change made in place: roads over the edited ground are re-baked (unless the
-   * caller already did), objects follow, one history entry, new doc.
+   * Finish a terrain change made in place (brush stroke): the change of the final terrain is
+   * folded into the layers — height into the sculpt layer, ground into the paint layer — then
+   * the natural terrain is recomposed and the roads re-baked over it. One history entry.
    */
-  const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect, roadsAfter?: RoadNetwork) => {
+  const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect) => {
     const { doc, past } = get();
     // (Terrain arrays are edited in place: callers check `locked` before touching them.)
     const t = doc.terrain;
-    let roads = roadsAfter ?? doc.roads;
-    if (!roadsAfter) {
-      const r = rebakeAfterTerrainEdit(t, doc.roads, before, rect);
-      roads = r.roads;
-      rect = r.rect;
+    const land = doc.landscape;
+    const lb = snapshotLandscape(land);
+    for (let iz = rect.z0; iz <= rect.z1; iz++) {
+      for (let ix = rect.x0; ix <= rect.x1; ix++) {
+        const i = iz * t.nx + ix;
+        const dh = t.heights[i] - before.heights[i];
+        // (cm steps, like the heights: the layer saves and reloads exactly)
+        if (dh !== 0) land.sculpt[i] = Math.round((land.sculpt[i] + dh) * 100) / 100;
+        if (t.ground[i] !== before.ground[i]) land.paint[i] = t.ground[i];
+      }
     }
-    const patch = makePatch(t, before, rect);
-    const objects = followTerrain(doc.objects, samplerOver(t, before), samplerFor(t));
+    const r = recompose(t, land, doc.roads, rect, seaLevel(t));
+    const finalRect = unionRects(rect, r.final)!;
+    finishLayered(doc, past, before, lb, finalRect, unionRects(rect, r.natural)!, r.roads, doc.objects);
+  };
+
+  /** Commit after the terrain / layers were changed in place: patches, objects follow, history. */
+  const finishLayered = (
+    doc: WorldDocument, past: HistoryEntry[], before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | null,
+    finalRect: GridRect, layerRect: GridRect | null, roads: RoadNetwork, objects: Objects, featuresBefore = doc.landscape.features, nextBefore = doc.landscape.next,
+  ) => {
+    const t = doc.terrain;
+    const land = doc.landscape;
+    const patch = makePatch(t, before, finalRect);
+    const lpatch = lb && layerRect ? makeLayerPatch(land, t.nx, lb, layerRect) : null;
+    const area = rectArea(t, finalRect);
+    const out = followTerrain(objects, samplerOver(t, before), samplerFor(t), area);
     set({
-      doc: { ...touch(doc, objects), terrain: { ...t }, roads },
-      past: [...past, { objects: doc.objects, terrain: patch, roads: doc.roads }].slice(-HISTORY_LIMIT),
+      doc: { ...touch(doc, out), terrain: { ...t }, roads, landscape: { ...land } },
+      past: [...past, { objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }].slice(-HISTORY_LIMIT),
       future: [],
     });
   };
@@ -202,9 +255,12 @@ export const useWorldStore = create<WorldState>((set, get) => {
   /** Undo/redo: swap objects + roads, and apply the terrain side of the patch if there is one. */
   const travel = (entry: HistoryEntry, side: 'before' | 'after'): WorldDocument => {
     const doc = get().doc;
-    if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads };
+    const l = entry.landscape;
+    if (l.patch) applyLayerPatch(doc.landscape, doc.terrain.nx, l.patch, side);
+    const landscape = { ...doc.landscape, features: l.features, next: l.next };
+    if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads, landscape };
     applyPatch(doc.terrain, entry.terrain, side);
-    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads };
+    return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads, landscape };
   };
 
   /**
@@ -221,7 +277,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
     const rect = dirtyRect(t, prev, next);
     if (!rect) return { objects, roads: { ...next, underlay: prev.underlay }, patch: null };
     const before = snapshotLayers(t);
-    const res = bakeRegion(t, prev, next, rect);
+    const res = bakeRegion(t, prev, next, rect, naturalProvider(doc.landscape));
     const roads: RoadNetwork = { ...next, underlay: res.underlay };
     const beforeSampler = samplerOver(t, before);
     const after = samplerFor(t);
@@ -237,6 +293,71 @@ export const useWorldStore = create<WorldState>((set, get) => {
     roadStats.bakeMs += performance.now() - t0;
     roadStats.lastBakeMs = performance.now() - t0;
     return { objects: out, roads, patch: res.rect ? makePatch(t, before, res.rect) : null };
+  };
+
+  /**
+   * Landscape edit (+ optional roads) as ONE atomic step: layers first, then the roads bake on
+   * the new natural terrain, objects follow. On any error every array is restored and the
+   * error is re-thrown — no half-changed terrain.
+   */
+  const applyLandscapeEdit = (objects: Objects, e: LandscapeEdit, nextRoads?: RoadNetwork) => {
+    const { doc, past } = get();
+    const t = doc.terrain;
+    const land = doc.landscape;
+    const before = snapshotLayers(t);
+    const lb = snapshotLandscape(land, e.base ? ['baseHeights', 'baseGround', 'sculpt', 'paint', 'naturalHeights', 'naturalGround'] : undefined);
+    const featuresBefore = land.features, nextBefore = land.next;
+    try {
+      let rect: GridRect | null = null;
+      if (e.base) {
+        land.base.heights.set(e.base.heights);
+        land.base.ground.set(e.base.ground);
+        land.sculpt.fill(0);
+        land.paint.fill(NO_PAINT);
+        if (e.base.soil) t.soil.set(e.base.soil);
+        if (e.base.settings) t.settings = { ...e.base.settings };
+        rect = fullGridRect(t);
+      }
+      if (e.features) {
+        rect = unionRects(rect, featureChangeRect(land, t, land.features, e.features));
+        land.features = e.features;
+      }
+      if (e.next !== undefined) land.next = Math.max(land.next, e.next);
+      let roads = doc.roads;
+      let finalRect: GridRect | null = null, layerRect: GridRect | null = null;
+      if (rect) {
+        const r = recompose(t, land, roads, rect, seaLevel(t));
+        roads = r.roads;
+        finalRect = r.final;
+        layerRect = r.natural;
+      }
+      let out = objects;
+      if (nextRoads && nextRoads !== doc.roads) {
+        assertValid(nextRoads);
+        const rr = dirtyRect(t, roads, nextRoads);
+        if (rr) {
+          const res = bakeRegion(t, roads, nextRoads, rr, naturalProvider(land));
+          finalRect = unionRects(finalRect, rr);
+          out = followRoads(out, roads, { ...nextRoads, underlay: res.underlay }, samplerOver(t, before), samplerFor(t));
+          roads = { ...nextRoads, underlay: res.underlay };
+        } else roads = { ...nextRoads, underlay: roads.underlay };
+      }
+      finishLayered(doc, past, before, lb, finalRect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }, layerRect, roads, out, featuresBefore, nextBefore);
+    } catch (err) {
+      // Roll back every array touched so far.
+      t.heights.set(before.heights);
+      t.ground.set(before.ground);
+      t.soil.set(before.soil);
+      t.settings = before.settings;
+      for (const [k, v] of Object.entries(lb) as [string, Float32Array | Uint8Array][]) {
+        const dst = k === 'baseHeights' ? land.base.heights : k === 'baseGround' ? land.base.ground : k === 'sculpt' ? land.sculpt : k === 'paint' ? land.paint : k === 'naturalHeights' ? land.natural.heights : land.natural.ground;
+        dst.set(v);
+      }
+      land.features = featuresBefore;
+      land.next = nextBefore;
+      t.revision++;
+      throw err;
+    }
   };
 
   const patchObject = (id: EntityId, fn: (o: WorldObject) => WorldObject, opts?: MutationOptions) => {
@@ -290,10 +411,14 @@ export const useWorldStore = create<WorldState>((set, get) => {
         }
         changed = true;
       }
+      if (edit.landscape) {
+        applyLandscapeEdit(objects, edit.landscape, edit.roads);
+        return ids;
+      }
       if (edit.roads && edit.roads !== get().doc.roads) {
         const doc = get().doc;
         const r = bakeRoads(doc, objects, edit.roads);
-        const entry: HistoryEntry = { objects: doc.objects, terrain: r.patch, roads: doc.roads };
+        const entry: HistoryEntry = { objects: doc.objects, terrain: r.patch, roads: doc.roads, landscape: landEntry(doc, null) };
         set({
           doc: { ...touch(doc, r.objects), terrain: r.patch ? { ...doc.terrain } : doc.terrain, roads: r.roads },
           // Always an undo step: the terrain patch and the network must travel together
@@ -403,6 +528,9 @@ export const useWorldStore = create<WorldState>((set, get) => {
     replaceDocument: (doc) => {
       if (get().locked) return;
       stroke = null;
+      // Layers must compose to the terrain (documents built by older code paths may not).
+      const landscape = adoptTerrain(doc.terrain, doc.roads, doc.landscape);
+      if (landscape !== doc.landscape) doc = { ...doc, landscape };
       set({ doc, past: [], future: [], docVersion: get().docVersion + 1 });
     },
 
@@ -436,39 +564,43 @@ export const useWorldStore = create<WorldState>((set, get) => {
 
     applyTerrainPreset: (preset, seed) => {
       if (get().locked) return;
-      const t = get().doc.terrain;
-      const before = snapshotLayers(t);
-      const next = generateTerrain(preset, seed, t);
-      t.heights.set(next.heights);
-      t.ground.set(next.ground);
-      t.soil.set(next.soil);
-      t.settings = next.settings;
-      t.revision++;
-      // The whole ground is new and natural: roads are baked onto it from scratch.
-      commitTerrain(before, fullRect(t), rebakeAll(t, get().doc.roads));
+      // A preset is a new BASE terrain: sculpt and paint are cleared, natural features stay.
+      const next = generateTerrain(preset, seed, get().doc.terrain);
+      applyLandscapeEdit(get().doc.objects, { base: { heights: next.heights, ground: next.ground, soil: next.soil, settings: next.settings } });
     },
 
     setWaterLevel: (level) => {
       if (get().locked) return;
-      const t = get().doc.terrain;
+      const { doc, past } = get();
+      const t = doc.terrain;
       const before = snapshotLayers(t);
       t.settings = { ...t.settings, waterLevel: level };
       t.revision++;
-      // Settings-only change: a 1-vertex patch still carries settings before/after for undo.
-      commitTerrain(before, { x0: 0, z0: 0, x1: 0, z1: 0 }, get().doc.roads);
+      // Coastlines are shaped from the sea level: recompose the map; otherwise settings only
+      // (a 1-vertex patch still carries the settings before / after for undo).
+      if (doc.landscape.features.some((f) => f.kind === 'coast')) {
+        const lb = snapshotLandscape(doc.landscape);
+        const r = recompose(t, doc.landscape, doc.roads, fullGridRect(t), seaLevel(t));
+        finishLayered(doc, past, before, lb, r.final, r.natural, r.roads, doc.objects);
+      } else finishLayered(doc, past, before, null, { x0: 0, z0: 0, x1: 0, z1: 0 }, null, doc.roads, doc.objects);
     },
 
     checkpoint: () => {
       const { doc, past, locked } = get();
       if (locked) return;
-      set({ past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads }].slice(-HISTORY_LIMIT), future: [] });
+      set({ past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
+    },
+
+    setFeatures: (features, next) => {
+      if (get().locked) return;
+      get().applyEdit({ landscape: { features, next } });
     },
 
     undo: () => {
       const { doc, past, future, locked } = get();
       const prev = past[past.length - 1];
       if (!prev || stroke || locked) return;
-      const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads };
+      const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future] });
     },
 
@@ -476,7 +608,7 @@ export const useWorldStore = create<WorldState>((set, get) => {
       const { doc, past, future, locked } = get();
       const next = future[0];
       if (!next || stroke || locked) return;
-      const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads };
+      const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1) });
     },
   };

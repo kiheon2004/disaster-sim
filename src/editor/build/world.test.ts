@@ -148,15 +148,15 @@ describe('ID uniqueness', () => {
 });
 
 describe('save / load', () => {
-  it('a built world round-trips exactly (groups included), schema v6 since Phase 18', () => {
+  it('a built world round-trips exactly (groups included), schema v7 since Phase 19', () => {
     builtWorld('gentleHills');
     selectAll('nature');
     groupSelection();
     const doc = useWorldStore.getState().doc;
     const json = serializeDocument(doc);
     const raw = JSON.parse(json);
-    expect(raw.schemaVersion).toBe(6);
-    expect(SCHEMA_VERSION).toBe(6);
+    expect(raw.schemaVersion).toBe(7);
+    expect(SCHEMA_VERSION).toBe(7);
     const res = parseDocument(json);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
