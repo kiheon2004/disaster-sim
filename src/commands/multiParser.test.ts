@@ -64,8 +64,8 @@ describe('multi-phenomenon commands (Phase 15)', () => {
     }
   });
 
-  it('planned phenomena (black hole, gravity …) are recognized but never executed (meteor: implemented since Phase 23)', async () => {
-    for (const [text, type] of [['Create a black hole in the center', 'blackHole'], ['산소 농도를 낮춰', 'atmosphereLoss'], ['토네이도 발생', 'tornado']]) {
+  it('planned phenomena (tornado, O₂ fraction …) are recognized but never executed (meteor: implemented since Phase 23)', async () => {
+    for (const [text, type] of [['산소 농도를 낮춰', 'atmosphereLoss'], ['토네이도 발생', 'tornado']]) {
       const { r, got } = await run(text);
       expect(got).toHaveLength(0);
       expect(r.unsupported[0]?.event).toBe(type);
@@ -77,6 +77,13 @@ describe('multi-phenomenon commands (Phase 15)', () => {
       expect(got).toHaveLength(0);
       expect(r.unsupported[0]?.event).toBe('gravity');
       expect(r.warnings[0].key).toBe('parse.gravity.editor');
+    }
+    // Phase 32: black holes are implemented — recognized (also "a black hole's gravity") and pointed to the editor.
+    for (const text of ['Create a black hole in the center', '블랙홀의 중력을 보여줘']) {
+      const { r, got } = await run(text);
+      expect(got).toHaveLength(0);
+      expect(r.unsupported[0]?.event).toBe('celestial');
+      expect(r.warnings[0].key).toBe('parse.celestial.editor');
     }
   });
 });

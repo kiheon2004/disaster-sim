@@ -30,6 +30,7 @@ import { symEigenvalues, boxSecondMoment, gradientTorque } from '@/celestial/tid
 import { G_N, schwarzschildRadius } from '@/celestial/constants';
 import { newForceRecord, type ForceRecord } from '../forces/ForceLedger';
 import { CelestialLedger, type CaptureKind } from '@/celestial/ledger';
+import { CelestialStructures } from './structures';
 
 /** Seconds between history samples, history length. */
 const SERIES_DT = 0.25;
@@ -130,6 +131,8 @@ export class CelestialRuntime {
   readonly probes: Probe[] = [];
   readonly stats: CelestialStats = { sources: [], maxAccel: 0, maxTidal: 0, orbiting: 0, contact: 0, particles: 0, landed: 0, maxSubsteps: 0, meanSubsteps: 0, capped: 0, captured: 0, capturedMass: 0, limit: 'none', limitReason: '', ms: 0 };
   readonly series: CelestialSeriesPoint[] = [];
+  /** Storey lateral loads and the uplift check (structures.ts). */
+  readonly structures = new CelestialStructures();
   /** Accretion test particles: position / velocity (3 per particle), state (0 none, 1 flying, 2 landed, 3 captured,
    *  4 left), mass (kg). */
   px = new Float64Array(0);
@@ -419,6 +422,17 @@ export class CelestialRuntime {
       if (this.series.length > SERIES_MAX) this.series.splice(0, this.series.length - SERIES_MAX);
     }
     this.stats.ms += performance.now() - t0;
+  }
+
+  /** Structures under the field of this step (after the Phase 31 member ratios). */
+  structuresStep(ctx: SystemContext) {
+    this.structures.update(ctx, this.f);
+  }
+
+  /** A structural failure attributed to gravity while celestial sources act (milestone on the first). */
+  noteFailure(ctx: SystemContext, building: string) {
+    this.failures++;
+    ctx.milestone?.({ time: ctx.time, kind: 'tidalFailure', subject: 'celestial', label: { key: 'ms.celestial.tidalFailure' as never, params: { id: building } } }, 'celestial:failure');
   }
 
   /** Reset per-step counters (GravityRuntime.pre, before the bodies are visited). */

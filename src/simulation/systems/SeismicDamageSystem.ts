@@ -16,12 +16,12 @@ export class SeismicDamageSystem implements SimulationSystem {
 
   isActive(ctx: SystemContext) {
     const sr = ctx.runtime.seismic;
-    return sr !== undefined && (ctx.env.groundMotion.active || ctx.env.blast.loading || sr.freeVibration > 0);
+    return sr !== undefined && (ctx.env.groundMotion.active || ctx.env.blast.loading || ctx.env.gravity.lateral || sr.freeVibration > 0);
   }
 
   update(ctx: SystemContext, dt: number) {
     const sr = ctx.runtime.seismic;
-    if (!sr || (!ctx.env.groundMotion.active && !ctx.env.blast.loading && sr.freeVibration <= 0)) return;
+    if (!sr || (!ctx.env.groundMotion.active && !ctx.env.blast.loading && !ctx.env.gravity.lateral && sr.freeVibration <= 0)) return;
     // Object responses to the groundMotion channel (response/responses.ts), in entity order.
     for (const e of sr.entities) responses.respond('groundMotion', e, ctx, dt);
   }

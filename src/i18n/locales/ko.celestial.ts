@@ -214,4 +214,7 @@ export const koCelestial = {
   "milestone.celestialEnd": "극한 중력원 종료",
   "log.celestial.captured": "중력원에 포획되어 세계에서 제거됨 (질량·운동량·에너지 장부 기록)",
   "struct.account.captured": "포획됨",
+  "log.celestial.collapsed": "극한 중력원의 수평·차등 하중으로 붕괴",
+  "struct.cause.uplift": "들림 (연결부 인장 초과)",
+  "parse.celestial.editor": "블랙홀·극한 중력원은 실험 편집기에서 설정합니다 (질량·연화 길이·포획 반경·궤도 시험체)",
 };

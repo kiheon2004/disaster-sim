@@ -1,4 +1,4 @@
-import { blastGovernsStructure } from '../seismic/SeismicState';
+import { blastGovernsStructure, gravityGovernsStructure } from '../seismic/SeismicState';
 import type { Vec3 } from '@/core/types';
 import { qRotate, vAdd, vScale } from '@/core/math';
 import type { ComponentSpec } from '@/core/model';
@@ -69,7 +69,7 @@ export function spawnDebris(
     pose: { position: opts.position, quaternion: e.pose.quaternion },
     spawnTime: ctx.time,
     // Pieces shaken off by the structural model while an air-pressure load governed it are the blast's (Phase 24).
-    hazard: opts.hazard === 'earthquake' && blastGovernsStructure(e.seismic) ? 'blast' : opts.hazard ?? 'wind',
+    hazard: opts.hazard === 'earthquake' && gravityGovernsStructure(e.seismic) ? 'gravity' : opts.hazard === 'earthquake' && blastGovernsStructure(e.seismic) ? 'blast' : opts.hazard ?? 'wind',
     forces: newForceRecord(),
   };
   runtime.debris.push(piece);

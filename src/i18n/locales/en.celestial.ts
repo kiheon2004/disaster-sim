@@ -214,4 +214,7 @@ export const enCelestial = {
   "milestone.celestialEnd": "Celestial sources end",
   "log.celestial.captured": "Captured by a gravity source and removed (mass / momentum / energy booked)",
   "struct.account.captured": "Captured",
+  "log.celestial.collapsed": "Collapsed under a celestial source's lateral / differential load",
+  "struct.cause.uplift": "Uplift (connection tension exceeded)",
+  "parse.celestial.editor": "Black holes / celestial sources are set up in the experiment editor (mass, softening, capture radius, probes)",
 };

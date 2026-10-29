@@ -352,6 +352,25 @@ export class CollapseModel {
     return rec;
   }
 
+  /**
+   * Phase 32: a structural member pulled off the structure by an outside model (uplift beyond its connections'
+   * tension capacity): it leaves as a fragment right away — the adapter spawns it (spawnFragment).
+   */
+  detachMember(i: number, cause: FailCause, hazard: string, time: number, u = 1): CollapseRecord | null {
+    if (!this.alive(i)) return null;
+    const rec = this.record(i, time, cause, this.hz(hazard), -1, u);
+    this.set(i, MS.FAILED);
+    this.set(i, MS.DETACHED);
+    this.set(i, MS.FALLING);
+    this.damage[i] = 1;
+    this.external[i] = 1;
+    this.ledger.move('structure', this.g.type[i] === MT_WINDOW ? 'fines' : 'bodies', this.g.mass[i]);
+    if (this.g.type[i] === MT_WINDOW) this.set(i, MS.SETTLED);
+    this.s.kill(i, i);
+    this.dynamicNext = true;
+    return rec;
+  }
+
   /** A fragment handed to the physics engine came to rest (fixed body / aggregated). */
   settleExternal(i: number) {
     if (this.state[i] === MS.FALLING && this.external[i]) this.set(i, MS.SETTLED);

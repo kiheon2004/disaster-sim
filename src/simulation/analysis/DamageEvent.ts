@@ -57,7 +57,9 @@ export type DamageCause =
   // Phase 30: weight of snow / ice (roofs, crowns), repeated freezing and thawing (reported index).
   | 'snowLoad' | 'iceLoad' | 'freezeThaw'
   // Phase 31: own weight under a changed gravity field (dead load × g / g₀) and the members it overloaded.
-  | 'gravityLoad';
+  | 'gravityLoad'
+  // Phase 32: lateral / differential / uplift load of a celestial source's field, capture by a source.
+  | 'tidalLoad' | 'captured';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:

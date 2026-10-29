@@ -40,7 +40,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { StructuralModel } from '../seismic/StructuralModel';
 import { DamageState, worst } from '../damage/DamageState';
 import { COMPONENT_ROUNDS, downhill, type QuakeCollapse } from '../damage/behaviors/building';
-import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
+import { blastGovernsStructure, gravityGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
 
 /**
  * The hazard a structural-model failure belongs to: the shared structural model is driven by ground
@@ -49,6 +49,8 @@ import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicS
  */
 export function governingHazard(e: RuntimeEntity, h: Hazard, ctx?: SystemContext): Hazard {
   if (h === 'earthquake') {
+    // Phase 32: lateral loads of a celestial source's field drive the same storey model.
+    if (gravityGovernsStructure(e.seismic)) return 'gravity';
     if (blastGovernsStructure(e.seismic)) return 'blast';
     if (impactGovernsShaking(e.seismic)) return 'impact';
     return h;
@@ -426,7 +428,7 @@ export function modularCollapse(e: RuntimeEntity, ctx: SystemContext, quake?: Qu
   st.globalRecorded = true;
   const hazard: Hazard = quake ? (quake.hazard ?? 'earthquake') : 'wind';
   if (quake) {
-    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : hazard === 'impact' ? 'log.impact.collapsed' : blastGovernsStructure(e.seismic) ? 'log.blast.collapsed' : 'log.quake.collapsed' });
+    ctx.log(e.id, 'danger', { key: hazard === 'flood' ? 'log.flood.collapsed' : hazard === 'ground' ? 'log.ground.collapsed' : hazard === 'impact' ? 'log.impact.collapsed' : gravityGovernsStructure(e.seismic) ? 'log.celestial.collapsed' : blastGovernsStructure(e.seismic) ? 'log.blast.collapsed' : 'log.quake.collapsed' });
     ctx.recordDamage(e, { eventType: 'COLLAPSED', cause: quake.cause, hazard, response: quake.response, damageAfter: 1, ...quake.extra });
   } else {
     ctx.log(e.id, 'danger', { key: 'log.building.collapsed' });

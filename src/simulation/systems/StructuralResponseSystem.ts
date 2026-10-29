@@ -56,14 +56,15 @@ export class StructuralResponseSystem implements SimulationSystem {
 
   isActive(ctx: SystemContext) {
     const sr = ctx.runtime.seismic;
-    return sr !== undefined && (ctx.env.groundMotion.active || ctx.env.blast.loading || sr.freeVibration > 0);
+    return sr !== undefined && (ctx.env.groundMotion.active || ctx.env.blast.loading || ctx.env.gravity.lateral || sr.freeVibration > 0);
   }
 
   update(ctx: SystemContext, dt: number) {
     const sr = ctx.runtime.seismic;
     if (!sr) return;
     // Ground motion or an air-pressure load (Phase 24) drives the model; free vibration after both.
-    const active = ctx.env.groundMotion.active || ctx.env.blast.loading;
+    // Phase 32: …or a celestial source's horizontal field (static body force on the floors).
+    const active = ctx.env.groundMotion.active || ctx.env.blast.loading || ctx.env.gravity.lateral;
     if (active) sr.freeVibration = FREE_VIBRATION;
     else if (sr.freeVibration > 0) sr.freeVibration -= dt;
     else return;

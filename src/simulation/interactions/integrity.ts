@@ -17,7 +17,7 @@
  */
 import type { RuntimeEntity } from '../SimulationRuntime';
 import { HAZARDS, type Hazard } from '../analysis/DamageEvent';
-import { blastGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
+import { blastGovernsStructure, gravityGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 
 /** Strength degradation per unit damage index (same as StructuralModel: F_y·(1 − 0.3·D)). */
@@ -50,8 +50,10 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
   // Phase 24: structural damage driven by air-pressure loads (when they govern the structure's
   // response) and the blast's own channel (base-moment oscillators) are the blast's.
   const byBlast = blastGovernsStructure(e.seismic);
+  // Phase 32: structural damage of the storey model driven by a celestial source's lateral field is gravity's.
+  const byGravity = gravityGovernsStructure(e.seismic);
   const blast = Math.max(e.blast ? Math.min(1, e.blast.damage) : 0, byBlast ? earthquake : 0);
-  return { wind: Math.max(0, wind), earthquake: shakeByImpact || byBlast ? 0 : earthquake, flood, ground: groundByImpact ? 0 : groundAll, impact, blast,
+  return { wind: Math.max(0, wind), earthquake: shakeByImpact || byBlast || byGravity ? 0 : earthquake, flood, ground: groundByImpact ? 0 : groundAll, impact, blast,
     // Phase 26: heat has no damage index — its effect is the separate material factor of the members
     // (temperature-dependent strength), never a second damage index (no double counting).
     thermal: 0, fire: 0,
@@ -60,7 +62,7 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
     // Phase 30: snow / ice load breakage of crowns (structural snow loads act through the collapse model).
     climate: e.climate ? Math.min(1, e.climate.damage) : 0,
     // Phase 31: gravity loads act through the collapse model (member failures with hazard 'gravity'), not a second index.
-    gravity: 0 };
+    gravity: byGravity ? earthquake : 0 };
 }
 
 /**

@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere', 'climate', 'gravity']); // Phase 27: + fire, Phase 28: + volcano, Phase 29: + atmosphere, Phase 30: + climate, Phase 31: + gravity
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere', 'climate', 'gravity', 'celestial']); // Phase 27: + fire, Phase 28: + volcano, Phase 29: + atmosphere, Phase 30: + climate, Phase 31: + gravity, Phase 32: + celestial
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -66,7 +66,10 @@ describe('registration', () => {
     // (meteor → implemented as 'impact' since Phase 23)
     // (air removal → implemented as the atmosphere experiment 'atmosphere' since Phase 29; an O₂-fraction change stays planned)
     // (gravity change → implemented as the gravity experiment 'gravity' since Phase 31)
-    for (const type of ['blackHole', 'tornado', 'atmosphereLoss']) {
+    // (black hole → implemented as the celestial experiment 'celestial' since Phase 32)
+    expect(phenomena.get('blackHole')).toBeUndefined();
+    expect(phenomena.get('celestial')?.status).toBe('implemented');
+    for (const type of ['tornado', 'atmosphereLoss']) {
       const d = phenomena.get(type)!;
       expect(d.status).toBe('planned');
       expect(() => createEvent({ event: type } as unknown as EventSpec, 0, CTX)).toThrow(/Unsupported/);
@@ -83,7 +86,7 @@ describe('registration', () => {
     expect(phenomena.get('climate')?.status).toBe('implemented');
     expect(phenomena.matchPlanned('폭염이 오게 해줘')).toBeFalsy();
     expect(phenomena.matchPlanned('대기를 제거해')).toBeFalsy();
-    expect(phenomena.matchPlanned('create a black hole')?.type).toBe('blackHole');
+    expect(phenomena.matchPlanned('create a black hole')).toBeFalsy(); // Phase 32: implemented ('celestial')
   });
 
   it('rejects a duplicate registration; every model is marked as not validated', () => {

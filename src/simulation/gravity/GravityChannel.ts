@@ -40,6 +40,8 @@ export class GravityChannel {
   rt: import('./runtime').GravityRuntime | null = null;
   /** Bumped when an experiment is added (renderers, editor). */
   rev = 0;
+  /** Phase 32: a celestial source's horizontal field loads the storey model this step (structural response active). */
+  lateral = false;
 
   get active(): boolean {
     return this.field !== null;

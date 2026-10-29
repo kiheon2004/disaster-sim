@@ -239,6 +239,7 @@ export class GravityRuntime {
     const moved = G[0] !== this.lastG[0] || G[1] !== this.lastG[1] || G[2] !== this.lastG[2];
     this.lastG[0] = G[0]; this.lastG[1] = G[1]; this.lastG[2] = G[2];
     this.structures.update(ctx, f, moved || this.fieldChanging);
+    if (cel) cel.structuresStep(ctx);
     this.stats.structMs = performance.now() - ts;
     const s = this.stats;
     s.G = [G[0], G[1], G[2]];
@@ -260,6 +261,8 @@ export class GravityRuntime {
   private fieldSignature(): boolean {
     let sig = '';
     for (const l of this.field.liveSources()) sig += `${l.f};`;
+    // Phase 32: celestial sources move, ramp and grow.
+    for (const l of this.field.points.live) sig += `${l.x},${l.y},${l.z},${l.mu};`;
     const ch = sig !== this.lastSig;
     this.lastSig = sig;
     return ch;
@@ -357,6 +360,7 @@ export class GravityRuntime {
   noteFailure(ctx: SystemContext, roof: boolean, building: string) {
     this.failures++;
     if (roof) this.roofFailures++;
+    if (this.celestial && this.field.points.live.length) this.celestial.noteFailure(ctx, building);
     ctx.milestone?.({ time: ctx.time, kind: 'gravityFailure', subject: 'gravity', label: { key: (roof ? 'ms.gravity.roofFailure' : 'ms.gravity.failure') as never, params: { id: building } } }, `gravity:fail:${roof ? 'roof' : 'member'}`);
   }
 }

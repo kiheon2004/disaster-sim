@@ -95,6 +95,13 @@ export class StructuralModel {
    */
   fbx = new Float64Array(0);
   fbz = new Float64Array(0);
+  /**
+   * Phase 32: horizontal body acceleration of a celestial source's field at each dof (world x / z, 2 per dof, m/s²):
+   * the floor mass m_j feels m_j·g_h(x_j) relative to the ground it stands on (the ground is held). `hasG` marks the
+   * units that carry one (0 everywhere without a celestial experiment — the step is the Phase 31 one).
+   */
+  gfx = new Float64Array(0);
+  hasG = new Uint8Array(0);
   /** Outputs (world axes): top / foundation displacement relative to the ground (2 per unit). */
   top = new Float64Array(0);
   base = new Float64Array(0);
@@ -156,6 +163,7 @@ export class StructuralModel {
     this.irregular = new Uint8Array(U);
     this.u = f(2 * D); this.v = f(2 * D); this.p = f(2 * D); this.cum = f(D); this.thMax = f(D); this.storyD = f(D);
     this.acc = f(2 * D); this.peakAcc = f(D);
+    this.gfx = f(2 * D); this.hasG = new Uint8Array(U);
 
     let o = 0;
     this.inits.forEach((init, ui) => {
@@ -351,7 +359,7 @@ export class StructuralModel {
    * (Phase 24: blast-only runs load a few units at a time).
    */
   idle(ui: number): boolean {
-    if (this.agx[ui] !== 0 || this.agz[ui] !== 0 || this.fwx[ui] !== 0 || this.fwz[ui] !== 0 || this.fbx[ui] !== 0 || this.fbz[ui] !== 0) return false;
+    if (this.agx[ui] !== 0 || this.agz[ui] !== 0 || this.fwx[ui] !== 0 || this.fwz[ui] !== 0 || this.fbx[ui] !== 0 || this.fbz[ui] !== 0 || this.hasG[ui] !== 0) return false;
     const o = this.off[ui], n = this.n[ui];
     for (let j = 0; j <= n; j++) {
       const d = 2 * (o + j);
@@ -441,6 +449,14 @@ export class StructuralModel {
         if (ext !== 0) A[n] += ext / m[o + n];
         const blast = ax === 0 ? blastL0 : blastL1;
         if (blast !== 0) for (let j = 1; j <= n; j++) A[j] += (blast * this.hs[o + j]) / (height * m[o + j]);
+        // Phase 32: the field's horizontal part at each floor (world → local), the foundation mass included.
+        if (this.hasG[ui]) {
+          const G = this.gfx;
+          for (let j = hasF ? 0 : 1; j <= n; j++) {
+            const d2 = 2 * (o + j);
+            A[j] += ax === 0 ? G[d2] * cs - G[d2 + 1] * sn : G[d2] * sn + G[d2 + 1] * cs;
+          }
+        }
         // Semi-implicit Euler: velocities, then positions.
         for (let j = hasF ? 0 : 1; j <= n; j++) {
           const i2 = 2 * (o + j) + ax;

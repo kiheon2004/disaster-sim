@@ -16,6 +16,8 @@ import { createEnvironment, type EnvironmentState } from './environment/Environm
 import { buildRuntime } from './RuntimeBuilder';
 import type { SimulationRuntime } from './SimulationRuntime';
 import type { SimulationSystem, SystemContext } from './systems/SimulationSystem';
+import { structureOf } from './structure/state';
+import { celestialPath, celestialReach, nearPath } from './gravity/structures';
 import { createDefaultSystems } from './systems';
 import { MetricsSystem } from './systems/MetricsSystem';
 import { MetricsRecorder, type SimulationMetrics } from './analysis/MetricsRecorder';
@@ -287,7 +289,30 @@ export class SimulationController {
   private schedule(ev: SimulationEvent) {
     if (ev.prepare && (this.env.deformation.engine?.rev ?? 0) === 0) ev.prepare(this.env.terrain.data);
     if (STRUCTURAL_EVENTS.has(ev.type)) this.prepareStructures();
+    if (ev.type === 'celestial') this.prepareCelestial(ev.spec as import('@/celestial/types').CelestialSpec);
     this.scheduler.add(ev);
+  }
+
+  /**
+   * Phase 32 (Phase 31 audit residual M3 / §2.2): the collapse models of the buildings a celestial source will reach,
+   * and the storey model when it loads structures laterally, are built ahead of the clock — every building takes the
+   * field in the step it starts (no lazy creation budget delaying a large town). Deterministic: canonical place order.
+   */
+  private prepareCelestial(spec: import('@/celestial/types').CelestialSpec) {
+    const rt = this.runtime, physics = this.physics, forces = this.forces;
+    if (!rt || !physics || !forces) return;
+    if (spec.tidal) this.prepareStructures();
+    const ctx: SystemContext = {
+      env: this.env, runtime: rt, physics, time: this.time, step: this.stepIndex, rng: this.rng, fxRng: this.fxRng,
+      log: (entityId, severity, message) => this.log(entityId, severity, message),
+      recordDamage: (e, ev) => this.metrics.record(this.time, e, ev),
+      forces, interactions: this.interactions,
+      milestone: (m, key) => (key ? this.metrics.milestones.once(key, m) : this.metrics.milestones.add(m)),
+    };
+    const g0 = this.env.gravity.g0;
+    const list = [...rt.entities.values()].filter((e) => e.modular && !e.modular.structure && !e.flags.collapsed && spec.sources.some((s) => nearPath(e, celestialPath(s, spec.duration), celestialReach(s, g0))));
+    list.sort((a, b) => { const p = a.pose.position, q = b.pose.position; return p[0] - q[0] || p[2] - q[2] || p[1] - q[1] || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+    for (const e of list) structureOf(e, ctx);
   }
 
   /**

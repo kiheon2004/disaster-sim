@@ -40,6 +40,11 @@ export interface SeismicEntityState {
    * where it governs (see blastGovernsStructure).
    */
   pgaBlast: number;
+  /**
+   * Phase 32: peak horizontal acceleration of a celestial source's field at the structure (m/s²) — its equivalent of
+   * a ground acceleration: structural damage is attributed to gravity where it governs (gravityGovernsStructure).
+   */
+  pgaGravity?: number;
   /** Top / foundation displacement relative to the ground (world x, z; m). */
   top: [number, number];
   base: [number, number];
@@ -320,7 +325,11 @@ export function prepareSeismicRuntime(runtime: SimulationRuntime, terrain: Terra
 }
 
 /** Whether impact ground shocks, rather than an earthquake, govern an object's shaking (Phase 23). */
-export const impactGovernsShaking = (st: SeismicEntityState | undefined) => !!st && st.pgaImpact > 0 && st.pgaImpact >= st.pgaQuake && !blastGovernsStructure(st);
+export const impactGovernsShaking = (st: SeismicEntityState | undefined) => !!st && st.pgaImpact > 0 && st.pgaImpact >= st.pgaQuake && !blastGovernsStructure(st) && !gravityGovernsStructure(st);
 
 /** Whether air-pressure waves, rather than ground motion, govern a structure's response (Phase 24). */
-export const blastGovernsStructure = (st: SeismicEntityState | undefined) => !!st && st.pgaBlast > 0 && st.pgaBlast >= st.pgaQuake && st.pgaBlast >= st.pgaImpact;
+export const blastGovernsStructure = (st: SeismicEntityState | undefined) => !!st && st.pgaBlast > 0 && st.pgaBlast >= st.pgaQuake && st.pgaBlast >= st.pgaImpact && !((st.pgaGravity ?? 0) > st.pgaBlast);
+
+/** Whether a celestial source's lateral field, rather than ground motion or air pressure, governs a structure's
+ *  response (Phase 32): its damage then belongs to the gravity hazard. */
+export const gravityGovernsStructure = (st: SeismicEntityState | undefined) => !!st && (st.pgaGravity ?? 0) > 0 && st.pgaGravity! >= st.pgaQuake && st.pgaGravity! >= st.pgaImpact && st.pgaGravity! >= st.pgaBlast;

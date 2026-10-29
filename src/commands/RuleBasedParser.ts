@@ -388,8 +388,15 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
       result.warnings.push({ key: 'parse.unsupported.planned' });
       continue;
     }
+    // Phase 32: a black hole / celestial source is recognized but set up in the experiment editor (mass, softening,
+    // capture radius, probes) — text never creates one. Before the gravity check: "a black hole's gravity" is celestial.
+    if (phenomena.implemented('celestial')!.keywords.test(raw)) {
+      result.unsupported.push({ event: 'celestial', params: {} });
+      result.warnings.push({ key: 'parse.celestial.editor' });
+      continue;
+    }
     // Phase 31: a gravity experiment is recognized but set up in the experiment editor (magnitude, direction, profile,
-    // local sources) — text never changes gravity. (After the planned check: "a black hole's gravity" stays planned.)
+    // local sources) — text never changes gravity.
     if (phenomena.implemented('gravity')!.keywords.test(raw)) {
       result.unsupported.push({ event: 'gravity', params: {} });
       result.warnings.push({ key: 'parse.gravity.editor' });
