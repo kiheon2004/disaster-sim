@@ -18,6 +18,7 @@ import eq from './EarthquakeForm.module.css';
 import x from './ExperimentPanel.module.css';
 import { DeformationTools } from './DeformationTools';
 import { GroundTools } from './GroundTools';
+import { ImpactTools } from './ImpactTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -147,11 +148,13 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
               </label>
             );
           }
+          // "Auto": show the value the model actually uses (not a placeholder).
+          const auto = v === undefined && f.autoValue ? f.autoValue(inst.spec) * (f.scale ?? 1) : undefined;
           return (
             <div key={f.key} className={eq.autoRow} data-field={f.key}>
-              <NumberField label={t(f.labelKey)} value={typeof v === 'number' ? v : f.min} min={f.min} max={f.max} step={f.step} precision={f.precision} unit={f.unit}
+              <NumberField label={t(f.labelKey)} value={typeof v === 'number' ? v : auto ?? f.min} min={f.min} max={f.max} step={f.step} precision={f.precision} unit={f.unit}
                 disabled={v === undefined} onChange={(n, live) => !live && set(setField(f, inst.spec, n))} />
-              {f.optional ? <Toggle checked={v === undefined} onChange={(b) => set(setField(f, inst.spec, b ? undefined : f.min + (f.max - f.min) / 4))} label={t('eq.form.auto')} /> : <span />}
+              {f.optional ? <Toggle checked={v === undefined} onChange={(b) => set(setField(f, inst.spec, b ? undefined : auto ?? f.min + (f.max - f.min) / 4))} label={t('eq.form.auto')} /> : <span />}
             </div>
           );
         })}
@@ -188,6 +191,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         {!valid.success && <div className={x.issue} data-testid="exp-invalid">⚠ {valid.error.issues[0]?.message}</div>}
         {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
         {(inst.type === 'sinkhole' || inst.type === 'landslide') && <GroundTools inst={inst} />}
+        {inst.type === 'impact' && <ImpactTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

@@ -4,7 +4,7 @@ import { WIND_COLOR_STOPS } from '@/rendering/sim/windColors';
 import { DAMAGE_STATE_COLORS, DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
 import { Toggle } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
-import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS } from '@/rendering/viewStore';
+import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS, FRAGMENT_SCALES } from '@/rendering/viewStore';
 import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { useSimStore } from '@/simulation/simStore';
 import { DEPOSIT_GRADIENT, DEPOSIT_MAX, FS_GRADIENT, SEDIMENT_GRADIENT, SEDIMENT_MAX } from '@/rendering/ground/groundColors';
@@ -26,6 +26,8 @@ export function OverlayToggles() {
   const deform = useViewStore((s) => s.deformViz);
   const deformLive = useSimStore((s) => s.deform);
   const groundLive = useSimStore((s) => s.ground !== null);
+  const impactLive = useSimStore((s) => s.impacts !== null);
+  const impact = useViewStore((s) => s.impactViz);
   const ground = useViewStore((s) => s.groundViz);
   const gradient = `linear-gradient(90deg, ${WIND_COLOR_STOPS.map(([s, c]) => `${c} ${(s / 60) * 100}%`).join(', ')})`;
   return (
@@ -175,6 +177,23 @@ export function OverlayToggles() {
             <Toggle checked={ground.sources} onChange={(b) => v.setGroundViz({ sources: b })} label={t('overlay.ground.sources')} />
             <Toggle checked={ground.dust} onChange={(b) => v.setGroundViz({ dust: b })} label={t('overlay.ground.dust')} />
             <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.ground.note')}</span>
+          </div>
+        </>
+      )}
+      {impactLive && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#ff8fd0', marginTop: 2 }}>{t('overlay.impact')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="impact-overlay">
+            <Toggle checked={impact.trajectory} onChange={(b) => v.setImpactViz({ trajectory: b })} label={t('overlay.impact.trajectory')} />
+            <Toggle checked={impact.ejecta} onChange={(b) => v.setImpactViz({ ejecta: b })} label={t('overlay.impact.ejecta')} />
+            <Toggle checked={impact.trails} onChange={(b) => v.setImpactViz({ trails: b })} label={t('overlay.impact.trails')} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.impact.fragmentScale')}</span>
+              <Segmented size="small" value={impact.fragmentScale} onChange={(k) => v.setImpactViz({ fragmentScale: k })} options={FRAGMENT_SCALES.map((k) => ({ value: k, label: `×${k}` }))} />
+            </div>
+            <Toggle checked={impact.flash} onChange={(b) => v.setImpactViz({ flash: b })} label={t('overlay.impact.flash')} />
+            <Toggle checked={impact.dust} onChange={(b) => v.setImpactViz({ dust: b })} label={t('overlay.impact.dust')} />
+            <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.impact.note')}</span>
           </div>
         </>
       )}

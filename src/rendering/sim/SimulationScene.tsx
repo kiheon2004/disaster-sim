@@ -19,6 +19,7 @@ import { DeformationOverlay } from '../deformation/DeformationOverlay';
 import { SceneCompile, ShaderWarmup } from '../deformation/ShaderWarmup';
 import { DeformationPicker, DeformationPreview } from '../deformation/DeformationTools';
 import { GroundOverlay } from '../ground/GroundOverlay';
+import { ImpactLayer } from '../impact/ImpactLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
@@ -78,6 +79,7 @@ export function SimulationScene() {
       <WaterLayer />
       <DeformationOverlay />
       <GroundOverlay />
+      <ImpactLayer />
       <ShaderWarmup />
       <SceneCompile version={version} />
       <DeformationPreview />

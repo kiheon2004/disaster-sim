@@ -46,6 +46,21 @@ export interface GroundViz {
   dust: boolean;
 }
 
+/**
+ * Impact visuals (Phase 23, render-only). Body, trajectory and ejecta positions are the computed
+ * ones; `fragmentScale` only enlarges the drawn fragments (labelled exaggeration); flash and dust
+ * are visual effects with no mass or force.
+ */
+export interface ImpactViz {
+  trajectory: boolean;
+  ejecta: boolean;
+  trails: boolean;
+  flash: boolean;
+  dust: boolean;
+  fragmentScale: number;
+}
+export const FRAGMENT_SCALES = [1, 3, 10] as const;
+
 /** Ground tool in the 3D view: set a point (sinkhole / landslide circle) or draw a polygon. */
 export interface GroundPick {
   id: string;
@@ -101,6 +116,8 @@ interface ViewState {
   setDeformPreview: (id: string | null) => void;
   groundViz: GroundViz;
   setGroundViz: (patch: Partial<GroundViz>) => void;
+  impactViz: ImpactViz;
+  setImpactViz: (patch: Partial<ImpactViz>) => void;
   groundPick: GroundPick | null;
   setGroundPick: (p: GroundPick | null) => void;
   /** Experiment instance (sinkhole / landslide) whose predicted outcome is drawn on the ground. */
@@ -142,6 +159,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setDeformPreview: (deformPreview) => set({ deformPreview }),
   groundViz: { mode: 'change', arrows: true, sources: true, dust: true },
   setGroundViz: (patch) => set((s) => ({ groundViz: { ...s.groundViz, ...patch } })),
+  impactViz: { trajectory: true, ejecta: true, trails: true, flash: true, dust: true, fragmentScale: 3 },
+  setImpactViz: (patch) => set((s) => ({ impactViz: { ...s.impactViz, ...patch } })),
   groundPick: null,
   setGroundPick: (groundPick) => set({ groundPick }),
   groundPreview: null,

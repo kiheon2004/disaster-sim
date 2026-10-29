@@ -24,10 +24,12 @@ import { currentDeformation } from '../terrain/runtimeGround';
 import { FieldPatch } from '../deformation/fieldMesh';
 import { fsColor } from './groundColors';
 import type { GroundArea, LandslideSpec, SinkholeSpec } from '@/ground/types';
+import type { ImpactSpec } from '@/impact/types';
 import { areaCentroid } from '@/ground/common';
 import { GeoField } from '@/ground/GeoField';
 import { LandslideModel } from '@/ground/landslide';
 import { sinkholeOutlook } from '@/phenomena/groundDefinitions';
+import { ImpactPreview } from '../impact/ImpactPreview';
 import type { PhenomenonInstance } from '@/phenomena/types';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -37,7 +39,7 @@ function groundTerrain(): TerrainData {
 }
 
 function useGroundInstance(id: string | null): PhenomenonInstance | null {
-  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide')) ?? null : null));
+  return useWorldStore((s) => (id ? s.doc.scenario.experiment?.instances.find((i) => i.id === id && (i.type === 'sinkhole' || i.type === 'landslide' || i.type === 'impact')) ?? null : null));
 }
 
 /** Points of a closed (or open) line on the ground, lifted a little. */
@@ -58,7 +60,7 @@ function draped(pts: [number, number][], closed: boolean, step = 1): THREE.Vecto
   return out;
 }
 
-function circlePts(cx: number, cz: number, r: number, n = 72): [number, number][] {
+export function circlePts(cx: number, cz: number, r: number, n = 72): [number, number][] {
   return Array.from({ length: n }, (_, i) => [cx + Math.cos((i / n) * Math.PI * 2) * r, cz + Math.sin((i / n) * Math.PI * 2) * r] as [number, number]);
 }
 
@@ -132,7 +134,8 @@ export function GroundPicker() {
       const cur = current();
       if (!cur) return done();
       if (mode === 'point') {
-        if (cur.type === 'sinkhole') updatePhenomenon(id, { spec: { ...(cur.spec as SinkholeSpec), center: p } });
+        if (cur.type === 'impact') updatePhenomenon(id, { spec: { ...(cur.spec as ImpactSpec), target: p } });
+        else if (cur.type === 'sinkhole') updatePhenomenon(id, { spec: { ...(cur.spec as SinkholeSpec), center: p } });
         else updatePhenomenon(id, { spec: { ...(cur.spec as LandslideSpec), area: moveArea((cur.spec as LandslideSpec).area, p) } });
         return done();
       }
@@ -183,6 +186,7 @@ export function GroundPicker() {
   }
   if (!hover) return null;
   let outline: [number, number][];
+  if (inst.type === 'impact') return <AimMarker x={hover[0]} z={hover[1]} color="#ffd34d" />;
   if (inst.type === 'sinkhole') outline = circlePts(hover[0], hover[1], (inst.spec as SinkholeSpec).cavityRadius);
   else outline = areaOutline(moveArea((inst.spec as LandslideSpec).area, hover));
   return <GroundLine pts={outline} color="#ffd34d" />;
@@ -241,9 +245,21 @@ function LandslidePreview({ inst }: { inst: PhenomenonInstance }) {
   );
 }
 
+/** A cross + small ring on the ground (impact aim / impact point). */
+export function AimMarker({ x, z, color, r = 2 }: { x: number; z: number; color: string; r?: number }) {
+  return (
+    <group>
+      <GroundLine pts={circlePts(x, z, r, 32)} color={color} />
+      <GroundLine pts={[[x - 2 * r, z], [x + 2 * r, z]]} closed={false} color={color} />
+      <GroundLine pts={[[x, z - 2 * r], [x, z + 2 * r]]} closed={false} color={color} />
+    </group>
+  );
+}
+
 export function GroundPreview() {
   const id = useViewStore((s) => s.groundPreview);
   const inst = useGroundInstance(id);
   if (!inst) return null;
+  if (inst.type === 'impact') return <ImpactPreview inst={inst} />;
   return inst.type === 'sinkhole' ? <SinkholePreview inst={inst} /> : <LandslidePreview inst={inst} />;
 }

@@ -12,7 +12,7 @@ import { TerrainInspector } from './TerrainInspector';
 import { QuakeLiveSection } from './SeismicInspector';
 import { FloodLiveSection, FloodProbeSection } from './FloodInspector';
 import { DeformationLiveSection, DeformationProbeSection } from './DeformationInspector';
-import { GroundObjectSection, GroundProbeSection } from './GroundInspector';
+import { GroundObjectSection, GroundProbeSection, ImpactObjectSection } from './GroundInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
 import { MemberInspector } from '@/ui/Building/MemberInspector';
@@ -49,6 +49,7 @@ export function InspectorPanel() {
           {inSim && <FloodLiveSection id={obj.id} />}
           {inSim && <DeformationLiveSection id={obj.id} />}
           {inSim && <GroundObjectSection id={obj.id} />}
+          {inSim && <ImpactObjectSection id={obj.id} />}
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>

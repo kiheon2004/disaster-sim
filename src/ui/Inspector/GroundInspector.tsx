@@ -5,6 +5,7 @@ import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { slopeAt } from '@/ground/common';
+import { shockAt } from '@/impact/plan';
 import { Section } from '@/ui/common/Panel';
 import { fmt } from '@/ui/format';
 import styles from './Inspector.module.css';
@@ -75,8 +76,15 @@ export function GroundProbeSection() {
     [t('ground.inspect.mobile'), f.h[i] > 0.005 ? `${fmt(f.h[i], 2)} m · ${fmt(v, 1)} m/s` : '–'],
     [t('ground.inspect.deposit'), f.loose[i] > 0.005 ? `${fmt(f.loose[i], 2)} m` : '–'],
     [t('ground.inspect.change'), `${f.bed[i] + f.h[i] >= 0 ? '+' : '−'}${fmt(Math.abs(f.bed[i] + f.h[i]), 3)} m`],
-    [t('deform.inspect.source'), owner ? `${owner.name} · ${t(ch.sinkholes.includes(owner as never) ? 'phen.sinkhole' : 'phen.landslide')}` : '–'],
+    [t('deform.inspect.source'), owner ? `${owner.name} · ${t('kind' in owner ? 'phen.meteor' : ch.sinkholes.includes(owner as never) ? 'phen.sinkhole' : 'phen.landslide')}` : '–'],
   );
+  // Phase 23: distance to each impact and its computed ground shock at this point.
+  for (const m of env.impact.models) {
+    if (!m.plan.crater) continue;
+    const r = Math.hypot(x - m.plan.arc.point[0], z - m.plan.arc.point[2]);
+    const sh = shockAt(m.plan, r);
+    rows.push([t('impact.inspect.point'), t('impact.inspect.pointRow', { id: m.name, r: fmt(r, 1), R: fmt(m.plan.crater.radius, 1), pgv: fmt(sh.pgv, 3), pga: fmt(sh.pgaApplied / 9.81, 2) })]);
+  }
   const rt = simulationController.getRuntime();
   const near: { d: number; text: string }[] = [];
   if (rt) for (const e of rt.entities.values()) {
@@ -128,6 +136,31 @@ export function GroundObjectSection({ id }: { id: EntityId }) {
     <Section title={t('ground.obj.title')}>
       <Rows rows={rows} testId="ground-object" />
       <div className={styles.note}>{t('ground.obj.note' as MessageKey)}</div>
+    </Section>
+  );
+}
+
+/** Impact responses of the selected object (Phase 23). */
+export function ImpactObjectSection({ id }: { id: EntityId }) {
+  const t = useT();
+  useSimStore((s) => s.time);
+  const e = simulationController.getRuntime()?.entities.get(id);
+  if (!e || (!e.impact && !(e.seismic && e.seismic.pgaImpact > 0))) return null;
+  const rows: [string, string][] = [];
+  if (e.seismic && e.seismic.pgaImpact > 0) rows.push([t('impact.obj.shock'), `${fmt(e.seismic.pgaImpact / 9.81, 2)} g (${t('impact.obj.quake')} ${fmt(e.seismic.pgaQuake / 9.81, 2)} g)`]);
+  if (e.impact) {
+    rows.push(
+      [t('impact.obj.hits'), `${e.impact.hits}`],
+      [t('impact.obj.load'), `${fmt(e.impact.ejectaRatio, 2)} × ${t('ground.obj.capacity')}`],
+      [t('impact.obj.impulse'), `${fmt(e.impact.impulse / 1000, 2)} kN·s`],
+      [t('impact.obj.damage'), fmt(e.impact.damage, 3)],
+      [t('deform.inspect.source'), e.impact.source],
+    );
+  }
+  return (
+    <Section title={t('impact.obj.title')}>
+      <Rows rows={rows} testId="impact-object" />
+      <div className={styles.note}>{t('impact.obj.note')}</div>
     </Section>
   );
 }
