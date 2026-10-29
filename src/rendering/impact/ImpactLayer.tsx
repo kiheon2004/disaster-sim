@@ -5,7 +5,9 @@
  *    km/s that is a fraction of a second; the HUD counts down the entry stage instead of faking a
  *    slow approach). A glow is drawn while the body is faster than ~3 km/s (luminous flight; slower
  *    bodies fall "dark");
- *  - flash at the impact point for 0.3 s (visual effect, no energy applied);
+ *  - flash at the impact point for 0.3 s (visual effect, no energy applied). A sprite only — no
+ *    light: adding a light changes the scene's light count, which recompiles every lit material
+ *    (all buildings, the terrain) at the start of the run (measured 90–360 ms stall);
  *  - ejecta: every parcel drawn at its computed position along its integrated path between its
  *    launch and landing time, with a short trail; fragment size × the chosen exaggeration
  *    (labelled — the computed size is used by the physics);
@@ -47,7 +49,6 @@ function ImpactVisual({ model }: { model: ImpactModel }) {
   const bodyRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
   const flashRef = useRef<THREE.Mesh>(null);
-  const lightRef = useRef<THREE.PointLight>(null);
   const arc = useDisposable(() => {
     const a = plan.arc, pts: THREE.Vector3[] = [];
     for (let k = 0; k <= 80; k++) {
@@ -110,14 +111,13 @@ function ImpactVisual({ model }: { model: ImpactModel }) {
       glow.scale.setScalar(Math.max(1, plan.projectile.diameter * 2.5));
     }
     // Flash.
-    const flash = flashRef.current, light = lightRef.current;
+    const flash = flashRef.current;
     const fa = !plan.airburst && viz.flash && tau >= 0 && tau < FLASH_TIME ? 1 - tau / FLASH_TIME : 0;
     if (flash) {
       flash.visible = fa > 0;
       (flash.material as THREE.MeshBasicMaterial).opacity = 0.9 * fa;
       flash.scale.setScalar(Math.max(2, (plan.crater?.radius ?? 1) * (1 + 2 * (1 - fa))));
     }
-    if (light) light.intensity = fa * Math.min(5000, 50 * Math.log10(1 + plan.energy / 1e6));
     // Ejecta parcels.
     let n = 0, tn = 0;
     const tr = trails.attributes.position.array as Float32Array;
@@ -182,7 +182,6 @@ function ImpactVisual({ model }: { model: ImpactModel }) {
       <mesh ref={bodyRef} geometry={bodyGeo} material={bodyMat} visible={false} />
       <mesh ref={glowRef} geometry={glowGeo} material={glowMat} visible={false} raycast={() => null} />
       <mesh ref={flashRef} geometry={glowGeo} material={flashMat} position={[px, py + 1, pz]} visible={false} raycast={() => null} />
-      <pointLight ref={lightRef} position={[px, py + 6, pz]} color="#ffe2b0" intensity={0} distance={200} decay={1.5} />
       <primitive object={rocks} />
       <lineSegments geometry={trails} material={trailMat} frustumCulled={false} />
       <points geometry={dust} material={dustMat} frustumCulled={false} />

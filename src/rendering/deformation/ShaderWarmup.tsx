@@ -1,6 +1,7 @@
 /**
  * Compiles, while the simulation scene loads, the shader programs a terrain deformation needs
- * later (Phase 21; Phase 22 adds the ground-failure overlay's points / instanced arrows / lines): the heightfield terrain material, its skirt, outline and surroundings (the flat
+ * later (Phase 21; Phase 22 adds the ground-failure overlay's points / instanced arrows / lines;
+ * Phase 23 the impact layer's flat-shaded body / instanced rocks / additive glow): the heightfield terrain material, its skirt, outline and surroundings (the flat
  * world draws a plain plane) and the RGBA vertex-color overlay. Without this the first deformation update stalls one frame by
  * ~100 ms on shader compilation. Two tiny triangles far below the world, drawn for a few frames,
  * then removed; materials with the same shader share the compiled program.
@@ -34,8 +35,13 @@ export function ShaderWarmup() {
     const arrows = new THREE.InstancedMesh(tri(3), arrow, 1);
     arrows.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3).fill(1), 3);
     arrows.frustumCulled = false;
+    // Phase 23 impact layer: body (flat-shaded standard), rocks (instanced), glow / flash (additive).
+    const body = new THREE.MeshStandardMaterial({ color: '#7d7266', roughness: 0.9, flatShading: true });
+    const glow = new THREE.MeshBasicMaterial({ color: '#ffb35c', transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+    const rocks = new THREE.InstancedMesh(tri(3), new THREE.MeshStandardMaterial({ color: '#8a7358', roughness: 1, flatShading: true }), 1);
+    rocks.frustumCulled = false;
     const lines = [line, dashed].map((m) => Object.assign(new THREE.Line(tri(3), m), { frustumCulled: false }));
-    return { terrain, overlay, skirt, outline, ring, dust, arrow, line, dashed, arrows, lines, g3: tri(3), g4: tri(4) };
+    return { terrain, overlay, skirt, outline, ring, dust, arrow, line, dashed, arrows, lines, body, glow, rocks, g3: tri(3), g4: tri(4) };
   }, []);
   useEffect(() => () => {
     parts.terrain.dispose();
@@ -49,6 +55,10 @@ export function ShaderWarmup() {
     parts.dashed.dispose();
     parts.arrows.geometry.dispose();
     for (const l of parts.lines) l.geometry.dispose();
+    parts.body.dispose();
+    parts.glow.dispose();
+    parts.rocks.geometry.dispose();
+    (parts.rocks.material as THREE.Material).dispose();
     parts.g3.dispose();
     parts.g4.dispose();
   }, [parts]);
@@ -67,6 +77,9 @@ export function ShaderWarmup() {
       <primitive object={parts.arrows} />
       <primitive object={parts.lines[0]} />
       <primitive object={parts.lines[1]} />
+      <mesh geometry={parts.g3} material={parts.body} frustumCulled={false} />
+      <mesh geometry={parts.g3} material={parts.glow} frustumCulled={false} />
+      <primitive object={parts.rocks} />
     </group>
   );
 }
