@@ -20,9 +20,10 @@ import { useEntityStates } from '@/ui/useEntityStates';
 import { TerrainPanel } from '@/ui/Terrain/TerrainPanel';
 import { BuildingPanel } from '@/ui/Building/BuildingPanel';
 import { RoadPanel } from '@/ui/Roads/RoadPanel';
+import { BlueprintPanel } from '@/ui/Blueprints/BlueprintPanel';
 import styles from './ObjectPalette.module.css';
 
-type Tab = 'objects' | 'building' | 'terrain' | 'roads' | 'scene';
+type Tab = 'objects' | 'building' | 'terrain' | 'roads' | 'blueprints' | 'scene';
 
 export function ObjectPalette() {
   countRender('ObjectPalette');
@@ -40,10 +41,13 @@ export function ObjectPalette() {
     // The Roads tab is Road Editing Mode (Phase 18), like the Terrain tab.
     if (next === 'roads' && ed.mode === 'editor') ed.setRoadEdit(true);
     else if (ed.tool === 'road') ed.setRoadEdit(false);
+    // Blueprint Mode (Phase 20): capture / placement end when the tab is left.
+    if (next !== 'blueprints' && ed.tool === 'blueprint') ed.setBlueprintTool(false);
   };
   const buildingActive = useEditorStore((s) => s.tool === 'building');
   const roadActive = useEditorStore((s) => s.tool === 'road');
-  const shown: Tab = terrainActive ? 'terrain' : buildingActive ? 'building' : roadActive ? 'roads' : tab;
+  const blueprintActive = useEditorStore((s) => s.tool === 'blueprint');
+  const shown: Tab = terrainActive ? 'terrain' : buildingActive ? 'building' : roadActive ? 'roads' : blueprintActive ? 'blueprints' : tab;
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs} role="tablist">
@@ -59,11 +63,14 @@ export function ObjectPalette() {
         <button role="tab" aria-selected={shown === 'roads'} data-testid="tab-roads" className={`${styles.tab} ${shown === 'roads' ? styles.active : ''}`} onClick={() => setTab('roads')}>
           {t('panel.roads')}
         </button>
+        <button role="tab" aria-selected={shown === 'blueprints'} data-testid="tab-blueprints" className={`${styles.tab} ${shown === 'blueprints' ? styles.active : ''}`} onClick={() => setTab('blueprints')}>
+          {t('panel.blueprints')}
+        </button>
         <button role="tab" aria-selected={shown === 'scene'} className={`${styles.tab} ${shown === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
           {t('panel.scene')} ({count})
         </button>
       </div>
-      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : shown === 'roads' ? <RoadPanel /> : <OutlinerTab />}
+      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : shown === 'roads' ? <RoadPanel /> : shown === 'blueprints' ? <BlueprintPanel /> : <OutlinerTab />}
     </div>
   );
 }

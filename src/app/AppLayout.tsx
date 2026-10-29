@@ -3,6 +3,7 @@ import { ObjectPalette } from '@/ui/ObjectPalette/ObjectPalette';
 import { InspectorPanel } from '@/ui/Inspector/InspectorPanel';
 import { BottomPanel } from '@/ui/BottomPanel/BottomPanel';
 import { ViewportContainer } from '@/ui/Viewport/ViewportContainer';
+import { BlueprintDialogs } from '@/ui/Blueprints/BlueprintDialogs';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
@@ -25,6 +26,7 @@ export function AppLayout() {
       <aside className={styles.right}>
         <InspectorPanel />
       </aside>
+      <BlueprintDialogs />
     </div>
   );
 }

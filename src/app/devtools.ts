@@ -41,6 +41,16 @@ import * as roadCity from '@/roads/city';
 import { blocksOf } from '@/roads/blocks';
 import { intersectionsOf } from '@/roads/intersections';
 import { emptyNetwork, defaultProfile, PROFILE_PRESETS } from '@/roads/types';
+import * as blueprintActions from './blueprintActions';
+import { useBlueprintStore } from '@/editor/blueprintStore';
+import { useLibraryStore } from '@/blueprints/library';
+import { captureBlueprint } from '@/blueprints/capture';
+import { planPlacement as planBlueprint, defaultPlacement } from '@/blueprints/place';
+import { parseBlueprintText, serializeBlueprint } from '@/blueprints/schema';
+import { buildBuiltinBlueprint } from '@/blueprints/builtin';
+import { buildTemplate } from '@/templates/builtin';
+import { createTemplate, serializeTemplate, parseTemplate } from '@/templates/template';
+import { worldFingerprint } from '@/world/fingerprint';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -64,6 +74,11 @@ export function installDevtools() {
     roadBatches: getRoadBatches,
     roadStats,
     roadLib: { ...roadNetwork, ...roadCity, blocksOf, intersectionsOf, emptyNetwork, defaultProfile, PROFILE_PRESETS },
+    /** Phase 20 blueprints / templates (benchmarks / browser verification). */
+    blueprintActions,
+    blueprints: useBlueprintStore,
+    library: useLibraryStore,
+    blueprintLib: { captureBlueprint, planPlacement: planBlueprint, defaultPlacement, parseBlueprintText, serializeBlueprint, buildBuiltinBlueprint, buildTemplate, createTemplate, serializeTemplate, parseTemplate, worldFingerprint },
     locale: useLocaleStore,
     /** Translate a key in the current locale (browser verification finds buttons by label). */
     tr: (key: MessageKey) => translate(useLocaleStore.getState().locale, key),

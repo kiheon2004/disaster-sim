@@ -21,6 +21,7 @@ import { StaticWaterLayer } from '@/rendering/landscape/StaticWaterLayer';
 import { RoadTool } from './tools/RoadTool';
 import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
 import { PasteTool } from './tools/PasteTool';
+import { BlueprintTool } from './tools/BlueprintTool';
 import { TransformGizmo } from './TransformGizmo';
 import { GroupSelection } from './GroupSelection';
 import { MarqueeSelect } from './MarqueeSelect';
@@ -218,6 +219,7 @@ export function EditorScene() {
       {tool === 'paste' && <PasteTool />}
       {tool === 'terrain' && (isBrushTool(terrainTool) || terrainTool === 'inspect' ? <TerrainTool /> : <NatureTool />)}
       {tool === 'road' && <RoadTool />}
+      {tool === 'blueprint' && <BlueprintTool />}
       {editingBuilding && <BuildingEditor />}
       {interactive && single && <TransformGizmo />}
       {multi && <GroupSelection ids={selectedIds} />}

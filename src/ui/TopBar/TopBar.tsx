@@ -16,6 +16,7 @@ import { Icon } from '@/ui/common/Icon';
 import { LanguageToggle } from './LanguageToggle';
 import { ModeSwitch } from './ModeSwitch';
 import { HelpButton } from './HelpDialog';
+import { useBlueprintStore } from '@/editor/blueprintStore';
 import styles from './TopBar.module.css';
 
 export function TopBar() {
@@ -40,6 +41,9 @@ export function TopBar() {
         onChange={(e) => useWorldStore.getState().setProjectName(e.target.value)}
       />
       <div className={styles.group}>
+        <button className={styles.iconBtn} disabled={!editing} onClick={() => useBlueprintStore.getState().setWizardOpen(true)} title={t('wiz.title')} data-testid="topbar-new-world">
+          <Icon name="globe" /> {t('topbar.newWorld')}
+        </button>
         <button className={styles.iconBtn} onClick={saveProject} title={t('topbar.save.title')}>
           <Icon name="save" /> {t('topbar.save')}
         </button>

@@ -1,6 +1,7 @@
 import { Viewport } from '@/rendering/Viewport';
 import { EditorScene } from '@/editor/EditorScene';
 import { SimulationScene } from '@/rendering/sim/SimulationScene';
+import { useBlueprintStore } from '@/editor/blueprintStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { useRoadStore } from '@/editor/roadStore';
 import { isBrushTool } from '@/editor/tools/TerrainTool';
@@ -60,6 +61,8 @@ export function ViewportContainer() {
             ? t('viewport.hint.sim')
             : tool === 'building'
               ? t('viewport.hint.building')
+              : tool === 'blueprint'
+                ? <BlueprintHint />
               : tool === 'road'
                 ? t('viewport.hint.road', { mode: t(`road.mode.${roadMode}`), hint: t(`road.hint.${roadMode}`) })
               : tool === 'terrain'
@@ -83,4 +86,12 @@ export function ViewportContainer() {
       {loading && <div className={styles.loading}>{t('app.loadingPhysics')}</div>}
     </div>
   );
+}
+
+/** Blueprint Mode hint (Phase 20): what the viewport does in the current capture / placement step. */
+function BlueprintHint() {
+  const t = useT();
+  const mode = useBlueprintStore((s) => s.mode);
+  const kind = useBlueprintStore((s) => s.capture.kind);
+  return <>{mode === 'place' ? t('bp.place.hint') : t(`bp.capture.hint.${kind}`)}</>;
 }

@@ -12,7 +12,7 @@ const MODES: { mode: TransformMode; icon: IconName; key: string; label: 'tool.mo
 ];
 
 /** Build tools (Phase 16). Exactly one is active; each owns viewport input while active. */
-export const BUILD_TOOLS: { tool: Exclude<EditorTool, 'terrain' | 'paste' | 'building' | 'road'>; icon: IconName; key: string; label: MessageKey }[] = [
+export const BUILD_TOOLS: { tool: Exclude<EditorTool, 'terrain' | 'paste' | 'building' | 'road' | 'blueprint'>; icon: IconName; key: string; label: MessageKey }[] = [
   { tool: 'select', icon: 'cursor', key: 'V', label: 'build.tool.select' },
   { tool: 'place', icon: 'place', key: 'P', label: 'build.tool.place' },
   { tool: 'brush', icon: 'scatter', key: 'B', label: 'build.tool.brush' },

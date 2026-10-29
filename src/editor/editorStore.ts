@@ -7,10 +7,11 @@ export type AppMode = 'editor' | 'simulation';
  * Exactly one tool owns viewport input at a time (Phase 16): select (click / Shift+click /
  * Shift+drag box, gizmo), place (single click), brush (drag to scatter), line (click points),
  * area (drag a rectangle / circle or paint a region, then apply), paste (clipboard ghost),
- * terrain (Terrain Editing Mode), road (Road Editing Mode, Phase 18 — modes in roadStore).
+ * terrain (Terrain Editing Mode), road (Road Editing Mode, Phase 18 — modes in roadStore),
+ * blueprint (Phase 20: drawing a capture area / placing a blueprint — session in blueprintStore).
  * Switching tools ends the previous tool's session.
  */
-export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste' | 'terrain' | 'building' | 'road';
+export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste' | 'terrain' | 'building' | 'road' | 'blueprint';
 /** Tools that place the armed palette preset. */
 export const PLACEMENT_TOOLS: readonly EditorTool[] = ['place', 'brush', 'line', 'area'];
 export const isPlacementTool = (t: EditorTool) => (PLACEMENT_TOOLS as readonly string[]).includes(t);
@@ -68,9 +69,11 @@ interface EditorState {
   /** Arm a preset for the current placement tool (place by default); null/same id = back to select. */
   armPlacement: (itemId: string | null) => void;
   /** Switch tool. Placement tools keep the armed preset; select / paste clear it. */
-  setTool: (tool: Exclude<EditorTool, 'terrain' | 'building' | 'road'>) => void;
+  setTool: (tool: Exclude<EditorTool, 'terrain' | 'building' | 'road' | 'blueprint'>) => void;
   /** Enter / leave Road Editing Mode (Phase 18). */
   setRoadEdit: (on: boolean) => void;
+  /** Give / take viewport input to the blueprint capture / placement tool (Phase 20). */
+  setBlueprintTool: (on: boolean) => void;
   rotateGhost: (delta: number) => void;
   select: (id: EntityId | null) => void;
   /** Replace the selection (primary = `primary` if given and included, else the last id). */
@@ -155,6 +158,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
   setRoadEdit: (on) =>
     set(on ? { tool: 'road', placeItemId: null, selectedId: null, selectedIds: [], hoveredId: null, buildingId: null } : { tool: 'select' }),
+  setBlueprintTool: (on) =>
+    set(on ? { tool: 'blueprint', placeItemId: null, hoveredId: null, buildingId: null } : get().tool === 'blueprint' ? { tool: 'select' } : {}),
   setBuildingEdit: (id) =>
     set(id
       ? { tool: 'building', buildingId: id, placeItemId: null, selectedId: id, selectedIds: [id], hoveredId: null }

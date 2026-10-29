@@ -14,6 +14,9 @@ import { useNatureStore } from '@/editor/natureStore';
 import { deleteFeature, finishNatureDraft } from '@/app/natureActions';
 import type { TerrainToolId } from '@/editor/editorStore';
 import { deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, modularBuilding } from '@/app/buildingActions';
+import { useBlueprintStore } from '@/editor/blueprintStore';
+import { backToLibrary, pinPlacement, rotatePlacement } from '@/app/blueprintActions';
+import { closePolygon } from '@/editor/tools/BlueprintTool';
 
 /** Building Edit Mode keys. Returns true when the key was handled. */
 function buildingKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
@@ -144,6 +147,45 @@ function natureKeys(e: KeyboardEvent, key: string, tool: TerrainToolId): boolean
   return false;
 }
 
+/** Blueprint Mode keys (Phase 20): capture polygon editing, placement turning / unpinning. */
+function blueprintKeys(e: KeyboardEvent, key: string): boolean {
+  const bs = useBlueprintStore.getState();
+  const step = degToRad(useBuildStore.getState().snapping.rotationStep);
+  if (bs.mode === 'capture') {
+    const c = bs.capture;
+    switch (key) {
+      case 'enter':
+        if (c.kind === 'polygon' && c.draft.length >= 3) { e.preventDefault(); closePolygon(); return true; }
+        return false;
+      case 'backspace':
+        if (c.kind === 'polygon' && c.draft.length) { e.preventDefault(); bs.setCapture({ draft: c.draft.slice(0, -1) }); return true; }
+        return false;
+      case 'escape':
+        if (c.draft.length) bs.setCapture({ draft: [] });
+        else backToLibrary();
+        return true;
+    }
+    return false;
+  }
+  if (bs.mode === 'place') {
+    switch (key) {
+      case 'r':
+        rotatePlacement(e.shiftKey ? -Math.PI / 2 : Math.PI / 2);
+        return true;
+      case 't':
+        rotatePlacement(e.shiftKey ? -step : step);
+        return true;
+      case 'escape':
+        if (bs.place.pinned) pinPlacement(null);
+        else backToLibrary();
+        return true;
+      case 'enter':
+        return true; // (confirmed by the placement tool itself)
+    }
+  }
+  return false;
+}
+
 /** Tool keys (Phase 16). Chosen not to collide with W/E/R/F/G/T, Space, [ ], Shift+P. */
 const TOOL_KEYS: Record<string, 'select' | 'place' | 'brush' | 'line' | 'area'> = { v: 'select', p: 'place', b: 'brush', l: 'line', a: 'area' };
 
@@ -239,7 +281,9 @@ export function useEditorHotkeys() {
       if (ed.tool === 'terrain' && natureKeys(e, key, ed.terrainTool)) return;
       // Road Editing Mode (Phase 18): draft / selection keys.
       if (ed.tool === 'road' && roadKeys(e, key)) return;
-      if (ed.tool !== 'terrain' && ed.tool !== 'road' && TOOL_KEYS[key] && !e.altKey) {
+      // Blueprint Mode (Phase 20).
+      if (ed.tool === 'blueprint' && blueprintKeys(e, key)) return;
+      if (ed.tool !== 'terrain' && ed.tool !== 'road' && ed.tool !== 'blueprint' && TOOL_KEYS[key] && !e.altKey) {
         ed.setTool(TOOL_KEYS[key]);
         return;
       }
