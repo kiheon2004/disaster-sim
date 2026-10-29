@@ -209,14 +209,16 @@ export class GravityRuntime {
         }
       }
       const gg = Math.hypot(g[0], g[1], g[2]);
-      if (cel) cel.sampleAt(ctx, x[0], x[1], x[2]);
+      if (cel) { const tsa = P.now(); cel.sampleAt(ctx, x[0], x[1], x[2]); P.add('celestial.sample', tsa); }
       if (gg > this.stats.peak) this.stats.peak = gg;
       if (gg < this.stats.minimum) this.stats.minimum = gg;
       n++;
     };
+    const tv = P.now();
     for (const e of ctx.runtime.entities.values()) if (e.dynamic && e.body !== null) visit(e.body, e, 800, 2.5);
     for (const d of ctx.runtime.debris) visit(d.body, d, 600, 4);
     if (cel) for (const p of cel.probes) if (p.body !== null) visit(p.body, p, -1, 0);
+    P.add('gravity.visit', tv);
     // Bodies that left the set (removed debris, bodies made fixed).
     for (const [h, tr] of this.tracked) {
       if (tr.seen === stamp) continue;
@@ -239,7 +241,9 @@ export class GravityRuntime {
     const ts = performance.now();
     const moved = G[0] !== this.lastG[0] || G[1] !== this.lastG[1] || G[2] !== this.lastG[2];
     this.lastG[0] = G[0]; this.lastG[1] = G[1]; this.lastG[2] = G[2];
+    const tsu = P.now();
     this.structures.update(ctx, f, moved || this.fieldChanging);
+    P.add('gravity.structures', tsu);
     if (cel) { const tc = P.now(); cel.structuresStep(ctx); P.add('celestial.struct', tc); }
     this.stats.structMs = performance.now() - ts;
     const s = this.stats;

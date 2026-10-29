@@ -31,6 +31,7 @@ import { G_N, schwarzschildRadius } from '@/celestial/constants';
 import { newForceRecord, type ForceRecord } from '../forces/ForceLedger';
 import { CelestialLedger, type CaptureKind } from '@/celestial/ledger';
 import { CelestialStructures } from './structures';
+import { simProfiler as P } from '../profiling/SimProfiler';
 
 /** Seconds between history samples, history length. */
 const SERIES_DT = 0.25;
@@ -282,13 +283,17 @@ export class CelestialRuntime {
    */
   integrate(ctx: SystemContext, h: BodyHandle, m: number, x0: Readonly<Vec3>, v0: Readonly<Vec3>, g0: Readonly<Vec3>, phi0: number, dt: number, ledger: GravityLedger, out: { captured: number; x: Vec3; v: Vec3 }): boolean {
     const physics = ctx.physics;
+    const tq = P.now();
     // Only a free dynamic body: a fixed one (buried, settled) is not moved by Rapier, so the replacement would move it.
-    if (physics.isSleeping(h) || !physics.isDynamic(h)) return false;
-    if (physics.touching(h)) { this.stats.contact++; return false; }
+    if (physics.isSleeping(h) || !physics.isDynamic(h)) { P.add('kdk.query', tq); return false; }
+    if (physics.touching(h)) { this.stats.contact++; P.add('kdk.query', tq); return false; }
+    P.add('kdk.query', tq);
     const x = this.x, v = this.v, res = this.res;
     x[0] = x0[0]; x[1] = x0[1]; x[2] = x0[2];
     v[0] = v0[0]; v[1] = v0[1]; v[2] = v0[2];
+    const ti = P.now();
     kdk(this.sf, x, v, dt, res);
+    P.add('kdk.integrate', ti);
     this.note(res.n, res.capped, ctx);
     const kappa = physics.freeKappa(), damp = 1 / (1 + physics.linearDamping(h) * dt);
     physics.readMotion(h, POS, VEL, 0);

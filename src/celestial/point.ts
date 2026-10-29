@@ -110,6 +110,8 @@ export class PointField {
   readonly live: PointLive[] = [];
   private pool: PointLive[] = [];
   time = -Infinity;
+  /** Bumped whenever the live sources change (prepare, growth) — the key of field caches (Phase 32.1). */
+  epoch = 0;
   private readonly tmp: Vec3 = [0, 0, 0];
   private readonly vtmp: Vec3 = [0, 0, 0];
 
@@ -130,6 +132,7 @@ export class PointField {
   prepare(t: number): this {
     if (t === this.time) return this;
     this.time = t;
+    this.epoch++;
     this.live.length = 0;
     let n = 0;
     for (const e of this.entries) {
@@ -163,6 +166,7 @@ export class PointField {
     const e = this.entries.find((x) => x.owner === owner && x.index === index);
     if (!e) return;
     e.grown += m;
+    this.epoch++;
     const l = this.live.find((x) => x.owner === owner && x.index === index);
     if (l) l.mu = (l.mu / (G_N * (e.spec.mass + e.grown - m))) * G_N * (e.spec.mass + e.grown);
   }

@@ -79,6 +79,23 @@ export class RapierEngine implements PhysicsEngine {
   private userData = new Map<BodyHandle, BodyUserData>();
   private forced = new Set<BodyHandle>();
   private ground: RAPIER.RigidBody | null = null;
+  /**
+   * Contact state from Rapier's collision events (Phase 32.1): every body collider carries COLLISION_EVENTS, so the
+   * narrow phase reports each collider pair when it starts / stops having solver contacts (removals included). Pairs
+   * with contacts (key "c1:c2" → the two bodies, whether one collider is the terrain heightfield) and, per body, how
+   * many of them it is in. `touching` reads the counts — the same predicate as asking the narrow phase pair by pair
+   * (touchingQuery), without a WASM callback per pair. Exception: a heightfield pair starts with contact points inside
+   * the prediction distance even when the heightfield produced no solver contact (measured, Rapier 0.21), so a body
+   * whose only pairs are with the heightfield is asked directly.
+   */
+  private activePairs = new Map<string, [BodyHandle, BodyHandle, boolean]>();
+  private touchCount = new Map<BodyHandle, number>();
+  private hfCount = new Map<BodyHandle, number>();
+  private heightfields = new Set<number>();
+  private colliderBody = new Map<number, BodyHandle>();
+  /** Bodies whose type changed: the narrow phase may drop or revive their pairs without an event (a pair of two fixed
+   *  bodies is no longer computed) — after the next step their pairs are taken from the narrow phase directly. */
+  private resync = new Set<BodyHandle>();
 
   async init(gravity: number, terrain: TerrainColliderDesc | null = null) {
     await ensureRapier();
@@ -100,7 +117,7 @@ export class RapierEngine implements PhysicsEngine {
     const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
     this.ground = ground;
     if (!terrain) {
-      world.createCollider(RAPIER.ColliderDesc.cuboid(GROUND_HALF, 0.5, GROUND_HALF).setFriction(0.9), ground);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(GROUND_HALF, 0.5, GROUND_HALF).setFriction(0.9).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), ground);
       return;
     }
     const { nx, nz, cellSize, originX, originZ, heights, friction } = terrain;
@@ -110,19 +127,22 @@ export class RapierEngine implements PhysicsEngine {
     // centered on the collider origin.
     const cm = new Float32Array(nx * nz);
     for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix < nx; ix++) cm[ix * nz + iz] = heights[iz * nx + ix];
-    world.createCollider(
+    const hf = world.createCollider(
       RAPIER.ColliderDesc.heightfield(nz - 1, nx - 1, cm, { x: sx, y: 1, z: sz }, RAPIER.HeightFieldFlags.FIX_INTERNAL_EDGES)
         .setTranslation(originX + sx / 2, 0.5, originZ + sz / 2)
-        .setFriction(friction),
+        .setFriction(friction)
+        // Contact state (Phase 32.1): a removed collider reports the end of its contacts only when it carries the flag.
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
       ground,
     );
+    this.heightfields.add(hf.handle);
     // Surroundings (top at y = 0): north/south strips span the full width, east/west fill the rest.
     const x0 = originX;
     const x1 = originX + sx;
     const z0 = originZ;
     const z1 = originZ + sz;
     const slab = (cx: number, cz: number, hx: number, hz: number) =>
-      world.createCollider(RAPIER.ColliderDesc.cuboid(hx, 0.5, hz).setTranslation(cx, 0, cz).setFriction(0.9), ground);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(hx, 0.5, hz).setTranslation(cx, 0, cz).setFriction(0.9).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), ground);
     const northDepth = (z0 + GROUND_HALF) / 2;
     const southDepth = (GROUND_HALF - z1) / 2;
     slab(0, z0 - northDepth, GROUND_HALF, northDepth);
@@ -168,10 +188,11 @@ export class RapierEngine implements PhysicsEngine {
         .setRestitution(desc.restitution)
         .setMass(Math.max(0.1, (desc.mass * fractions[i]) / total));
       if (desc.contactForceThreshold !== undefined) {
-        cd.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+        cd.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS | RAPIER.ActiveEvents.COLLISION_EVENTS);
         cd.setContactForceEventThreshold(desc.contactForceThreshold);
-      }
-      world.createCollider(cd, body);
+      } else cd.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+      const c = world.createCollider(cd, body);
+      this.colliderBody.set(c.handle, body.handle);
     });
     if (desc.lockRotations) body.lockRotations(true, true);
 
@@ -183,6 +204,7 @@ export class RapierEngine implements PhysicsEngine {
   removeBody(h: BodyHandle) {
     const b = this.bodies.get(h);
     if (!b || !this.world) return;
+    for (let i = 0; i < b.numColliders(); i++) this.colliderBody.delete(b.collider(i).handle);
     this.world.removeRigidBody(b);
     this.bodies.delete(h);
     this.userData.delete(h);
@@ -192,6 +214,7 @@ export class RapierEngine implements PhysicsEngine {
   setBodyKind(h: BodyHandle, kind: BodyKind) {
     const b = this.bodies.get(h);
     b?.setBodyType(kind === 'fixed' ? RAPIER.RigidBodyType.Fixed : RAPIER.RigidBodyType.Dynamic, true);
+    if (b) this.resync.add(h);
   }
 
   setRotationsLocked(h: BodyHandle, locked: boolean) {
@@ -319,11 +342,17 @@ export class RapierEngine implements PhysicsEngine {
     b.setLinvel({ x: vel[0], y: vel[1], z: vel[2] }, false);
   }
 
+  touching(h: BodyHandle) {
+    if ((this.touchCount.get(h) ?? 0) > 0) return true;
+    return (this.hfCount.get(h) ?? 0) > 0 && this.touchingQuery(h);
+  }
+
   isDynamic(h: BodyHandle) {
     return this.bodies.get(h)?.isDynamic() ?? false;
   }
 
-  touching(h: BodyHandle) {
+  /** The narrow phase asked pair by pair: a collider pair of the body with at least one solver contact (reference of `touching`). */
+  touchingQuery(h: BodyHandle) {
     const b = this.bodies.get(h);
     const world = this.world;
     if (!b || !world) return false;
@@ -351,6 +380,61 @@ export class RapierEngine implements PhysicsEngine {
     const world = this.w();
     world.timestep = dt;
     world.step(this.events ?? undefined);
+    this.events?.drainCollisionEvents((c1, c2, started) => {
+      const key = c1 < c2 ? `${c1}:${c2}` : `${c2}:${c1}`;
+      if (started) {
+        if (this.activePairs.has(key)) return;
+        const b1 = this.colliderBody.get(c1), b2 = this.colliderBody.get(c2);
+        this.hold([b1 ?? -1, b2 ?? -1, this.heightfields.has(c1) || this.heightfields.has(c2)], key);
+      } else {
+        const pair = this.activePairs.get(key);
+        if (!pair) return;
+        this.activePairs.delete(key);
+        this.release(pair);
+      }
+    });
+    if (this.resync.size) {
+      for (const h of this.resync) this.resyncBody(world, h);
+      this.resync.clear();
+    }
+  }
+
+  private hold(pair: [BodyHandle, BodyHandle, boolean], key: string) {
+    this.activePairs.set(key, pair);
+    const count = pair[2] ? this.hfCount : this.touchCount;
+    for (let i = 0; i < 2; i++) {
+      const b = pair[i] as BodyHandle;
+      if (b >= 0) count.set(b, (count.get(b) ?? 0) + 1);
+    }
+  }
+
+  private release(pair: [BodyHandle, BodyHandle, boolean]) {
+    const count = pair[2] ? this.hfCount : this.touchCount;
+    for (let i = 0; i < 2; i++) {
+      const b = pair[i] as BodyHandle;
+      if (b < 0) continue;
+      const n = (count.get(b) ?? 0) - 1;
+      if (n > 0) count.set(b, n); else count.delete(b);
+    }
+  }
+
+  /** The pairs of one body as the narrow phase has them now (pairs with at least one solver contact). */
+  private resyncBody(world: RAPIER.World, h: BodyHandle) {
+    for (const [key, pair] of this.activePairs) if (pair[0] === h || pair[1] === h) { this.activePairs.delete(key); this.release(pair); }
+    const b = this.bodies.get(h);
+    if (!b) return;
+    for (let i = 0; i < b.numColliders(); i++) {
+      const c = b.collider(i);
+      world.contactPairsWith(c, (other) => {
+        let hit = false;
+        world.contactPair(c, other, (m) => { if (m.numSolverContacts() > 0) hit = true; });
+        if (!hit) return;
+        const c1 = c.handle, c2 = other.handle;
+        const key = c1 < c2 ? `${c1}:${c2}` : `${c2}:${c1}`;
+        if (this.activePairs.has(key)) return;
+        this.hold([h, this.colliderBody.get(c2) ?? -1, this.heightfields.has(c2)], key);
+      });
+    }
   }
 
   drainContactEvents(): ContactEvent[] {
@@ -381,6 +465,12 @@ export class RapierEngine implements PhysicsEngine {
     this.world = null;
     this.ground = null;
     this.bodies.clear();
+    this.activePairs.clear();
+    this.touchCount.clear();
+    this.hfCount.clear();
+    this.heightfields.clear();
+    this.colliderBody.clear();
+    this.resync.clear();
     this.userData.clear();
     this.forced.clear();
   }

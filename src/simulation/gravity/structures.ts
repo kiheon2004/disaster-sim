@@ -25,7 +25,8 @@
 import type { Vec3 } from '@/core/types';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
-import { structureOf, activate, toWorld, type StructureState } from '../structure/state';
+import { structureOf, activate, type StructureState } from '../structure/state';
+import { memberGy } from './memberField';
 import type { GravityField } from '@/gravity/field';
 import type { GravitySourceSpec } from '@/gravity/types';
 import { G_N } from '@/celestial/constants';
@@ -59,14 +60,8 @@ export class GravityStructures {
   created = 0;
   /** Buildings the plan reaches still waiting for their model (no ratio is applied while > 0). */
   pending = 0;
-  private readonly tmp: Vec3 = [0, 0, 0];
 
   constructor(private readonly g0: number) {}
-
-  /** Ratio at a world point. */
-  private ratio(f: GravityField, p: Readonly<Vec3>): number {
-    return -f.sample(p[0], p[1], p[2], this.tmp)[1] / this.g0;
-  }
 
   /** Buildings with a model in canonical order (rebuilt when the entity set changes). */
   private order: RuntimeEntity[] = [];
@@ -131,10 +126,9 @@ export class GravityStructures {
         let changed = !a?.kM;
         const next = new Float64Array(g.n);
         let jump = 0;
+        const gy = memberGy(e, st, f);
         for (let i = 0; i < g.n; i++) {
-          const o = 6 * i;
-          const c = toWorld(e, [(g.box[o] + g.box[o + 3]) / 2, (g.box[o + 1] + g.box[o + 4]) / 2, (g.box[o + 2] + g.box[o + 5]) / 2]);
-          next[i] = this.ratio(f, c);
+          next[i] = -gy[i] / this.g0;
           const d = Math.abs(next[i] - kM[i]);
           if (d > K_QUANTUM) changed = true;
           if (d > jump) jump = d;

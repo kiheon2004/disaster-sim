@@ -198,6 +198,9 @@ export class GravityField {
   globalOwner = -1;
   /** Bumped when the set of experiments changes. */
   rev = 0;
+  /** Bumped whenever the field is re-evaluated (prepare at a new time, experiments added) — with points.epoch the key
+   *  of caches of field samples (Phase 32.1, simulation/gravity/memberField.ts). */
+  epoch = 0;
   private sorted: GravityExperiment[] = [];
   private from: Vec3[] = [];
   private live: Live[] = [];
@@ -222,6 +225,7 @@ export class GravityField {
     this.from = [];
     for (let k = 0; k < this.sorted.length; k++) this.from.push(this.globalAt(this.sorted[k].start, k));
     this.rev++;
+    this.epoch++;
     this.time = -Infinity;
   }
 
@@ -248,6 +252,7 @@ export class GravityField {
     this.celestial.forEach((x, k) => this.points.add(x.spec, x.start, k));
     for (const x of this.points.entries) x.grown = grown.get(x.key) ?? 0;
     this.rev++;
+    this.epoch++;
     this.time = -Infinity;
   }
 
@@ -264,6 +269,7 @@ export class GravityField {
   prepare(t: number): this {
     if (t === this.time) return this;
     this.time = t;
+    this.epoch++;
     const G = this.G;
     G[0] = 0; G[1] = -this.g0; G[2] = 0;
     this.globalOwner = -1;

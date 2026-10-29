@@ -30,7 +30,8 @@ import type { SystemContext } from '../systems/SimulationSystem';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { GravityField } from '@/gravity/field';
 import { ensureSeismicRuntime } from '../seismic/SeismicState';
-import { structureOf, activate, toWorld } from '../structure/state';
+import { structureOf, activate } from '../structure/state';
+import { memberGy } from '../gravity/memberField';
 import { spawnFragment } from '../structure/fragments';
 import { memberMaterial, MT_BEAM, MT_COLUMN, MT_DOOR, MT_ROOF, MT_WALL, MT_WINDOW, type StructuralGraph } from '@/structure/graph';
 import { CK } from '@/structure/types';
@@ -127,12 +128,11 @@ export class CelestialStructures {
     if (this.N.length < n) this.N = new Float64Array(n);
     const N = this.N;
     let any = false;
+    const gyM = memberGy(e, st, f);
     for (let i = 0; i < n; i++) {
       N[i] = 0;
       if (!m.alive(i)) continue;
-      const o = 6 * i;
-      const c = toWorld(e, [(g.box[o] + g.box[o + 3]) / 2, (g.box[o + 1] + g.box[o + 4]) / 2, (g.box[o + 2] + g.box[o + 5]) / 2]);
-      const gy = f.sample(c[0], c[1], c[2], tmp)[1];
+      const gy = gyM[i];
       if (gy > 0) { N[i] = g.mass[i] * gy; any = true; } else N[i] = g.mass[i] * gy;
     }
     if (!any) return;
