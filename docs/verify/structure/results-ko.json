@@ -106,14 +106,14 @@
       "ok": true,
       "detail": [
         {
-          "o": "car_bc7c43d02t",
+          "o": "car_e07e37022t",
           "ty": "car",
           "t": "IMPACT",
           "h": "earthquake",
           "c": "impact",
           "sec": {
             "striker": "frag-2",
-            "source": "building_f4eba24d2o",
+            "source": "building_609cee6a2o",
             "member": "w4-s-2",
             "energy": 9722.897206067099
           },
@@ -121,14 +121,14 @@
           "time": 5.316666666666653
         },
         {
-          "o": "car_31e686962r",
+          "o": "car_c793f1672r",
           "ty": "car",
           "t": "IMPACT",
           "h": "earthquake",
           "c": "impact",
           "sec": {
             "striker": "frag-45",
-            "source": "building_f4eba24d2o",
+            "source": "building_609cee6a2o",
             "member": "w1-s-0",
             "energy": 3373.111208259086
           },
@@ -143,7 +143,7 @@
       "detail": {
         "height": 2.1222979789307876,
         "blocked": true,
-        "source": "building_f4eba24d2o"
+        "source": "building_609cee6a2o"
       }
     },
     {
@@ -159,10 +159,10 @@
       "ok": true,
       "detail": {
         "pick": {
-          "owner": "building_40d0a5502p",
-          "member": 12
+          "owner": "building_412d08e22p",
+          "member": 0
         },
-        "memSec": "상태지면 정착손상 지수100 %잔여 용량99 %연직 하중0.0 kN사용률 축력 / 휨 / 전단0.01 / 0.00 / 0.00용량 축력 · 휨 "
+        "memSec": "상태지면 정착손상 지수100 %잔여 용량70 %연직 하중0.0 kN사용률 축력 / 휨 / 전단0.01 / 0.00 / 0.00용량 축력 · 휨 "
       }
     },
     {
@@ -202,7 +202,7 @@
       "name": "10 exterior walls / cladding blown off by the wave: detached parts become fragments",
       "ok": true,
       "detail": {
-        "frags": 82
+        "frags": 88
       }
     },
     {
@@ -236,7 +236,7 @@
   "errors": [],
   "heap": [
     28,
-    45.6
+    45.3
   ],
   "geometries": [
     17,

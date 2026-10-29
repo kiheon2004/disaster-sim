@@ -106,14 +106,14 @@
       "ok": true,
       "detail": [
         {
-          "o": "car_180b158a2t",
+          "o": "car_40584b7d2t",
           "ty": "car",
           "t": "IMPACT",
           "h": "earthquake",
           "c": "impact",
           "sec": {
             "striker": "frag-2",
-            "source": "building_887dfa402o",
+            "source": "building_af0374a42o",
             "member": "w4-s-2",
             "energy": 9722.897206067099
           },
@@ -121,14 +121,14 @@
           "time": 5.316666666666653
         },
         {
-          "o": "car_1eb1c4ef2r",
+          "o": "car_f1756b6b2r",
           "ty": "car",
           "t": "IMPACT",
           "h": "earthquake",
           "c": "impact",
           "sec": {
             "striker": "frag-45",
-            "source": "building_887dfa402o",
+            "source": "building_af0374a42o",
             "member": "w1-s-0",
             "energy": 3373.111208259086
           },
@@ -143,7 +143,7 @@
       "detail": {
         "height": 2.1222979789307876,
         "blocked": true,
-        "source": "building_887dfa402o"
+        "source": "building_af0374a42o"
       }
     },
     {
@@ -159,10 +159,10 @@
       "ok": true,
       "detail": {
         "pick": {
-          "owner": "building_482fe0a32p",
-          "member": 12
+          "owner": "building_30761ee02p",
+          "member": 0
         },
-        "memSec": "StateSettled on the groundDamage index100 %Residual capacity99 %Vertical load0.0"
+        "memSec": "StateSettled on the groundDamage index100 %Residual capacity70 %Vertical load0.0"
       }
     },
     {
@@ -202,7 +202,7 @@
       "name": "10 exterior walls / cladding blown off by the wave: detached parts become fragments",
       "ok": true,
       "detail": {
-        "frags": 82
+        "frags": 88
       }
     },
     {
@@ -236,7 +236,7 @@
   "errors": [],
   "heap": [
     28.3,
-    45.8
+    45.4
   ],
   "geometries": [
     17,

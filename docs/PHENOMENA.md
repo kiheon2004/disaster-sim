@@ -73,6 +73,8 @@
 | Water | WaterSolver | 읽기 전용; 장애물 제거는 `FloodEnvironment.removeObstacle()` API |
 | Object Transform / Velocity | Rapier → PoseSync가 `e.pose`로 복사 | 읽기; 힘은 ForceLedger로만 |
 | Structural State | StructuralResponseSystem(StructuralModel SoA) | 외력은 `fwx/fwz`, 강도 축소는 `scaleStrength()` API |
+| Member / Collapse State (Phase 25) | StructuralCollapseSystem(건물별 `CollapseModel`, 설계당 공유 구조 그래프) | 해저드는 부재 손상·파괴·지반 지지·추가 하중을 API(`fail`·`setDamage`·`setGround`·`addLoad`)로만 넣음, 잔해 질량은 `StructuralModel.addMass` — [STRUCTURAL_DESTRUCTION.md](STRUCTURAL_DESTRUCTION.md) |
+| Rubble / Fragments (Phase 25) | StructuresRuntime(잔해장·파편) | 도로 차단·매몰·2차 피해는 읽기, 질량은 건물별 장부 |
 | Surface Contact | GroundContactSystem(`setFriction`) | — |
 | Damage | 재난별 채널: 바람(`integrity.windHealth`), 지진(`seismic`), 홍수(`flood`) → DamageSystem이 `min()`/`worst()`로 공통 상태 | 다른 재난 채널은 읽기만(잔여 강도) |
 | Exposure | ExposureSystem | 읽기 전용 |
@@ -106,6 +108,7 @@ Rapier·지형 데이터는 복제하지 않습니다(힘 기록은 오브젝트
 - **중복 계산 방지**: 상호작용 ON이면 바람 피로가 자기 채널(`windHealth`)에서만 누적 — 이전에는 지진 손상이 들어간 공통 health에서 계속 깎여 숨은 합산이 됐습니다. 부품(창·외장재)은 상태가 바뀌면 다른 재난이 다시 파손 기록하지 않음(테스트), 붕괴는 1회.
 - **원인별 기록·순서 보존**: 모든 피해 이벤트에 hazard, 오브젝트별 상태 변화 이력(시각·재난·상태, 시간순), 실험 마일스톤.
 - 공통 상태는 여전히 `min(채널 health)`와 `worst(채널 state)`.
+- **Phase 25 부재 단위**: 모듈형 건물은 해저드별 손상이 부재 손상 지수(포락선)로 들어가고, 부재의 중력 용량은 같은 법칙 `F·(1 − 0.3·D)`(`structure/policy.ts` 공유). 파괴는 붕괴 엔진(재분배·낙하·잔해)을 거치며 직접 원인 + 주 해저드(연쇄 뿌리) + 2차 피해(타격 파편·출처)로 귀속 — [STRUCTURAL_DESTRUCTION.md](STRUCTURAL_DESTRUCTION.md) §23.
 
 ## 8. Object Response Framework
 
@@ -210,6 +213,7 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 - 잔여 강도는 지진 시작 시점의 손상으로 항복강도를 한 번 축소(지진 중 생긴 바람 손상은 health `min()`으로만 반영).
 - 바람 피해 응답은 아직 응답 레지스트리가 아닌 기존 DamageSystem 경로.
 - 비교 실행은 메인 스레드에서 양보하며 실행(Web Worker 아님) — 큰 장면은 시나리오당 수 초~수십 초.
+- 구조 파괴(Phase 25)는 축약된 부재·하중 경로 모델(FEA 아님) — 레거시 건물은 부재 모델이 없어 파편 타격 미평가, 잔해 더미는 물 격자 장애물이 아님 — STRUCTURAL_DESTRUCTION.md §37.
 - 인터페이스만 있는 채널(온도·대기·공간 중력)은 동작하지 않습니다. 압력 채널은 Phase 24에서 구현(BLAST.md). 지형 변형(Phase 21)과 지반 지지·토사(Phase 22) 채널은 구현됨 — TERRAIN_DEFORMATION.md, GROUND_FAILURE.md.
 
 ## 19. Phase 16 이후 확장 (필요 시스템 vs 재사용)
@@ -219,6 +223,7 @@ Phase 14 커밋(3656f79)과 교대 4회, 최솟값(측정 중 load average 4–6
 | Sinkhole | **구현됨(Phase 22)** — 실행 중 지형 변형은 Phase 21 엔진, 공동·플러그 파괴·벽 붕괴 모델, 산사태(무한사면·Newmark·Voellmy 흐름)와 함께 [GROUND_FAILURE.md](GROUND_FAILURE.md) | — |
 | Meteor Impact | **구현됨(Phase 23)** — 대기 진입·크레이터 스케일링·분출물·지반 충격(지반 운동장 중첩)·`impact` 해저드, [IMPACT.md](IMPACT.md). 대기 압력파는 Phase 24(공중 폭발·대기 결합 몫 → 압력 채널). 남은 것: 열 | — |
 | Explosion | **대기 압력파 구현됨(Phase 24)** — 가상 에너지 방출, Sedov–Taylor + 약충격 N파, 지면 반사·차폐, 압력 채널(`pressure` active), ForceLedger `blast`, 구조 외부 횡하중·외장 SDOF·외벽 면외·사람 전도 기준, `blast` 해저드, [BLAST.md](BLAST.md). 남은 것: 열·연소(Phase 26–27) | — |
+| Structural Destruction (교차 해저드) | **구현됨(Phase 25)** — 구조 그래프·증분 하중 재분배·접합부·연쇄/부분 붕괴·낙하 블록 충돌·잔해(질량 장부)·2차 피해·기초 지지 상실, 모든 해저드 공통, [STRUCTURAL_DESTRUCTION.md](STRUCTURAL_DESTRUCTION.md). 남은 것: 부재 온도·열팽창·온도 의존 강도(Phase 26 — `setMaterialFactor` 확장 지점) | 해저드별 손상 모델, Phase 17 해석·층 모델, Rapier, ForceLedger |
 | Volcano | 열·온도장, 용암(점성 격자 흐름 — 물 솔버 구조 재사용), 화산재 이송·퇴적 하중 | 격자 솔버 패턴, 지반 운동(화산 지진), 노출 상태 |
 | Atmosphere Removal | 공간 대기장(기압·O₂·밀도), 생리 모델(별도 Phase) | 노출 상태(값만 교체), 공기 밀도 → 풍하중 자동 반영 |
 | Gravity Change | 공간 중력장(오브젝트별 힘, Rapier 전역 중력은 기준 유지) | `GravityField` 인터페이스, ForceLedger(`gravityField` 출처 예약), 구조 모델 gravity 입력 |
