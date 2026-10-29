@@ -4,6 +4,7 @@ import { SimulationScene } from '@/rendering/sim/SimulationScene';
 import { useEditorStore } from '@/editor/editorStore';
 import { useSimStore } from '@/simulation/simStore';
 import { getPaletteItem } from '@/objects/palette';
+import { BuildingEditBar } from './BuildingEditBar';
 import { useT } from '@/i18n/i18n';
 import { Compass } from './Compass';
 import { ViewportToolbar } from './ViewportToolbar';
@@ -54,12 +55,19 @@ export function ViewportContainer() {
         <span className={styles.hint} data-testid="viewport-hint">
           {!isEditor
             ? t('viewport.hint.sim')
-            : tool === 'terrain'
+            : tool === 'building'
+              ? t('viewport.hint.building')
+              : tool === 'terrain'
                 ? t(terrainTool === 'inspect' ? 'viewport.hint.terrainInspect' : 'viewport.hint.terrain', { tool: t(`terrain.tool.${terrainTool}`) })
                 : <BuildHint fallback={tool === 'place' && placeItem ? t('viewport.hint.place', { name: t(placeItem.labelKey) }) : t('viewport.hint.camera')} />}
         </span>
       </div>
       {isEditor && tool === 'area' && <AreaApplyBar />}
+      {isEditor && tool === 'building' && (
+        <div className={styles.overlay} style={{ top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+          <BuildingEditBar />
+        </div>
+      )}
       {!isEditor && (
         <div className={`${styles.overlay} ${styles.bottomRight}`}>
           <OverlayToggles />

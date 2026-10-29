@@ -21,6 +21,8 @@ import { PasteTool } from './tools/PasteTool';
 import { TransformGizmo } from './TransformGizmo';
 import { GroupSelection } from './GroupSelection';
 import { MarqueeSelect } from './MarqueeSelect';
+import { BuildingEditor } from './BuildingEditor';
+import { useBuildingDraft } from './buildingDraft';
 
 const mods = (e: ThreeEvent<MouseEvent>) => ({ shift: e.nativeEvent.shiftKey, alt: e.nativeEvent.altKey });
 
@@ -162,20 +164,30 @@ export function EditorScene() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const selectedId = useEditorStore((s) => s.selectedId);
   const hoveredId = useEditorStore((s) => s.hoveredId);
+  const buildingId = useEditorStore((s) => s.buildingId);
+  const draft = useBuildingDraft((s) => s.obj);
   const interactive = tool === 'select';
+  const editingBuilding = tool === 'building' && buildingId ? buildingId : null;
   const count = Object.keys(objects).length;
   const multi = interactive && selectedIds.length > 1;
   const single = interactive && selectedIds.length === 1 ? selectedIds[0] : null;
 
   // Selected objects leave the batches while selected: the single one is a React view (gizmo),
   // a multi-selection is drawn by GroupSelection (rigid group drag without batch rebuilds).
-  const hide = useMemo(() => (interactive && selectedIds.length ? new Set(selectedIds) : EMPTY), [interactive, selectedIds]);
+  // Building Edit Mode (Phase 17): the edited building is drawn by the BuildingEditor.
+  const hide = useMemo(
+    () => (editingBuilding ? new Set([editingBuilding]) : interactive && selectedIds.length ? new Set(selectedIds) : EMPTY),
+    [interactive, selectedIds, editingBuilding],
+  );
   const live = useMemo(() => {
     const out: WorldObject[] = [];
-    // (Roads of a multi-selection move with the group drawing.)
-    for (const o of Object.values(objects)) if ((o.type === 'road' && !(multi && hide.has(o.id))) || o.id === single) out.push(o);
+    // (Roads of a multi-selection move with the group drawing.) A Building Creator draft is
+    // drawn in place of the selected building while its parameters are being edited.
+    for (const o of Object.values(objects)) {
+      if ((o.type === 'road' && !(multi && hide.has(o.id))) || o.id === single) out.push(draft && draft.id === o.id ? draft : o);
+    }
     return out;
-  }, [objects, single, multi, hide]);
+  }, [objects, single, multi, hide, draft]);
   const hoverBatched = interactive && hoveredId && !hide.has(hoveredId) && objects[hoveredId]?.type !== 'road' ? hoveredId : null;
 
   return (
@@ -200,6 +212,7 @@ export function EditorScene() {
       {tool === 'area' && <AreaTool />}
       {tool === 'paste' && <PasteTool />}
       {tool === 'terrain' && <TerrainTool />}
+      {editingBuilding && <BuildingEditor />}
       {interactive && single && <TransformGizmo />}
       {multi && <GroupSelection ids={selectedIds} />}
     </>

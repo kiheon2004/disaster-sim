@@ -13,6 +13,7 @@ import { QuakeLiveSection } from './SeismicInspector';
 import { FloodLiveSection, FloodProbeSection } from './FloodInspector';
 import { PhenomenaLiveSection } from './PhenomenaInspector';
 import { MultiInspector } from './MultiInspector';
+import { MemberInspector } from '@/ui/Building/MemberInspector';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
@@ -24,11 +25,14 @@ export function InspectorPanel() {
   const obj = useWorldStore((s) => (selectedId ? s.doc.objects[selectedId] : undefined));
   const inSim = mode === 'simulation';
   const terrainMode = useEditorStore((s) => s.tool === 'terrain');
+  const buildingMode = useEditorStore((s) => s.tool === 'building');
 
   return (
     <Panel title={t('panel.inspector')}>
       {terrainMode && !inSim ? (
         <TerrainInspector />
+      ) : buildingMode && !inSim ? (
+        <MemberInspector />
       ) : selectedIds.length > 1 && !inSim ? (
         <MultiInspector ids={selectedIds} readOnly={inSim} />
       ) : obj ? (

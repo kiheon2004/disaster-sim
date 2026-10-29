@@ -18,9 +18,10 @@ import { displayName } from '@/ui/format';
 import { StateDot } from '@/ui/common/StateBadge';
 import { useEntityStates } from '@/ui/useEntityStates';
 import { TerrainPanel } from '@/ui/Terrain/TerrainPanel';
+import { BuildingPanel } from '@/ui/Building/BuildingPanel';
 import styles from './ObjectPalette.module.css';
 
-type Tab = 'objects' | 'terrain' | 'scene';
+type Tab = 'objects' | 'building' | 'terrain' | 'scene';
 
 export function ObjectPalette() {
   countRender('ObjectPalette');
@@ -36,12 +37,16 @@ export function ObjectPalette() {
     if (next === 'terrain' && ed.mode === 'editor') ed.setTerrainTool(ed.terrainTool);
     else if (ed.tool === 'terrain') ed.setTerrainTool(null);
   };
-  const shown: Tab = terrainActive ? 'terrain' : tab;
+  const buildingActive = useEditorStore((s) => s.tool === 'building');
+  const shown: Tab = terrainActive ? 'terrain' : buildingActive ? 'building' : tab;
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs} role="tablist">
         <button role="tab" aria-selected={shown === 'objects'} className={`${styles.tab} ${shown === 'objects' ? styles.active : ''}`} onClick={() => setTab('objects')}>
           {t('panel.objects')}
+        </button>
+        <button role="tab" aria-selected={shown === 'building'} data-testid="tab-building" className={`${styles.tab} ${shown === 'building' ? styles.active : ''}`} onClick={() => setTab('building')}>
+          {t('panel.building')}
         </button>
         <button role="tab" aria-selected={shown === 'terrain'} className={`${styles.tab} ${shown === 'terrain' ? styles.active : ''}`} onClick={() => setTab('terrain')}>
           {t('panel.terrain')}
@@ -50,7 +55,7 @@ export function ObjectPalette() {
           {t('panel.scene')} ({count})
         </button>
       </div>
-      {shown === 'objects' ? <PaletteTab /> : shown === 'terrain' ? <TerrainPanel /> : <OutlinerTab />}
+      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : <OutlinerTab />}
     </div>
   );
 }

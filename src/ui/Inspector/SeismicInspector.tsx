@@ -9,6 +9,7 @@ import { foundationPlinth } from '@/terrain/groundPlacement';
 import { buildingHeight, type BuildingParams } from '@/objects/definitions/building';
 import { FOUNDATION_TYPE_IDS, STRUCTURAL_SYSTEMS, STRUCTURAL_SYSTEM_IDS, naturalPeriod, seismicOf } from '@/simulation/seismic/structuralProps';
 import { simulationController } from '@/simulation/SimulationController';
+import { analysisOf } from '@/buildings/design';
 import { useSimStore } from '@/simulation/simStore';
 import { soilProfile } from '@/terrain/SoilProfiles';
 import { Section } from '@/ui/common/Panel';
@@ -27,8 +28,10 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
   if (!s || obj.type !== 'building') return null;
   const p = obj.params as BuildingParams;
   const H = buildingHeight(p) * obj.transform.scale[1];
-  const T = naturalPeriod({ ...s.structure, periodOverride: 0 }, H);
-  const cy = STRUCTURAL_SYSTEMS[s.structure.system].cy * s.structure.strengthFactor;
+  // Modular buildings (Phase 17): system, period and strength come from the members.
+  const modular = obj.building ? analysisOf(obj.building) : null;
+  const T = modular ? Math.max(modular.periodX, modular.periodZ) : naturalPeriod({ ...s.structure, periodOverride: 0 }, H);
+  const cy = (modular ? Math.min(modular.cyX, modular.cyZ) : STRUCTURAL_SYSTEMS[s.structure.system].cy) * s.structure.strengthFactor;
   const soil = samplerFor(terrain).sampleSoil(obj.transform.position[0], obj.transform.position[2]);
   const setS = (patch: Partial<typeof s.structure>, live = false) => store().updateSeismic(obj.id, { structure: patch }, { history: !live });
   const setF = (patch: Partial<typeof s.foundation>, live = false) => store().updateSeismic(obj.id, { foundation: patch }, { history: !live });
@@ -38,7 +41,7 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
   return (
     <>
       <Section title={t('inspector.structure')}>
-        <SelectField<StructuralSystem> label={t('struct.system')} value={st.system} disabled={readOnly}
+        <SelectField<StructuralSystem> label={t('struct.system')} value={st.system} disabled={readOnly || !!modular}
           options={STRUCTURAL_SYSTEM_IDS.map((v) => ({ value: v, label: t(`struct.system.${v}` as MessageKey) }))}
           onChange={(v) => setS({ system: v, dampingRatio: STRUCTURAL_SYSTEMS[v].damping })} />
         <NumberField label={t('struct.damping')} value={st.dampingRatio} min={0.005} max={0.3} step={0.005} precision={3} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ dampingRatio: v }, live)} />
@@ -46,7 +49,7 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
         <NumberField label={t('struct.strength')} value={st.strengthFactor} min={0.1} max={10} step={0.05} precision={2} unit="×" disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ strengthFactor: v }, live)} />
         <NumberField label={t('struct.period')} value={st.periodOverride} min={0} max={10} step={0.05} precision={2} unit="s" hint={t('struct.period.hint')} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ periodOverride: v }, live)} />
         <div className={styles.note}>{t('struct.period.estimated', { t: fmt(st.periodOverride > 0 ? st.periodOverride : T, 2), cy: fmt(cy, 2) })}</div>
-        <div className={styles.note}>{t('struct.note')}</div>
+        <div className={styles.note}>{t(modular ? 'struct.modularNote' : 'struct.note')}</div>
       </Section>
       <Section title={t('inspector.foundation')}>
         <SelectField<FoundationType> label={t('found.type')} value={f.type} disabled={readOnly}

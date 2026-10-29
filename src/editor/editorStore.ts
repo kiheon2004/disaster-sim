@@ -9,7 +9,7 @@ export type AppMode = 'editor' | 'simulation';
  * area (drag a rectangle / circle or paint a region, then apply), paste (clipboard ghost),
  * terrain (Terrain Editing Mode). Switching tools ends the previous tool's session.
  */
-export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste' | 'terrain';
+export type EditorTool = 'select' | 'place' | 'brush' | 'line' | 'area' | 'paste' | 'terrain' | 'building';
 /** Tools that place the armed palette preset. */
 export const PLACEMENT_TOOLS: readonly EditorTool[] = ['place', 'brush', 'line', 'area'];
 export const isPlacementTool = (t: EditorTool) => (PLACEMENT_TOOLS as readonly string[]).includes(t);
@@ -46,12 +46,14 @@ interface EditorState {
   soilType: SoilProfileId;
   /** Point picked with the inspect tool (world x/z). */
   terrainProbe: { x: number; z: number } | null;
+  /** Building Edit Mode (Phase 17): the modular building whose members are being edited. */
+  buildingId: EntityId | null;
 
   setMode: (m: AppMode) => void;
   /** Arm a preset for the current placement tool (place by default); null/same id = back to select. */
   armPlacement: (itemId: string | null) => void;
   /** Switch tool. Placement tools keep the armed preset; select / paste clear it. */
-  setTool: (tool: Exclude<EditorTool, 'terrain'>) => void;
+  setTool: (tool: Exclude<EditorTool, 'terrain' | 'building'>) => void;
   rotateGhost: (delta: number) => void;
   select: (id: EntityId | null) => void;
   /** Replace the selection (primary = `primary` if given and included, else the last id). */
@@ -67,6 +69,8 @@ interface EditorState {
   setPaintType: (t: GroundTypeId) => void;
   setSoilType: (t: SoilProfileId) => void;
   setTerrainProbe: (p: { x: number; z: number } | null) => void;
+  /** Enter Building Edit Mode on a modular building (null = back to select, building selected). */
+  setBuildingEdit: (id: EntityId | null) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -87,17 +91,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   paintType: 3,
   soilType: 2,
   terrainProbe: null,
+  buildingId: null,
 
-  setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null }),
+  setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null, buildingId: null }),
   armPlacement: (placeItemId) => {
     const cur = get();
     if (placeItemId && placeItemId !== cur.placeItemId) {
-      set({ placeItemId, tool: isPlacementTool(cur.tool) ? cur.tool : 'place', selectedId: null, selectedIds: [] });
-    } else set({ placeItemId: null, tool: 'select' });
+      set({ placeItemId, tool: isPlacementTool(cur.tool) ? cur.tool : 'place', selectedId: null, selectedIds: [], buildingId: null });
+    } else set({ placeItemId: null, tool: 'select', buildingId: null });
   },
   setTool: (tool) => {
-    if (isPlacementTool(tool)) set({ tool, selectedId: null, selectedIds: [], hoveredId: null });
-    else set({ tool, placeItemId: null, hoveredId: null });
+    if (isPlacementTool(tool)) set({ tool, selectedId: null, selectedIds: [], hoveredId: null, buildingId: null });
+    else set({ tool, placeItemId: null, hoveredId: null, buildingId: null });
   },
   rotateGhost: (delta) => set({ ghostYaw: (get().ghostYaw + delta) % (Math.PI * 2) }),
   select: (selectedId) => set({ selectedId, selectedIds: selectedId ? [selectedId] : [] }),
@@ -112,7 +117,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleRandomize: () => set({ randomize: !get().randomize }),
   setDragging: (dragging) => set({ dragging }),
   setTerrainTool: (t) =>
-    set(t ? { tool: 'terrain', terrainTool: t, placeItemId: null, selectedId: null, selectedIds: [], hoveredId: null } : { tool: 'select' }),
+    set(t ? { tool: 'terrain', terrainTool: t, placeItemId: null, selectedId: null, selectedIds: [], hoveredId: null, buildingId: null } : { tool: 'select' }),
   setBrush: ({ radius, strength }) =>
     set({
       brushRadius: radius === undefined ? get().brushRadius : Math.min(BRUSH_RADIUS_RANGE[1], Math.max(BRUSH_RADIUS_RANGE[0], radius)),
@@ -121,4 +126,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPaintType: (paintType) => set({ paintType }),
   setSoilType: (soilType) => set({ soilType }),
   setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
+  setBuildingEdit: (id) =>
+    set(id
+      ? { tool: 'building', buildingId: id, placeItemId: null, selectedId: id, selectedIds: [id], hoveredId: null }
+      : { tool: 'select', buildingId: null, hoveredId: null }),
 }));

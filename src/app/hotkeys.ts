@@ -7,6 +7,53 @@ import { useBuildStore } from '@/editor/buildStore';
 import { applyAreaSession } from '@/editor/tools/BulkTools';
 import { useViewStore } from '@/rendering/viewStore';
 import { degToRad } from '@/core/math';
+import { useMemberStore } from '@/editor/memberStore';
+import { deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, modularBuilding } from '@/app/buildingActions';
+
+/** Building Edit Mode keys. Returns true when the key was handled. */
+function buildingKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
+  const ms = useMemberStore.getState();
+  if (mod && key === 'd') {
+    e.preventDefault();
+    duplicateSelectedMembers();
+    return true;
+  }
+  if (mod && key === 'a') {
+    if (hasTextSelection()) return false;
+    e.preventDefault();
+    const o = modularBuilding(useEditorStore.getState().buildingId);
+    if (o) ms.select(o.building!.members.map((m) => m.id));
+    return true;
+  }
+  if (mod) return false;
+  switch (key) {
+    case 'delete':
+    case 'backspace':
+      deleteSelectedMembers();
+      return true;
+    case 'escape':
+      if (ms.adding) ms.setAdding(null);
+      else if (ms.selected.length) ms.select([]);
+      else exitBuildingEdit();
+      return true;
+    case 'w':
+      ms.setGizmo('translate');
+      return true;
+    case 'e':
+      ms.setGizmo('rotate');
+      return true;
+    case 'r':
+      ms.rotateAdd();
+      return true;
+    case 'x':
+      ms.setXray(!ms.xray);
+      return true;
+    case 'h':
+      ms.setLoadPath(!ms.loadPath);
+      return true;
+  }
+  return false;
+}
 
 function isTyping(e: KeyboardEvent) {
   const el = e.target as HTMLElement | null;
@@ -72,6 +119,8 @@ export function useEditorHotkeys() {
         world.redo();
         return;
       }
+      // Building Edit Mode (Phase 17): member shortcuts.
+      if (ed.tool === 'building' && buildingKeys(e, key, mod)) return;
       if (mod && key === 'd') {
         e.preventDefault();
         duplicateSelection();

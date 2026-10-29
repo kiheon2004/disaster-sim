@@ -10,6 +10,7 @@ import { estimateCriticalSpeeds } from '@/simulation/damage/windLoad';
 import { Icon, type IconName } from '@/ui/common/Icon';
 import { Section } from '@/ui/common/Panel';
 import { SeismicSections } from './SeismicInspector';
+import { BuildingInspector } from '@/ui/Building/BuildingInspector';
 import { ColorField, NumberField, SelectField, ToggleField, Vec3Field } from '@/ui/common/fields';
 import { displayName, fmt } from '@/ui/format';
 import styles from './Inspector.module.css';
@@ -50,7 +51,7 @@ export function ObjectInspector({ obj, readOnly = false }: { obj: WorldObject; r
       </div>
 
       <TransformSection obj={obj} readOnly={readOnly} />
-      <ParamsSection obj={obj} readOnly={readOnly} />
+      {obj.building ? <BuildingInspector obj={obj} /> : <ParamsSection obj={obj} readOnly={readOnly} />}
       {!def.inert && <PhysicsSection obj={obj} readOnly={readOnly} />}
       {!def.inert && <EstimateSection obj={obj} />}
       <SeismicSections obj={obj} readOnly={readOnly} />
