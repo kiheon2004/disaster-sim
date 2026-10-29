@@ -37,7 +37,7 @@ export function RoadLayer() {
     synced.current = { rev: engine?.rev ?? -1, at: performance.now() };
   }, [batches, roads, terrain, engine]);
   useFrame(({ camera }) => {
-    if (batches && engine && engine.rev !== synced.current.rev && performance.now() - synced.current.at > 200) {
+    if (batches && engine && engine.rev !== synced.current.rev && performance.now() - synced.current.at > 200 && Object.keys(roads.segments).length > 0) {
       batches.sync(roads, engine.terrain);
       synced.current = { rev: engine.rev, at: performance.now() };
     }

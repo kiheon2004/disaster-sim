@@ -79,7 +79,7 @@ export class DeformationSystem implements SimulationSystem {
     const u = engine.update(ctx.time);
     if (!u) return;
     const terrain = ctx.env.terrain;
-    terrain.sync();
+    terrain.syncHeights(); // ground types / soil are never changed by a deformation
     const b = performance.now();
     ctx.physics.setTerrain(heightfieldDesc(engine.terrain));
     const c = performance.now();

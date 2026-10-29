@@ -125,6 +125,12 @@ function failComponent(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext
   }
 }
 
+/** Horizontal unit vector down the fitted base plane (the way a building on settling ground leans). */
+export function downhill(g: [number, number]): Vec3 {
+  const n = Math.hypot(g[0], g[1]);
+  return n > 1e-9 ? [-g[0] / n, 0, -g[1] / n] : [1, 0, 0];
+}
+
 /** Earthquake / flood collapse: debris falls along the building's response, not downwind. */
 export interface QuakeCollapse {
   /** Horizontal unit direction the structure was swaying / leaning toward (flood: the flow). */
@@ -133,8 +139,8 @@ export interface QuakeCollapse {
   speed: number;
   cause: DamageCause;
   response: number;
-  /** Default earthquake (Phase 13); 'flood' for lateral water load failures (Phase 14). */
-  hazard?: 'earthquake' | 'flood';
+  /** Default earthquake (Phase 13); 'flood' for lateral water load failures (Phase 14); 'ground' for foundation failure on deforming ground (Phase 21). */
+  hazard?: 'earthquake' | 'flood' | 'ground';
   /** Extra fields for the damage record (flood: water depth, flow speed, load …). */
   extra?: Partial<DamageEventInput>;
 }
@@ -291,13 +297,15 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
       structure.health = applyFatigue(structure.health, e.loadRatio, e.source.physics.durability, e.source.physics.breakThreshold, dt);
     }
     // Earthquake / flood damage (if any) and wind fatigue share one structural health.
-    if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
-    if (e.flood) structure.health = Math.min(structure.health, e.flood.health);
-    if (e.ground) structure.health = Math.min(structure.health, e.ground.health);
+    // The channel with the lowest health governs (and is the hazard a failure is attributed to).
+    let governing: 'wind' | 'earthquake' | 'flood' | 'ground' = 'wind';
+    if (e.seismic && seismicHealth(e.seismic) < structure.health) { structure.health = seismicHealth(e.seismic); governing = 'earthquake'; }
+    if (e.flood && e.flood.health < structure.health) { structure.health = e.flood.health; governing = 'flood'; }
+    if (e.ground && e.ground.health < structure.health) { structure.health = e.ground.health; governing = 'ground'; }
     e.health = structure.health;
     if (e.modular !== undefined) {
-      // Wind failure of a modular building = collapse of its weakest story (and above).
-      if (modularWindStructure(e, ctx, structure.health)) {
+      // Failure of a modular building = collapse of its weakest story (and above).
+      if (modularWindStructure(e, ctx, structure.health, governing)) {
         if (e.flags.collapsed) {
           e.state = DamageState.DESTROYED;
           return;
@@ -307,7 +315,7 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
         if (e.integrity) e.integrity.windHealth = 0.5;
       }
     } else if (structure.health <= 0) {
-      collapse(e, ctx);
+      collapse(e, ctx, governing === 'ground' && e.ground ? { dir: downhill(e.ground.gradient), speed: 0.3, cause: 'foundation', response: e.ground.peakBeta, hazard: 'ground' } : undefined);
       e.state = DamageState.DESTROYED;
       return;
     }

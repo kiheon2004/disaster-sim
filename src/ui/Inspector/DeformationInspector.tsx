@@ -111,7 +111,7 @@ export function DeformationLiveSection({ id }: { id: EntityId }) {
       [t('live.ground.bearing'), Number.isFinite(g.bearing0) ? `${fmt(g.bearing0, 2)} → ${fmt(g.bearingRatio, 2)}` : '–'],
     );
   }
-  rows.push([t('live.ground.damage'), fmt(g.damage, 3)], [t('live.flood.health'), `${Math.round((1 - g.health) * 100)} %`]);
+  rows.push([t('live.ground.damage'), fmt(g.damage, 3)]);
   return (
     <Section title={t('live.ground.title')}>
       <Rows rows={rows} testId="ground-live" />

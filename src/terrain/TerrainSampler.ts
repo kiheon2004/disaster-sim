@@ -60,6 +60,25 @@ export class TerrainSampler {
     this.maxHeight = Math.max(0, hi);
   }
 
+  /**
+   * Re-read only what depends on the HEIGHTS (flat flag, range) after an in-place height change
+   * that left ground types and soil untouched (Phase 21 deformation: one pass instead of four).
+   */
+  syncHeights() {
+    if (this.data.revision === this.syncedRevision) return;
+    this.syncedRevision = this.data.revision;
+    const h = this.data.heights;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < h.length; i++) {
+      const v = h[i];
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    this.flat = lo === 0 && hi === 0;
+    this.minHeight = Math.min(0, lo);
+    this.maxHeight = Math.max(0, hi);
+  }
+
   inside(x: number, z: number): boolean {
     const d = this.data;
     return x >= d.originX && x <= this.x1 && z >= d.originZ && z <= this.z1;

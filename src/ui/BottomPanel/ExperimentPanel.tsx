@@ -56,7 +56,7 @@ export function ExperimentPanel({ tabs }: { tabs: React.ReactNode }) {
             const r = startOf.get(inst.id);
             const issue = issueOf.get(inst.id);
             return (
-              <div key={inst.id} className={x.row} data-disabled={!inst.enabled}>
+              <div key={inst.id} className={x.row} data-disabled={!inst.enabled} data-instance={inst.id}>
                 <div className={x.head}>
                   <Toggle checked={inst.enabled} onChange={(v) => updatePhenomenon(inst.id, { enabled: v })} title={t('exp.enabled')} />
                   <Icon name={def.icon as 'wind'} size={14} />
@@ -66,12 +66,12 @@ export function ExperimentPanel({ tabs }: { tabs: React.ReactNode }) {
                   <button className={x.icon} title={t(inst.visualize ? 'exp.viz.on' : 'exp.viz.off')} aria-pressed={inst.visualize} onClick={() => updatePhenomenon(inst.id, { visualize: !inst.visualize })}>
                     <Icon name={inst.visualize ? 'eye' : 'eyeOff'} size={13} />
                   </button>
-                  <button className={x.icon} title={t('exp.edit')} aria-expanded={open === inst.id} onClick={() => setOpen(open === inst.id ? null : inst.id)}>
+                  <button className={x.icon} title={t('exp.edit')} aria-expanded={open === inst.id} data-testid={`exp-edit-${inst.id}`} onClick={() => setOpen(open === inst.id ? null : inst.id)}>
                     <Icon name={open === inst.id ? 'chevronDown' : 'chevronRight'} size={13} />
                   </button>
                   <button className={x.icon} title={t('exp.remove')} onClick={() => removePhenomenon(inst.id)}><Icon name="trash" size={13} /></button>
                 </div>
-                {issue && <div className={x.issue}>⚠ {t(`exp.issue.${issue.problem}` as MessageKey, { id: inst.id })}</div>}
+                {issue && <div className={x.issue} data-testid="exp-issue">⚠ {t(`exp.issue.${issue.problem}` as MessageKey, { id: inst.id })}</div>}
                 {open === inst.id && <InstanceEditor inst={inst} def={def} others={instances.filter((i) => i.id !== inst.id)} />}
               </div>
             );
@@ -140,14 +140,14 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
             return (
               <label key={f.key} className={eq.row}>
                 <span className={eq.label}>{t(f.labelKey)}</span>
-                <select value={String(v)} onChange={(e) => set(setField(f, inst.spec, e.target.value))}>
+                <select value={String(v)} data-field={f.key} onChange={(e) => set(setField(f, inst.spec, e.target.value))}>
                   {f.options.map((o) => <option key={o.value} value={o.value}>{t(o.labelKey)}</option>)}
                 </select>
               </label>
             );
           }
           return (
-            <div key={f.key} className={eq.autoRow}>
+            <div key={f.key} className={eq.autoRow} data-field={f.key}>
               <NumberField label={t(f.labelKey)} value={typeof v === 'number' ? v : f.min} min={f.min} max={f.max} step={f.step} precision={f.precision} unit={f.unit}
                 disabled={v === undefined} onChange={(n, live) => !live && set(setField(f, inst.spec, n))} />
               {f.optional ? <Toggle checked={v === undefined} onChange={(b) => set(setField(f, inst.spec, b ? undefined : f.min + (f.max - f.min) / 4))} label={t('eq.form.auto')} /> : <span />}
@@ -184,7 +184,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         </div>
         <NumberField label={after ? t('exp.start.offset') : t('exp.start.time')} value={after ? after.offset : 'at' in inst.start ? inst.start.at : 0} min={after ? -3600 : 0} max={86400} step={1} precision={1} unit="s"
           onChange={(n, live) => !live && updatePhenomenon(inst.id, { start: after ? { ...after, offset: n } : { at: n } })} />
-        {!valid.success && <div className={x.issue}>⚠ {valid.error.issues[0]?.message}</div>}
+        {!valid.success && <div className={x.issue} data-testid="exp-invalid">⚠ {valid.error.issues[0]?.message}</div>}
         {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>

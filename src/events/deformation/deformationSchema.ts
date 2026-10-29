@@ -32,4 +32,5 @@ export const terrainDeformationSchema = z.object({
   supportLoss: range(LIMITS.supportLoss).optional(),
   field: prescribedFieldSchema.optional(),
   startTime: z.number().min(0).optional(),
+  name: z.string().max(40).optional(),
 }).refine((s) => s.kind !== 'prescribed' || !!s.field, { message: 'prescribed field missing' }) as unknown as z.ZodType<TerrainDeformationSpec>;

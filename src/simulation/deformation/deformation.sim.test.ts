@@ -153,6 +153,19 @@ describe('building foundations', { timeout: 120_000 }, () => {
     c.unload();
   });
 
+  it('a building destroyed by differential settlement is attributed to the ground, never to wind (no wind blowing)', async () => {
+    S().applyEdit({ add: [{ type: 'building', building: house(), seed: 1, transform: tf(5, 0) }] });
+    const c = await start([def({ radius: 22, amount: 1.6, duration: 4 })]);
+    c.advance(8);
+    const b = byType(c, 'building')[0];
+    expect(b.state).toBeGreaterThanOrEqual(3);
+    const ev = c.getDamageEvents().filter((e) => e.objectId === b.id);
+    expect(ev.length).toBeGreaterThan(0);
+    expect(ev.filter((e) => e.hazard === 'wind')).toEqual([]);
+    expect(ev.some((e) => e.hazard === 'ground' && (e.eventType === 'COLLAPSED' || e.eventType === 'STORY_COLLAPSED' || e.eventType === 'DESTROYED'))).toBe(true);
+    c.unload();
+  });
+
   it('explicit support loss raises the bearing ratio; displacement alone does not', async () => {
     S().applyEdit({ add: [{ type: 'building', building: house(), seed: 1, transform: tf(0, 0) }] });
     const plain = await start([def({ falloff: 'steep', radius: 100, amount: 0.3 })]);

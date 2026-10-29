@@ -78,6 +78,8 @@ export interface TerrainDeformationSpec {
   field?: PrescribedField;
   /** Absolute simulation time to start at (default: now). */
   startTime?: number;
+  /** Display name of the source (the experiment instance id, e.g. "p1"; set by the schedule). */
+  name?: string;
 }
 
 /** Model classification shown with every deformation. */

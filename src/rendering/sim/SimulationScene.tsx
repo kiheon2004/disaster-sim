@@ -16,6 +16,7 @@ import { EpicenterMarker } from './seismic/EpicenterMarker';
 import { CameraShake } from './seismic/CameraShake';
 import { WaterLayer } from './water/WaterLayer';
 import { DeformationOverlay } from '../deformation/DeformationOverlay';
+import { ShaderWarmup } from '../deformation/ShaderWarmup';
 import { DeformationPicker, DeformationPreview } from '../deformation/DeformationTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
@@ -72,6 +73,7 @@ export function SimulationScene() {
       <WindArrows />
       <WaterLayer />
       <DeformationOverlay />
+      <ShaderWarmup />
       <DeformationPreview />
       <DeformationPicker />
       <GroundMotionLayer />

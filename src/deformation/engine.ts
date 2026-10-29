@@ -93,6 +93,8 @@ interface Entry {
   source: DeformationSource;
   version: number;
   contrib: Float32Array;
+  /** Second buffer (swapped with contrib on each update). */
+  spare?: Float32Array;
 }
 
 export class DeformationEngine {
@@ -169,26 +171,35 @@ export class DeformationEngine {
     const delta = new Float32Array(rw * rh);
     for (const e of changed) {
       const tau = time - e.source.startTime;
-      const next = new Float32Array(e.contrib.length);
+      // Two buffers per source, swapped (no allocation per update).
+      const next = (e.spare ??= new Float32Array(e.contrib.length));
       e.source.sample(tau, next);
       const r = e.source.rect;
-      const w = r.x1 - r.x0 + 1;
-      for (let i = 0; i < next.length; i++) {
-        const d = next[i] - e.contrib[i];
-        if (d === 0) continue;
-        const ix = r.x0 + (i % w), iz = r.z0 + Math.floor(i / w);
-        W[iz * t.nx + ix] += d;
-        delta[(iz - rect.z0) * rw + (ix - rect.x0)] += d;
+      const w = r.x1 - r.x0 + 1, h = r.z1 - r.z0 + 1, prev = e.contrib;
+      for (let j = 0; j < h; j++) {
+        const src = j * w, dst = (r.z0 + j) * t.nx + r.x0, dd = (r.z0 + j - rect.z0) * rw + (r.x0 - rect.x0);
+        for (let i = 0; i < w; i++) {
+          const d = next[src + i] - prev[src + i];
+          if (d === 0) continue;
+          W[dst + i] += d;
+          delta[dd + i] += d;
+        }
       }
+      e.spare = prev;
       e.contrib = next;
       e.version = e.source.version(tau);
     }
     let maxDelta = 0;
-    for (let iz = rect.z0; iz <= rect.z1; iz++) for (let ix = rect.x0; ix <= rect.x1; ix++) {
-      const i = iz * t.nx + ix;
-      t.heights[i] = this.original[i] + W[i];
-      const d = Math.abs(delta[(iz - rect.z0) * rw + (ix - rect.x0)]);
-      if (d > maxDelta) maxDelta = d;
+    const H = t.heights, H0 = this.original;
+    for (let iz = rect.z0; iz <= rect.z1; iz++) {
+      const row = iz * t.nx, drow = (iz - rect.z0) * rw - rect.x0;
+      for (let ix = rect.x0; ix <= rect.x1; ix++) {
+        const i = row + ix;
+        H[i] = H0[i] + W[i];
+        const d = delta[drow + ix];
+        if (d > maxDelta) maxDelta = d;
+        else if (-d > maxDelta) maxDelta = -d;
+      }
     }
     t.revision++;
     this.updates++;

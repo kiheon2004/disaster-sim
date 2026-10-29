@@ -28,7 +28,7 @@ export class TerrainDeformationEvent implements SimulationEvent<TerrainDeformati
   onStart({ env }: EventContext) {
     const ch = env.deformation;
     const engine = ch.ensure();
-    engine.add(new PrescribedSource(`src:${this.id}`, this.id, this.spec, this.startTime, ch.terrain, this.spec.seed ?? this.seed));
+    engine.add(new PrescribedSource(`src:${this.id}`, this.spec.name ?? this.id, this.spec, this.startTime, ch.terrain, this.spec.seed ?? this.seed));
   }
 
   update() {

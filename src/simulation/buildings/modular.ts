@@ -35,7 +35,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 import type { StructuralModel } from '../seismic/StructuralModel';
 import { DamageState, worst } from '../damage/DamageState';
 import { spawnDebris } from '../damage/spawn';
-import { collapse, COMPONENT_ROUNDS, noteFacadeFailure, type QuakeCollapse } from '../damage/behaviors/building';
+import { collapse, COMPONENT_ROUNDS, downhill, noteFacadeFailure, type QuakeCollapse } from '../damage/behaviors/building';
 import { accumulate, capacities, CRACK_LEVELS, failPart, isDriftPart } from '../damage/behaviors/seismic';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 import type { DamageCause, Hazard } from '../analysis/DamageEvent';
@@ -375,7 +375,7 @@ export function collapseFrom(e: RuntimeEntity, ctx: SystemContext, story: number
     mr.collapsedFrom = 0;
     mr.reserve = 0.05;
     mr.rev++;
-    collapse(e, ctx, quake ?? (o.hazard === 'wind' ? undefined : { dir: o.dir, speed: 0.3, cause: o.cause, response: o.response, hazard: o.hazard === 'flood' ? 'flood' : 'earthquake' }));
+    collapse(e, ctx, quake ?? (o.hazard === 'wind' ? undefined : { dir: o.dir, speed: 0.3, cause: o.cause, response: o.response, hazard: o.hazard === 'flood' ? 'flood' : o.hazard === 'ground' ? 'ground' : 'earthquake' }));
     return;
   }
   if (s >= mr.collapsedFrom) return;
@@ -576,7 +576,7 @@ function facadeLevels(e: RuntimeEntity): Int32Array {
  * structure into the collapse of that story (total when it is the ground story).
  * Returns true when the building (or part of it) collapsed.
  */
-export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, health: number): boolean {
+export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, health: number, governing: Hazard = 'wind'): boolean {
   const mr = e.modular!;
   const weak = Math.min(mr.current.weakStory[0], mr.current.weakStory[1]);
   const d = 1 - health;
@@ -590,6 +590,11 @@ export function modularWindStructure(e: RuntimeEntity, ctx: SystemContext, healt
     }
   }
   if (health > 0) return false;
+  // Attributed to the hazard whose health governed (ground: foundation failure, Phase 21).
+  if (governing === 'ground' && e.ground) {
+    collapseFrom(e, ctx, weak, { hazard: 'ground', cause: 'foundation', response: e.ground.peakBeta, dir: downhill(e.ground.gradient) });
+    return true;
+  }
   const flow = ctx.env.wind.flow();
   collapseFrom(e, ctx, weak, { hazard: 'wind', cause: e.loadRatio >= e.source.physics.breakThreshold ? 'overload' : 'fatigue', response: e.loadRatio, dir: [flow[0], 0, flow[2]] });
   return true;
