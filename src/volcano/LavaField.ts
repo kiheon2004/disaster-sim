@@ -178,6 +178,9 @@ export class LavaField {
     this.hPeak = new Float32Array(n); this.Tpeak = new Float32Array(n);
     this.inMobile = new Uint8Array(n); this.inHot = new Uint8Array(n); this.still = new Uint8Array(n); this.heatTouched = new Uint8Array(n);
     this.outV = new Float64Array(n);
+    this.cooledAt = new Float64Array(n);
+    this.awakeStamp = new Int32Array(n); this.cacheStamp = new Int32Array(n);
+    this.cEta = new Float64Array(n); this.cTau = new Float64Array(n); this.cRigid = new Float64Array(n);
     this.eSnap = new Float64Array(n);
     this.aSnap = new Float32Array(n);
     this.Tlock = lockTemperature(mat);
@@ -211,8 +214,30 @@ export class LavaField {
 
   private wake(i: number) {
     this.still[i] = 0;
-    if (!this.inMobile[i]) { this.inMobile[i] = 1; this.mobile.push(i); }
+    if (!this.inMobile[i]) { this.inMobile[i] = 1; this.mobile.push(i); this.cooledAt[i] = this.clock; }
+    if (this.awakeStamp[i] !== this.callStamp) { this.awakeStamp[i] = this.callStamp; this.awakeList.push(i); }
   }
+
+  /** η, τ_y and the rigid crust thickness of a donor for this flow call (τ_y < 0 marks a locked column). */
+  private rheology(i: number, call: number) {
+    this.cacheStamp[i] = call;
+    const T = this.clampT(temperatureFromEnergy(this.mat, this.E[i] / this.M[i], this.Tref));
+    this.T[i] = T;
+    if (T <= this.Tlock) { this.cTau[i] = -1; return; }
+    const h = this.depth(i);
+    const d = boundaryLayer(this.kappa, this.age[i], h);
+    const below = this.depThicknessLava(i) > 0.01 ? this.depT[i] : T;
+    this.cRigid[i] = rigidPart(d, T, this.Ts[i], this.Tlock) + rigidPart(d, T, Math.min(below, T), this.Tlock);
+    this.cEta[i] = viscosity(this.mat, T);
+    this.cTau[i] = yieldStrength(this.mat, T);
+  }
+  private callStamp = 0;
+  private awakeList: number[] = [];
+  private awakeStamp = new Int32Array(0);
+  private cacheStamp = new Int32Array(0);
+  private cEta = new Float64Array(0);
+  private cTau = new Float64Array(0);
+  private cRigid = new Float64Array(0);
 
   private heat(i: number) {
     if (!this.inHot[i]) { this.inHot[i] = 1; this.hot.push(i); }
@@ -327,19 +352,25 @@ export class LavaField {
     const { nx, nz, area, rho, dx } = this;
     let left = dt, subs = 0;
     this.faces = 0;
-    for (const i of this.mobile) this.speed[i] = 0;
+    // Awake donors of this call; the rheology of each (η, τ_y, rigid crust) is evaluated once per call from
+    // its current energy (the temperature does not change between sub-steps — it is refreshed after the flow),
+    // vertices reached during the call join with their own mixed temperature.
+    const call = ++this.callStamp;
+    const awake = this.awakeList;
+    awake.length = 0;
+    for (const i of this.mobile) { this.speed[i] = 0; if (this.still[i] < SLEEP_AFTER && this.M[i] > 0) { awake.push(i); this.awakeStamp[i] = call; } }
     while (left > 1e-12 && subs < MAX_SUB) {
       // 1. face fluxes of the awake donors.
       let nf = 0, hMin = left;
       const minH = dt / MAX_SUB;
-      const list = this.mobile;
-      for (let k = 0; k < list.length; k++) {
-        const i = list[k];
+      for (let k = 0; k < awake.length; k++) {
+        const i = awake[k];
         if (this.still[i] >= SLEEP_AFTER || this.M[i] <= 0) continue;
-        const hf = this.flowingDepth(i);
+        if (this.cacheStamp[i] !== call) this.rheology(i, call);
+        const h0 = this.depth(i);
+        const hf = h0 <= FILM || this.cTau[i] < 0 ? 0 : Math.max(0, h0 - this.cRigid[i]);
         if (hf <= 0) { this.still[i]++; continue; }
-        const T = this.T[i];
-        const eta = viscosity(this.mat, T), tau = yieldStrength(this.mat, T);
+        const eta = this.cEta[i], tau = this.cTau[i];
         const Si = this.bed(i) + this.depth(i);
         const ix = i % nx, iz = (i / nx) | 0;
         let any = false;
@@ -469,14 +500,21 @@ export class LavaField {
    * deposits (top / base); lock-up; retirement of cold deposits. Heat out is accumulated per vertex
    * (qGround / qAir / qRad / qWater) for the adapter.
    */
-  cool(dt: number, env: LavaSurroundings) {
+  cool(step: number, env: LavaSurroundings) {
     const mat = this.mat;
-    for (const i of this.mobile) this.age[i] += dt;
-    for (const i of this.hot) this.depAge[i] += dt;
-    // Mobile columns: top to air / water, base to the deposit below or the ground.
+    this.clock += step;
+    const cadence = this.depCount + 1 >= DEP_EVERY;
+    for (const i of this.mobile) this.age[i] += step;
+    for (const i of this.hot) this.depAge[i] += step;
+    // Mobile columns: top to air / water, base to the deposit below or the ground. Lava that no longer
+    // moves (asleep) is cooled at the deposit cadence over the time since it was last cooled (exact).
     for (const i of this.mobile) {
       const m = this.M[i];
       if (m <= 0) continue;
+      if (this.still[i] >= SLEEP_AFTER && !cadence) continue;
+      const dt = this.clock - this.cooledAt[i];
+      this.cooledAt[i] = this.clock;
+      if (dt <= 0) continue;
       const onDep = this.depThicknessLava(i) > 0.01;
       const t = this.top(i, this.T[i], this.depth(i), this.age[i], dt, env);
       const d = boundaryLayer(this.kappa, this.age[i], this.depth(i));
@@ -501,9 +539,9 @@ export class LavaField {
       if (crystalFraction(mat, this.T[i]) >= mat.phiLock) this.lock(i);
     }
     // Hot deposits: top to air / water (unless mobile lava covers them — that exchange is above), base to the ground.
-    this.depAcc += dt;
+    this.depAcc += step;
     if (++this.depCount < DEP_EVERY) return;
-    dt = this.depAcc;
+    const dt = this.depAcc;
     this.depAcc = 0;
     this.depCount = 0;
     const keep: number[] = [];
@@ -556,7 +594,7 @@ export class LavaField {
     }
     const Ta = env.airT(i), Tsky = env.Tref;
     const hc = hGround(Math.max(this.Ts[i], Ta), Ta, env.wind(i));
-    const Ts = surfaceTemperature(Ti, d, k, eps, Tsky, hc, Ta);
+    const Ts = surfaceTemperature(Ti, d, k, eps, Tsky, hc, Ta, this.Ts[i]);
     this.Ts[i] = Ts;
     const q = eps * SIGMA * (Ts ** 4 - Tsky ** 4);
     // Margins: the faces standing above lava-free neighbours radiate sideways (same crust temperature).
@@ -600,6 +638,9 @@ export class LavaField {
 
   private depAcc = 0;
   private depCount = 0;
+  /** Time cooled so far (s) and, per mobile vertex, the time it was last cooled. */
+  private clock = 0;
+  private cooledAt = new Float64Array(0);
   /** Margin radiation of the column just evaluated by top() (J, outward normal × area). */
   private readonly sideNow = { J: 0, nx: 0, nz: 0 };
 

@@ -33,11 +33,12 @@ export function boundaryLayer(kappa: number, age: number, h: number): number {
 }
 
 /** Surface temperature in air (K): Newton on the concave balance from above (monotone convergence). */
-export function surfaceTemperature(Ti: number, delta: number, k: number, eps: number, Tsky: number, hc: number, Tair: number): number {
+export function surfaceTemperature(Ti: number, delta: number, k: number, eps: number, Tsky: number, hc: number, Tair: number, guess = Ti): number {
   const G = k / delta;
   const lo = Math.min(Tsky, Tair);
   if (Ti <= lo) return Ti;
-  let Ts = Ti;
+  // Warm start from the last surface temperature (a step moves it little); Newton then converges in a few iterations.
+  let Ts = guess > lo && guess < Ti ? guess : Ti;
   for (let it = 0; it < 12; it++) {
     const T3 = Ts * Ts * Ts;
     const f = G * (Ti - Ts) - eps * SIGMA * (T3 * Ts - Tsky ** 4) - hc * (Ts - Tair);

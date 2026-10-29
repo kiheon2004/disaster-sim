@@ -23,6 +23,9 @@ import { DEG } from '@/ground/materials';
 import { MS } from '@/structure/types';
 import type { VolcanoRuntime } from './runtime';
 import { SYNC_TOLERANCE } from './VolcanoChannel';
+import { THERMAL_MATERIALS } from '@/thermal/materials';
+
+const THERMAL_EPS = (m: number) => THERMAL_MATERIALS[m].emissivity;
 
 const S = () => useWorldStore.getState();
 /** Ground height of the test slope (6° toward +x up to x = 30) — objects stand on it, as the editor places them. */
@@ -313,3 +316,74 @@ describe('determinism, ids, restoration, save / load', () => {
 });
 
 void MS;
+
+describe('Phase 27 residual checks with the volcano', () => {
+  it('attribution: earthquake failures near an unrelated heat source are not heat failures (an unregistered hazard index −1 is not the no-cause marker); hazard indices of earlier phases are unchanged', { timeout: 300_000 }, async () => {
+    const { HAZARDS } = await import('../analysis/DamageEvent');
+    expect(HAZARDS.slice(0, 8)).toEqual(['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire']);
+    expect(HAZARDS.indexOf('volcano')).toBe(8);
+    S().setLocked(false);
+    S().newDocument();
+    S().applyEdit({ add: [{ type: 'building', building: createDesign(presetSpec('apartment')!, 'apartment'), seed: 1, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } }] });
+    const c = await start(docNow(), [
+      { event: 'earthquake', magnitude: 7.5, pga: 1.1, duration: 20, seed: 3 } as EventSpec,
+      { event: 'heatSource', kind: 'point', position: [80, 80], height: 1, radius: 1, input: 'power', power: 1e4, profile: 'constant', duration: 40 } as EventSpec,
+    ]);
+    c.advance(30);
+    const rt = c.getEnvironment().thermal.rt!;
+    const m = [...c.getRuntime()!.entities.values()].find((e) => e.modular)!.modular!.structure!.model;
+    const failed = m.records.length;
+    expect(failed).toBeGreaterThan(0);
+    for (const bt of rt.buildings) expect(bt.thermalFailures).toBe(0);
+    expect(c.getDamageEvents().some((e) => e.hazard === 'thermal' || e.hazard === 'fire' || e.hazard === 'volcano')).toBe(false);
+    c.unload();
+  });
+
+  it('lava heat reaches the fire model\'s incident flux exactly once (radiation + contact deposits = qInc of the fuel)', { timeout: 300_000 }, async () => {
+    slope();
+    S().applyEdit({ add: [tree(-52, 0)] });
+    const c = await start(docNow(), [eruption({ duration: 200 })]);
+    c.advance(15);
+    let checked = 0;
+    for (let k = 0; k < 600; k++) {
+      c.advance(0.1);
+      const vr = vrOf(c), fr = c.getEnvironment().fire.rt!, fw = fr.fw, B = vr.trt.world.bodies;
+      const te = vr.trt.ents.find((x) => x.e.source.type === 'tree')!;
+      const items = fr.bodyItems.get(te.body) ?? [];
+      if (!items.length) continue;
+      let q = 0;
+      for (const s of vr.last) {
+        const n = s.bodies ?? s.deposits.length;
+        for (let j = 0; j < n; j++) { const d = s.deposits[j]; if (d.kind === 4 && d.index === te.body && d.a && !d.core) q += (s.energy * d.w) / (0.1 * THERMAL_EPS(B.matS[te.body]) * d.a); }
+      }
+      // Burning neighbours would add their own flame flux: only while nothing burns is the lava the only source.
+      if (Array.from(fw.state.slice(0, fw.n)).some((st) => st >= 3)) break;
+      if (q <= 0) continue;
+      // (qInc is Float32: equal to float precision — counted twice it would be 2.)
+      for (const i of items) { expect(fw.qInc[i] / q).toBeCloseTo(1, 6); checked++; }
+    }
+    expect(checked).toBeGreaterThan(0);
+    c.unload();
+  });
+
+  it('thermal LOD: lava in one corner of a 100-house town refines only the buildings it reaches', { timeout: 400_000 }, async () => {
+    S().setLocked(false);
+    S().newDocument();
+    const t0 = S().doc.terrain;
+    const h = (x: number, z: number) => Math.round(Math.max(0, (100 - (x + z) / 2) * Math.tan(5 * DEG) - 40 * Math.tan(5 * DEG)) * 100) / 100;
+    const heights = new Float32Array(t0.heights.length);
+    for (let iz = 0; iz < t0.nz; iz++) for (let ix = 0; ix < t0.nx; ix++) heights[iz * t0.nx + ix] = h(t0.originX + ix, t0.originZ + iz);
+    S().applyEdit({ landscape: { base: { heights, ground: new Uint8Array(heights.length) } } });
+    const add = [];
+    for (let z = -94; z <= 94 && add.length < 100; z += 16) for (let x = -94; x <= 94 && add.length < 100; x += 16) if (x + z >= -120) add.push({ type: 'building' as const, building: house(), seed: add.length + 1, transform: { position: [x, h(x, z), z] as [number, number, number], rotation: [0, 0, 0] as [number, number, number], scale: [1, 1, 1] as [number, number, number] } });
+    S().applyEdit({ add });
+    S().doc.settings.simulation.seed = 42;
+    const c = await start(docNow(), [eruption({ vents: [{ kind: 'central', position: [-90, -90], radius: 2 }], duration: 300 })]);
+    c.advance(150);
+    const rt = c.getEnvironment().thermal.rt!;
+    expect(rt.refined).toBeLessThanOrEqual(6);
+    expect(rt.buildings.length).toBeLessThanOrEqual(6);
+    expectLedgers(c);
+    c.unload();
+  });
+});

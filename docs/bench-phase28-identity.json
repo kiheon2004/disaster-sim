@@ -1,0 +1,67 @@
+{
+ "baseline": "5c0f878 (Phase 27 final)",
+ "candidate": "Phase 28 working tree (volcano off)",
+ "note": "IDENTITY_FIRE=1: hazard scenes + heat-source scenes + fire scenes; SHA-256 of damage events, collapse records, rubble, poses, water, thermal and fire state",
+ "scenes": {
+  "street earthquake 1.1 g": {
+   "phase27": "c5f388ba30ebfc72e340f02c18c36f58002d775f6b3bab8fb0ed571c8d5c45d6",
+   "phase28": "c5f388ba30ebfc72e340f02c18c36f58002d775f6b3bab8fb0ed571c8d5c45d6",
+   "identical": true
+  },
+  "blast 12 houses": {
+   "phase27": "77a67713495878f952eb986fc4b21d4d184180dca9c70ff1a9a89ed8c5c54204",
+   "phase28": "77a67713495878f952eb986fc4b21d4d184180dca9c70ff1a9a89ed8c5c54204",
+   "identical": true
+  },
+  "flood + rain": {
+   "phase27": "f7dda124168c6666e0c1ecd05b9382e1b36f62b1be736f6c91aec1e746efae8f",
+   "phase28": "f7dda124168c6666e0c1ecd05b9382e1b36f62b1be736f6c91aec1e746efae8f",
+   "identical": true
+  },
+  "wind cladding": {
+   "phase27": "47196fc84c5982cfea7c8a381635c252eef10600e465ad002beaaadf530592a3",
+   "phase28": "47196fc84c5982cfea7c8a381635c252eef10600e465ad002beaaadf530592a3",
+   "identical": true
+  },
+  "impact": {
+   "phase27": "5862ce8493e5bc5e8e26620d4a8446ac88bd7a8aab87e787ff86450e222f793b",
+   "phase28": "5862ce8493e5bc5e8e26620d4a8446ac88bd7a8aab87e787ff86450e222f793b",
+   "identical": true
+  },
+  "heat: warehouse room fire-like source": {
+   "phase27": "83a71bcf866e6889b628f00256badf19b4aee32af006756600aa6c26648eaeb7",
+   "phase28": "83a71bcf866e6889b628f00256badf19b4aee32af006756600aa6c26648eaeb7",
+   "identical": true
+  },
+  "heat: house + trees, ramp": {
+   "phase27": "d7972d3543022e34df19ebf17e75ceab84dcd1349212281940ddd8f524c487e2",
+   "phase28": "d7972d3543022e34df19ebf17e75ceab84dcd1349212281940ddd8f524c487e2",
+   "identical": true
+  },
+  "heat: apartment temperature sphere + earthquake": {
+   "phase27": "50f53fc77ba80472f7687a7ebd42aab36a2cd314747ef666288079834e6e005c",
+   "phase28": "50f53fc77ba80472f7687a7ebd42aab36a2cd314747ef666288079834e6e005c",
+   "identical": true
+  },
+  "heat: surface + rain": {
+   "phase27": "fccfaf084f1ab2bf6373f84bcf601eca69290901ff06c470f69668c148f7dce3",
+   "phase28": "fccfaf084f1ab2bf6373f84bcf601eca69290901ff06c470f69668c148f7dce3",
+   "identical": true
+  },
+  "fire: house room fire, windows open": {
+   "phase27": "fb09202c7660e551dff29970472b2f9671a3ddb228518b7d2928dce96ce7b8cb",
+   "phase28": "fb09202c7660e551dff29970472b2f9671a3ddb228518b7d2928dce96ce7b8cb",
+   "identical": true
+  },
+  "fire: dry stand + wind": {
+   "phase27": "63033025e2606589edab8be8eec377cdc11ead9c82c40712e10b715be8ebaacf",
+   "phase28": "63033025e2606589edab8be8eec377cdc11ead9c82c40712e10b715be8ebaacf",
+   "identical": true
+  },
+  "fire: heat ignition of a dry crown": {
+   "phase27": "3c9e86fabea0eb7f7c014c770113076892829cb57719b54735587bfd5c0de00d",
+   "phase28": "3c9e86fabea0eb7f7c014c770113076892829cb57719b54735587bfd5c0de00d",
+   "identical": true
+  }
+ }
+}

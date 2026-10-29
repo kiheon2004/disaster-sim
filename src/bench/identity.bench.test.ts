@@ -4,6 +4,8 @@
  * water) to IDENTITY_OUT.
  * Phase 27: IDENTITY_HEAT=1 adds heat-source scenes (no fire) whose thermal state is hashed too — with
  * the fire system off they must be bit-identical to the Phase 26 build.
+ * Phase 28: IDENTITY_FIRE=1 adds fire scenes (room fire, burning stand, heat ignition) whose fire and thermal
+ * state is hashed too — with the volcano system off they must be bit-identical to the Phase 27 build.
  */
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -43,6 +45,25 @@ const HEAT_SCENES: typeof SCENES = [
   { name: 'heat: surface + rain', doc: () => world([{ type: 'tree', seed: 2, transform: tf(3, 0) }]), events: [heat({ kind: 'surface', radius: 6, power: 1e6, duration: 60 }), { event: 'rain', intensity: 100, duration: 60 } as EventSpec], seconds: 60 },
 ];
 
+const fireSettings = (p: Record<string, unknown> = {}) => ({ foliageMoisture: 1.5, openings: 'windowsOpen', heatIgnition: false, ...p });
+const conifer = (x: number, z: number, seed: number) => ({ type: 'tree', params: { species: 'conifer', height: 11, canopyRadius: 2.2, trunkRadius: 0.32 }, seed, transform: tf(x, z) });
+const withFire = (d: WorldDocument, p: Record<string, unknown> = {}) => { (d.settings.simulation as unknown as Record<string, unknown>).fire = fireSettings(p); return d; };
+const FIRE_SCENES: typeof SCENES = [
+  { name: 'fire: house room fire, windows open', doc: () => withFire(world([{ type: 'building', building: D('house'), seed: 7, transform: tf(0, 0) }, conifer(9, 0, 1) as never])), events: [{ event: 'fire', position: [0, 0], height: 1, radius: 1, duration: 900 } as EventSpec], seconds: 600 },
+  { name: 'fire: dry stand + wind', doc: () => withFire(world(Array.from({ length: 12 }, (_, k) => conifer(-10 + (k % 4) * 6, -6 + Math.floor(k / 4) * 6, 30 + k) as never)), { foliageMoisture: 0.2 }), events: [{ event: 'wind', speed: 8, direction: 'W', duration: 300 } as EventSpec, { event: 'fire', position: [-10, -6], height: 6, radius: 2, duration: 300 } as EventSpec], seconds: 180 },
+  { name: 'fire: heat ignition of a dry crown', doc: () => withFire(world([conifer(0, 0, 3) as never]), { foliageMoisture: 0.2, heatIgnition: true }), events: [heat({ position: [3, 0], height: 4, power: 2e6, duration: 120 })], seconds: 120 },
+];
+
+function fireLines(c: SimulationController): string[] {
+  const fr = c.getEnvironment().fire.rt;
+  if (!fr) return ['no-fire'];
+  const fw = fr.fw, lines: string[] = [];
+  for (let i = 0; i < fw.n; i++) lines.push([fw.kind[i], fw.state[i], fw.m[i], fw.E[i], fw.char[i], fw.tIgn[i], fr.cause[i]].join('|'));
+  for (const R of fw.rooms) lines.push([R.o2, R.soot, R.Ao, R.flashover].join('|'));
+  lines.push(Array.from(fw.soot).join(','), JSON.stringify(fw.ledger.snapshot()));
+  return lines;
+}
+
 function thermalLines(c: SimulationController): string[] {
   const rt = c.getEnvironment().thermal.rt;
   if (!rt) return ['no-thermal'];
@@ -58,7 +79,7 @@ function thermalLines(c: SimulationController): string[] {
 describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
   it('scenes', { timeout: 3_600_000 }, async () => {
     const out: Record<string, string> = {};
-    for (const sc of process.env.IDENTITY_HEAT ? [...SCENES, ...HEAT_SCENES] : SCENES) {
+    for (const sc of [...SCENES, ...(process.env.IDENTITY_HEAT || process.env.IDENTITY_FIRE ? HEAT_SCENES : []), ...(process.env.IDENTITY_FIRE ? FIRE_SCENES : [])]) {
       const c = new SimulationController({ headless: true });
       await c.load(sc.doc());
       for (const e of sc.events) c.addEvent(e);
@@ -74,7 +95,8 @@ describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
       if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
       const f = c.getEnvironment().flood.field;
       if (f) lines.push(Array.from(f.h).reduce((a, b) => a + b, 0).toString(), JSON.stringify(f.budget));
-      if (process.env.IDENTITY_HEAT) lines.push(...thermalLines(c));
+      if (process.env.IDENTITY_HEAT || process.env.IDENTITY_FIRE) lines.push(...thermalLines(c));
+      if (process.env.IDENTITY_FIRE) lines.push(...fireLines(c));
       out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
       c.unload();
     }

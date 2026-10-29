@@ -296,7 +296,7 @@ export class VolcanoObjects {
       const st = volcanoState(e);
       st.lava = s.h; st.deposit = s.d;
       if (s.h > st.peakLava) st.peakLava = s.h;
-      if (s.h >= 0.02) st.contact += dt;
+      if (s.h >= 0.02) { st.contact += dt; this.arrival(ctx, e); }
       const over = s.h + s.d;
       const burial = BURIAL[t];
       if (burial !== undefined && over >= burial * e.dims[1] && !st.noted.has('buried')) {
@@ -369,7 +369,7 @@ export class VolcanoObjects {
     const st = volcanoState(e);
     st.lava = hb; st.deposit = over - hb;
     if (hb > st.peakLava) st.peakLava = hb;
-    if (hb > 0.02) st.contact += dt;
+    if (hb > 0.02) { st.contact += dt; this.arrival(ctx, e); }
     // Ash on the roof.
     st.ash = ash;
     const roofA = Math.max(1, e.dims[0] * e.dims[2]);
@@ -420,6 +420,11 @@ export class VolcanoObjects {
         activate(e, ctx);
       }
     }
+  }
+
+  /** Timeline: the first object the lava reaches. */
+  private arrival(ctx: SystemContext, e: RuntimeEntity) {
+    ctx.milestone?.({ time: ctx.time, kind: 'lavaArrival', hazard: 'volcano', subject: e.source.type, label: { key: 'milestone.lavaArrival' } }, 'volcano:lavaArrival');
   }
 
   private roads(ctx: SystemContext) {

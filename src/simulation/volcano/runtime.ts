@@ -49,6 +49,8 @@ export const RAD_FLOOR = 200;
 export const RAD_REACH = 40;
 /** Receiver lists of the patches are rebuilt this often (s) — the weights inside a list are exact per step. */
 export const RAD_PERIOD = 1;
+/** Receiver lists refreshed per step at most (new patches are always built). */
+export const MAX_REBUILDS = 12;
 /** Glowing surface (Draper point): a fuel item touching it is piloted. */
 export const DRAPER = 798;
 /** Lava at least this deep (m) at an object counts as contact. */
@@ -80,8 +82,9 @@ export interface VolcanoStats {
   patches: number;
   receivers: number;
   contacts: number;
-  /** Cost of the last step by part (ms). */
+  /** Cost of the last step by part (ms) and the run totals. */
   ms: { flow: number; cool: number; ash: number; bombs: number; heat: number; objects: number };
+  msTotal: { flow: number; cool: number; ash: number; bombs: number; heat: number; objects: number };
   supplyRate: number;
   waterAbove100: number;
 }
@@ -90,7 +93,7 @@ export class VolcanoRuntime {
   readonly vw: VolcanoWorld | null;
   readonly trt: ThermalRuntime;
   readonly objects: VolcanoObjects;
-  readonly stats: VolcanoStats = { activeLava: 0, hotDeposits: 0, maxDepth: 0, maxT: 0, maxSpeed: 0, substeps: 0, faces: 0, patches: 0, receivers: 0, contacts: 0, ms: { flow: 0, cool: 0, ash: 0, bombs: 0, heat: 0, objects: 0 }, supplyRate: 0, waterAbove100: 0 };
+  readonly stats: VolcanoStats = { activeLava: 0, hotDeposits: 0, maxDepth: 0, maxT: 0, maxSpeed: 0, substeps: 0, faces: 0, patches: 0, receivers: 0, contacts: 0, ms: { flow: 0, cool: 0, ash: 0, bombs: 0, heat: 0, objects: 0 }, msTotal: { flow: 0, cool: 0, ash: 0, bombs: 0, heat: 0, objects: 0 }, supplyRate: 0, waterAbove100: 0 };
   private readonly patches = new Map<number, Patch>();
   /** Cells covered by lava now (and what they were before). */
   private covered: number[] = [];
@@ -215,6 +218,8 @@ export class VolcanoRuntime {
     this.updateCover();
     this.stats.ms.heat = performance.now() - th;
     Object.assign(this.stats.ms, vw.cost);
+    const T = this.stats.msTotal, M = this.stats.ms;
+    T.flow += M.flow; T.cool += M.cool; T.ash += M.ash; T.bombs += M.bombs; T.heat += M.heat;
     this.stats.activeLava = f.mobile.length;
     this.stats.hotDeposits = f.hot.length;
     this.stats.substeps = f.substeps;
@@ -230,18 +235,28 @@ export class VolcanoRuntime {
   }
 
   /** Accumulated heat of the field → thermal source steps (exact: the steps carry what the field booked). */
+  /** Per-cell / per-column accumulators of the heat steps (reused: no per-step maps or sorting of pairs). */
+  private acc: { ground: Float64Array; water: Float64Array; air: Float64Array; gList: number[]; wList: number[]; aList: number[] } | null = null;
+
   private heatSteps(ctx: SystemContext, dt: number): SourceStep[] {
     const w = this.trt.world, f = this.world.field, cb = this.cbuf;
-    const ground = new Map<number, number>(), water = new Map<number, number>(), air = new Map<number, number>();
-    let G = 0, W = 0, A = 0, R = 0;
+    const acc = (this.acc ??= { ground: new Float64Array(w.terrain.count), water: new Float64Array(w.terrain.count), air: new Float64Array(w.air.count), gList: [], wList: [], aList: [] });
+    let G = 0, W = 0, A = 0, R = 0, above = 0;
     const patchE = new Map<number, { top: number; side: number; x: number; z: number; y: number; sx: number; sz: number; w: number }>();
     f.drain((i, g, a, r, wt) => {
-      if (g !== 0) { const k = this.cellsOf(i, cb); if (k === 0) { G += 0; } for (let j = 0; j < k; j++) ground.set(cb[j], (ground.get(cb[j]) ?? 0) + g / k); G += k ? g : 0; if (!k) w.ledger.lost.deepGround += 0; }
-      if (wt !== 0) { const k = this.cellsOf(i, cb); for (let j = 0; j < k; j++) water.set(cb[j], (water.get(cb[j]) ?? 0) + wt / k); W += wt; }
+      if (g !== 0 || wt !== 0) {
+        const k = this.cellsOf(i, cb);
+        for (let j = 0; j < k; j++) {
+          const c = cb[j];
+          if (g !== 0) { if (acc.ground[c] === 0) acc.gList.push(c); acc.ground[c] += g / k; }
+          if (wt !== 0) { if (acc.water[c] === 0) acc.wList.push(c); acc.water[c] += wt / k; }
+        }
+        if (k) { G += g; W += wt; }
+      }
       if (a !== 0) {
         const c = w.air.index(f.xOf(i), f.zOf(i), Math.max(1, f.depth(i) + 1));
-        if (c >= 0) { air.set(c, (air.get(c) ?? 0) + a); A += a; }
-        else { air.set(-1, (air.get(-1) ?? 0) + a); A += a; }
+        if (c >= 0) { if (acc.air[c] === 0) acc.aList.push(c); acc.air[c] += a; } else above += a;
+        A += a;
       }
       if (r !== 0) {
         const ix = i % f.nx, iz = (i / f.nx) | 0;
@@ -255,25 +270,27 @@ export class VolcanoRuntime {
         R += r;
       }
     });
+    const take = (arr: Float64Array, list: number[], kind: number, total: number): Deposit[] => {
+      list.sort((x, y) => x - y);
+      const out: Deposit[] = new Array(list.length);
+      for (let n = 0; n < list.length; n++) { const c = list[n]; out[n] = { kind: kind as Deposit['kind'], index: c, w: arr[c] / total }; arr[c] = 0; }
+      list.length = 0;
+      return out;
+    };
     const steps: SourceStep[] = [];
-    const sorted = (m: Map<number, number>) => [...m.entries()].sort((a, b) => a[0] - b[0]);
-    if (G !== 0) {
-      const d: Deposit[] = sorted(ground).map(([c, J]) => ({ kind: TK.ground, index: c, w: J / G }));
-      steps.push({ id: 'volcano:ground', energy: G, deposits: d, volcanic: true });
-    }
-    if (W !== 0) steps.push({ id: 'volcano:water', energy: W, deposits: sorted(water).map(([c, J]) => ({ kind: TK.water, index: c, w: J / W })), volcanic: true });
-    if (A !== 0) {
-      const list = sorted(air);
-      const above = list.filter(([c]) => c < 0).reduce((s, [, J]) => s + J, 0);
-      steps.push({ id: 'volcano:air', energy: A, deposits: list.filter(([c]) => c >= 0).map(([c, J]) => ({ kind: TK.air, index: c, w: J / A })), aboveLayer: above / A, volcanic: true });
-    }
+    // Water heated beyond boiling (no boiling model in Phase 26): reported, not hidden.
+    let hot = 0;
+    if (w.water) for (const c of acc.wList) if (w.waterT(c) > 373.15) hot++;
+    this.stats.waterAbove100 = Math.max(this.stats.waterAbove100, hot);
+    if (G !== 0) steps.push({ id: 'volcano:ground', energy: G, deposits: take(acc.ground, acc.gList, TK.ground, G), volcanic: true });
+    else { for (const c of acc.gList) acc.ground[c] = 0; acc.gList.length = 0; }
+    if (W !== 0) steps.push({ id: 'volcano:water', energy: W, deposits: take(acc.water, acc.wList, TK.water, W), volcanic: true });
+    else { for (const c of acc.wList) acc.water[c] = 0; acc.wList.length = 0; }
+    if (A !== 0) steps.push({ id: 'volcano:air', energy: A, deposits: take(acc.air, acc.aList, TK.air, A), aboveLayer: above / A, volcanic: true });
+    else { for (const c of acc.aList) acc.air[c] = 0; acc.aList.length = 0; }
     if (R !== 0) steps.push(this.radiation(ctx, dt, patchE, R));
     const contact = this.contacts(ctx, dt);
     if (contact) steps.push(contact);
-    // Water heated beyond boiling (no boiling model in Phase 26): reported, not hidden.
-    let hot = 0;
-    if (w.water) for (const c of water.keys()) if (w.waterT(c) > 373.15) hot++;
-    this.stats.waterAbove100 = Math.max(this.stats.waterAbove100, hot);
     return steps;
   }
 
@@ -282,10 +299,15 @@ export class VolcanoRuntime {
     const trt = this.trt, B = trt.world.bodies;
     const acc = new Map<number, { J: number; a: number }>();
     let receivers = 0;
+    let rebuilds = 0;
     for (const [key, e] of [...patchE.entries()].sort((a, b) => a[0] - b[0])) {
       let p = this.patches.get(key);
       const x = e.x / e.w, y = e.y / e.w, z = e.z / e.w;
-      if (!p || ctx.time - p.builtAt >= RAD_PERIOD || Math.hypot(p.x - x, p.z - z) > 1.5) {
+      // New patches always get their receivers; old lists are refreshed at most MAX_REBUILDS per step
+      // (spread over steps, oldest first by key order) — a list is at most a few seconds old.
+      const stale = !!p && (ctx.time - p.builtAt >= RAD_PERIOD || Math.hypot(p.x - x, p.z - z) > 1.5);
+      if (!p || (stale && rebuilds < MAX_REBUILDS && ctx.time - p.builtAt >= RAD_PERIOD * (1 + (key % 7) / 7))) {
+        if (p) rebuilds++;
         p = this.buildPatch(ctx, key, [x, y, z], (e.top + e.side) / dt, e.sx, e.sz);
         this.patches.set(key, p);
       }
@@ -318,7 +340,7 @@ export class VolcanoRuntime {
     const sl = Math.hypot(sx, sz);
     const nx = sl > 0 ? sx / sl : 0, nz = sl > 0 ? sz / sl : 0;
     // Bodies in reach join the thermal network first (activation / member detail where it matters).
-    for (const te of trt.ents) {
+    for (const te of this.entsNear(ctx, P, reach)) {
       const q = te.e.pose.position;
       const d = Math.hypot(q[0] - P[0], q[2] - P[2]) - Math.hypot(te.e.dims[0], te.e.dims[2]) / 2;
       if (d > reach) continue;
@@ -326,7 +348,7 @@ export class VolcanoRuntime {
       if (te.coarse && d <= 8) trt.refine(ctx, te);
     }
     const shields = trt.shields(P, reach);
-    for (let i = 0; i < B.n; i++) {
+    for (const i of this.bodiesNear(ctx, P, reach)) {
       if (!B.alive[i]) continue;
       const dx = B.x[i] - P[0], dy = B.y[i] - P[1], dz = B.z[i] - P[2];
       const r = Math.hypot(dx, dy, dz);
@@ -348,6 +370,52 @@ export class VolcanoRuntime {
     }
     return p;
   }
+
+  /** Bodies near a point (8 m grid of body centres, rebuilt once per step when bodies were added / moved). */
+  private grid: { step: number; n: number; cells: Map<number, number[]> } = { step: -1, n: -1, cells: new Map() };
+  private bodiesNear(ctx: SystemContext, P: Vec3, r: number): number[] {
+    const B = this.trt.world.bodies, G = 8;
+    if (this.grid.step !== ctx.step || this.grid.n !== B.n) {
+      const cells = new Map<number, number[]>();
+      for (let i = 0; i < B.n; i++) {
+        if (!B.alive[i]) continue;
+        const key = Math.floor(B.x[i] / G) * 100003 + Math.floor(B.z[i] / G);
+        const l = cells.get(key);
+        if (l) l.push(i); else cells.set(key, [i]);
+      }
+      this.grid = { step: ctx.step, n: B.n, cells };
+    }
+    const out: number[] = [];
+    const x0 = Math.floor((P[0] - r - 4) / G), x1 = Math.floor((P[0] + r + 4) / G), z0 = Math.floor((P[2] - r - 4) / G), z1 = Math.floor((P[2] + r + 4) / G);
+    for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const l = this.grid.cells.get(gx * 100003 + gz); if (l) for (const i of l) out.push(i); }
+    return out.sort((a, b) => a - b);
+  }
+
+  /** Thermal entities near a point (16 m grid of their positions, rebuilt once per step; sizes ≤ 40 m covered by the margin). */
+  private egrid: { step: number; cells: Map<number, EntityThermal[]> } = { step: -1, cells: new Map() };
+  private entsNear(ctx: SystemContext, P: Vec3, r: number): EntityThermal[] {
+    const G = 16;
+    if (this.egrid.step !== ctx.step) {
+      const cells = new Map<number, EntityThermal[]>();
+      for (const te of this.trt.ents) {
+        const q = te.e.pose.position;
+        const key = Math.floor(q[0] / G) * 100003 + Math.floor(q[2] / G);
+        const l = cells.get(key);
+        if (l) l.push(te); else cells.set(key, [te]);
+      }
+      this.egrid = { step: ctx.step, cells };
+    }
+    const out: EntityThermal[] = [];
+    const m = r + 24;
+    for (let gx = Math.floor((P[0] - m) / G); gx <= Math.floor((P[0] + m) / G); gx++) for (let gz = Math.floor((P[2] - m) / G); gz <= Math.floor((P[2] + m) / G); gz++) {
+      const l = this.egrid.cells.get(gx * 100003 + gz);
+      if (l) for (const te of l) out.push(te);
+    }
+    // Registration order (deterministic, as the full scan).
+    const order = this.entOrder ??= new Map(this.trt.ents.map((te, k) => [te, k]));
+    return out.sort((a, b) => order.get(a)! - order.get(b)!);
+  }
+  private entOrder: Map<EntityThermal, number> | null = null;
 
   /** Conduction into objects standing in the lava (and bombs they caught). */
   private contacts(ctx: SystemContext, dt: number): SourceStep | null {
@@ -453,6 +521,7 @@ export class VolcanoRuntime {
     const t0 = performance.now();
     this.objects.respond(ctx, dt);
     this.stats.ms.objects = performance.now() - t0;
+    this.stats.msTotal.objects += this.stats.ms.objects;
     this.milestones(ctx);
     this.ms += performance.now() - t0;
     this.msTotal += this.ms;
