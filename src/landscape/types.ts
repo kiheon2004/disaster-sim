@@ -166,7 +166,7 @@ export const LIMITS = {
   peakRadius: [8, 100],
   mountainHeight: [3, 60],
   hillHeight: [1, 20],
-  lineWidth: [6, 80],
+  lineWidth: [6, 160],
   ridgeHeight: [1, 40],
   valleyDepth: [1, 30],
   roughness: [0, 1],

@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import type { EntityId, Transform } from '@/core/types';
 import type { FloodScenario, FoundationSpec, ObjectParams, PhysicalProperties, StructuralSpec, TerrainData, TerrainPresetId, WaterSettings, WindModelSettings, WorldDocument, WorldObject } from '@/core/model';
 import { defaultFloodScenario, defaultWaterSettings } from '@/core/model';
@@ -108,7 +109,7 @@ export interface MutationOptions {
   history?: boolean;
 }
 
-interface WorldState {
+export interface WorldState {
   doc: WorldDocument;
   past: HistoryEntry[];
   future: HistoryEntry[];
@@ -234,7 +235,12 @@ function samplerOver(t: TerrainData, layers: ReturnType<typeof snapshotLayers>):
   return new TerrainSampler({ ...t, heights: layers.heights, ground: layers.ground, soil: layers.soil, settings: layers.settings, revision: -1 });
 }
 
-export const useWorldStore = create<WorldState>((set, get) => {
+/**
+ * The world store's behaviour as a creator (Phase 20): the app's store and headless scratch
+ * stores (world templates, built-in blueprints) run the very same edit pipeline — layer
+ * composition, road baking, seating, history.
+ */
+const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
   /** Shared write path: optionally records history, then replaces objects immutably. */
   const commit = (next: Objects, opts?: MutationOptions) => {
     const { doc, past, locked } = get();
@@ -683,7 +689,16 @@ export const useWorldStore = create<WorldState>((set, get) => {
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });
     },
   };
-});
+};
+
+export const useWorldStore = create<WorldState>(worldStoreCreator);
+
+/** A separate, headless world store (never the app's): build documents with the full edit pipeline. */
+export function scratchWorld(doc?: WorldDocument) {
+  const store = createStore<WorldState>(worldStoreCreator);
+  if (doc) store.getState().replaceDocument(doc);
+  return store;
+}
 
 /** Convenience selectors */
 export const selectObjectList = (s: WorldState) => s.doc.objects;
