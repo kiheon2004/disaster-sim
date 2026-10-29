@@ -29,8 +29,9 @@ function spec(over: Partial<ClimateSpec>): ClimateSpec {
   return { ...defaultClimateSpec(), solar: 'off', precipitation: 0, scenario: 'custom', profile: 'constant', duration: 7200, humidity: 0.5, humidityTarget: undefined, soilMoisture: 0.2, ...over };
 }
 
-function setup(sp: ClimateSpec, water?: (x: number, z: number) => number, pressure?: number) {
+function setup(sp: ClimateSpec, water?: (x: number, z: number) => number, pressure?: number, height?: (x: number, z: number) => number) {
   const t = createFlatTerrain(40);
+  if (height) for (let iz = 0; iz < t.nz; iz++) for (let ix = 0; ix < t.nx; ix++) t.heights[iz * t.nx + ix] = height(t.originX + ix * t.cellSize, t.originZ + iz * t.cellSize);
   const tw = new ThermalWorld(t, { ...defaultThermalSettings(), ambient: sp.temperature }, 1.225);
   const ws = { ...defaultWaterSettings(), boundaries: { N: { type: 'closed' as const }, E: { type: 'closed' as const }, S: { type: 'closed' as const }, W: { type: 'closed' as const } } };
   let field: WaterField | null = null, solver: WaterSolver | null = null;
@@ -56,7 +57,7 @@ function setup(sp: ClimateSpec, water?: (x: number, z: number) => number, pressu
   for (let k = 0; k < tw.terrain.ntx * tw.terrain.ntz; k++) tw.terrain.activateTile(k);
   let time = 0;
   return {
-    tw, cw, get field() { return field; },
+    tw, cw, get field() { return field; }, get solver() { return solver; },
     step(seconds: number) {
       const n = Math.round(seconds / 0.1);
       for (let i = 0; i < n; i++) {
@@ -261,11 +262,66 @@ describe('audit: humidity paths of the editor scenarios and presets', () => {
       for (const e of p.events) {
         if ((e as { event: string }).event !== 'climate') continue;
         const sp = e as unknown as ClimateSpec;
-        const declared = sp.humidityTarget !== undefined;
+        // Presets whose assumptions describe a drying (or wetting) air: the heatwaves and the cold wave.
+        const declared = ['summerHeatwave', 'extremeCold', 'heatwaveDrying'].includes(id) || sp.humidityTarget === sp.humidity;
         if (!declared) for (const v of rhPath(sp)) expect(v).toBeCloseTo(sp.humidity, 12);
         const snowing = (sp.precipitation ?? 0) > 0 && sp.precipPhase !== 'rain';
         if (snowing && !declared && sp.humidity >= 0.5) expect(climateWarnings(sp)).not.toContain('climate.warn.drySnowfall');
       }
     }
+  });
+});
+
+describe('audit: ice in the flood model', () => {
+  it('floating ice on a bowl lake leaves the water at rest (before: the draft capped at h drove 0.5 m/s currents)', () => {
+    const bowl = (x: number, z: number) => -0.5 + 0.0006 * (x * x + z * z);
+    const r = setup(spec({ temperature: K(-5), target: K(-5), forcing: 'prescribed', humidity: 0.8, initialIce: 0.1 }), (x, z) => Math.max(0, -bowl(x, z)), undefined, bowl);
+    const f = r.field!;
+    r.step(30);
+    let uMax = 0;
+    for (let i = 0; i < f.qx.length; i++) uMax = Math.max(uMax, Math.abs(f.qx[i]));
+    for (let i = 0; i < f.qz.length; i++) uMax = Math.max(uMax, Math.abs(f.qz[i]));
+    // Unit discharge (m²/s): still water stays still; before the audit the shallow ring drew water from the centre.
+    expect(uMax).toBeLessThan(1e-4);
+    expect(r.tw.ledger.relativeResidual()).toBeLessThan(1e-8);
+  });
+
+  it('water on ice frozen to the bed flows over it (before: a bed-fast strip was a wall)', () => {
+    const slope = (x: number) => -0.02 * x;
+    const r = setup(spec({ temperature: K(-5), target: K(-5), forcing: 'prescribed', humidity: 0.8 }), (x) => (x < -12 ? 0.03 : x >= -4 && x < -2 ? 0.002 : 0), undefined, (x) => slope(x));
+    const f = r.field!, cw = r.cw;
+    // A strip of 4 mm ice frozen to the bed across the slope (x ∈ [−4, −2)).
+    for (let iz = 0; iz < f.nz; iz++) for (let ix = 0; ix < f.nx; ix++) {
+      const x = f.cellX(ix);
+      if (x >= -4 && x < -2) { const c = iz * f.nx + ix; (cw as unknown as { addFrozen(c: number, m: number, T: number, ice: boolean, rho: number): void }).addFrozen(c, 0.004 * RHO_ICE * cw.cellArea, K(-5), true, RHO_ICE); }
+    }
+    cw.syncIce();
+    expect(f.frozen![20 * f.nx + 17]).toBe(1);
+    let below0 = 0;
+    for (let iz = 0; iz < f.nz; iz++) for (let ix = 0; ix < f.nx; ix++) if (f.cellX(ix) > 0) below0 += f.h[iz * f.nx + ix];
+    // Short enough that the cold air freezes little of the moving film.
+    for (let k = 0; k < 600; k++) { r.solver!.step(0.1); }
+    let below1 = 0;
+    for (let iz = 0; iz < f.nz; iz++) for (let ix = 0; ix < f.nx; ix++) if (f.cellX(ix) > 0) below1 += f.h[iz * f.nx + ix];
+    // Before the audit the strip held everything upstream (exactly 0 crossed).
+    expect(below1).toBeGreaterThan(below0 + 1e-4);
+  });
+
+  it('a film on bare ground evaporates (before: films ≤ 1 mm were treated as soil and never left h)', () => {
+    const r = setup(spec({ temperature: K(25), target: K(25), humidity: 0.3, soilMoisture: 0.0, solar: 'constant', irradiance: 800 } as Partial<ClimateSpec>), () => 0.0008);
+    const v0 = r.field!.totalVolume();
+    r.step(300);
+    expect(r.field!.budget.evaporated).toBeGreaterThan(0);
+    expect(r.field!.totalVolume()).toBeLessThan(v0);
+    expect(r.tw.ledger.relativeResidual()).toBeLessThan(1e-8);
+  });
+
+  it('rain running through an ice glaze is booked as rain, not meltwater', () => {
+    const r = setup(spec({ temperature: K(-1), target: K(-1), forcing: 'prescribed', humidity: 0.95, precipitation: 20, precipPhase: 'rain' } as Partial<ClimateSpec>));
+    for (let c = 0; c < r.cw.n; c++) (r.cw as unknown as { addFrozen(c: number, m: number, T: number, ice: boolean, rho: number): void }).addFrozen(c, 0.003 * RHO_ICE * r.cw.cellArea, K(-1), true, RHO_ICE);
+    r.cw.water.initial = r.cw.waterStorage(); r.cw.energy.initial = r.cw.storeEnergy();
+    r.step(120);
+    // −1 °C air cannot melt the ice: whatever drained to the flood is the rain passing through (the cover holds no liquid).
+    expect(r.cw.totals.meltToFlood).toBeLessThan(1e-6 * Math.max(1, r.cw.totals.rain));
   });
 });

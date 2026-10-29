@@ -144,6 +144,8 @@ export class ClimateWorld {
   /** Cell temperature / liquid of the cover after the last update (display, friction). */
   readonly cT: Float32Array;
   readonly cLiq: Float32Array;
+  /** Liquid in a cover that arrived as rain and has not frozen (kg): it drains as rain, not as meltwater. */
+  readonly cRain: Float64Array;
   readonly coverTile: Uint8Array;
   // ── Soil (cell × layer, kg) ──
   readonly nl: number;
@@ -245,7 +247,7 @@ export class ClimateWorld {
     const n = this.n;
     this.cM = new Float64Array(n); this.cU = new Float64Array(n); this.cIce = new Float64Array(n);
     this.cRho = new Float32Array(n).fill(100); this.cAlb = new Float32Array(n).fill(SNOW_ALBEDO_MAX); this.cAsh = new Float32Array(n);
-    this.cT = new Float32Array(n).fill(T_MELT); this.cLiq = new Float32Array(n);
+    this.cT = new Float32Array(n).fill(T_MELT); this.cLiq = new Float32Array(n); this.cRain = new Float64Array(n);
     this.coverTile = new Uint8Array(g.ntx * g.ntz);
     this.sW = new Float64Array(n * this.nl); this.sI = new Float64Array(n * this.nl);
     this.ftCycles = new Uint16Array(n); this.ftFrozen = new Uint8Array(n);
@@ -816,8 +818,21 @@ export class ClimateWorld {
       }
       const T0 = g.T(c, 0);
       if (dm > 0) {
-        // Soil water: the flood's infiltrated water first, then the antecedent water of the top 8 cm.
         let m = dm, from = 0;
+        // A film (≤ WATER_MERGE, thermally merged with the ground) evaporates first — with its own sensible heat share.
+        if (w && w.h[c] > 0) {
+          const Mf = w.h[c] * RHO_WATER * w.cellArea;
+          const take = Math.min(Mf, m);
+          const e = w.heat ? w.heat[c] * (take / Mf) : 0;
+          if (w.heat) w.heat[c] -= e;
+          this.toThermal(-e, 'waterMass');
+          w.h[c] = take >= Mf ? 0 : w.h[c] - take / (RHO_WATER * w.cellArea);
+          w.budget.evaporated += take / RHO_WATER;
+          this.water.transfers.evaporation += take; this.totals.evaporated += take; this.last.evaporation += take;
+          this.vaporExchange(a, take, take > 0 ? e / take : 0, lat * (take / dm), false);
+          m -= take;
+        }
+        // Soil water: the flood's infiltrated water first, then the antecedent water of the top 8 cm.
         if (w) {
           const inf = w.infiltrated[c] * RHO_WATER * w.cellArea;
           const take = Math.min(inf, m);
@@ -832,9 +847,9 @@ export class ClimateWorld {
         const hs = C_WATER * (T0 - this.Tref);
         this.depositGround(c, -hs * from, 'waterMass');
         this.water.transfers.evaporation += from; this.totals.evaporated += from; this.last.evaporation += from;
-        this.vaporExchange(a, from, hs, lat * (dm > 0 ? from / dm : 1), false);
+        this.vaporExchange(a, from, hs, lat * (from / dm), false);
         // Latent of the part that found no water stays with the air (a tiny mismatch only when water ran out).
-        if (from < dm) this.vaporExchange(a, 0, 0, lat * (1 - from / dm), false);
+        if (m > 0) this.vaporExchange(a, 0, 0, lat * (m / dm), false);
       } else {
         const m = -dm;
         const vapAvail = a >= 0 ? this.vap[a] : Infinity;
@@ -985,6 +1000,7 @@ export class ClimateWorld {
     if ((this.cM[j] > 0 && !(w && w.blocked[c])) || coldBare) {
       this.cM[j] += m;
       this.cU[j] += J - m * C_WATER * (T_MELT - this.Tref);
+      this.cRain[j] += m;
       if (coldBare) this.markCover(j);
     } else this.toFlood(c, m, J, 'rain');
     void Tw;
@@ -1146,10 +1162,16 @@ export class ClimateWorld {
     this.cIce[c] = Math.min(this.cIce[c], F);
     const snowF = Math.max(0, F - this.cIce[c]);
     const drain = Math.max(0, liq - SNOW_HOLDING * snowF);
+    // Rain liquid that froze in the cover is part of the frozen mass now: what is left of it is at most the liquid.
+    if (this.cRain[c] > liq) this.cRain[c] = liq;
     if (drain > 1e-12) {
-      // Liquid at 0 °C carries 0 relative to 0 °C: U unchanged, M decreases.
+      // Liquid at 0 °C carries 0 relative to 0 °C: U unchanged, M decreases. Rain that ran through drains as rain.
       this.cM[c] = M - drain;
-      this.drainToWater(c, drain, drain * C_WATER * (T_MELT - this.Tref), wet);
+      const rain = Math.min(this.cRain[c], drain);
+      this.cRain[c] -= rain;
+      const hs = C_WATER * (T_MELT - this.Tref);
+      if (rain > 0) this.toFlood(c, rain, rain * hs, 'rain');
+      if (drain - rain > 0) this.drainToWater(c, drain - rain, (drain - rain) * hs, wet);
       this.water.transfers.drainage += drain; this.last.drained += drain;
     }
     if (!(this.cM[c] > 1e-9)) { this.clearCover(c, wet); return; }
@@ -1173,7 +1195,9 @@ export class ClimateWorld {
       const J = this.coverEnergy(M, U);
       const w = this.link.water();
       if (M > 1e-3 || (wet && w)) {
-        if (M > 0) this.toFlood(c, M, J, 'melt');
+        const rain = Math.min(this.cRain[c], Math.max(0, M));
+        if (rain > 0) this.toFlood(c, rain, (J * rain) / M, 'rain');
+        if (M - rain > 0) this.toFlood(c, M - rain, (J * (M - rain)) / M, 'melt');
         else if (wet && w) this.depositWater(w, c, J, 'cover');
         else this.depositGround(c, J, 'cover');
       } else {
@@ -1181,7 +1205,7 @@ export class ClimateWorld {
         this.depositGround(c, J, 'cover');
       }
     }
-    this.cM[c] = 0; this.cU[c] = 0; this.cIce[c] = 0; this.cRho[c] = 100; this.cAlb[c] = SNOW_ALBEDO_MAX; this.cLiq[c] = 0; this.cT[c] = T_MELT;
+    this.cM[c] = 0; this.cU[c] = 0; this.cIce[c] = 0; this.cRho[c] = 100; this.cAlb[c] = SNOW_ALBEDO_MAX; this.cLiq[c] = 0; this.cT[c] = T_MELT; this.cRain[c] = 0;
     this.surf.covered[c] = 0;
   }
 
@@ -1394,14 +1418,17 @@ export class ClimateWorld {
       const F = (w.iceFric ??= new Float32Array(w.count).fill(1));
       const Z = (w.frozen ??= new Uint8Array(w.count));
       for (let c = 0; c < this.n; c++) {
-        const ice = this.cM[c] > 0 ? this.cM[c] : 0;
-        // Floating ice presses with its draft; ice grounded on a thinner film rests on the bed, pressing the water at
-        // most with the film's own depth (continuous at h = draft; avoids metre-scale heads over 0.1 mm films).
-        L[c] = Math.min(ice / (RHO_WATER * w.cellArea), w.h[c]);
         const iceThick = this.cIce[c] / (RHO_ICE * this.cellArea);
+        // Ice frozen to the bed (thicker than 2 mm over less than 5 mm of water): the liquid of the cell lies ON it —
+        // the ice raises the bed the water flows over (iceLoad = its thickness, solver: frozen cells).
+        const bedFast = this.cIce[c] > 0 && iceThick > 0.002 && w.h[c] < 0.005;
+        Z[c] = bedFast ? 1 : 0;
+        // Floating ice (with liquid under it beyond a film) presses the water with its whole cover — ice and the snow on
+        // it — as a water depth (its draft): the surface that drives the flow is bed + h + draft, the level the water
+        // had before it froze. Snow without ice and covers on films rest on the bed: no load.
+        L[c] = bedFast ? iceThick : this.cIce[c] > 0 && w.h[c] > WATER_MERGE ? this.cM[c] / (RHO_WATER * w.cellArea) : 0;
         // Sabaneev composite roughness with ice n_i = 0.02 and half the hydraulic radius under a cover: n² × ≈ 2.5.
-        F[c] = this.cIce[c] > 0 && iceThick > 0.005 ? 2.5 : 1;
-        Z[c] = this.cIce[c] > 0 && iceThick > 0.002 && w.h[c] < 0.005 ? 1 : 0;
+        F[c] = !bedFast && this.cIce[c] > 0 && iceThick > 0.005 ? 2.5 : 1;
       }
     }
     if (anyFrozenSoil || w.infilFactor) {
@@ -1430,9 +1457,12 @@ export class ClimateWorld {
       if (wet) { sf.evapMax[c] = (w!.h[c] * RHO_WATER * w!.cellArea) / Math.max(dtg, SURFACE_DT); sf.soilWet[c] = 0; continue; }
       // Soil: water of the top 8 cm (antecedent + the flood's infiltrated water), Sellers et al. (1992) resistance.
       const top = this.sW[c * nl] + (nl > 1 ? this.sW[c * nl + 1] : 0) + (w ? w.infiltrated[c] * RHO_WATER * w.cellArea : 0);
+      // A film on the surface (≤ WATER_MERGE) is free water: no soil resistance while it lasts.
+      const film = w && w.h[c] > 0 ? w.h[c] * RHO_WATER * w.cellArea : 0;
       const cap = 0.45 * 0.08 * RHO_WATER * this.cellArea;
       const W = Math.min(1, top / cap);
-      sf.evapMax[c] = top / Math.max(dtg, SURFACE_DT);
+      sf.evapMax[c] = (top + film) / Math.max(dtg, SURFACE_DT);
+      if (film > 0) { sf.soilWet[c] = 1; continue; }
       if (!(top > 0)) { sf.soilWet[c] = 0; continue; }
       const rs = Math.exp(8.206 - 4.255 * W);
       // Share of the free-water transfer: 1/(1 + r_s·h_m/ρ) with h_m/ρ ≈ (5 W/(m²K)) / (c_p·Le^(2/3)) / 1.2.

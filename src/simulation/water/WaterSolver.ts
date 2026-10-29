@@ -401,7 +401,8 @@ export class WaterSolver {
 
   /**
    * Phase 30: the same face update under floating ice — the ice weight (as water depth) adds to the surface
-   * that drives the flow, the ice underside adds friction (n² × iceFric), water frozen to the bed does not flow.
+   * that drives the flow, the ice underside adds friction (n² × iceFric); ice frozen to the bed raises the bed (the
+   * cell's water lies on it and flows over it).
    * The flowing depth stays the liquid depth. A simplified boundary condition, not an under-ice flow model.
    */
   private computeFluxesIce(dt: number) {
@@ -448,9 +449,10 @@ export class WaterSolver {
         const hL = h[L];
         const hR = h[R];
         let qn = 0;
-        if ((hL > 0 || hR > 0) && blocked[L] === 0 && blocked[R] === 0 && frz[L] === 0 && frz[R] === 0) {
-          const bL = bed[L];
-          const bR = bed[R];
+        if ((hL > 0 || hR > 0) && blocked[L] === 0 && blocked[R] === 0) {
+          // Ice frozen to the bed raises it (iceL = thickness, no load); floating ice adds its draft to the head.
+          const bL = bed[L] + (frz[L] ? iceL[L] : 0);
+          const bR = bed[R] + (frz[R] ? iceL[R] : 0);
           const eL = bL + hL;
           const eR = bR + hR;
           const hf = (eL > eR ? eL : eR) - (bL > bR ? bL : bR);
@@ -458,7 +460,7 @@ export class WaterSolver {
             const q0 = th * old + th2 * (prevOld + qx[fi + 1]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eR + iceL[R] - eL - iceL[L]);
+            let num = q0 - slopeK * hf * (eR + (frz[R] ? 0 : iceL[R]) - eL - (frz[L] ? 0 : iceL[L]));
             if (extX) num += (hf > STRESS_MIN_DEPTH ? sX : 0) - hf * gX;
             if (air !== null) num -= hf * airK * (air[R] - air[L]);
             qn = (num * H) / (H + gdt * 0.5 * (n2[L] * fric[L] + n2[R] * fric[R]) * aq);
@@ -489,9 +491,10 @@ export class WaterSolver {
         const hT = h[T];
         const hB = h[B];
         let qn = 0;
-        if ((hT > 0 || hB > 0) && blocked[T] === 0 && blocked[B] === 0 && frz[T] === 0 && frz[B] === 0) {
-          const bT = bed[T];
-          const bB = bed[B];
+        if ((hT > 0 || hB > 0) && blocked[T] === 0 && blocked[B] === 0) {
+          // Ice frozen to the bed raises it (iceL = thickness, no load); floating ice adds its draft to the head.
+          const bT = bed[T] + (frz[T] ? iceL[T] : 0);
+          const bB = bed[B] + (frz[B] ? iceL[B] : 0);
           const eT = bT + hT;
           const eB = bB + hB;
           const hf = (eT > eB ? eT : eB) - (bT > bB ? bT : bB);
@@ -499,7 +502,7 @@ export class WaterSolver {
             const q0 = th * old + th2 * (rowOld[ix] + qz[fi + nx]);
             const aq = q0 < 0 ? -q0 : q0;
             const H = hf * hf * cbrtFast(hf);
-            let num = q0 - slopeK * hf * (eB + iceL[B] - eT - iceL[T]);
+            let num = q0 - slopeK * hf * (eB + (frz[B] ? 0 : iceL[B]) - eT - (frz[T] ? 0 : iceL[T]));
             if (extZ) num += (hf > STRESS_MIN_DEPTH ? sZ : 0) - hf * gZ;
             if (air !== null) num -= hf * airK * (air[B] - air[T]);
             qn = (num * H) / (H + gdt * 0.5 * (n2[T] * fric[T] + n2[B] * fric[B]) * aq);
@@ -540,7 +543,8 @@ export class WaterSolver {
       return 0;
     }
     const dx = f.cell;
-    const n2 = f.n2[c];
+    // Phase 30: floating ice adds its underside friction at the edge too (iceFric null without a climate).
+    const n2 = f.iceFric ? f.n2[c] * f.iceFric[c] : f.n2[c];
     // Discharge in the OUTWARD direction (positive = leaving the map).
     const qOld = arr[fi] * out;
     let qOut: number;
