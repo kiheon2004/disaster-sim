@@ -22,6 +22,7 @@ import { GravityLedger, type GravityBalance } from '@/gravity/ledger';
 import { EARTH_G } from '@/gravity/types';
 import type { GravityChannel } from './GravityChannel';
 import type { ForceOwner } from '../forces/ForceLedger';
+import { GravityStructures } from './structures';
 
 /** Wake every dynamic body when the uniform gravity moved by this share of max(|G|, 0.05 g₀) since the last wake. */
 const WAKE_SHARE = 0.02;
@@ -61,6 +62,8 @@ export interface GravityStats {
   /** Peak / minimum |g| sampled at bodies so far. */
   peak: number;
   minimum: number;
+  /** Cost (ms) of the structural ratio pass in the last step. */
+  structMs: number;
   /** Cost (ms) of this runtime in the last step, cumulative. */
   ms: number;
   msTotal: number;
@@ -89,8 +92,10 @@ export class GravityRuntime {
   readonly ch: GravityChannel;
   readonly field: GravityField;
   readonly ledger = new GravityLedger();
-  readonly stats: GravityStats = { G: [0, 0, 0], magnitude: 0, ratio: 0, down: 0, uniform: true, bodies: 0, inSource: 0, affected: 0, fieldForces: 0, wakes: 0, peak: 0, minimum: Infinity, ms: 0, msTotal: 0 };
+  readonly stats: GravityStats = { G: [0, 0, 0], magnitude: 0, ratio: 0, down: 0, uniform: true, bodies: 0, inSource: 0, affected: 0, fieldForces: 0, wakes: 0, peak: 0, minimum: Infinity, structMs: 0, ms: 0, msTotal: 0 };
   readonly series: GravitySeriesPoint[] = [];
+  /** Gravity ratios of the modular buildings (structures.ts). */
+  readonly structures: GravityStructures;
   /** Structural failures attributed to gravity (StructuralCollapseSystem), roofs among them. */
   failures = 0;
   roofFailures = 0;
@@ -110,6 +115,7 @@ export class GravityRuntime {
     this.ch = ch;
     this.field = ch.field!;
     this.wakeG = [0, -ch.g0, 0];
+    this.structures = new GravityStructures(ch.g0);
     this.lastLevel = ch.g0;
   }
 
@@ -186,6 +192,9 @@ export class GravityRuntime {
     }
     if (start) ledger.start(k0, u0, p0);
     this.fieldChanging = this.fieldSignature();
+    const ts = performance.now();
+    this.structures.update(ctx, f);
+    this.stats.structMs = performance.now() - ts;
     const s = this.stats;
     s.G = [G[0], G[1], G[2]];
     s.magnitude = gm;

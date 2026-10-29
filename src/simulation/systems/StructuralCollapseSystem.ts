@@ -72,7 +72,9 @@ export class StructuralCollapseSystem implements SimulationSystem {
       const st = mr.structure!;
       const m = st.model;
       const t0 = simProfiler.now();
-      m.step(dt, ctx.time, kinematics(e, ctx), GRAVITY);
+      // Phase 31: the downward gravity at the building (the project constant while no gravity experiment runs).
+      const p = e.pose.position;
+      m.step(dt, ctx.time, kinematics(e, ctx), ctx.env.gravity.down(p[0], p[1] + e.dims[1] / 2, p[2], GRAVITY));
       simProfiler.add('struct.model', t0);
       const events = m.events;
       m.events = [];
@@ -200,9 +202,13 @@ export class StructuralCollapseSystem implements SimulationSystem {
     }
     if (st.recorded >= EVENT_BUDGET) return;
     st.recorded++;
+    if (hz === 'gravity') ctx.env.gravity.rt?.noteFailure(ctx, m.type === 'roof', e.id);
+    // Phase 31: a member overloaded by a changed gravity field / a roof panel under snow names that load.
+    const base = damageCause(r.cause, st.storyCause);
+    const cause: DamageCause = base === 'gravity' && hz === 'gravity' ? 'gravityLoad' : base === 'gravity' && hz === 'climate' && m.type === 'roof' ? 'snowLoad' : base;
     ctx.recordDamage(e, {
       eventType: 'FAILED',
-      cause: damageCause(r.cause, st.storyCause),
+      cause,
       hazard: hz,
       componentId: m.id,
       memberType: m.type,

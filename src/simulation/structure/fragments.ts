@@ -17,6 +17,7 @@ import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
 import { memberMaterial } from '@/structure/graph';
 import { bulkVolume } from '@/structure/rubble';
+import { FALL_MIN } from '@/structure/collapse';
 import { MATERIALS } from '@/buildings/materials';
 import { newForceRecord } from '../forces/ForceLedger';
 import type { DebrisPiece, RuntimeEntity } from '../SimulationRuntime';
@@ -117,9 +118,11 @@ export function aggregate(ctx: SystemContext, e: RuntimeEntity, i: number, pos: 
   const g = m.g, o = 6 * i;
   const ground = ctx.env.terrain.sampleHeight(pos[0], pos[2]);
   const h = Math.max(0, pos[1] - ground);
-  // Landing time under gravity from its vertical speed (exact), then where it lands.
+  // Landing time under gravity from its vertical speed (exact), then where it lands. Phase 31: the downward gravity at
+  // the piece; with (almost) none it is laid down where it is (no ballistic landing exists — documented approximation).
   const vy = vel[1];
-  const t = (vy + Math.sqrt(vy * vy + 2 * GRAVITY * h)) / GRAVITY;
+  const gd = ctx.env.gravity.down(pos[0], pos[1], pos[2], GRAVITY);
+  const t = gd >= FALL_MIN ? (vy + Math.sqrt(vy * vy + 2 * gd * h)) / gd : 0;
   const x = pos[0] + vel[0] * t, z = pos[2] + vel[2] * t;
   const mass = g.mass[i];
   const size = Math.max(0.3, Math.sqrt((g.box[o + 3] - g.box[o]) * (g.box[o + 5] - g.box[o + 2])));

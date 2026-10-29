@@ -24,7 +24,9 @@
  *
  * Visual-only members are not special-cased: cladding, partitions, windows and roof coverings have
  * mass and a load path to the structure (they hang / rest on it) but are never `structural` — they
- * carry nothing and have no gravity capacity check.
+ * carry nothing and have no gravity capacity check — except SPANNING roof panels (Phase 31, R1):
+ * a roof covering carried by beams / walls / columns (no slab under it) gets a reduced roof-system
+ * capacity (`roofCap`, capacity.ts) checked against its own weight and what lies on it (snow, ash).
  */
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
@@ -33,7 +35,7 @@ import { analysisOf } from '@/buildings/design';
 import { lengthAxis } from '@/buildings/geometry';
 import { MATERIALS, material } from '@/buildings/materials';
 import { isLateralRole, isStructuralRole, type BuildingDesign, type MemberType } from '@/buildings/types';
-import { beamCapacity, beamSeatCapacity, columnCapacity, slabEdgeCapacity, slabMomentPerM, wallCapacity } from './capacity';
+import { beamCapacity, beamSeatCapacity, columnCapacity, roofPanelCapacity, slabEdgeCapacity, slabMomentPerM, wallCapacity } from './capacity';
 import { CK } from './types';
 
 export const MT: Record<MemberType, number> = { foundation: 0, column: 1, beam: 2, slab: 3, wall: 4, window: 5, door: 6, roof: 7 };
@@ -69,6 +71,11 @@ export interface StructuralGraph {
   capN: Float64Array;
   capM: Float64Array;
   capV: Float64Array;
+  /**
+   * Spanning roof panels (Phase 31, R1): characteristic gravity capacity (N) — 0 for every other member and for
+   * coverings lying on a slab (finish layers). Checked by the solver only while roof checks are on (StructuralSolver.roofCheck).
+   */
+  roofCap: Float64Array;
   /** Beam length axis (x, z) and length; slab extents along x / z. */
   axisX: Float32Array;
   axisZ: Float32Array;
@@ -229,6 +236,18 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
     for (const j of cand) if (B(j, 1) < B(i, 1)) edges[i].push({ to: j, tier: 1, kind: CK.ROOF });
   }
 
+  // ── Spanning roof panels (R1): pitched panels (on rafters / purlins) and flat coverings with no slab under them ──
+  const roofCap = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    if (type[i] !== MT_ROOF || absent[i] || !edges[i].length) continue;
+    const r = src[i].rotation;
+    const pitched = Math.abs(r[0]) > 1e-6 || Math.abs(r[2]) > 1e-6;
+    let onSlab = false;
+    for (const e of edges[i]) if (e.tier === 0 && type[e.to] === MT_SLAB) onSlab = true;
+    if (!pitched && onSlab) continue;
+    roofCap[i] = roofPanelCapacity(weight[i], (B(i, 3) - B(i, 0)) * (B(i, 5) - B(i, 2)));
+  }
+
   // ── Topological rank: depth above the ground through candidate supports ──
   const depth = new Int32Array(n).fill(-1);
   const visiting = new Uint8Array(n);
@@ -317,7 +336,7 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
 
   return {
     design, scale: [...scale] as Vec3, n, analysis: A, type, level, structural, lateral, ground, soilFallback, absent, box, mass, weight,
-    capN, capM, capV, axisX, axisZ, length, mat: matIdx, eStart, eFrom, eTo, eTier, eKind, eCap, ePos, eA0, eA1, eDX, eDZ, rStart, rEdge, rank, byRank,
+    capN, capM, capV, roofCap, axisX, axisZ, length, mat: matIdx, eStart, eFrom, eTo, eTier, eKind, eCap, ePos, eA0, eA1, eDX, eDZ, rStart, rEdge, rank, byRank,
     grid: { x0: gx0, z0: gz0, nx: gnx, nz: gnz, start: gStart, items: gItems }, kx, kz, vx, vz, floors, edges: E,
   };
 }

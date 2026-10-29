@@ -625,6 +625,52 @@ export class ClimateWorld {
     return this.sGone[k] || !(this.sM[k] > 0) || !(A > 0) ? 0 : Math.min(1, this.sM[k] / (A * SNOW_COVER));
   }
 
+  // ── Packets (Phase 31, R2) ────────────────────────────
+  /**
+   * Snow / ice in transit: a share of a store that left it with a failed roof panel and rides on the falling member
+   * until it comes to rest. A packet keeps its mass, enthalpy and ice part unchanged (no phase change during the fall —
+   * seconds; documented) and is counted in the storages, so the ledgers stay closed; it is deposited on ground cells
+   * like a dropped store. The same snow is never on the roof and on the ground at once.
+   */
+  readonly packets: { m: number; U: number; ice: number; rho: number; done: boolean }[] = [];
+
+  /** Move a share (0–1] of store k into a new packet; returns its index (−1 when the store is empty). */
+  splitStore(k: number, share: number): number {
+    if (this.sGone[k] || !(this.sM[k] > 0) || !(share > 0)) return -1;
+    const f = Math.min(1, share);
+    const m = this.sM[k] * f, U = this.sU[k] * f, ice = this.sIce[k] * f;
+    this.sM[k] -= m; this.sU[k] -= U; this.sIce[k] -= ice;
+    if (f === 1) { this.sM[k] = 0; this.sU[k] = 0; this.sIce[k] = 0; }
+    this.packets.push({ m, U, ice, rho: this.sRho[k], done: false });
+    return this.packets.length - 1;
+  }
+
+  /** Deposit a packet on ground cells (equal shares). */
+  depositPacket(p: number, cells: readonly number[]) {
+    const pk = this.packets[p];
+    if (!pk || pk.done) return;
+    pk.done = true;
+    if (!(pk.m > 0) || !cells.length) return;
+    const share = 1 / cells.length;
+    for (const c of cells) {
+      const sn = Math.max(0, this.cM[c] - this.cIce[c]);
+      const add = (pk.m - pk.ice) * share;
+      if (add > 0) this.cRho[c] = sn > 0 ? (sn + add) / (sn / this.cRho[c] + add / pk.rho) : pk.rho;
+      this.cM[c] += pk.m * share;
+      this.cU[c] += pk.U * share;
+      this.cIce[c] += pk.ice * share;
+      this.markCover(c);
+    }
+    pk.m = 0; pk.U = 0; pk.ice = 0;
+  }
+
+  /** Snow in transit (kg). */
+  packetMass(): number {
+    let s = 0;
+    for (const p of this.packets) if (!p.done) s += p.m;
+    return s;
+  }
+
   /** Load of a store (N) — mass × g. */
   storeLoad(k: number, g = 9.81) {
     return this.sM[k] * g;
@@ -638,6 +684,7 @@ export class ClimateWorld {
     for (let c = 0; c < this.n; c++) s += this.cM[c];
     for (let j = 0; j < this.sW.length; j++) s += this.sW[j] + this.sI[j];
     for (let k = 0; k < this.stores.length; k++) s += this.sM[k];
+    for (const p of this.packets) if (!p.done) s += p.m;
     const w = this.link.water();
     if (w && this.floodSeen) s += this.floodStorage(w);
     else if (w && !this.floodSeen) { this.linkFlood(w); s += this.floodStorage(w); }
@@ -650,6 +697,7 @@ export class ClimateWorld {
     for (let c = 0; c < this.n; c++) if (this.cM[c] > 0) e += this.coverEnergy(this.cM[c], this.cU[c]);
     for (let j = 0; j < this.sI.length; j++) e -= L_F * this.sI[j];
     for (let k = 0; k < this.stores.length; k++) if (this.sM[k] > 0) e += this.coverEnergy(this.sM[k], this.sU[k]);
+    for (const p of this.packets) if (!p.done && p.m > 0) e += this.coverEnergy(p.m, p.U);
     for (let a = 0; a < this.na; a++) e += this.ipErain[a] + this.ipEsnow[a];
     return e + this.latentPending;
   }

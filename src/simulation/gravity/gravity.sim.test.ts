@@ -7,7 +7,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { SimulationController } from '@/simulation/SimulationController';
 import type { WorldDocument } from '@/core/model';
 import type { EventSpec } from '@/events/specs';
-import { defaultGravitySpec, type GravitySpec } from '@/gravity/types';
+import { gravity } from './testSpecs';
 import type { Vec3 } from '@/core/types';
 
 const S = () => useWorldStore.getState();
@@ -20,7 +20,6 @@ function world(objs: { type: string; seed: number; transform: ReturnType<typeof 
   if (objs.length) S().applyEdit({ add: objs as never });
   return structuredClone(S().doc);
 }
-export const gravity = (p: Partial<GravitySpec> = {}): EventSpec => ({ ...defaultGravitySpec(), scenario: 'custom', profile: 'constant', duration: 60, startTime: 0, ...p } as EventSpec);
 
 async function run(doc: WorldDocument, events: EventSpec[], seconds: number) {
   const c = new SimulationController({ headless: true });

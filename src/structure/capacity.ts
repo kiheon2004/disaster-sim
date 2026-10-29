@@ -24,8 +24,17 @@
  *    length (line supports) or the punching perimeter 2·(a + b) (column supports); timber floors
  *    0.3 MPa (joist hangers), masonry 0.2 MPa
  *  compression transfer (splices, bases, transfer onto beams) is governed by the members on both
- *  sides and is not checked separately; roof coverings, hosted openings and cladding anchors fail
- *  through their own facade models (wind / blast / earthquake), not under gravity.
+ *  sides and is not checked separately; hosted openings and cladding anchors fail through their own
+ *  facade models (wind / blast / earthquake), not under gravity.
+ *
+ *  roof panel (Phase 31, R1)  SPANNING roof coverings (carried by beams / walls / columns, not resting on a
+ *              slab) as a reduced roof system — covering + the purlins / rafters the model does not draw:
+ *              characteristic capacity = ROOF_RESISTANCE·(own weight + ROOF_DESIGN_LOAD·plan area): roofs are
+ *              designed for the factored load 1.2·D + 1.6·S ≈ 1.5·(D + S) with the roof live / snow load
+ *              1.0 kN/m² (KDS 41 10 15 roof live load; Korean ground snow 0.5–2.0 kN/m²); with the engine's
+ *              mean / characteristic ratio OVERLOAD = 1.25 a panel fails at ≈ 1.9·(D + 1 kPa) — light roofs
+ *              (D ≈ 0.1–0.3 kPa) at ≈ 2.1–2.5 kPa of total load. A covering lying on a slab is a finish layer
+ *              (no capacity of its own: the slab carries the load).
  *
  * Dynamic increase for sudden member loss (GSA 2016 Alternate Path guidelines, nonlinear static
  * procedure): Ω_N = 1.04 + 0.45 / (θ_pra/θ_y + 0.48), with the plastic / yield rotation ratio taken
@@ -104,6 +113,15 @@ export function slabEdgeCapacity(id: MaterialId, t: number, contact: number): nu
 /** Chord rotation capacity used for energy absorption (rad). */
 export function rotationCapacity(mat: MaterialProps): number {
   return Math.max(0.002, mat.driftCapacity.column);
+}
+
+/** Roof design live / snow load (Pa) and the factored-load ratio of roof systems (Phase 31, R1). */
+export const ROOF_DESIGN_LOAD = 1000;
+export const ROOF_RESISTANCE = 1.5;
+
+/** Characteristic gravity capacity (N) of a spanning roof panel: own weight W (N) and plan area A (m²). */
+export function roofPanelCapacity(W: number, A: number): number {
+  return Math.max(1, ROOF_RESISTANCE * (W + ROOF_DESIGN_LOAD * A));
 }
 
 export { SHEAR as MEMBER_SHEAR, SLAB_SHEAR };

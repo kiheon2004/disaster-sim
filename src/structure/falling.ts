@@ -82,5 +82,7 @@ export function impactOutcome({ M, v, mR, P, deltaU, g }: ImpactInput): ImpactOu
  */
 export function fallTime(h: number, v: number, g: number): number {
   if (h <= 0) return 0;
+  // Phase 31: (almost) no downward gravity — uniform motion (the caller hands blocks to the physics engine below FALL_MIN).
+  if (!(g > 1e-9)) return v > 0 ? h / v : Infinity;
   return (-v + Math.sqrt(v * v + 2 * g * h)) / g;
 }

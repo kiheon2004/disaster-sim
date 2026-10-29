@@ -33,10 +33,8 @@ import { GravitySystem, GravityLedgerSystem } from './GravitySystem';
  */
 export function createDefaultSystems(): SimulationSystem[] {
   return [
-    // Phase 31: the gravity field is prepared first (every system of the step samples the same g(x, t)); its ledger
-    // is the first postPhysics system (the integrated step, before any body is spawned or removed).
+    // Phase 31: the gravity field is prepared first (every system of the step samples the same g(x, t)).
     new GravitySystem(),
-    new GravityLedgerSystem(),
     // Phase 22: sinkholes / landslides advance the shared ground field, then (Phase 21) the
     // ground moves; every later system of the step sees the new surface.
     // Phase 23: impacts cut craters / land ejecta on the same field and pass their ground shock
@@ -53,6 +51,8 @@ export function createDefaultSystems(): SimulationSystem[] {
     new WaterForceSystem(),
     new SedimentForceSystem(),
     new GroundContactSystem(),
+    // Phase 31: the gravity ledger is the first postPhysics system (the integrated step, before any body is spawned or removed).
+    new GravityLedgerSystem(),
     new PoseSyncSystem(),
     new StructuralResponseSystem(),
     new SeismicDamageSystem(),

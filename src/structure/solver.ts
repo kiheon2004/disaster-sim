@@ -24,9 +24,15 @@
  *
  * At initialization (`init`) the result equals the Phase 17 analysis of the original world
  * (supported flags and loads; tested), so the engine starts from the state the editor showed.
+ *
+ * Gravity (Phase 31): own weights and surcharges are stored as EARTH weights (mass × GRAVITY, the graph's `weight`,
+ * `extra`); each member's ratio kM = g_down / g₀ at the member scales what it adds in `collect` (its own weight and its
+ * surcharge) — loads, shares and checks are then in actual newtons. kM = 1 everywhere (no gravity experiment) is
+ * bitwise the Phase 25 solver (x·1 = x). Capacities never change with g (designed on Earth). Spanning roof panels are
+ * checked (R1) only while `roofCheck` is on — snow / ash / gravity experiments — so runs without them are unchanged.
  */
 import { IndexHeap } from './heap';
-import { MT_BEAM, MT_COLUMN, MT_FOUNDATION, MT_SLAB, MT_WALL, memberMaterial, type StructuralGraph } from './graph';
+import { MT_BEAM, MT_COLUMN, MT_FOUNDATION, MT_ROOF, MT_SLAB, MT_WALL, memberMaterial, type StructuralGraph } from './graph';
 import { dynamicFactor, rotationCapacity } from './capacity';
 import { OVERLOAD, type FailCause } from './types';
 
@@ -78,8 +84,12 @@ export class StructuralSolver {
   /** Vertical load carried (N): own weight + surcharge + received. */
   readonly load: Float64Array;
   readonly load0: Float64Array;
-  /** Static surcharge on a member (N): rubble resting on it, external loads. */
+  /** Static surcharge on a member (N, Earth weight): rubble resting on it, external loads. */
   readonly extra: Float64Array;
+  /** Gravity ratio g_down / g₀ at each member (Phase 31; 1 without a gravity experiment). */
+  readonly kM: Float64Array;
+  /** Check spanning roof panels against their reduced capacity (Phase 31, R1). */
+  roofCheck = false;
   readonly share: Float64Array;
   readonly edgeAlive: Uint8Array;
   /** Connections broken so far (summaries without a scan). */
@@ -119,6 +129,7 @@ export class StructuralSolver {
     this.load = new Float64Array(n);
     this.load0 = new Float64Array(n);
     this.extra = new Float64Array(n);
+    this.kM = new Float64Array(n).fill(1);
     this.share = new Float64Array(E);
     this.edgeAlive = new Uint8Array(E).fill(1);
     this.groundFactor = new Float32Array(n).fill(1);
@@ -228,6 +239,28 @@ export class StructuralSolver {
     this.loadHeap.push(i);
   }
 
+  /**
+   * Gravity ratio of a member (g_down / g₀, Phase 31): its own weight and surcharge are re-collected and the change
+   * propagates down the load path in the next `propagate`. Upward gravity (k < 0) is taken by magnitude — the vertical
+   * load path is symmetric in this model (uplift / tension of connections is not represented: a documented limit).
+   */
+  setGravityRatio(i: number, k: number, origin = i) {
+    const a = Math.abs(k);
+    if (a === this.kM[i]) return;
+    this.kM[i] = a;
+    if (!this.alive[i]) return;
+    this.mark(i, origin);
+    this.loadHeap.push(i);
+    this.touch(i);
+  }
+
+  /** Turn the roof-panel checks on (queues the panels for a check in the next propagate). */
+  enableRoofCheck() {
+    if (this.roofCheck) return;
+    this.roofCheck = true;
+    for (let i = 0; i < this.n; i++) if (this.g.roofCap[i] > 0 && this.alive[i]) this.touch(i);
+  }
+
   /** Residual capacity factor (0–1] of a member (damage from any hazard). */
   setCapFactor(i: number, f: number) {
     if (f === this.capFactor[i]) return;
@@ -294,7 +327,7 @@ export class StructuralSolver {
       const uDyn = u + (om - 1) * Math.max(0, u - uOld);
       const soil = g.type[i] === MT_FOUNDATION || g.ground[i] === 1;
       const limit = soil ? 1 : OVERLOAD;
-      if (uDyn >= limit && (g.structural[i] || soil)) {
+      if (uDyn >= limit && (g.structural[i] || soil || (this.roofCheck && g.roofCap[i] > 0))) {
         res.failed.push({ i, cause: this.governing(i), u: uDyn, trigger: this.originStamp[i] === this.stamp ? this.origin[i] : -1 });
       }
     }
@@ -379,10 +412,10 @@ export class StructuralSolver {
     this.supported[i] = ok;
   }
 
-  /** Own weight + surcharge + what the dependents pass on. */
+  /** Own weight + surcharge (× the member's gravity ratio) + what the dependents pass on. */
   private collect(i: number): number {
     const g = this.g;
-    let L = g.weight[i] + this.extra[i];
+    let L = (g.weight[i] + this.extra[i]) * this.kM[i];
     for (let q = g.rStart[i]; q < g.rStart[i + 1]; q++) L += this.share[g.rEdge[q]];
     return L;
   }
@@ -453,7 +486,7 @@ export class StructuralSolver {
       if (g.type[i] === MT_FOUNDATION || g.ground[i]) {
         const u = this.bearingUtil(i);
         if (u > 0) res = this.load[i] * (1 / u - 1);
-      } else if (g.structural[i] && this.util[i] > 0) res = this.load[i] * (OVERLOAD / this.util[i] - 1);
+      } else if ((g.structural[i] || (this.roofCheck && g.roofCap[i] > 0)) && this.util[i] > 0) res = this.load[i] * (OVERLOAD / this.util[i] - 1);
       // Cladding, partitions, openings and roof coverings carry nothing more than their own weight.
       else if (!g.structural[i] && !g.ground[i]) res = 0;
       if (res !== Infinity) {
@@ -527,6 +560,8 @@ export class StructuralSolver {
       else if (t === MT_BEAM) { this.beamDemand(i); m = this.dM / (g.capM[i] * cf); v = this.dV / (g.capV[i] * cf); }
       else if (t === MT_SLAB && g.capM[i] > 0) m = this.slabMoment(i) / (g.capM[i] * cf);
     }
+    // Spanning roof panel (R1): total gravity load on the panel against its reduced roof-system capacity (bending).
+    if (t === MT_ROOF && this.roofCheck && g.roofCap[i] > 0 && this.alive[i]) m = this.load[i] / (g.roofCap[i] * cf);
     // Footings and ground slabs: bearing pressure on the soil.
     if ((t === MT_FOUNDATION || g.ground[i]) && this.alive[i]) n = this.bearingUtil(i);
     this.uN[i] = n; this.uM[i] = m; this.uV[i] = v;
@@ -567,7 +602,7 @@ export class StructuralSolver {
       if (b - a < 0.05) { const c = (a + b) / 2; a = c - 0.025; b = c + 0.025; }
       this.lp[nl * 3] = a; this.lp[nl * 3 + 1] = b; this.lp[nl * 3 + 2] = P; nl++;
     };
-    push(-h, h, g.weight[i] + this.extra[i]);
+    push(-h, h, (g.weight[i] + this.extra[i]) * this.kM[i]);
     for (let q = g.rStart[i]; q < g.rStart[i + 1]; q++) {
       const e = g.rEdge[q];
       if (this.share[e] > 0) push(g.eA0[e], g.eA1[e], this.share[e]);

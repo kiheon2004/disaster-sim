@@ -25,7 +25,7 @@ import { dewPointChecked, qSat, vapourPressure } from '@/climate/psychro';
 import { qRotate } from '@/core/math';
 import { GRAVITY } from '@/core/units';
 import { DamageState } from '../damage/DamageState';
-import { activate, structureOf } from '../structure/state';
+import { activate, structureOf, toWorld } from '../structure/state';
 import { MT_ROOF } from '@/structure/graph';
 import { MS } from '@/structure/types';
 import { IK } from '@/fire/FireWorld';
@@ -108,7 +108,9 @@ export interface ClimateStats {
 export interface ClimateSample { t: number; T: number; Ts: number; rh: number; snow: number; ice: number; melt: number; evap: number; P: number }
 export const SERIES_MAX = 1800;
 
-interface StoreRef { k: number; e: RuntimeEntity; nextLoad: number; applied: Float64Array | null; broken: boolean }
+interface StoreRef { k: number; e: RuntimeEntity; nextLoad: number; applied: Float64Array | null; broken: boolean; seen?: number }
+/** Roof snow riding on a failed roof panel (Phase 31, R2): ClimateWorld packet, building, member. */
+interface PacketRef { p: number; e: RuntimeEntity; i: number }
 interface CrownRef { e: RuntimeEntity; store: number; u: number; dry: number; lai: number; cells: Int32Array }
 
 export class ClimateRuntime {
@@ -119,6 +121,8 @@ export class ClimateRuntime {
   readonly warnings: string[];
   readonly stores: StoreRef[] = [];
   readonly roofOf = new Map<RuntimeEntity, number>();
+  /** Snow packets in transit with failed roof panels (R2). */
+  readonly packets: PacketRef[] = [];
   readonly crowns: CrownRef[] = [];
   readonly crownOf = new Map<RuntimeEntity, CrownRef>();
   readonly series: ClimateSample[] = [];
@@ -358,6 +362,8 @@ export class ClimateRuntime {
     // A roof that just failed lets its snow go in the same step (the structural model dropped the load at once; the
     // once-per-second object pass left the snow on the store for up to 1 s).
     for (const s of this.stores) if (!this.cw.sGone[s.k] && this.cw.stores[s.k].kind === STORE.roof && this.roofGone(s.e)) this.dropRoof(ctx, s);
+    // Phase 31 (R2): roof panels that failed take their share of the roof's snow with them (packets on the member).
+    for (const s of this.stores) if (s.applied && !this.cw.sGone[s.k]) this.panelFailures(ctx, s);
     w.ledger.final = w.internalEnergy();
     if (ctx.time + 1e-9 >= this.nextSecond) {
       this.nextSecond = ctx.time + 1;
@@ -469,18 +475,27 @@ export class ClimateRuntime {
 
   private objects(ctx: SystemContext) {
     const cw = this.cw;
+    this.packetsLanded(ctx);
     for (const s of this.stores) {
       const e = s.e, st = cw.stores[s.k];
       if (cw.sGone[s.k]) continue;
       if (st.kind === STORE.roof) {
         if (this.roofGone(e)) { this.dropRoof(ctx, s); continue; }
         if (ctx.time >= s.nextLoad) { s.nextLoad = ctx.time + LOAD_EVERY; this.roofLoad(ctx, s); }
+        else if (ctx.env.gravity.field) {
+          // Phase 31: under a gravity experiment the reported roof pressure follows g every second (the structural
+          // load follows it through the members' gravity ratios — only the report would lag the 5 s pass).
+          const cs = this.climateState(e), p = e.pose.position;
+          cs.loadKPa = (cw.sM[s.k] * ctx.env.gravity.down(p[0], p[1] + e.dims[1], p[2], GRAVITY)) / st.area / 1000;
+        }
       } else if (st.kind === STORE.crown) {
         if (e.flags.toppled || e.flags.snapped || e.flags.uprooted) { cw.dropStore(s.k); continue; }
         const load = cw.sM[s.k] / st.area;
         const cs = this.climateState(e);
         cs.load = load;
-        if (load >= CROWN_BREAK && !s.broken && e.body !== null) {
+        // CROWN_BREAK is a snow mass per area calibrated at Earth gravity: compared as a weight (× g/g₀, Phase 31).
+        const pe = e.pose.position;
+        if (load * ctx.env.gravity.ratio(pe[0], pe[1] + e.dims[1] * 0.7, pe[2]) >= CROWN_BREAK && !s.broken && e.body !== null) {
           s.broken = true;
           ctx.physics.setBodyKind(e.body, 'dynamic');
           e.dynamic = true;
@@ -519,6 +534,68 @@ export class ClimateRuntime {
     return e.flags.collapsed || e.flags.toppled || (e.modular ? Number.isFinite(e.modular.collapsedFrom) : false);
   }
 
+  /**
+   * Roof panels of a building that failed since the last look (R2): each takes M·a_i / A_alive of the roof's snow as a
+   * packet — its mass rides on the member (collapse model `carry`: falling block, impacts, resting load) and is set down
+   * on the ground under the member where it comes to rest (packets()). The rest of the roof's snow stays on the panels
+   * still standing (the next roof-load pass spreads it over their area).
+   */
+  private panelFailures(ctx: SystemContext, s: StoreRef) {
+    const model = s.e.modular?.structure?.model;
+    if (!model) return;
+    const recs = model.records;
+    const from = s.seen ?? 0;
+    if (recs.length === from) return;
+    s.seen = recs.length;
+    const g = model.g, cw = this.cw;
+    const area = (i: number) => (g.box[6 * i + 3] - g.box[6 * i]) * (g.box[6 * i + 5] - g.box[6 * i + 2]);
+    const failed: number[] = [];
+    for (let r = from; r < recs.length; r++) { const i = recs[r].i; if (g.type[i] === MT_ROOF && !failed.includes(i)) failed.push(i); }
+    if (!failed.length) return;
+    // Alive roof area before these failures (the panels just failed included).
+    let A = 0;
+    for (let i = 0; i < g.n; i++) if (g.type[i] === MT_ROOF && !g.absent[i] && (model.state[i] < MS.FAILED || failed.includes(i))) A += area(i);
+    const M0 = cw.sM[s.k];
+    if (!(A > 0) || !(M0 > 0)) return;
+    for (const i of failed) {
+      const dm = (M0 * area(i)) / A;
+      const M = cw.sM[s.k];
+      if (!(M > 0)) break;
+      const p = cw.splitStore(s.k, dm / M);
+      if (p < 0) continue;
+      model.carry(i, cw.packets[p].m);
+      s.applied![i] = 0;
+      this.packets.push({ p, e: s.e, i });
+      this.once(ctx, `roofPanel:${s.e.id}`, 'snowFromRoof', { kg: cw.packets[p].m.toFixed(0) });
+    }
+  }
+
+  /** Packets whose member came to rest on the ground / left as a fragment / whose building collapsed are set down (R2). */
+  private packetsLanded(ctx: SystemContext) {
+    if (!this.packets.length) return;
+    const cw = this.cw;
+    let w = 0;
+    for (const r of this.packets) {
+      const model = r.e.modular?.structure?.model;
+      const st = model ? model.state[r.i] : MS.SETTLED;
+      const down = !model || st === MS.SETTLED || model.external[r.i] === 1 || this.roofGone(r.e);
+      if (!down) { this.packets[w++] = r; continue; }
+      cw.depositPacket(r.p, this.memberCells(r.e, r.i));
+    }
+    this.packets.length = w;
+    void ctx;
+  }
+
+  /** Ground cells under a member's current (displaced) footprint. */
+  private memberCells(e: RuntimeEntity, i: number): number[] {
+    const m = e.modular?.structure?.model;
+    if (!m) return this.footprint(e);
+    const g = m.g, o = 6 * i;
+    const c = toWorld(e, [(g.box[o] + g.box[o + 3]) / 2 + m.dx[i], (g.box[o + 1] + g.box[o + 4]) / 2 + m.dy[i], (g.box[o + 2] + g.box[o + 5]) / 2 + m.dz[i]]);
+    const r = 0.5 * Math.sqrt((g.box[o + 3] - g.box[o]) ** 2 + (g.box[o + 5] - g.box[o + 2]) ** 2);
+    return this.disc(c[0], c[2], Math.max(0.5, r));
+  }
+
   /** The roof's snow to the ground of its footprint; its loads leave the bookkeeping (the members carrying them failed). */
   private dropRoof(ctx: SystemContext, s: StoreRef) {
     this.cw.dropStore(s.k);
@@ -534,7 +611,9 @@ export class ClimateRuntime {
   private roofLoad(ctx: SystemContext, s: StoreRef) {
     const e = s.e, cw = this.cw, st = cw.stores[s.k];
     const M = cw.sM[s.k];
-    const kPa = (M * GRAVITY) / st.area / 1000;
+    // Reported pressure under the gravity acting at the roof (Phase 31; the project constant without an experiment).
+    const p = e.pose.position;
+    const kPa = (M * ctx.env.gravity.down(p[0], p[1] + e.dims[1], p[2], GRAVITY)) / st.area / 1000;
     const cs = this.climateState(e);
     cs.load = M / st.area;
     cs.loadKPa = kPa;
@@ -542,9 +621,12 @@ export class ClimateRuntime {
     if (kPa < ROOF_SCREEN_KPA && !cs.applied) return;
     const g = structureOf(e, ctx).model.g;
     const model = e.modular.structure!.model;
+    // Phase 31 (R1): spanning roof panels are checked against their roof-system capacity while snow loads them.
+    model.s.enableRoofCheck();
     if (!s.applied) s.applied = new Float64Array(g.n);
     let A = 0;
-    for (let i = 0; i < g.n; i++) if (g.type[i] === MT_ROOF && !g.absent[i]) A += (g.box[6 * i + 3] - g.box[6 * i]) * (g.box[6 * i + 5] - g.box[6 * i + 2]);
+    // Area of the panels still standing (failed panels took their share with them — R2).
+    for (let i = 0; i < g.n; i++) if (g.type[i] === MT_ROOF && !g.absent[i] && model.state[i] < MS.FAILED) A += (g.box[6 * i + 3] - g.box[6 * i]) * (g.box[6 * i + 5] - g.box[6 * i + 2]);
     if (A <= 0) return;
     let changed = false;
     for (let i = 0; i < g.n; i++) {

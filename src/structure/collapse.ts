@@ -131,6 +131,12 @@ export class CollapseModel {
   readonly blockOf: Int32Array;
   /** 1 = one of the member's own load-transfer connections failed (its loss is a connection failure). */
   readonly connLost: Uint8Array;
+  /**
+   * Mass (kg) a member carries that is not structure (Phase 31, R2: the share of roof snow on a failed roof panel) —
+   * it falls with the member (block mass, impacts, resting load) and is reported to the owner of that mass when the
+   * member comes to rest; the structural mass ledger never contains it.
+   */
+  readonly carried: Float64Array;
   readonly blocks: FallingBlock[] = [];
   readonly records: CollapseRecord[] = [];
   /** Records of structural failures (cause other than 'facade'; summaries without a scan). */
@@ -182,6 +188,7 @@ export class CollapseModel {
     this.external = new Uint8Array(n);
     this.blockOf = new Int32Array(n).fill(-1);
     this.connLost = new Uint8Array(n);
+    this.carried = new Float64Array(n);
     let total = 0, sup = 0, x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (let i = 0; i < n; i++) {
       if (g.absent[i]) { this.state[i] = MS.ABSENT; continue; }
@@ -373,6 +380,29 @@ export class CollapseModel {
     this.s.addExtra(i, N);
   }
 
+  /**
+   * Gravity ratio of member i (g_down / g₀, Phase 31) with the hazard it is attributed to. A change larger than
+   * SUDDEN_RATIO is a sudden load change (dynamic increase Ω on the next round), a smaller one gradual.
+   */
+  setGravityRatio(i: number, k: number, hazard = 'gravity') {
+    const old = this.s.kM[i];
+    if (Math.abs(k) === old) return;
+    this.causeHazard[i] = this.hz(hazard);
+    if (Math.abs(Math.abs(k) - old) > SUDDEN_RATIO) this.suddenGravity = true;
+    this.gravityQueued = true;
+    this.s.setGravityRatio(i, k);
+  }
+  private suddenGravity = false;
+
+  /** Non-structural mass (kg) that member i carries from now on (R2: roof snow share of a failed panel). */
+  carry(i: number, kg: number) {
+    if (!(kg > 0)) return;
+    this.carried[i] += kg;
+    const b = this.blockOf[i];
+    if (b >= 0 && this.blocks[b].active) this.blocks[b].mass += kg;
+    else if (this.state[i] === MS.RESTING && this.restOn[i] >= 0) this.s.addExtra(this.restOn[i], kg * GRAVITY, i);
+  }
+
   // ── Time evolution ─────────────────────────────────────────
 
   /**
@@ -385,9 +415,15 @@ export class CollapseModel {
 
   /** One fixed step. `kin`: horizontal velocity of the standing structure at a member (local). */
   step(dt: number, time: number, kin?: Kinematics, g = GRAVITY) {
+    // Phase 31: a gradual gravity change re-checks the structure statically (no dynamic increase); a sudden one, or
+    // any other change (member loss), dynamically as before.
+    if (this.gravityPending()) { this.dynamicNext = this.suddenGravity; this.suddenGravity = false; }
+    // Without downward gravity nothing falls onto floors: blocks in flight are handed to the physics engine.
+    if (g < FALL_MIN && this.activeBlocks) this.releaseBlocks(time);
     if (this.s.pending) this.redistribute(time);
     for (let r = 1; r < CollapseModel.roundsPerStep && this.s.pending; r++) this.redistribute(time);
     if (this.dead.length) this.formBlocks(time, kin, g);
+    this.gravityQueued = false;
     if (this.activeBlocks) {
       for (const b of this.blocks) if (b.active) this.advance(b, dt, time, g);
       this.ledger.energy.kinetic = this.kineticOfBlocks();
@@ -439,13 +475,33 @@ export class CollapseModel {
     for (const d of this.dead) this.resumeResting(d.i);
   }
 
+  /** Gravity ratios were changed since the last step (set by the adapter through setGravityRatio). */
+  private gravityQueued = false;
+  private gravityPending() {
+    return this.gravityQueued;
+  }
+  /** Every block in flight leaves as fragments with its velocity (g below FALL_MIN — the physics engine takes over). */
+  private releaseBlocks(time: number) {
+    for (const b of this.blocks) {
+      if (!b.active) continue;
+      b.active = false;
+      this.activeBlocks--;
+      for (const i of b.members) {
+        this.external[i] = 1;
+        this.ledger.move('falling', 'bodies', this.g.mass[i]);
+        this.ledger.momentum.inherited += this.g.mass[i] * Math.hypot(b.vx, b.v, b.vz);
+        this.events.push({ kind: 'exit', i, time, velocity: [b.vx, -b.v, b.vz], hazard: this.hazardName(i), root: this.root[i], impulse: false });
+      }
+    }
+  }
+
   private resumeResting(i: number) {
     const list = this.resting.get(i);
     if (!list) return;
     this.resting.delete(i);
     for (const m of list) {
       if (this.state[m] !== MS.RESTING) continue;
-      this.s.addExtra(i, -this.g.weight[m]);
+      this.s.addExtra(i, -this.g.weight[m] - this.carried[m] * GRAVITY);
       this.restOn[m] = -1;
       this.dead.push({ i: m });
       this.resumeResting(m);
@@ -484,10 +540,10 @@ export class CollapseModel {
         // Ballistic landing estimate (fall to the ground floor level, 0): outside the plan → fragment.
         const b = 6 * i;
         const bottom = G.box[b + 1] + this.dy[i];
-        const tf = Math.sqrt((2 * Math.max(0, bottom)) / g);
+        const tf = g >= FALL_MIN ? Math.sqrt((2 * Math.max(0, bottom)) / g) : 0;
         const cx = (G.box[b] + G.box[b + 3]) / 2 + this.dx[i] + vx * tf, cz = (G.box[b + 2] + G.box[b + 5]) / 2 + this.dz[i] + vz * tf;
         const from = this.state[i] === MS.RESTING ? 'resting' : 'structure';
-        if (cx < B.x0 - EXIT_MARGIN || cx > B.x1 + EXIT_MARGIN || cz < B.z0 - EXIT_MARGIN || cz > B.z1 + EXIT_MARGIN || (d.vel && d.impulse)) {
+        if (cx < B.x0 - EXIT_MARGIN || cx > B.x1 + EXIT_MARGIN || cz < B.z0 - EXIT_MARGIN || cz > B.z1 + EXIT_MARGIN || (d.vel && d.impulse) || g < FALL_MIN) {
           if (this.state[i] === MS.RESTING) this.set(i, MS.FALLING);
           else this.set(i, MS.FALLING);
           this.external[i] = 1;
@@ -503,9 +559,10 @@ export class CollapseModel {
         if (this.state[i] === MS.RESTING) { this.set(i, MS.FALLING); this.ledger.move('resting', 'falling', G.mass[i]); }
         else { this.set(i, MS.FALLING); this.ledger.move('structure', 'falling', G.mass[i]); }
         members.push(i);
-        mass += G.mass[i];
-        px += G.mass[i] * vx;
-        pz += G.mass[i] * vz;
+        const mi = G.mass[i] + this.carried[i];
+        mass += mi;
+        px += mi * vx;
+        pz += mi * vz;
         if (root < 0) { root = this.root[i]; h = this.hazardOf[i]; }
       }
       if (!members.length) continue;
@@ -541,6 +598,14 @@ export class CollapseModel {
     return this.centre(i) + ((this.g.box[o + 4] - this.g.box[o + 1]) / 2) * this.sy[i];
   }
 
+  /** Member i is a roof panel that failed in bending (Phase 31 roof check) and j one of the supports it spanned. */
+  private brokeBetween(i: number, j: number): boolean {
+    const G = this.g;
+    if (!(G.roofCap[i] > 0) || this.failCause[i] !== BENDING) return false;
+    for (let e = G.eStart[i]; e < G.eStart[i + 1]; e++) if (G.eTo[e] === j) return true;
+    return false;
+  }
+
   /** Highest surface under member i (standing member, resting / settled rubble; −1 = the ground floor level 0). */
   private surfaceUnder(i: number, block: number): { top: number; member: number } {
     const G = this.g;
@@ -552,6 +617,8 @@ export class CollapseModel {
     membersInRect(G, Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), this.tmp);
     for (const j of this.tmp) {
       if (j === i || (block >= 0 && this.blockOf[j] === block)) continue;
+      // A roof panel that broke in bending between its supports (R1) falls through between them: never onto them.
+      if (this.brokeBetween(i, j)) continue;
       const st = this.state[j];
       const standing = st <= MS.SEVERE;
       if (!standing && st !== MS.RESTING && st !== MS.SETTLED) continue;
@@ -588,7 +655,7 @@ export class CollapseModel {
       this.restOn[i] = r;
       (this.resting.get(r) ?? this.resting.set(r, []).get(r)!).push(i);
       this.ledger.move('falling', 'resting', G.mass[i]);
-      this.s.addExtra(r, G.weight[i], i);
+      this.s.addExtra(r, G.weight[i] + this.carried[i] * GRAVITY, i);
     } else {
       this.set(i, MS.SETTLED);
       this.ledger.move('falling', 'rubble', G.mass[i]);
@@ -805,7 +872,8 @@ export class CollapseModel {
     for (const r of R) wsum += recv.get(r)!;
     const w = R.map((r) => recv.get(r)! / wsum);
     let mR = 0;
-    for (const r of R) mR += G.mass[r] + this.s.extra[r] / g;
+    // Surcharges are stored as Earth weights (Phase 31): back to kg with GRAVITY, whatever g acts now.
+    for (const r of R) mR += G.mass[r] + this.s.extra[r] / GRAVITY;
     const res = this.s.reserve(R, w);
     // Part of the block on the ground: the (rigid) ground arrests the block; the floor takes no more
     // than the collision with its members (rotation of the block is not modelled).
@@ -843,7 +911,7 @@ export class CollapseModel {
         this.resting.delete(x);
         for (const m of list) {
           if (this.state[m] !== MS.RESTING) continue;
-          this.s.addExtra(x, -G.weight[m]);
+          this.s.addExtra(x, -G.weight[m] - this.carried[m] * GRAVITY);
           this.set(m, MS.FALLING);
           this.restOn[m] = -1;
           this.ledger.move('resting', 'falling', G.mass[m]);
@@ -863,7 +931,7 @@ export class CollapseModel {
   private join(b: FallingBlock, i: number) {
     b.members.push(i);
     b.join.push(b.D);
-    b.mass += this.g.mass[i];
+    b.mass += this.g.mass[i] + this.carried[i];
     this.blockOf[i] = b.id;
   }
 
@@ -919,8 +987,10 @@ export class CollapseModel {
     this.activeBlocks--;
     const K = 0.5 * b.mass * b.v * b.v;
     this.ledger.energy.ground += K;
-    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, solid = 0, base = Infinity;
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, solid = 0, base = Infinity, ms = 0, carried = 0;
     for (const i of b.members) {
+      ms += G.mass[i];
+      carried += this.carried[i];
       const o = 6 * i;
       x0 = Math.min(x0, G.box[o] + this.dx[i]); x1 = Math.max(x1, G.box[o + 3] + this.dx[i]);
       z0 = Math.min(z0, G.box[o + 2] + this.dz[i]); z1 = Math.max(z1, G.box[o + 5] + this.dz[i]);
@@ -929,7 +999,8 @@ export class CollapseModel {
       this.set(i, MS.SETTLED);
       this.ledger.move('falling', 'rubble', G.mass[i]);
     }
-    const pi = this.addToPile(x0, z0, x1, z1, Math.max(0, base), b.mass, solid);
+    // The pile is the structure's rubble (carried snow is reported to its owner, not piled).
+    const pi = this.addToPile(x0, z0, x1, z1, Math.max(0, base), carried > 0 ? ms : b.mass, solid);
     const pile = this.piles[pi];
     this.compact(b, pile.y, pile.height);
     this.events.push({ kind: 'ground', group: b.id, time, mass: b.mass, energy: K, pile: pi, members: b.members.slice(), hazard: b.hazard });
@@ -993,6 +1064,13 @@ export class CollapseModel {
     return 'intact';
   }
 }
+
+const BENDING = FAIL_CAUSES.indexOf('bending');
+
+/** Downward gravity (m/s²) below which failed members do not fall as blocks but leave as rigid fragments (Phase 31). */
+export const FALL_MIN = 0.05 * GRAVITY;
+/** Change of a member's gravity ratio within one step treated as sudden (dynamic increase) (Phase 31). */
+export const SUDDEN_RATIO = 0.05;
 
 /** Standing superstructure share below which a collapse is called global. */
 export const GLOBAL_STANDING = 0.1;
