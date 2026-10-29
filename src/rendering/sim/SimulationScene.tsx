@@ -15,6 +15,8 @@ import { GroundMotionLayer } from './seismic/GroundMotionLayer';
 import { EpicenterMarker } from './seismic/EpicenterMarker';
 import { CameraShake } from './seismic/CameraShake';
 import { WaterLayer } from './water/WaterLayer';
+import { DeformationOverlay } from '../deformation/DeformationOverlay';
+import { DeformationPicker, DeformationPreview } from '../deformation/DeformationTools';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
 
@@ -35,7 +37,7 @@ function GroundDeselect() {
         if (e.delta > 5) return;
         useEditorStore.getState().select(null);
         // Flood inspector: the point on the actual terrain under the cursor (Phase 14).
-        if (!useSimStore.getState().flood) return;
+        if (!useSimStore.getState().flood && !useSimStore.getState().deform) return;
         const o = e.ray.origin;
         const d = e.ray.direction;
         const terrain = simulationController.getEnvironment().terrain;
@@ -69,6 +71,9 @@ export function SimulationScene() {
       <WindStreaks />
       <WindArrows />
       <WaterLayer />
+      <DeformationOverlay />
+      <DeformationPreview />
+      <DeformationPicker />
       <GroundMotionLayer />
       <EpicenterMarker />
       <CameraShake />

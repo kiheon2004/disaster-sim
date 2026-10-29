@@ -25,7 +25,7 @@ const EVENT_COLORS: Partial<Record<DamageEventType, string>> = {
   INUNDATED: '#46a0e6', FLOATED: '#2d7fd0', SCOURED: '#8a6a48',
 };
 
-const HAZARD_COLORS: Partial<Record<Hazard, string>> = { earthquake: '#ffb3a1', flood: '#9fd3ff' };
+const HAZARD_COLORS: Partial<Record<Hazard, string>> = { earthquake: '#ffb3a1', flood: '#9fd3ff', ground: '#ffd9a0' };
 
 function objectLabel(e: DamageEventRecord, objects: ReturnType<typeof useWorldStore.getState>['doc']['objects'], t: TFunction) {
   const o = objects[e.objectId];

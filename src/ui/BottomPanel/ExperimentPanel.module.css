@@ -18,3 +18,8 @@
 .menu button:disabled { color: var(--text-3); }
 .menuSep { font-size: 10.5px; color: var(--text-3); padding: 6px 8px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
 .planned { margin-left: auto; font-size: 10px; color: #b98cf5; }
+.deform { display: flex; flex-direction: column; gap: 4px; padding: 4px 6px; border-radius: 6px; background: var(--bg-3); }
+.deformButtons { display: flex; gap: 6px; flex-wrap: wrap; }
+.deformButtons button[aria-pressed='true'] { border-color: #ffd34d; color: #ffd34d; }
+.deformHint { font-size: 10.5px; color: #ffd34d; }
+.deformSummary { font-size: 11px; color: var(--text-1); font-family: var(--font-mono); }

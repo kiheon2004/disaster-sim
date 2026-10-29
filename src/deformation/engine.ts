@@ -110,6 +110,8 @@ export class DeformationEngine {
   /** Bumped on every applied update (renderers / inspectors compare it). */
   rev = 0;
   maxAbs = 0;
+  /** Changed rectangles of the last updates (renderers catch up with dirtySince). */
+  private recent: { rev: number; rect: GridRect }[] = [];
 
   constructor(readonly terrain: TerrainData) {
     this.original = terrain.heights.slice();
@@ -192,6 +194,8 @@ export class DeformationEngine {
     this.updates++;
     this.verticesWritten += rw * rh;
     this.rev++;
+    this.recent.push({ rev: this.rev, rect });
+    if (this.recent.length > 64) this.recent.shift();
     // Summary record (whole grid: cheap at 10 Hz on 40 k vertices).
     let maxAbs = 0, vol = 0;
     for (let i = 0; i < W.length; i++) {
@@ -204,6 +208,18 @@ export class DeformationEngine {
     this.history.push({ time, maxAbs, volume: vol * t.cellSize * t.cellSize });
     if (this.history.length > 4000) this.history.splice(0, this.history.length - 4000);
     return { rect, maxDelta, delta, discontinuous };
+  }
+
+  /**
+   * Union of the rectangles changed after revision `rev` (null = nothing changed). A consumer
+   * that fell further behind than the kept history gets the whole grid.
+   */
+  dirtySince(rev: number): GridRect | null {
+    if (rev >= this.rev) return null;
+    if (!this.recent.length || this.recent[0].rev > rev + 1) return { x0: 0, z0: 0, x1: this.terrain.nx - 1, z1: this.terrain.nz - 1 };
+    let r: GridRect | null = null;
+    for (const e of this.recent) if (e.rev > rev) r = unionRect(r, e.rect);
+    return r;
   }
 
   /** Displacement at a point (bilinear on W; 0 outside the grid). */

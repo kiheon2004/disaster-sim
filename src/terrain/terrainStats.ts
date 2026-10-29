@@ -9,7 +9,10 @@ export const terrainStats = {
   /** Render mesh updates (partial or full) and their total cost (ms). */
   meshUpdates: 0,
   meshMs: 0,
+  /** Simulation-mode mesh refreshes after terrain deformation updates (Phase 21). */
+  deformUpdates: 0,
   reset() {
+    this.deformUpdates = 0;
     this.dabs = 0;
     this.dabMs = 0;
     this.meshUpdates = 0;

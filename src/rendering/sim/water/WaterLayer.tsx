@@ -153,6 +153,8 @@ class WaterMesh {
   private readonly cnt: Uint8Array;
   private readonly around: Uint8Array;
   private readonly ground: Float32Array;
+  /** Terrain revision the cached ground was read at (a deformation moves it — Phase 21). */
+  private groundRev: number;
 
   constructor(private readonly f: WaterField) {
     const nvx = (this.nvx = f.nx + 1);
@@ -166,6 +168,7 @@ class WaterMesh {
     this.around = new Uint8Array(n);
     this.ground = new Float32Array(n);
     const heights = f.terrain.data.heights;
+    this.groundRev = f.terrain.data.revision;
     for (let vz = 0; vz < nvz; vz++) {
       for (let vx = 0; vx < nvx; vx++) {
         const i = vz * nvx + vx;
@@ -203,6 +206,11 @@ class WaterMesh {
     const t0 = performance.now();
     const f = this.f;
     const { nvx, eta, cnt, depth, vel, pos, ground, around } = this;
+    const td = f.terrain.data;
+    if (td.revision !== this.groundRev) {
+      this.groundRev = td.revision;
+      for (let i = 0; i < ground.length; i++) ground[i] = td.heights[i] ?? 0;
+    }
     eta.fill(0);
     cnt.fill(0);
     depth.fill(0);

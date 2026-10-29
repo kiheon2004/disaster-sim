@@ -69,6 +69,26 @@ export interface FloodLive {
   substeps: number;
 }
 
+/** Live terrain deformation status for HUDs (null until a deformation starts). Phase 21. */
+export interface DeformLive {
+  /** Sources (deformations) started so far and how many are still changing. */
+  sources: number;
+  changing: number;
+  /** Largest |W| now (m) and the net volume change Σ W·A (m³). */
+  maxAbs: number;
+  volume: number;
+  updates: number;
+  /** Cost of the last update (ms): field + heights, collider, water bed, responses. */
+  fieldMs: number;
+  colliderMs: number;
+  waterMs: number;
+  responseMs: number;
+  /** Water moved with the bed (m³) and the largest bed rise / drop under water (m). */
+  bedVolume: number;
+  bedRise: number;
+  bedDrop: number;
+}
+
 export interface SimStats {
   byState: [number, number, number, number, number];
   debris: number;
@@ -114,6 +134,7 @@ export interface SimState {
   /** Recorded earthquake time series (downsampled). */
   seismicSeries: SeismicSeries | null;
   flood: FloodLive | null;
+  deform: DeformLive | null;
   /** Recorded flood time series (downsampled). */
   floodSeries: FloodSeries | null;
   /** Experiment timeline milestones (Phase 15). */
@@ -144,6 +165,7 @@ export const useSimStore = create<SimState>((set) => ({
   quake: null,
   seismicSeries: null,
   flood: null,
+  deform: null,
   floodSeries: null,
   initialWaterTime: null,
   baseline: null,

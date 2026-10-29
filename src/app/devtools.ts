@@ -51,6 +51,9 @@ import { buildBuiltinBlueprint } from '@/blueprints/builtin';
 import { buildTemplate } from '@/templates/builtin';
 import { createTemplate, serializeTemplate, parseTemplate } from '@/templates/template';
 import { worldFingerprint } from '@/world/fingerprint';
+import { terrainStats } from '@/terrain/terrainStats';
+import { validateDeformation } from '@/deformation/field';
+import { currentDeformation } from '@/rendering/terrain/runtimeGround';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -89,6 +92,8 @@ export function installDevtools() {
     ui: useUiStore,
     waterRenderStats,
     profiler: simProfiler,
+    /** Phase 21 terrain deformation (benchmarks / browser verification). */
+    deformLib: { terrainStats, getRoadBatches, validateDeformation, currentDeformation },
     /** Benchmarks: the next run starts with `depth` m of still water on every open cell. */
     floodStart: (depth: number) => {
       const doc = useWorldStore.getState().doc;

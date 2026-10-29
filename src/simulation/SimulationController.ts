@@ -1,3 +1,4 @@
+import type { DeformLive } from './simStore';
 import type { WorldDocument } from '@/core/model';
 import type { EntityId } from '@/core/types';
 import { FIXED_DT, type SimSpeed } from '@/core/units';
@@ -216,6 +217,7 @@ export class SimulationController {
       quake: null,
       seismicSeries: null,
       flood: null,
+      deform: null,
       floodSeries: null,
       milestones: [],
     });
@@ -514,6 +516,7 @@ export class SimulationController {
       patch.milestones = ms.slice();
     }
     patch.flood = this.floodLive();
+    patch.deform = this.deformLive();
     const fs = this.metrics.flood.series;
     if (fs.t.length !== this.lastFloodSeriesLength || force) {
       this.lastFloodSeriesLength = fs.t.length;
@@ -551,6 +554,29 @@ export class SimulationController {
     return {
       active, accel, accelH, peak: this.quakePeak, phase, magnitude: q.magnitude, pga: q.pga, pgaAssumed: q.pgaAssumed,
       epicenter: q.epicenter, depth: q.depth, direction: q.direction, local, duration: q.duration, sMinusP: sp,
+    };
+  }
+
+  /** Live terrain deformation status (null until the first deformation starts). Phase 21. */
+  private deformLive(): DeformLive | null {
+    const e = this.env.deformation.engine;
+    if (!e) return null;
+    const st = this.env.deformation.stats;
+    const bm = this.env.flood.field?.bedMotion;
+    const last = e.history[e.history.length - 1];
+    return {
+      sources: e.sources.length,
+      changing: e.sources.filter((s) => s.version(this.time - s.startTime) < 1 || s.duration === Infinity).length,
+      maxAbs: e.maxAbs,
+      volume: last?.volume ?? 0,
+      updates: e.updates,
+      fieldMs: st?.fieldMs ?? 0,
+      colliderMs: st?.colliderMs ?? 0,
+      waterMs: st?.waterMs ?? 0,
+      responseMs: st?.responseMs ?? 0,
+      bedVolume: bm?.displacedVolume ?? 0,
+      bedRise: bm?.maxRise ?? 0,
+      bedDrop: bm?.maxDrop ?? 0,
     };
   }
 

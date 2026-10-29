@@ -16,6 +16,7 @@ import { useUiStore } from '@/ui/uiStore';
 import styles from './BottomPanel.module.css';
 import eq from './EarthquakeForm.module.css';
 import x from './ExperimentPanel.module.css';
+import { DeformationTools } from './DeformationTools';
 
 /**
  * Experiment tab (Phase 15): the list of phenomena of an experiment, each with its own
@@ -133,6 +134,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
     <div className={x.editor}>
       <div className={x.params}>
         {def.fields.map((f) => {
+          if (f.visible && !f.visible(inst.spec)) return null;
           const v = fieldValue(f, inst.spec);
           if (f.options) {
             return (
@@ -183,6 +185,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
         <NumberField label={after ? t('exp.start.offset') : t('exp.start.time')} value={after ? after.offset : 'at' in inst.start ? inst.start.at : 0} min={after ? -3600 : 0} max={86400} step={1} precision={1} unit="s"
           onChange={(n, live) => !live && updatePhenomenon(inst.id, { start: after ? { ...after, offset: n } : { at: n } })} />
         {!valid.success && <div className={x.issue}>⚠ {valid.error.issues[0]?.message}</div>}
+        {inst.type === 'terrainDeformation' && <DeformationTools inst={inst} />}
         <div className={eq.assumptions}>
           <b>{t('flood.form.assumptions')}</b>
           {def.assumptions(inst.spec, ctx).map((a, i) => <div key={i}>· {translateMessage(locale, a)}</div>)}

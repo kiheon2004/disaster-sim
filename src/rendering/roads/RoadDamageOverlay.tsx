@@ -11,7 +11,10 @@ export function roadDamageColor(st: RoadSegmentState): string | null {
   if (st.scour >= 1) return '#8d5a2b';
   if (st.crack >= 0.6) return '#e53935';
   if (st.crownDepth >= ROAD_IMPASSABLE) return '#1e63c8';
+  // Ground deformation (Phase 21): cut by a step / grade (purple), steeper than 15 % (yellow).
+  if (st.deform && !st.deform.passable) return '#9c3fd6';
   if (st.crack >= 0.05) return '#ff9800';
+  if (st.deform && st.deform.grade >= 0.15 && st.deform.grade > st.deform.grade0 + 0.01) return '#f2d23c';
   if (st.depth >= ROAD_INUNDATED) return '#4f9be0';
   return null;
 }

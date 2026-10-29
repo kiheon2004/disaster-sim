@@ -24,6 +24,11 @@ export function RoadSimSection() {
     .filter((x) => x.crack >= 0.05 || x.maxDepth >= 0.15 || x.scour >= 1)
     .sort((a, b) => b.crack + b.maxDepth - (a.crack + a.maxDepth))
     .slice(0, 6);
+  // Roads on moving ground (Phase 21): largest step first. The network itself never changes.
+  const deformed = roads.segments
+    .filter((x) => x.deform && (x.deform.offset >= 0.05 || !x.deform.passable || x.deform.grade > x.deform.grade0 + 0.01))
+    .sort((a, b) => b.deform!.offset - a.deform!.offset)
+    .slice(0, 6);
   return (
     <Section title={t('road.sim.title')}>
       <div className={styles.liveGrid} data-testid="road-sim">
@@ -33,11 +38,18 @@ export function RoadSimSection() {
         <span>{t('road.sim.inundated')}</span><span>{s.inundated}</span>
         <span>{t('road.sim.impassable')}</span><span>{s.impassable}</span>
         <span>{t('road.sim.scoured')}</span><span>{s.scoured}</span>
+        {deformed.length > 0 && <><span>{t('road.sim.steep')}</span><span>{s.steep}</span></>}
+        {deformed.length > 0 && <><span>{t('road.sim.cut')}</span><span>{s.cut}</span></>}
       </div>
       {/* Most affected roads: one line each (long values do not fit the two-column grid). */}
       {worst.map((w) => (
         <div key={w.id} className={styles.note} data-road-state={w.status}>
           <b>{w.id}</b> · {t('road.sim.row', { crack: Math.round(w.crack * 100), pgv: w.peakPgv.toFixed(2), depth: w.maxDepth.toFixed(2), crown: w.maxCrownDepth.toFixed(2) })}
+        </div>
+      ))}
+      {deformed.map((w) => (
+        <div key={`d:${w.id}`} className={styles.note} data-road-deform={w.deform!.passable ? 'passable' : 'blocked'}>
+          <b>{w.id}</b> · {t('road.sim.deformRow', { o: (w.deform!.offset * 100).toFixed(0), g: (w.deform!.grade * 100).toFixed(1), g0: (w.deform!.grade0 * 100).toFixed(1), s: w.deform!.settlement.toFixed(2), pass: t(w.deform!.passable ? 'road.sim.passable' : 'road.sim.blocked') })}
         </div>
       ))}
       <div className={styles.note}>{t('road.sim.note')}</div>

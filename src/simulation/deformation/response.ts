@@ -110,7 +110,7 @@ function tiltQuat(g: [number, number]): Quat {
 }
 
 /** Footprint half extents (scaled) and yaw. */
-function footprint(e: RuntimeEntity): { hx: number; hz: number; yaw: number } {
+export function footprint(e: RuntimeEntity): { hx: number; hz: number; yaw: number } {
   const d = e.dims;
   return { hx: Math.max(0.25, d[0] / 2), hz: Math.max(0.25, d[2] / 2), yaw: yawOf(e.source.transform.rotation) };
 }

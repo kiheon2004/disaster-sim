@@ -84,6 +84,8 @@ export interface ParamField {
   scale?: number;
   /** May be left undefined (resolved as a documented assumption). */
   optional?: boolean;
+  /** Shown only when it applies to the spec (e.g. stages only for a staged profile). */
+  visible?: (spec: EventSpec) => boolean;
 }
 
 /** Context a definition may need to resolve defaults (frozen terrain, water settings, seed). */

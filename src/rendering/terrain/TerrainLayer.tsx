@@ -9,6 +9,9 @@ import { useViewStore } from '../viewStore';
 import { grassTexture } from '../textures';
 import { createTerrainMaterial, TerrainSurface } from './TerrainSurface';
 import { takeTerrainDirty } from './terrainDirty';
+import { useDeformationEngine } from './runtimeGround';
+import type { DeformationEngine } from '@/deformation/engine';
+import { terrainStats } from '@/terrain/terrainStats';
 
 const OUTER = 3000;
 
@@ -75,8 +78,10 @@ function OuterRing() {
   );
 }
 
-function TerrainMesh({ showGrid }: { showGrid: boolean }) {
-  const terrain = useWorldStore((s) => s.doc.terrain);
+function TerrainMesh({ showGrid, engine }: { showGrid: boolean; engine?: DeformationEngine }) {
+  const docTerrain = useWorldStore((s) => s.doc.terrain);
+  // Simulation with a deformation: the run's own terrain copy (H₀ + W), never the document.
+  const terrain = engine ? engine.terrain : docTerrain;
   const mode = useViewStore((s) => s.terrainView);
   // One surface per grid (commits share the arrays and only bump the object identity).
   const surface = useMemo(() => new TerrainSurface(terrain, mode), [terrain.heights, terrain.ground, terrain.soil]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -93,6 +98,15 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
   // A committed change (stroke end, undo/redo, preset, layer edit): the changed rectangle only
   // (whole mesh when unknown), then bounds / skirt.
   useEffect(() => {
+    if (engine) {
+      surface.update(null);
+      lastRev.current = engine.rev;
+      const s = samplerFor(terrain);
+      s.sync();
+      const wl = terrain.settings.waterLevel;
+      setWater(wl !== null && s.minHeight < wl ? wl : null);
+      return;
+    }
     takeTerrainDirty();
     const r = useWorldStore.getState().terrainRect;
     surface.update(r);
@@ -101,10 +115,21 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
     const s = samplerFor(terrain);
     const wl = terrain.settings.waterLevel;
     setWater(wl !== null && s.minHeight < wl ? wl : null);
-  }, [terrain, surface]);
+  }, [terrain, surface, engine]);
 
   // Live sculpting: only the dabbed rectangle.
   useFrame(() => {
+    if (engine) {
+      // Deformation updates (10 Hz): only the rectangles changed since the last frame.
+      if (engine.rev === lastRev.current) return;
+      const r = engine.dirtySince(lastRev.current);
+      lastRev.current = engine.rev;
+      if (!r) return;
+      surface.update(r);
+      surface.finish();
+      terrainStats.deformUpdates++;
+      return;
+    }
     if (terrain.revision === lastRev.current) return;
     lastRev.current = terrain.revision;
     surface.update(takeTerrainDirty());
@@ -134,6 +159,11 @@ function TerrainMesh({ showGrid }: { showGrid: boolean }) {
  * (zero cost); as soon as the terrain has relief or painted ground the heightfield mesh is used.
  */
 export function TerrainLayer({ showGrid }: { showGrid: boolean }) {
+  const engine = useDeformationEngine();
+  return engine ? <TerrainMesh key="deformed" showGrid={false} engine={engine} /> : <DocumentGround showGrid={showGrid} />;
+}
+
+function DocumentGround({ showGrid }: { showGrid: boolean }) {
   const terrain = useWorldStore((s) => s.doc.terrain);
   const view = useViewStore((s) => s.terrainView);
   // A painted soil layer only needs the mesh while the soil map is shown.

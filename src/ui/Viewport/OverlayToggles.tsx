@@ -4,7 +4,8 @@ import { WIND_COLOR_STOPS } from '@/rendering/sim/windColors';
 import { DAMAGE_STATE_COLORS, DAMAGE_STATE_IDS } from '@/simulation/damage/DamageState';
 import { Toggle } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
-import { QUAKE_EXAGGERATIONS } from '@/rendering/viewStore';
+import { QUAKE_EXAGGERATIONS, DEFORM_EXAGGERATIONS } from '@/rendering/viewStore';
+import { DISPLACEMENT_GRADIENT, displacementScale } from '@/rendering/deformation/deformColors';
 import { useSimStore } from '@/simulation/simStore';
 import { accelGradient } from '@/rendering/sim/seismic/quakeColors';
 import { cssGradient, DEPTH_MAX, DEPTH_STOPS, SPEED_MAX, SPEED_STOPS } from '@/rendering/sim/water/waterColors';
@@ -21,6 +22,8 @@ export function OverlayToggles() {
   const hasQuake = useSimStore((s) => s.quake !== null);
   const hasFlood = useSimStore((s) => s.flood !== null);
   const flood = useViewStore((s) => s.floodViz);
+  const deform = useViewStore((s) => s.deformViz);
+  const deformLive = useSimStore((s) => s.deform);
   const gradient = `linear-gradient(90deg, ${WIND_COLOR_STOPS.map(([s, c]) => `${c} ${(s / 60) * 100}%`).join(', ')})`;
   return (
     <div
@@ -103,6 +106,37 @@ export function OverlayToggles() {
               </div>
             )}
             <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.flood.note')}</span>
+          </div>
+        </>
+      )}
+      {deformLive && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#ffd9a0', marginTop: 2 }}>{t('overlay.deform')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 2 }} data-testid="deform-overlay">
+            <Segmented
+              size="small"
+              value={deform.mode}
+              onChange={(m) => v.setDeformViz({ mode: m })}
+              options={(['off', 'displacement', 'original', 'vectors'] as const).map((m) => ({ value: m, label: t(`overlay.deform.${m}`) }))}
+            />
+            {deform.mode === 'displacement' && (
+              <div>
+                <div style={{ height: 6, borderRadius: 3, background: DISPLACEMENT_GRADIENT }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  <span>−{displacementScale(deformLive.maxAbs)} m</span><span>0</span><span>+{displacementScale(deformLive.maxAbs)} m</span>
+                </div>
+              </div>
+            )}
+            {deform.mode === 'original' && <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.deform.originalNote')}</span>}
+            {deform.mode === 'vectors' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{t('overlay.deform.exaggeration')}</span>
+                <Segmented size="small" value={deform.exaggeration} onChange={(e) => v.setDeformViz({ exaggeration: e })} options={DEFORM_EXAGGERATIONS.map((e) => ({ value: e, label: `×${e}` }))} />
+              </div>
+            )}
+            {deform.mode !== 'off' && <Toggle checked={deform.foundations} onChange={(b) => v.setDeformViz({ foundations: b })} label={t('overlay.deform.foundations')} />}
+            {deform.mode !== 'off' && deform.foundations && <span style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('overlay.deform.contact')}</span>}
+            <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('overlay.deform.note')}</span>
           </div>
         </>
       )}

@@ -29,6 +29,19 @@ export interface FloodViz {
   arrows: boolean;
 }
 
+/** Terrain deformation overlay (Phase 21, render-only). */
+export type DeformVizMode = 'off' | 'displacement' | 'original' | 'vectors';
+
+export interface DeformViz {
+  mode: DeformVizMode;
+  /** Foundation contact / tilt markers on buildings standing on moving ground. */
+  foundations: boolean;
+  /** Vertical exaggeration of the displacement arrows only (labelled; the ground is true scale). */
+  exaggeration: number;
+}
+
+export const DEFORM_EXAGGERATIONS = [1, 3, 10] as const;
+
 /**
  * Small bridge between the 3D view and DOM overlays (compass, focus requests).
  * Kept separate from world/editor state on purpose.
@@ -58,6 +71,14 @@ interface ViewState {
   /** Point picked on the ground in simulation mode (flood inspector), world x / z. */
   waterProbe: { x: number; z: number } | null;
   setWaterProbe: (p: { x: number; z: number } | null) => void;
+  deformViz: DeformViz;
+  setDeformViz: (patch: Partial<DeformViz>) => void;
+  /** Experiment instance whose deformation centre the next ground click sets (null = off). */
+  deformPick: string | null;
+  setDeformPick: (id: string | null) => void;
+  /** Experiment instance whose predicted final displacement is drawn on the ground. */
+  deformPreview: string | null;
+  setDeformPreview: (id: string | null) => void;
   /** Developer performance HUD (off by default; `?perf` or Shift+P). */
   showPerfHud: boolean;
   togglePerfHud: () => void;
@@ -86,6 +107,12 @@ export const useViewStore = create<ViewState>((set) => ({
   setFloodViz: (patch) => set((s) => ({ floodViz: { ...s.floodViz, ...patch } })),
   waterProbe: null,
   setWaterProbe: (waterProbe) => set({ waterProbe }),
+  deformViz: { mode: 'displacement', foundations: true, exaggeration: 1 },
+  setDeformViz: (patch) => set((s) => ({ deformViz: { ...s.deformViz, ...patch } })),
+  deformPick: null,
+  setDeformPick: (deformPick) => set({ deformPick }),
+  deformPreview: null,
+  setDeformPreview: (deformPreview) => set({ deformPreview }),
   showPerfHud: typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf'),
   togglePerfHud: () => set((s) => ({ showPerfHud: !s.showPerfHud })),
   setAzimuth: (azimuthDeg) => set({ azimuthDeg }),
