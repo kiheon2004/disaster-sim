@@ -50,11 +50,17 @@ import { DamageState } from '../damage/DamageState';
 import { activate, structureOf } from '../structure/state';
 import { GEOM_PERIOD, type BuildingThermal, type ThermalRuntime } from '../thermal/runtime';
 import type { IgnitionRecord } from './FireChannel';
+import { simProfiler } from '../profiling/SimProfiler';
 
 /** Char depth from which a timber member is designed by its charred section (m; a formed char layer, not a scorch). */
 export const CHAR_SWITCH = 0.001;
 /** Irradiance below which a flame's radiation is not resolved on a receiver (W/m²) — booked unresolved. */
 export const FLAME_FLOOR = 100;
+/**
+ * The same for ground cells (W/m²): the ground is heated where a flame delivers ≥ 1 kW/m²; the weaker,
+ * farther share (tens of thousands of cells per flame) is booked as unresolved radiation instead.
+ */
+export const FLAME_GROUND_FLOOR = 1000;
 /** Convective heat transfer of hot room gas to surfaces, for the incident flux of ignition (W/(m²·K)). */
 const H_ROOM = 10;
 const BODY_CELL = 8;
@@ -63,6 +69,8 @@ const SIDES = 5;
 
 interface Geom {
   rad: Deposit[];
+  /** Body receivers lead `rad`. */
+  nBodies: number;
   conv: Deposit[];
   aboveConv: number;
   builtAt: number;
@@ -417,11 +425,17 @@ export class FireRuntime {
       if (st >= MS.FAILED) { fw.home[i] = -1; fw.room[i] = -1; }
     }
     this.openings(ctx);
+    let tp = simProfiler.now();
     this.incident(ctx, dt, heat);
+    simProfiler.add('fire.incident', tp);
+    tp = simProfiler.now();
     fw.step(dt);
+    simProfiler.add('fire.burn', tp);
     for (const [i, from, to] of fw.changes) this.onChange(ctx, i, from, to);
     for (const [r, kind] of fw.roomEvents) this.onRoomEvent(ctx, r, kind);
+    tp = simProfiler.now();
     const steps = this.combustionSteps(ctx, dt);
+    simProfiler.add('fire.steps', tp);
     this.last = steps;
     void B;
     this.ms = performance.now() - t0;
@@ -531,7 +545,9 @@ export class FireRuntime {
     fw.pilot.fill(0, 0, fw.n);
     const add = (s: SourceStep, room: boolean, P?: Vec3) => {
       if (s.energy <= 0 || s.id.startsWith('gf:')) return;
-      for (const d of s.deposits) {
+      const n = s.bodies ?? s.deposits.length;
+      for (let k = 0; k < n; k++) {
+        const d = s.deposits[k];
         if (d.kind !== TK.body || !d.a) continue;
         const items = this.bodyItems.get(d.index);
         if (!items) continue;
@@ -683,11 +699,11 @@ export class FireRuntime {
         const rad = (chi * fo * Ein_ + chi * Eext) * sh;
         const conv = (1 - chi) * Eext * sh;
         if (conv > 0) steps.push({ id: `oc:${R.r}:${side}`, energy: conv, deposits: g.conv, aboveLayer: g.aboveConv, combustion: true });
-        if (rad > 0) steps.push({ id: `or:${R.r}:${side}`, energy: rad, deposits: g.rad, combustion: true });
+        if (rad > 0) steps.push({ id: `or:${R.r}:${side}`, energy: rad, deposits: g.rad, combustion: true, bodies: g.nBodies });
         if (gasOut > 0) {
           // Never more than the room holds above the ambient.
           const J = Math.min(gasOut * As * dt, Math.max(0, cp.E) * 0.5);
-          if (J > 0) steps.push({ id: `og:${R.r}:${side}`, energy: J, deposits: g.rad, from: { kind: TK.comp, index: FR.tc } });
+          if (J > 0) steps.push({ id: `og:${R.r}:${side}`, energy: J, deposits: g.rad, from: { kind: TK.comp, index: FR.tc }, bodies: g.nBodies });
         }
         if (Eext > 0) {
           const Q = (Eext * sh) / dt;
@@ -747,7 +763,7 @@ export class FireRuntime {
       const rest = gr.E - Efb;
       const g = this.groupGeom(ctx, gr, chi);
       if (rest * (1 - chi) > 0) steps.push({ id: `gc:${gr.key}`, energy: rest * (1 - chi), deposits: g.conv, aboveLayer: g.aboveConv, combustion: true });
-      if (rest * chi > 0) steps.push({ id: `gr:${gr.key}`, energy: rest * chi, deposits: g.rad, combustion: true });
+      if (rest * chi > 0) steps.push({ id: `gr:${gr.key}`, energy: rest * chi, deposits: g.rad, combustion: true, bodies: g.nBodies });
     }
     return steps;
   }
@@ -857,6 +873,11 @@ export class FireRuntime {
    * the flame surface) — carried in the deposit's area `a` = A_p·(r_near/r)².
    */
   private pointGeom(ctx: SystemContext, P: Vec3, Prad: number, own: Set<number>, rOwn: number): Geom {
+    const tg = simProfiler.now();
+    try { return this.pointGeomImpl(ctx, P, Prad, own, rOwn); } finally { simProfiler.add('fire.geom', tg); }
+  }
+
+  private pointGeomImpl(ctx: SystemContext, P: Vec3, Prad: number, own: Set<number>, rOwn: number): Geom {
     const trt = this.trt, w = trt.world, B = w.bodies, tr = w.terrain;
     const reach = Math.min(150, Math.sqrt(Math.max(1, Prad) / (4 * Math.PI * FLAME_FLOOR)));
     const strong = Math.sqrt(Math.max(1, Prad) / (4 * Math.PI * 1000));
@@ -901,14 +922,16 @@ export class FireRuntime {
       sum += wgt;
       if (dy < 0) down += f;
     });
+    const nBodies = rad.length;
     // Ground under the flame (not inside a room).
     if (!inside) {
       const yg = trt.groundY(ctx, P[0], P[2]);
       const A = tr.cell * tr.cell;
       const ground: Deposit[] = [];
       let gsum = 0;
-      const i0 = Math.max(0, Math.floor((P[0] - reach - tr.originX) / tr.cell)), i1 = Math.min(tr.nx - 1, Math.floor((P[0] + reach - tr.originX) / tr.cell));
-      const k0 = Math.max(0, Math.floor((P[2] - reach - tr.originZ) / tr.cell)), k1 = Math.min(tr.nz - 1, Math.floor((P[2] + reach - tr.originZ) / tr.cell));
+      const greach = Math.min(reach, Math.sqrt(Math.max(1, Prad) / (4 * Math.PI * FLAME_GROUND_FLOOR)));
+      const i0 = Math.max(0, Math.floor((P[0] - greach - tr.originX) / tr.cell)), i1 = Math.min(tr.nx - 1, Math.floor((P[0] + greach - tr.originX) / tr.cell));
+      const k0 = Math.max(0, Math.floor((P[2] - greach - tr.originZ) / tr.cell)), k1 = Math.min(tr.nz - 1, Math.floor((P[2] + greach - tr.originZ) / tr.cell));
       if (P[1] - yg > 0.01) {
         for (let iz = k0; iz <= k1; iz++) for (let ix = i0; ix <= i1; ix++) {
           const c = iz * tr.nx + ix;
@@ -918,9 +941,9 @@ export class FireRuntime {
           const dy = P[1] - y;
           if (dy <= 0) continue;
           const r = Math.hypot(x - P[0], dy, z - P[2]);
-          if (r > reach) continue;
+          if (r > greach) continue;
           const f = (A * (dy / r)) / (4 * Math.PI * r * r);
-          if ((f * Prad) / A < FLAME_FLOOR) continue;
+          if ((f * Prad) / A < FLAME_GROUND_FLOOR) continue;
           const eps = w.water && w.water.h[c] > 0.001 ? 0.96 : tr.emiss[c];
           ground.push({ kind: TK.ground, index: c, w: f * eps });
           gsum += f;
@@ -938,7 +961,7 @@ export class FireRuntime {
       const a = w.air.index(P[0], P[2], P[1] - trt.groundY(ctx, P[0], P[2]));
       if (a >= 0) conv.push({ kind: TK.air, index: a, w: 1 }); else aboveConv = 1;
     }
-    return { rad, conv, aboveConv, builtAt: ctx.time, Q: Prad, P };
+    return { rad, nBodies, conv, aboveConv, builtAt: ctx.time, Q: Prad, P };
   }
 
   /** Crown (foliage) item of a tree body, −1 otherwise. */

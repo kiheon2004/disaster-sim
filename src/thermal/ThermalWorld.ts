@@ -86,6 +86,8 @@ export interface SourceStep {
   combustion?: boolean;
   /** Phase 27: existing heat moved out of a node (radiation leaving a room through its openings) — no ledger input. */
   from?: { kind: TargetKind; index: number };
+  /** Phase 27: the body receivers are the first `bodies` deposits (incident-flux scan of the fire model). */
+  bodies?: number;
 }
 
 /** Building room (one story of a modular building). */

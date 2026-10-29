@@ -72,6 +72,8 @@ const SCENES: Scene[] = [
   { name: 'houses100 + house fire (flashover window) + wind 5', doc: () => world(houses(100), fireSet()), events: () => [wind(5), fire()], seconds: 60, skip: 760 },
   { name: 'houses500 + house fire (flashover window) + wind 5', doc: () => world(houses(500), fireSet()), events: () => [wind(5), fire()], seconds: 60, skip: 760 },
   { name: 'houses1000 + house fire (flashover window) + wind 5', doc: () => world(houses(1000), fireSet()), events: () => [wind(5), fire()], seconds: 60, skip: 760 },
+  { name: 'houses500 + wind 5, no fire (reference, same window)', doc: () => world(houses(500), fireSet()), events: () => [wind(5)], seconds: 60, skip: 760 },
+  { name: 'houses1000 + wind 5, no fire (reference, same window)', doc: () => world(houses(1000), fireSet()), events: () => [wind(5)], seconds: 60, skip: 760 },
   { name: 'small forest (12 dry conifers, 5 m)', ...preset('vegetation'), seconds: 60 },
   { name: 'large forest (400 dry conifers, 5 m)', doc: () => world(forest(400, 5), fireSet({ foliageMoisture: 0.2 })), events: () => [fire({ position: [-47.5, -47.5], height: 8, radius: 2 })], seconds: 120 },
   { name: 'wind and fire (18 conifers, 7 m, 10 m/s)', ...preset('windFire'), seconds: 90 },
