@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-18T16:45:37.750Z",
+  "cpus": "Apple M3",
+  "rows": [
+    {
+      "lang": "ko",
+      "frames": 570,
+      "fps": 59.4,
+      "p50": 16.7,
+      "p95": 16.8,
+      "p99": 33.3,
+      "worst": 33.4,
+      "climateMsMean": 1.62,
+      "drawCalls": 18,
+      "load": [
+        36.7,
+        21.4,
+        16.8
+      ]
+    },
+    {
+      "lang": "en",
+      "frames": 570,
+      "fps": 58.9,
+      "p50": 16.7,
+      "p95": 16.8,
+      "p99": 33.3,
+      "worst": 33.4,
+      "climateMsMean": 1.55,
+      "drawCalls": 18,
+      "load": [
+        38.5,
+        23.1,
+        17.6
+      ]
+    },
+    {
+      "lang": "ko",
+      "frames": 570,
+      "fps": 40.6,
+      "p50": 16.7,
+      "p95": 66.6,
+      "p99": 149.9,
+      "worst": 650,
+      "climateMsMean": 2.57,
+      "drawCalls": 18,
+      "load": [
+        50.7,
+        27.8,
+        19.5
+      ]
+    },
+    {
+      "lang": "en",
+      "frames": 570,
+      "fps": 55.7,
+      "p50": 16.7,
+      "p95": 16.8,
+      "p99": 33.4,
+      "worst": 300,
+      "climateMsMean": 1.29,
+      "drawCalls": 18,
+      "load": [
+        42,
+        27.4,
+        19.5
+      ]
+    }
+  ],
+  "errors": []
+}

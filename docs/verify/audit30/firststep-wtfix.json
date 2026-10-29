@@ -1,0 +1,2411 @@
+[
+ [
+  {
+   "t": 0.017,
+   "ms": 97.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 96.7,
+    "thermal.solve": 2.7,
+    "climate.stats": 7.8,
+    "climate.after": 10.2,
+    "thermal.total": 94.6,
+    "sys.thermal": 94.8
+   }
+  },
+  {
+   "t": 0.917,
+   "ms": 49.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 49.5,
+    "thermal.solve": 39.8,
+    "climate.after": 9.1,
+    "thermal.total": 49.5,
+    "sys.thermal": 49.5,
+    "climate.evap": 3,
+    "climate.shortwave": 2.4
+   }
+  },
+  {
+   "t": 1.017,
+   "ms": 8.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 8.5,
+    "climate.after": 7.4,
+    "thermal.total": 8.5,
+    "sys.thermal": 8.5
+   }
+  },
+  {
+   "t": 1.917,
+   "ms": 43.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 43.4,
+    "thermal.solve": 34,
+    "climate.after": 8.8,
+    "thermal.total": 43.4,
+    "sys.thermal": 43.4,
+    "climate.evap": 4.9,
+    "climate.soil": 2.3
+   }
+  },
+  {
+   "t": 2.017,
+   "ms": 8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 8,
+    "climate.after": 7.1,
+    "thermal.total": 8,
+    "sys.thermal": 8
+   }
+  },
+  {
+   "t": 2.917,
+   "ms": 17.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.3,
+    "thermal.solve": 12.1,
+    "climate.after": 4.7,
+    "thermal.total": 17.3,
+    "sys.thermal": 17.3,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 3.017,
+   "ms": 3.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.7,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 3.917,
+   "ms": 19.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 19,
+    "thermal.solve": 13.7,
+    "climate.after": 4.8,
+    "thermal.total": 19,
+    "sys.thermal": 19,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 4.017,
+   "ms": 3.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.5,
+    "climate.after": 2.7,
+    "thermal.total": 3.5,
+    "sys.thermal": 3.5
+   }
+  },
+  {
+   "t": 4.917,
+   "ms": 19.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 19.8,
+    "thermal.solve": 14.1,
+    "climate.after": 5.2,
+    "thermal.total": 19.8,
+    "sys.thermal": 19.8,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 5.017,
+   "ms": 5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 4.9,
+    "climate.stats": 3.8,
+    "climate.after": 4.2,
+    "thermal.total": 4.9,
+    "sys.thermal": 4.9
+   }
+  },
+  {
+   "t": 5.917,
+   "ms": 16.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.3,
+    "thermal.solve": 11,
+    "climate.after": 4.9,
+    "thermal.total": 16.3,
+    "sys.thermal": 16.3,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 6.017,
+   "ms": 7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 7,
+    "climate.after": 6.3,
+    "thermal.total": 7,
+    "sys.thermal": 7
+   }
+  },
+  {
+   "t": 6.917,
+   "ms": 16.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.7,
+    "thermal.solve": 11.6,
+    "climate.after": 4.7,
+    "thermal.total": 16.7,
+    "sys.thermal": 16.7,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 7.017,
+   "ms": 3.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.6,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 7.917,
+   "ms": 16.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.7,
+    "thermal.solve": 11.3,
+    "climate.after": 5,
+    "thermal.total": 16.7,
+    "sys.thermal": 16.7,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 8.017,
+   "ms": 3.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.7,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 8.917,
+   "ms": 18.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.1,
+    "thermal.solve": 12.4,
+    "climate.after": 5.1,
+    "thermal.total": 18,
+    "sys.thermal": 18,
+    "climate.evap": 3.1
+   }
+  },
+  {
+   "t": 9.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 9.917,
+   "ms": 16.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.1,
+    "thermal.solve": 11.1,
+    "climate.after": 4.6,
+    "thermal.total": 16.1,
+    "sys.thermal": 16.1,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 10.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.stats": 2.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 10.917,
+   "ms": 16.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.8,
+    "thermal.solve": 11.3,
+    "climate.after": 5,
+    "thermal.total": 16.8,
+    "sys.thermal": 16.8,
+    "climate.evap": 3.3
+   }
+  },
+  {
+   "t": 11.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.3,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 11.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 11,
+    "climate.after": 4.6,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 12.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 12.917,
+   "ms": 16.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.7,
+    "thermal.solve": 11.1,
+    "climate.after": 5,
+    "thermal.total": 16.7,
+    "sys.thermal": 16.7,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 13.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.after": 2.4,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 13.917,
+   "ms": 17.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.6,
+    "thermal.solve": 12.5,
+    "climate.after": 4.7,
+    "thermal.total": 17.6,
+    "sys.thermal": 17.6,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 14.017,
+   "ms": 3.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.4,
+    "thermal.total": 3.3,
+    "sys.thermal": 3.3
+   }
+  },
+  {
+   "t": 14.917,
+   "ms": 20.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 20.8,
+    "thermal.solve": 15,
+    "climate.after": 4.9,
+    "thermal.total": 20.8,
+    "sys.thermal": 20.8,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 15.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.stats": 2,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 15.917,
+   "ms": 17.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.6,
+    "thermal.solve": 12.2,
+    "climate.after": 4.9,
+    "thermal.total": 17.6,
+    "sys.thermal": 17.6,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 16.017,
+   "ms": 4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 4,
+    "climate.after": 3.2,
+    "thermal.total": 4,
+    "sys.thermal": 4
+   }
+  },
+  {
+   "t": 16.917,
+   "ms": 17.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.5,
+    "thermal.solve": 12.5,
+    "climate.after": 4.6,
+    "thermal.total": 17.5,
+    "sys.thermal": 17.5,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 17.017,
+   "ms": 3.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.6,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 17.917,
+   "ms": 17.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.4,
+    "thermal.solve": 12,
+    "climate.after": 4.9,
+    "thermal.total": 17.3,
+    "sys.thermal": 17.4,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 18.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 18.917,
+   "ms": 17.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.5,
+    "thermal.solve": 12.1,
+    "climate.after": 4.9,
+    "thermal.total": 17.5,
+    "sys.thermal": 17.5,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 19.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.3,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 19.917,
+   "ms": 17.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.4,
+    "thermal.solve": 12.3,
+    "climate.after": 4.6,
+    "thermal.total": 17.3,
+    "sys.thermal": 17.3,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 20.017,
+   "ms": 3.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.stats": 2.3,
+    "climate.after": 2.7,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 20.917,
+   "ms": 17.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.7,
+    "thermal.solve": 12.1,
+    "climate.after": 5.1,
+    "thermal.total": 17.7,
+    "sys.thermal": 17.7,
+    "climate.evap": 3.3
+   }
+  },
+  {
+   "t": 21.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.4,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 21.917,
+   "ms": 17,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17,
+    "thermal.solve": 11.8,
+    "climate.after": 4.7,
+    "thermal.total": 17,
+    "sys.thermal": 17,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 22.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.after": 2.4,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 22.917,
+   "ms": 18.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.6,
+    "thermal.solve": 13.2,
+    "climate.after": 5,
+    "thermal.total": 18.5,
+    "sys.thermal": 18.5,
+    "climate.evap": 3.3
+   }
+  },
+  {
+   "t": 23.017,
+   "ms": 3.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.4,
+    "climate.after": 2.8,
+    "thermal.total": 3.4,
+    "sys.thermal": 3.4
+   }
+  },
+  {
+   "t": 23.917,
+   "ms": 17.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.3,
+    "thermal.solve": 12,
+    "climate.after": 4.9,
+    "thermal.total": 17.3,
+    "sys.thermal": 17.3,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 24.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 24.917,
+   "ms": 17,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17,
+    "thermal.solve": 12,
+    "climate.after": 4.7,
+    "thermal.total": 17,
+    "sys.thermal": 17,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 25.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.stats": 2.3,
+    "climate.after": 2.6,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 25.917,
+   "ms": 17.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.5,
+    "thermal.solve": 12.2,
+    "climate.after": 4.9,
+    "thermal.total": 17.4,
+    "sys.thermal": 17.4,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 26.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 26.917,
+   "ms": 18.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.1,
+    "thermal.solve": 13,
+    "climate.after": 4.8,
+    "thermal.total": 18,
+    "sys.thermal": 18,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 27.017,
+   "ms": 3.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.5,
+    "climate.after": 2.8,
+    "thermal.total": 3.5,
+    "sys.thermal": 3.5
+   }
+  },
+  {
+   "t": 27.917,
+   "ms": 18.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.6,
+    "thermal.solve": 13.3,
+    "climate.after": 5,
+    "thermal.total": 18.5,
+    "sys.thermal": 18.5,
+    "climate.evap": 3.3
+   }
+  },
+  {
+   "t": 28.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 28.917,
+   "ms": 19.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 19.4,
+    "thermal.solve": 13.9,
+    "climate.after": 5.2,
+    "thermal.total": 19.4,
+    "sys.thermal": 19.4,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 29.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 29.917,
+   "ms": 18.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.4,
+    "thermal.solve": 13.5,
+    "climate.after": 4.6,
+    "thermal.total": 18.4,
+    "sys.thermal": 18.4,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 30.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.stats": 2.3,
+    "climate.after": 2.7,
+    "thermal.total": 3.3,
+    "sys.thermal": 3.3
+   }
+  },
+  {
+   "t": 30.917,
+   "ms": 18.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.4,
+    "thermal.solve": 13.1,
+    "climate.after": 5,
+    "thermal.total": 18.3,
+    "sys.thermal": 18.3,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 31.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 31.917,
+   "ms": 18.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.7,
+    "thermal.solve": 13.4,
+    "climate.after": 4.9,
+    "thermal.total": 18.6,
+    "sys.thermal": 18.6,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 32.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 32.917,
+   "ms": 19,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.9,
+    "thermal.solve": 13.8,
+    "climate.after": 4.8,
+    "thermal.total": 18.9,
+    "sys.thermal": 18.9,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 33.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.after": 2.6,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 33.917,
+   "ms": 23.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 23.7,
+    "thermal.solve": 17.9,
+    "climate.after": 5.5,
+    "thermal.total": 23.7,
+    "sys.thermal": 23.7,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 34.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.4,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 34.917,
+   "ms": 17.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.8,
+    "thermal.solve": 12.9,
+    "climate.after": 4.7,
+    "thermal.total": 17.8,
+    "sys.thermal": 17.8,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 35.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.stats": 2.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 35.917,
+   "ms": 18,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18,
+    "thermal.solve": 12.6,
+    "climate.after": 5.1,
+    "thermal.total": 17.9,
+    "sys.thermal": 17.9,
+    "climate.evap": 3.3
+   }
+  },
+  {
+   "t": 36.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 36.917,
+   "ms": 18,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18,
+    "thermal.solve": 12.8,
+    "climate.after": 4.9,
+    "thermal.total": 18,
+    "sys.thermal": 18,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 37.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 37.917,
+   "ms": 17.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.8,
+    "thermal.solve": 12.8,
+    "climate.after": 4.8,
+    "thermal.total": 17.8,
+    "sys.thermal": 17.8,
+    "climate.evap": 3.1
+   }
+  },
+  {
+   "t": 38.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 38.917,
+   "ms": 17.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.8,
+    "thermal.solve": 12.7,
+    "climate.after": 4.8,
+    "thermal.total": 17.8,
+    "sys.thermal": 17.8,
+    "climate.evap": 3.1
+   }
+  },
+  {
+   "t": 39.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 39.917,
+   "ms": 18.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.7,
+    "thermal.solve": 13.8,
+    "climate.after": 4.7,
+    "thermal.total": 18.7,
+    "sys.thermal": 18.7,
+    "climate.evap": 3
+   }
+  }
+ ],
+ [
+  {
+   "t": 0.017,
+   "ms": 29.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 29.4,
+    "climate.stats": 3.3,
+    "climate.after": 3.8,
+    "thermal.total": 29.2,
+    "sys.thermal": 29.2
+   }
+  },
+  {
+   "t": 1.017,
+   "ms": 6.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 6.1,
+    "climate.after": 4.1,
+    "thermal.total": 6.1,
+    "sys.thermal": 6.1
+   }
+  },
+  {
+   "t": 1.917,
+   "ms": 16.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.9,
+    "thermal.solve": 11.8,
+    "climate.after": 4.7,
+    "thermal.total": 16.8,
+    "sys.thermal": 16.8,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 2.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.after": 2.6,
+    "thermal.total": 3.3,
+    "sys.thermal": 3.3
+   }
+  },
+  {
+   "t": 2.917,
+   "ms": 18.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.8,
+    "thermal.solve": 11.4,
+    "climate.after": 6.9,
+    "thermal.total": 18.8,
+    "sys.thermal": 18.8,
+    "climate.evap": 3.9
+   }
+  },
+  {
+   "t": 3.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.after": 2.6,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 3.917,
+   "ms": 17.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.6,
+    "thermal.solve": 11.5,
+    "climate.after": 5.6,
+    "thermal.total": 17.6,
+    "sys.thermal": 17.6,
+    "climate.evap": 3.9
+   }
+  },
+  {
+   "t": 4.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.after": 2.6,
+    "thermal.total": 3.3,
+    "sys.thermal": 3.3
+   }
+  },
+  {
+   "t": 4.917,
+   "ms": 18.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.1,
+    "thermal.solve": 13.1,
+    "climate.after": 4.5,
+    "thermal.total": 18.1,
+    "sys.thermal": 18.1,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 5.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.stats": 2,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 5.917,
+   "ms": 16.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.3,
+    "thermal.solve": 11.4,
+    "climate.after": 4.5,
+    "thermal.total": 16.3,
+    "sys.thermal": 16.3,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 6.017,
+   "ms": 3.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.3,
+    "climate.after": 2.6,
+    "thermal.total": 3.3,
+    "sys.thermal": 3.3
+   }
+  },
+  {
+   "t": 6.917,
+   "ms": 16.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.5,
+    "thermal.solve": 11.5,
+    "climate.after": 4.5,
+    "thermal.total": 16.5,
+    "sys.thermal": 16.5,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 7.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 7.917,
+   "ms": 18.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.7,
+    "thermal.solve": 13.6,
+    "climate.after": 4.7,
+    "thermal.total": 18.7,
+    "sys.thermal": 18.7,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 8.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.after": 2.5,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 8.917,
+   "ms": 18.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 18.6,
+    "thermal.solve": 13.4,
+    "climate.after": 4.7,
+    "thermal.total": 18.6,
+    "sys.thermal": 18.6,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 9.017,
+   "ms": 4.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 4.5,
+    "climate.after": 3.6,
+    "thermal.total": 4.5,
+    "sys.thermal": 4.5
+   }
+  },
+  {
+   "t": 9.917,
+   "ms": 19.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 19.6,
+    "thermal.solve": 14.5,
+    "climate.after": 4.6,
+    "thermal.total": 19.5,
+    "sys.thermal": 19.5,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 10.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.stats": 2,
+    "climate.after": 2.4,
+    "thermal.total": 3.2,
+    "sys.thermal": 3.2
+   }
+  },
+  {
+   "t": 10.917,
+   "ms": 16.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.5,
+    "thermal.solve": 10.7,
+    "climate.after": 5.4,
+    "thermal.total": 16.5,
+    "sys.thermal": 16.5,
+    "climate.evap": 3.6
+   }
+  },
+  {
+   "t": 11.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 11.917,
+   "ms": 16.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.3,
+    "thermal.solve": 11.1,
+    "climate.after": 4.8,
+    "thermal.total": 16.3,
+    "sys.thermal": 16.3,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 12.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 12.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 11,
+    "climate.after": 4.6,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 13.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.2,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 13.917,
+   "ms": 17.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.6,
+    "thermal.solve": 12.5,
+    "climate.after": 4.6,
+    "thermal.total": 17.6,
+    "sys.thermal": 17.6,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 14.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 14.917,
+   "ms": 16.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.7,
+    "thermal.solve": 11.9,
+    "climate.after": 4.4,
+    "thermal.total": 16.7,
+    "sys.thermal": 16.7,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 15.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.stats": 2,
+    "climate.after": 2.4,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 15.917,
+   "ms": 27.4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 27.4,
+    "thermal.solve": 11.9,
+    "climate.after": 14.2,
+    "thermal.total": 27.3,
+    "sys.thermal": 27.4,
+    "climate.evap": 6.7,
+    "climate.soil": 5.7
+   }
+  },
+  {
+   "t": 16.017,
+   "ms": 8.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 8.9,
+    "climate.after": 6.8,
+    "thermal.total": 8.8,
+    "sys.thermal": 8.8
+   }
+  },
+  {
+   "t": 16.917,
+   "ms": 21.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 21.5,
+    "thermal.solve": 14.7,
+    "climate.after": 6.2,
+    "thermal.total": 21.4,
+    "sys.thermal": 21.4,
+    "climate.evap": 2.9,
+    "climate.soil": 2.4
+   }
+  },
+  {
+   "t": 17.017,
+   "ms": 3.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.8,
+    "climate.after": 2.5,
+    "thermal.total": 3.8,
+    "sys.thermal": 3.8
+   }
+  },
+  {
+   "t": 17.917,
+   "ms": 19,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 19,
+    "thermal.solve": 12.8,
+    "climate.after": 5.7,
+    "thermal.total": 19,
+    "sys.thermal": 19,
+    "climate.evap": 3.2
+   }
+  },
+  {
+   "t": 18.017,
+   "ms": 4,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 4,
+    "climate.after": 3.3,
+    "thermal.total": 4,
+    "sys.thermal": 4
+   }
+  },
+  {
+   "t": 18.917,
+   "ms": 32.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 32.5,
+    "thermal.solve": 25.7,
+    "climate.after": 5.6,
+    "thermal.total": 32.5,
+    "sys.thermal": 32.5,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 19.017,
+   "ms": 5.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 5.8,
+    "climate.after": 4.7,
+    "thermal.total": 5.8,
+    "sys.thermal": 5.8
+   }
+  },
+  {
+   "t": 19.917,
+   "ms": 20.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 20.4,
+    "thermal.solve": 14.1,
+    "climate.after": 5.6,
+    "thermal.total": 20.4,
+    "sys.thermal": 20.4,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 20.017,
+   "ms": 3.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.stats": 2,
+    "climate.after": 2.4,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 20.917,
+   "ms": 30.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 30.5,
+    "thermal.solve": 20.3,
+    "climate.after": 9.5,
+    "thermal.total": 30.5,
+    "sys.thermal": 30.5,
+    "climate.evap": 7.4
+   }
+  },
+  {
+   "t": 21.017,
+   "ms": 3.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.7,
+    "climate.after": 2.8,
+    "thermal.total": 3.7,
+    "sys.thermal": 3.7
+   }
+  },
+  {
+   "t": 21.917,
+   "ms": 33,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 33,
+    "thermal.solve": 27.8,
+    "climate.after": 4.8,
+    "thermal.total": 33,
+    "sys.thermal": 33,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 22.017,
+   "ms": 3.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.1,
+    "climate.after": 2.5,
+    "thermal.total": 3.1,
+    "sys.thermal": 3.1
+   }
+  },
+  {
+   "t": 22.917,
+   "ms": 16.2,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.2,
+    "thermal.solve": 11.4,
+    "climate.after": 4.5,
+    "thermal.total": 16.2,
+    "sys.thermal": 16.2,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 23.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 23.917,
+   "ms": 16.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.1,
+    "thermal.solve": 11.3,
+    "climate.after": 4.5,
+    "thermal.total": 16.1,
+    "sys.thermal": 16.1,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 24.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.after": 2.3,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 24.917,
+   "ms": 15.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.9,
+    "thermal.solve": 11.1,
+    "climate.after": 4.5,
+    "thermal.total": 15.9,
+    "sys.thermal": 15.9,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 25.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.stats": 2,
+    "climate.after": 2.4,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 25.917,
+   "ms": 16.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.1,
+    "thermal.solve": 11.2,
+    "climate.after": 4.6,
+    "thermal.total": 16.1,
+    "sys.thermal": 16.1,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 26.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 26.917,
+   "ms": 15.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.7,
+    "thermal.solve": 11,
+    "climate.after": 4.4,
+    "thermal.total": 15.7,
+    "sys.thermal": 15.7,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 27.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 27.917,
+   "ms": 15.6,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.6,
+    "thermal.solve": 10.9,
+    "climate.after": 4.4,
+    "thermal.total": 15.6,
+    "sys.thermal": 15.6,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 28.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.after": 2.4,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 28.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 10.9,
+    "climate.after": 4.8,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 3.1
+   }
+  },
+  {
+   "t": 29.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 29.917,
+   "ms": 16.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.8,
+    "thermal.solve": 11.7,
+    "climate.after": 4.8,
+    "thermal.total": 16.7,
+    "sys.thermal": 16.8,
+    "climate.evap": 3.1
+   }
+  },
+  {
+   "t": 30.017,
+   "ms": 3.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.5,
+    "climate.stats": 2.4,
+    "climate.after": 2.8,
+    "thermal.total": 3.5,
+    "sys.thermal": 3.5
+   }
+  },
+  {
+   "t": 30.917,
+   "ms": 16.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.5,
+    "thermal.solve": 11.7,
+    "climate.after": 4.5,
+    "thermal.total": 16.5,
+    "sys.thermal": 16.5,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 31.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 31.917,
+   "ms": 16.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.5,
+    "thermal.solve": 11.4,
+    "climate.after": 4.8,
+    "thermal.total": 16.5,
+    "sys.thermal": 16.5,
+    "climate.evap": 3
+   }
+  },
+  {
+   "t": 32.017,
+   "ms": 3.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3.8,
+    "climate.after": 3.3,
+    "thermal.total": 3.8,
+    "sys.thermal": 3.8
+   }
+  },
+  {
+   "t": 32.917,
+   "ms": 17.3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 17.3,
+    "thermal.solve": 12.4,
+    "climate.after": 4.6,
+    "thermal.total": 17.3,
+    "sys.thermal": 17.3,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 33.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 33.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 11.1,
+    "climate.after": 4.6,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 2.9
+   }
+  },
+  {
+   "t": 34.017,
+   "ms": 2.9,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.9,
+    "climate.after": 2.4,
+    "thermal.total": 2.9,
+    "sys.thermal": 2.9
+   }
+  },
+  {
+   "t": 34.917,
+   "ms": 16.1,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16.1,
+    "thermal.solve": 11.4,
+    "climate.after": 4.4,
+    "thermal.total": 16.1,
+    "sys.thermal": 16.1,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 35.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.stats": 2,
+    "climate.after": 2.5,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 35.917,
+   "ms": 15.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.6,
+    "thermal.solve": 10.8,
+    "climate.after": 4.5,
+    "thermal.total": 15.6,
+    "sys.thermal": 15.6,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 36.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.after": 2.3,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 36.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 11.1,
+    "climate.after": 4.7,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 2.8
+   }
+  },
+  {
+   "t": 37.017,
+   "ms": 3,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 3,
+    "climate.after": 2.5,
+    "thermal.total": 3,
+    "sys.thermal": 3
+   }
+  },
+  {
+   "t": 37.917,
+   "ms": 16,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 16,
+    "thermal.solve": 11.3,
+    "climate.after": 4.4,
+    "thermal.total": 16,
+    "sys.thermal": 16,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 38.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.after": 2.3,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 38.917,
+   "ms": 15.5,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.5,
+    "thermal.solve": 10.9,
+    "climate.after": 4.4,
+    "thermal.total": 15.5,
+    "sys.thermal": 15.5,
+    "climate.evap": 2.7
+   }
+  },
+  {
+   "t": 39.017,
+   "ms": 2.8,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": false,
+   "top": {
+    "dispatch": 2.8,
+    "climate.after": 2.3,
+    "thermal.total": 2.8,
+    "sys.thermal": 2.8
+   }
+  },
+  {
+   "t": 39.917,
+   "ms": 15.7,
+   "sub": 1,
+   "rate": 0.04,
+   "tiles": 400,
+   "ground": true,
+   "top": {
+    "dispatch": 15.7,
+    "thermal.solve": 11,
+    "climate.after": 4.4,
+    "thermal.total": 15.7,
+    "sys.thermal": 15.7,
+    "climate.evap": 2.7
+   }
+  }
+ ]
+]

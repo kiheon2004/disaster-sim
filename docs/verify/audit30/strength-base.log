@@ -1,0 +1,9 @@
+
+ RUN  v5.0.3 /Users/namkiheon/projects/disaster-sim-work/audit30/wtbase
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  00:03:22
+   Duration  15.09s (tests 99%, transform 1%)
+

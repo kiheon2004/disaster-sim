@@ -1,0 +1,151 @@
+
+ RUN  v5.0.3 /Users/namkiheon/projects/disaster-sim-work/audit30/wtbase
+
+ ❯ src/climate/audit30.test.ts (9 tests | 9 failed) 3002ms
+   ❯ audit: start state of a world colder than 0 °C (2)
+     × soil water of layers below 0 °C starts frozen — the ground keeps its start temperature 1789ms
+     × a lake starts as liquid at 0 °C, then grows ice at the rate of its heat loss (no instant ice) 650ms
+   ❯ audit: shortwave (3)
+     × a prescribed irradiance at night is diffuse — never more than G on flat ground 29ms
+     × a building does not shade its own roof 10ms
+     × a thin store cover takes only its share of the sun on its area (the body under it takes the rest) 233ms
+   ❯ audit: psychrometrics (4)
+     × saturation adjustment of a heavily supersaturated parcel ends saturated with c·ΔT = L·Δm 13ms
+     × the reported relative humidity is the input definition e/e_s 225ms
+     × dry air has no dew point: the display value is not a range end 9ms
+     × fresh snow restores the share P/10 of the gap to the maximum albedo (Douville et al. 1995) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: start state of a world colder than 0 °C > soil water of layers below 0 °C starts frozen — the ground keeps its start temperature
+AssertionError: expected 6 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 6
+
+ ❯ src/climate/audit30.test.ts:73:64
+     71|     const r = setup(spec({ temperature: K(-20), target: K(-20), forcin…
+     72|     const c = 20 * 40 + 20, g = r.tw.terrain, nl = r.cw.nl;
+     73|     for (let l = 0; l < nl; l++) { expect(r.cw.sW[c * nl + l]).toBe(0)…
+       |                                                                ^
+     74|     r.step(10);
+     75|     // Before the audit the freezing of liquid soil water put the whol…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: start state of a world colder than 0 °C > a lake starts as liquid at 0 °C, then grows ice at the rate of its heat loss (no instant ice)
+AssertionError: expected 253.14999999999998 to be close to 273.15, received difference is 20, but expected 5e-10
+ ❯ src/climate/audit30.test.ts:84:28
+     82|     const r = setup(spec({ temperature: K(-20), target: K(-20), forcin…
+     83|     const c = 20 * 40 + 20;
+     84|     expect(r.tw.waterT(c)).toBeCloseTo(T_MELT, 9);
+       |                            ^
+     85|     r.step(6);
+     86|     // Upper bound of the ice growth: a surface loss of 600 W/m² (−20 …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a prescribed irradiance at night is diffuse — never more than G on flat ground
+AssertionError: expected 5866.666666666665 to be close to 800, received difference is 5066.666666666665, but expected 5e-7
+ ❯ src/climate/audit30.test.ts:101:22
+     99|       // Flat cell: direct·cos(incidence) + diffuse, cos = dir·up.
+    100|       const onFlat = sun.direct * Math.max(0, sun.dir[1]) + sun.diffus…
+    101|       expect(onFlat).toBeCloseTo(800, 6);
+       |                      ^
+    102|     }
+    103|     const day = new ClimateForcing(spec({ solar: 'constant', irradianc…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a building does not shade its own roof
+AssertionError: expected 90 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 90
+
+ ❯ src/climate/audit30.test.ts:117:26
+    115|       let roofShaded = 0;
+    116|       for (let iz = 10; iz < 20; iz++) for (let ix = 10; ix < 20; ix++…
+    117|       expect(roofShaded).toBe(0);
+       |                          ^
+    118|       // Analytic shadow behind the block (sun from +X, 10 m high): it…
+    119|       expect(shade[15 * nx + 9]).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a thin store cover takes only its share of the sun on its area (the body under it takes the rest)
+TypeError: r.cw.storeCover is not a function
+ ❯ src/climate/audit30.test.ts:128:17
+    126|     // 0.2 kg/m² of snow: a fifth of the 1 kg/m² that covers a surface.
+    127|     (r.cw as unknown as { addStore(k: number, m: number, T: number, ic…
+    128|     expect(r.cw.storeCover(k)).toBeCloseTo(0.2, 12);
+       |                 ^
+    129|     const s0 = r.cw.energy.solar;
+    130|     r.step(6.1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > saturation adjustment of a heavily supersaturated parcel ends saturated with c·ΔT = L·Δm
+AssertionError: expected 0 to be greater than 0
+ ❯ src/climate/audit30.test.ts:145:20
+    143|       const m = 100, q = specificHumidity(RH * esWater(T), p), mv = (q…
+    144|       const r = saturationAdjust(T, mv, m, p, C);
+    145|       expect(r.dm).toBeGreaterThan(0);
+       |                    ^
+    146|       expect(r.T - T).toBeCloseTo((L_V * r.dm) / C, 9);
+    147|       const qe = (mv - r.dm) / (m + mv - r.dm);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > the reported relative humidity is the input definition e/e_s
+AssertionError: expected 0.2881367646292608 to be close to 0.3, received difference is 0.011863235370739189, but expected 5e-7
+ ❯ src/climate/audit30.test.ts:157:26
+    155|       const r = setup(spec({ temperature: T, target: T, humidity: RH }…
+    156|       expect(r.cw.q(0)).toBeCloseTo(humidityFromRH(RH, T, 101325), 12);
+    157|       expect(r.cw.rh(0)).toBeCloseTo(RH, 6);
+       |                          ^
+    158|     }
+    159|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > dry air has no dew point: the display value is not a range end
+TypeError: dewPointChecked is not a function
+ ❯ src/climate/audit30.test.ts:162:25
+    160|
+    161|   it('dry air has no dew point: the display value is not a range end',…
+    162|     expect(Number.isNaN(dewPointChecked(0))).toBe(true);
+       |                         ^
+    163|     expect(Number.isNaN(dewPointChecked(1e-12))).toBe(true);
+    164|     expect(dewPointChecked(esWater(283.15))).toBeCloseTo(283.15, 6);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > fresh snow restores the share P/10 of the gap to the maximum albedo (Douville et al. 1995)
+AssertionError: expected 0.85 to be close to 0.7749999999999999, received difference is 0.07500000000000007, but expected 5e-13
+ ❯ src/climate/audit30.test.ts:170:42
+    168|
+    169|   it('fresh snow restores the share P/10 of the gap to the maximum alb…
+    170|     expect(snowAlbedo(0.7, 0, false, 5)).toBeCloseTo(0.7 + 0.5 * (0.85…
+       |                                          ^
+    171|     expect(snowAlbedo(0.5, 0, false, 10)).toBeCloseTo(0.85, 12);
+    172|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed (9)
+   Start at  19:26:32
+   Duration  17.85s (transform 66%, tests 25%, import 9%)
+
+  Transform  transforming modules took 8.06s · 66% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+

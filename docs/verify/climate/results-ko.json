@@ -67,15 +67,15 @@
       "name": "7 evaporation: water leaves the lake as vapour (mass to the air, latent heat out of the water)",
       "ok": true,
       "detail": {
-        "evap": 54.28212443952921,
-        "vapour": 4180.767646569835
+        "evap": 54.30892185687404,
+        "vapour": 4180.777555797514
       }
     },
     {
       "name": "8 condensation: warm humid air over colder water / ground condenses on them (dew), latent heat released into the surfaces",
       "ok": true,
       "detail": {
-        "surface": 15.049837603239956,
+        "surface": 15.050279624792578,
         "air": 0
       }
     },
@@ -83,14 +83,14 @@
       "name": "9 snowfall started: external precipitation split by the wet bulb into snow, first snow milestone",
       "ok": true,
       "detail": {
-        "snowfall": 32890.37037053946
+        "snowfall": 32890.37037053922
       }
     },
     {
       "name": "10 falling snow particles drawn while it snows (visual only, density from the computed rate)",
       "ok": true,
       "detail": {
-        "pts": 4006,
+        "pts": 4009,
         "slabs": 5,
         "caps": 3
       }
@@ -99,8 +99,8 @@
       "name": "11 ground snow: the computed cover (mass, depth) on the ground",
       "ok": true,
       "detail": {
-        "kg": 32655.87292359618,
-        "d": 0.006533584292322442
+        "kg": 32709.67441379309,
+        "d": 0.006547114993659151
       }
     },
     {
@@ -108,11 +108,11 @@
       "ok": true,
       "detail": {
         "st12": {
-          "roof": 161.30425558322958,
-          "crown": 45.425833382471225
+          "roof": 161.54424945793943,
+          "crown": 45.517391354585655
         },
         "lc10": {
-          "pts": 4006,
+          "pts": 4009,
           "slabs": 5,
           "caps": 3
         }
@@ -123,11 +123,11 @@
       "ok": true,
       "detail": {
         "st12": {
-          "roof": 161.30425558322958,
-          "crown": 45.425833382471225
+          "roof": 161.54424945793943,
+          "crown": 45.517391354585655
         },
         "lc10": {
-          "pts": 4006,
+          "pts": 4009,
           "slabs": 5,
           "caps": 3
         }
@@ -142,7 +142,7 @@
       "name": "16 snow mass ledger closes (precipitation in, stores, vapour, residual at round-off)",
       "ok": true,
       "detail": {
-        "res": 3.4349610707075255e-16
+        "res": 0
       }
     },
     {
@@ -159,8 +159,8 @@
       "name": "37 inspector: snow on the roof (kg, kPa), air, humidity, dew point, surface state, snow depth / SWE, friction; ground probe; labels not squeezed",
       "ok": true,
       "detail": {
-        "insp": "그 온도-5.8 °C위의 눈·얼음212.3 kg · 3.2 kg/m²하중0.031 kPa · 2.08 kN기온-3.1 °C · 상대습도 59 %이슬점-9.9 °C · q 1.78 g/kg지표-0.0 °C · 건조토양",
-        "probe": "위치(-60.0, 60.0)기온-3.1 °C · 상대습도 59 %이슬점-9.9 °C · q 1.77 g/kg지표-4.2 °C · 눈눈 (깊이 ·",
+        "insp": "그 온도-4.4 °C위의 눈·얼음212.6 kg · 3.2 kg/m² · 얼음 0.3 kg하중0.031 kPa · 2.09 kN기온-3.0 °C · 상대습도 92 %이슬점-4.2 °C · q 2.76 g/kg지표-2",
+        "probe": "위치(-60.0, 60.0)기온-3.0 °C · 상대습도 92 %이슬점-4.2 °C · q 2.76 g/kg지표-3.8 °C · 눈눈 (깊이 ·",
         "narrow37": []
       }
     },
@@ -168,7 +168,7 @@
       "name": "38 HUD: mean / min / max temperature, snow and ice mass, meltwater, evaporation, water and energy ledgers; text not cut",
       "ok": true,
       "detail": {
-        "hud": " 기후강설 · 20.0 min기온 (평균, 범위)-3.1 °C (-3.3…-3.0)지표 (평균, 범위)-4.2 °C (-4.3…0.0)배경 공기-3.0 °C · 59 %하늘 (장파)-30.8 °C습도 · 수증기59 ",
+        "hud": " 기후강설 · 20.0 min기온 (평균, 범위)-3.1 °C (-3.2…-3.0)지표 (평균, 범위)-3.8 °C (-4.4…-2.0)배경 공기-3.0 °C · 92 %하늘 (장파)-26.8 °C습도 · 수증기92",
         "clip38": []
       }
     },
@@ -176,7 +176,7 @@
       "name": "40 results: cards, climate CSV (ledgers, stores, roads, history), JSON summary; text not cut",
       "ok": true,
       "detail": {
-        "res": "기후 기후 CSV평균 기온-3.1°C최저 -3.3 · 최고 -3.0 °C · 상대습도 59 %가장 뜨거운 지표0.0°C가장 찬 -4.3 · 평균",
+        "res": "기후 기후 CSV평균 기온-3.1°C최저 -3.2 · 최고 -3.0 °C · 상대습도 92 %가장 뜨거운 지표-2.0°C가장 찬 -4.4 · 평",
         "clip40": []
       }
     },
@@ -185,9 +185,8 @@
       "ok": true,
       "detail": [
         "climateStart",
+        "firstFreezing",
         "firstSnow",
-        "thawStart",
-        "peakSnowmelt",
         "peakSnowfall"
       ]
     },
@@ -199,15 +198,15 @@
           "c": true,
           "t": 0
         },
-        "h43a": "9.19484720059626e+4|6.11574172829809e+3|-3.24738363644851e+9|1.32445925925869e+5",
-        "h43b": "9.19484720059626e+4|6.11574172829809e+3|-3.24738363644851e+9|1.32445925925869e+5"
+        "h43a": "9.22618264699782e+4|9.48857057168811e+3|-3.12703207777057e+9|1.32445925925869e+5",
+        "h43b": "9.22618264699782e+4|9.48857057168811e+3|-3.12703207777057e+9|1.32445925925869e+5"
       }
     },
     {
       "name": "42 leaving the simulation leaves the original world untouched (fingerprint)",
       "ok": true,
       "detail": {
-        "fp0": "4303819ec50edec2"
+        "fp0": "ebde9e44858f9487"
       }
     },
     {
@@ -216,13 +215,13 @@
       "detail": {
         "s14a": {
           "rho": 90.02035522460938,
-          "kg": 36.00011048105223,
-          "d": 0.3999107800811108
+          "kg": 36.00010991992972,
+          "d": 0.399910773847826
         },
         "s14b": {
-          "rho": 90.42739868164062,
-          "kg": 36.00515019186292,
-          "d": 0.39816638227781953
+          "rho": 90.4272232055664,
+          "kg": 36.00512292967533,
+          "d": 0.3981668534466175
         }
       }
     },
@@ -230,37 +229,37 @@
       "name": "17 road icing: rain on the asphalt froze when the surface fell below 0 °C (computed ice thickness)",
       "ok": true,
       "detail": {
-        "ice": 0.0005418636347619035,
+        "ice": 0.00041582307645297053,
         "cars": [
-          1.0188121734183784,
-          1.0196557934788424,
-          1.018647898862683
+          0.7272727272727271,
+          0.7272727272727271,
+          0.7272727272727271
         ],
-        "grip": 0.7662737961205476,
+        "grip": 0.18181818181818182,
         "probe": {
-          "airT": 267.22446699281653,
-          "rh": 0.27277175726777075,
-          "q": 0.0006603459187072138,
-          "dew": 251.3703351560882,
+          "airT": 267.262479688523,
+          "rh": 0.9062471817094772,
+          "q": 0.0021961242646524764,
+          "dew": 265.9795828866767,
           "p": 101325,
           "surfaceT": 273.15,
-          "snowDepth": 0.0005169670675576445,
-          "swe": 0.052061894184394664,
-          "snowDensity": 100.31900024414062,
-          "iceThickness": 0.00022791495103141178,
-          "liquid": 0.00020027480786666274,
+          "snowDepth": 0.0003219957555634787,
+          "swe": 0.03391043461289095,
+          "snowDensity": 100.29837799072266,
+          "iceThickness": 0.000398425297448676,
+          "liquid": 0.001614782609976828,
           "albedo": 0.35,
           "solar": 0,
           "shade": false,
-          "water": 0.00005633994801157811,
-          "soilWater": 182.03800610202134,
-          "soilIce": 0.18421612020087455,
-          "frostDepth": 0.02,
+          "water": 5.547960965181702e-7,
+          "soilWater": 182.22222222062115,
+          "soilIce": 0,
+          "frostDepth": 0,
           "freezeThaw": 0,
-          "state": "frost",
-          "friction": 0.37590661741643827,
+          "state": "ice",
+          "friction": 0.1,
           "condensate": 0,
-          "Tsky": 230.71851993611017
+          "Tsky": 241.51850041582415
         }
       }
     },
@@ -268,37 +267,37 @@
       "name": "18 vehicle friction changed: the contact friction factor fell on the icy road (no tyre model)",
       "ok": true,
       "detail": {
-        "ice": 0.0005418636347619035,
+        "ice": 0.00041582307645297053,
         "cars": [
-          1.0188121734183784,
-          1.0196557934788424,
-          1.018647898862683
+          0.7272727272727271,
+          0.7272727272727271,
+          0.7272727272727271
         ],
-        "grip": 0.7662737961205476,
+        "grip": 0.18181818181818182,
         "probe": {
-          "airT": 267.22446699281653,
-          "rh": 0.27277175726777075,
-          "q": 0.0006603459187072138,
-          "dew": 251.3703351560882,
+          "airT": 267.262479688523,
+          "rh": 0.9062471817094772,
+          "q": 0.0021961242646524764,
+          "dew": 265.9795828866767,
           "p": 101325,
           "surfaceT": 273.15,
-          "snowDepth": 0.0005169670675576445,
-          "swe": 0.052061894184394664,
-          "snowDensity": 100.31900024414062,
-          "iceThickness": 0.00022791495103141178,
-          "liquid": 0.00020027480786666274,
+          "snowDepth": 0.0003219957555634787,
+          "swe": 0.03391043461289095,
+          "snowDensity": 100.29837799072266,
+          "iceThickness": 0.000398425297448676,
+          "liquid": 0.001614782609976828,
           "albedo": 0.35,
           "solar": 0,
           "shade": false,
-          "water": 0.00005633994801157811,
-          "soilWater": 182.03800610202134,
-          "soilIce": 0.18421612020087455,
-          "frostDepth": 0.02,
+          "water": 5.547960965181702e-7,
+          "soilWater": 182.22222222062115,
+          "soilIce": 0,
+          "frostDepth": 0,
           "freezeThaw": 0,
-          "state": "frost",
-          "friction": 0.37590661741643827,
+          "state": "ice",
+          "friction": 0.1,
           "condensate": 0,
-          "Tsky": 230.71851993611017
+          "Tsky": 241.51850041582415
         }
       }
     },
@@ -306,14 +305,14 @@
       "name": "19 lake freezing: the lake water froze from its own mass (frozen budget), floating ice in the flood model",
       "ok": true,
       "detail": {
-        "ice": 300.58738074520386
+        "ice": 275.5609106822761
       }
     },
     {
       "name": "20 ice thickness computed and shown (36: ice overlay with its m legend); lake-ice milestone",
       "ok": true,
       "detail": {
-        "maxIce": 0.002043491423735161
+        "maxIce": 0.0019072764287785472
       }
     },
     {
@@ -328,15 +327,19 @@
       "name": "3b cold wave in the run: the air cooled toward the target, the surfaces below 0 °C",
       "ok": true,
       "detail": {
-        "air": -24.744817197991892,
-        "s": -0.018515849407549467
+        "air": -24.74396755650713,
+        "s": -0.01831117412683625
       }
     },
     {
       "name": "22 thaw: melting started (thaw milestone), snow at 0 °C while melting",
       "ok": true,
       "detail": {
-        "melt": 141056.74122925146
+        "melt": 145723.9535192032,
+        "t22": {
+          "wet": 39872,
+          "dev": 0
+        }
       }
     },
     {
@@ -344,20 +347,20 @@
       "ok": true,
       "detail": {
         "fl24": {
-          "vol": 229.1046391002546,
-          "flooded": 259,
-          "melt": 568.9340846775272
+          "vol": 278.90218642127417,
+          "flooded": 171,
+          "melt": 1.8846461265239696
         },
-        "meltToFlood": 568934.0846777784
+        "meltToFlood": 1884.646126523935
       }
     },
     {
       "name": "24 snowmelt flooding: flooded cells in the valley (Phase 14 runoff)",
       "ok": true,
       "detail": {
-        "vol": 229.1046391002546,
-        "flooded": 259,
-        "melt": 568.9340846775272
+        "vol": 278.90218642127417,
+        "flooded": 171,
+        "melt": 1.8846461265239696
       }
     },
     {
@@ -365,34 +368,34 @@
       "ok": true,
       "detail": {
         "G": 1010.1016300819754,
-        "absorbed": 929.6124267578125
+        "absorbed": 929.6150512695312
       }
     },
     {
       "name": "26 surface temperature: dark asphalt warmer than grass in the sun; surface-temperature overlay °C",
       "ok": true,
       "detail": {
-        "asphalt": 309.17984267897447,
-        "grass": 302.88983839639235,
-        "solar": 929.6124267578125
+        "asphalt": 309.42060453899785,
+        "grass": 303.0670531847874,
+        "solar": 929.6150512695312
       }
     },
     {
       "name": "27 heatwave dries vegetation: crown moisture fell below its start (soil too dry to supply), never below the live floor",
       "ok": true,
       "detail": [
-        1.1894432723870498,
-        1.1894432723870498,
-        1.1894432723870498,
-        1.1894448623655336,
-        1.1894448623655338,
-        1.1894448623655336,
-        1.1894469223412603,
-        1.1894469223412605,
-        1.1894469223412603,
-        1.189451361051976,
-        1.189451361051976,
-        1.189451361051976
+        1.1894359254387321,
+        1.1894359254387321,
+        1.1894359254387321,
+        1.1894375191777153,
+        1.1894375191777153,
+        1.1894375191777153,
+        1.1894395844159995,
+        1.1894395844159995,
+        1.1894395844159995,
+        1.1894440376205617,
+        1.1894440376205617,
+        1.1894440376205617
       ]
     },
     {
@@ -402,26 +405,27 @@
         "foliage": 12,
         "lit": 0,
         "u": [
-          1.1883248314710277,
-          1.1883248314710277,
-          1.1883250120368667,
-          1.1883266449113643,
-          1.18832682548617,
-          1.188326825431564,
-          1.188329159930799,
-          1.1883291598762056,
-          1.1883291597908119,
-          1.188334191171395,
-          1.1883341910092482,
-          1.1883341908128973
-        ]
+          1.1883171010375284,
+          1.1883171010375284,
+          1.1883172816486702,
+          1.1883189182505518,
+          1.1883190988720969,
+          1.1883190988171748,
+          1.1883214385388576,
+          1.1883214384839438,
+          1.1883214383982272,
+          1.188326484970105,
+          1.1883264848076114,
+          1.1883264846112551
+        ],
+        "lit880": 0
       }
     },
     {
       "name": "29 roof snow load: snow mass × g on the roof members of the structural model (≥ 0.4 kPa applied)",
       "ok": true,
       "detail": {
-        "kPa": 2.8050003661709515,
+        "kPa": 2.805000366225123,
         "applied": true,
         "failed": 0,
         "hazards": [],
@@ -433,29 +437,35 @@
       "ok": true,
       "detail": {
         "b29": {
-          "kPa": 2.8050003661709515,
+          "kPa": 2.805000366225123,
           "applied": true,
           "failed": 0,
           "hazards": [],
           "collapsed": false
         },
-        "res": 2.4115648456235376e-14
+        "res": 4.574317451348878e-14
       }
     },
     {
-      "name": "31 volcano and snow: lava heat on covered cells melted snow (meltwater), ash darkened the snow",
+      "name": "31 volcano and snow: lava heat on covered cells melted snow (meltwater); ash darkens the snow it lies on",
       "ok": true,
       "detail": {
-        "melt": 25.187003452495233,
-        "meltToFlood": 130782.43222886919
+        "melt": 20.66206721474063,
+        "meltToFlood": 130747.74503435276,
+        "a31": {
+          "ashy": 10835,
+          "clean": 28849,
+          "aAshy": 0.27071155646576134,
+          "aClean": 0.6944064580198755
+        }
       }
     },
     {
       "name": "32 atmospheric removal and evaporation: vapour leaves with the air (same share), evaporation continues at low pressure, ledgers close",
       "ok": true,
       "detail": {
-        "removed": 12204.035135555298,
-        "evap": 188.26030351590376
+        "removed": 12251.533066749349,
+        "evap": 239.29798132937427
       }
     },
     {
@@ -497,9 +507,9 @@
       "name": "44 large town (1000 houses) under snowfall: interactive frame rate, roofs loaded",
       "ok": true,
       "detail": {
-        "fps": 24.1,
-        "worstFrameMs": 99.9,
-        "climateMs": 1.2999999970197678,
+        "fps": 60.2,
+        "worstFrameMs": 16.8,
+        "climateMs": 1.699999999254942,
         "gl44": {
           "calls": 18,
           "geometries": 23,
@@ -514,9 +524,9 @@
         "geoA": 7,
         "geoB": 7,
         "heaps45": [
-          64.8,
-          65.6,
-          65.8
+          65.7,
+          66.2,
+          66.2
         ]
       }
     },
@@ -532,8 +542,8 @@
   ],
   "errors": [],
   "heap": [
-    29.3,
-    64.5
+    29.7,
+    65.1
   ],
   "geometries": [
     17,

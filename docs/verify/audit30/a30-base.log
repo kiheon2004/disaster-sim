@@ -1,0 +1,269 @@
+
+ RUN  v5.0.3 /Users/namkiheon/projects/disaster-sim-work/audit30/wtbase
+
+ ❯ src/climate/audit30.test.ts (19 tests | 18 failed) 133160ms
+   ❯ audit: start state of a world colder than 0 °C (2)
+     × soil water of layers below 0 °C starts frozen — the ground keeps its start temperature 219ms
+     × a lake starts as liquid at 0 °C, then grows ice at the rate of its heat loss (no instant ice) 15ms
+   ❯ audit: shortwave (3)
+     × a prescribed irradiance at night is diffuse — never more than G on flat ground 21ms
+     × a building does not shade its own roof 53ms
+     × a thin store cover takes only its share of the sun on its area (the body under it takes the rest) 107ms
+   ❯ audit: psychrometrics (4)
+     × saturation adjustment of a heavily supersaturated parcel ends saturated with c·ΔT = L·Δm 4ms
+     × the reported relative humidity is the input definition e/e_s 11ms
+     × dry air has no dew point: the display value is not a range end 4ms
+     × fresh snow restores the share P/10 of the gap to the maximum albedo (Douville et al. 1995) 2ms
+   ❯ audit: bare-surface longwave of a hot surface (1)
+     × the sky loss of a 1300 K surface layer matches the exact quartic surface balance (before: +74 %) 246ms
+   ❯ audit: boiling at low pressure (2)
+     × water at the reference temperature boils when the local boiling point is below it (2 kPa: 17.5 °C) 1153ms
+     × below the triple point (500 Pa) liquid water boils down to 0 °C 1086ms
+   ❯ audit: HUD evaporation rate (1)
+     × is the mass evaporated per second over the last surface interval (before: a 5 s sum shown as /s) 4326ms
+   ❯ audit: humidity paths of the editor scenarios and presets (2)
+     × a scenario chosen in the editor runs at the humidity it shows unless it sets a humidity change 4ms
+   ❯ audit: ice in the flood model (4)
+     × floating ice on a bowl lake leaves the water at rest (before: the draft capped at h drove 0.5 m/s currents) 5236ms
+     × water on ice frozen to the bed flows over it (before: a bed-fast strip was a wall) 3001ms
+     × a film on bare ground evaporates (before: films ≤ 1 mm were treated as soil and never left h) 62649ms
+     × rain running through an ice glaze is booked as rain, not meltwater 54978ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: start state of a world colder than 0 °C > soil water of layers below 0 °C starts frozen — the ground keeps its start temperature
+AssertionError: expected 6 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 6
+
+ ❯ src/climate/audit30.test.ts:80:64
+     78|     const r = setup(spec({ temperature: K(-20), target: K(-20), forcin…
+     79|     const c = 20 * 40 + 20, g = r.tw.terrain, nl = r.cw.nl;
+     80|     for (let l = 0; l < nl; l++) { expect(r.cw.sW[c * nl + l]).toBe(0)…
+       |                                                                ^
+     81|     r.step(10);
+     82|     // Before the audit the freezing of liquid soil water put the whol…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: start state of a world colder than 0 °C > a lake starts as liquid at 0 °C, then grows ice at the rate of its heat loss (no instant ice)
+AssertionError: expected 253.14999999999998 to be close to 273.15, received difference is 20, but expected 5e-10
+ ❯ src/climate/audit30.test.ts:91:28
+     89|     const r = setup(spec({ temperature: K(-20), target: K(-20), forcin…
+     90|     const c = 20 * 40 + 20;
+     91|     expect(r.tw.waterT(c)).toBeCloseTo(T_MELT, 9);
+       |                            ^
+     92|     r.step(6);
+     93|     // Upper bound of the ice growth: a surface loss of 600 W/m² (−20 …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a prescribed irradiance at night is diffuse — never more than G on flat ground
+AssertionError: expected 5866.666666666665 to be close to 800, received difference is 5066.666666666665, but expected 5e-7
+ ❯ src/climate/audit30.test.ts:108:22
+    106|       // Flat cell: direct·cos(incidence) + diffuse, cos = dir·up.
+    107|       const onFlat = sun.direct * Math.max(0, sun.dir[1]) + sun.diffus…
+    108|       expect(onFlat).toBeCloseTo(800, 6);
+       |                      ^
+    109|     }
+    110|     const day = new ClimateForcing(spec({ solar: 'constant', irradianc…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a building does not shade its own roof
+AssertionError: expected 90 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 90
+
+ ❯ src/climate/audit30.test.ts:124:26
+    122|       let roofShaded = 0;
+    123|       for (let iz = 10; iz < 20; iz++) for (let ix = 10; ix < 20; ix++…
+    124|       expect(roofShaded).toBe(0);
+       |                          ^
+    125|       // Analytic shadow behind the block (sun from +X, 10 m high): it…
+    126|       expect(shade[15 * nx + 9]).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: shortwave > a thin store cover takes only its share of the sun on its area (the body under it takes the rest)
+TypeError: r.cw.storeCover is not a function
+ ❯ src/climate/audit30.test.ts:135:17
+    133|     // 0.2 kg/m² of snow: a fifth of the 1 kg/m² that covers a surface.
+    134|     (r.cw as unknown as { addStore(k: number, m: number, T: number, ic…
+    135|     expect(r.cw.storeCover(k)).toBeCloseTo(0.2, 12);
+       |                 ^
+    136|     const s0 = r.cw.energy.solar;
+    137|     r.step(6.1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > saturation adjustment of a heavily supersaturated parcel ends saturated with c·ΔT = L·Δm
+AssertionError: expected 0 to be greater than 0
+ ❯ src/climate/audit30.test.ts:152:20
+    150|       const m = 100, q = specificHumidity(RH * esWater(T), p), mv = (q…
+    151|       const r = saturationAdjust(T, mv, m, p, C);
+    152|       expect(r.dm).toBeGreaterThan(0);
+       |                    ^
+    153|       expect(r.T - T).toBeCloseTo((L_V * r.dm) / C, 9);
+    154|       const qe = (mv - r.dm) / (m + mv - r.dm);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > the reported relative humidity is the input definition e/e_s
+AssertionError: expected 0.2881367646292608 to be close to 0.3, received difference is 0.011863235370739189, but expected 5e-7
+ ❯ src/climate/audit30.test.ts:164:26
+    162|       const r = setup(spec({ temperature: T, target: T, humidity: RH }…
+    163|       expect(r.cw.q(0)).toBeCloseTo(humidityFromRH(RH, T, 101325), 12);
+    164|       expect(r.cw.rh(0)).toBeCloseTo(RH, 6);
+       |                          ^
+    165|     }
+    166|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > dry air has no dew point: the display value is not a range end
+TypeError: dewPointChecked is not a function
+ ❯ src/climate/audit30.test.ts:169:25
+    167|
+    168|   it('dry air has no dew point: the display value is not a range end',…
+    169|     expect(Number.isNaN(dewPointChecked(0))).toBe(true);
+       |                         ^
+    170|     expect(Number.isNaN(dewPointChecked(1e-12))).toBe(true);
+    171|     expect(dewPointChecked(esWater(283.15))).toBeCloseTo(283.15, 6);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: psychrometrics > fresh snow restores the share P/10 of the gap to the maximum albedo (Douville et al. 1995)
+AssertionError: expected 0.85 to be close to 0.7749999999999999, received difference is 0.07500000000000007, but expected 5e-13
+ ❯ src/climate/audit30.test.ts:177:42
+    175|
+    176|   it('fresh snow restores the share P/10 of the gap to the maximum alb…
+    177|     expect(snowAlbedo(0.7, 0, false, 5)).toBeCloseTo(0.7 + 0.5 * (0.85…
+       |                                          ^
+    178|     expect(snowAlbedo(0.5, 0, false, 10)).toBeCloseTo(0.85, 12);
+    179|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: bare-surface longwave of a hot surface > the sky loss of a 1300 K surface layer matches the exact quartic surface balance (before: +74 %)
+AssertionError: expected 0.746434437155467 to be less than 0.01
+ ❯ src/climate/audit30.test.ts:208:39
+    206|     const exact = eps * SIGMA * (Ts ** 4 - Tsky ** 4) * tr.area;
+    207|     // The cold cell's own share in `base` is subtracted with it (≈ 0.…
+    208|     expect(Math.abs(hot / exact - 1)).toBeLessThan(0.01);
+       |                                       ^
+    209|   });
+    210| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: boiling at low pressure > water at the reference temperature boils when the local boiling point is below it (2 kPa: 17.5 °C)
+AssertionError: expected 0 to be greater than 0
+ ❯ src/climate/audit30.test.ts:219:42
+    217|     r.step(6);
+    218|     // Before the audit water at the reference (heat 0) was never test…
+    219|     expect(r.cw.water.transfers.boiling).toBeGreaterThan(0);
+       |                                          ^
+    220|     expect(r.tw.waterT(20 * 40 + 20)).toBeLessThanOrEqual(Tb + 1e-6);
+    221|     // The boiled mass carries exactly the excess enthalpy: c·M·(T − T…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: boiling at low pressure > below the triple point (500 Pa) liquid water boils down to 0 °C
+AssertionError: expected 283.1427312156693 to be less than or equal to 273.150001
+ ❯ src/climate/audit30.test.ts:229:39
+    227|     const r = setup(spec({ temperature: K(10), target: K(10), humidity…
+    228|     r.step(6);
+    229|     expect(r.tw.waterT(20 * 40 + 20)).toBeLessThanOrEqual(T_MELT + 1e-…
+       |                                       ^
+    230|   });
+    231| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: HUD evaporation rate > is the mass evaporated per second over the last surface interval (before: a 5 s sum shown as /s)
+TypeError: Cannot read properties of undefined (reading 'evaporation')
+ ❯ src/climate/audit30.test.ts:241:23
+    239|     const m2 = r.cw.totals.evaporated;
+    240|     expect(m2 - m1).toBeGreaterThan(0);
+    241|     expect(r.cw.rates.evaporation).toBeCloseTo((m2 - m1) / 5, 9);
+       |                       ^
+    242|   });
+    243| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: humidity paths of the editor scenarios and presets > a scenario chosen in the editor runs at the humidity it shows unless it sets a humidity change
+AssertionError: expected 0.25 to be close to 0.7, received difference is 0.44999999999999996, but expected 5e-13
+ ❯ src/climate/audit30.test.ts:255:29
+    253|       const want = own ?? sp.humidity;
+    254|       // Before the audit snowfall / freezing rain / humid ran at 25 %…
+    255|       expect(rhPath(sp)[4]).toBeCloseTo(sc === 'custom' ? sp.humidityT…
+       |                             ^
+    256|       if (own === undefined && sc !== 'custom') for (const v of rhPath…
+    257|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: ice in the flood model > floating ice on a bowl lake leaves the water at rest (before: the draft capped at h drove 0.5 m/s currents)
+AssertionError: expected 0.019537485103482483 to be less than 0.0001
+ ❯ src/climate/audit30.test.ts:284:18
+    282|     for (let i = 0; i < f.qz.length; i++) uMax = Math.max(uMax, Math.a…
+    283|     // Unit discharge (m²/s): still water stays still; before the audi…
+    284|     expect(uMax).toBeLessThan(1e-4);
+       |                  ^
+    285|     expect(r.tw.ledger.relativeResidual()).toBeLessThan(1e-8);
+    286|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: ice in the flood model > water on ice frozen to the bed flows over it (before: a bed-fast strip was a wall)
+AssertionError: expected 0 to be greater than 0.0001
+ ❯ src/climate/audit30.test.ts:306:20
+    304|     for (let iz = 0; iz < f.nz; iz++) for (let ix = 0; ix < f.nx; ix++…
+    305|     // Before the audit the strip held everything upstream (exactly 0 …
+    306|     expect(below1).toBeGreaterThan(below0 + 1e-4);
+       |                    ^
+    307|   });
+    308|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: ice in the flood model > a film on bare ground evaporates (before: films ≤ 1 mm were treated as soil and never left h)
+AssertionError: expected 0 to be greater than 0
+ ❯ src/climate/audit30.test.ts:313:40
+    311|     const v0 = r.field!.totalVolume();
+    312|     r.step(300);
+    313|     expect(r.field!.budget.evaporated).toBeGreaterThan(0);
+       |                                        ^
+    314|     expect(r.field!.totalVolume()).toBeLessThan(v0);
+    315|     expect(r.tw.ledger.relativeResidual()).toBeLessThan(1e-8);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/18]⎯
+
+ FAIL  src/climate/audit30.test.ts > audit: ice in the flood model > rain running through an ice glaze is booked as rain, not meltwater
+AssertionError: expected 931.4067693192089 to be less than 0.001031111111111955
+ ❯ src/climate/audit30.test.ts:324:37
+    322|     r.step(120);
+    323|     // −1 °C air cannot melt the ice: whatever drained to the flood is…
+    324|     expect(r.cw.totals.meltToFlood).toBeLessThan(1e-6 * Math.max(1, r.…
+       |                                     ^
+    325|   });
+    326| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/18]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  18 failed | 1 passed (19)
+   Start at  20:16:47
+   Duration  150.61s (tests 89%, transform 10%, import 1%)
+
