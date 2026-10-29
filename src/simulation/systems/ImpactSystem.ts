@@ -30,6 +30,8 @@ import { DamageState } from '../damage/DamageState';
 import type { RuntimeEntity } from '../SimulationRuntime';
 
 const SMALL = new Set(['streetLight', 'sign', 'wall', 'tree']);
+/** Bucket size of the object grid used to find objects under a landing (m). */
+const GRID = 8;
 const force: [number, number, number] = [0, 0, 0];
 
 function impactOf(e: RuntimeEntity, source: string) {
@@ -68,7 +70,8 @@ export class ImpactSystem implements SimulationSystem {
       this.seen.set(m.id, k);
       if (landings.length) {
         const a = performance.now();
-        for (const l of landings) this.respond(ctx, m, l, dt);
+        const grid = this.objectGrid(ctx);
+        for (const l of landings) this.respond(ctx, m, l, dt, grid);
         objectsMs += performance.now() - a;
         ch.stats.landings += landings.length;
         ctx.env.groundFailure.urgent = true;
@@ -145,15 +148,38 @@ export class ImpactSystem implements SimulationSystem {
     }
   }
 
+  /** Objects bucketed on a GRID-m grid (built once per update with landings; objects barely move within one). */
+  private objectGrid(ctx: SystemContext) {
+    const buckets = new Map<number, RuntimeEntity[]>();
+    let maxHalf = 0;
+    for (const e of ctx.runtime.entities.values()) {
+      if (e.def.inert) continue;
+      const pos = e.dynamic ? e.pose.position : e.initialPose.position;
+      const k = Math.floor(pos[0] / GRID) * 4096 + Math.floor(pos[2] / GRID);
+      let b = buckets.get(k);
+      if (!b) buckets.set(k, (b = []));
+      b.push(e);
+      maxHalf = Math.max(maxHalf, Math.max(e.dims[0], e.dims[2]) / 2);
+    }
+    return { buckets, maxHalf };
+  }
+
   /** Objects under a landing parcel's footprint. */
-  private respond(ctx: SystemContext, m: ImpactModel, l: Landing, dt: number) {
+  private respond(ctx: SystemContext, m: ImpactModel, l: Landing, dt: number, grid: { buckets: Map<number, RuntimeEntity[]>; maxHalf: number }) {
     if (l.parcel.outflow) return;
     const p = l.parcel;
     const reachMax = 2 * Math.max(p.spreadR, p.spreadT);
     const footArea = 2 * Math.PI * p.spreadR * p.spreadT;
     const source = `impact:${m.name}`;
-    for (const e of ctx.runtime.entities.values()) {
-      if (e.def.inert) continue;
+    const reach = reachMax + grid.maxHalf;
+    const near: RuntimeEntity[] = [];
+    for (let gx = Math.floor((l.x - reach) / GRID); gx <= Math.floor((l.x + reach) / GRID); gx++) {
+      for (let gz = Math.floor((l.z - reach) / GRID); gz <= Math.floor((l.z + reach) / GRID); gz++) {
+        const b = grid.buckets.get(gx * 4096 + gz);
+        if (b) near.push(...b);
+      }
+    }
+    for (const e of near) {
       const pos = e.dynamic ? e.pose.position : e.initialPose.position;
       const half = Math.max(e.dims[0], e.dims[2]) / 2;
       const d = Math.hypot(pos[0] - l.x, pos[2] - l.z);
