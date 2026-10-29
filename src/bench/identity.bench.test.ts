@@ -6,6 +6,10 @@
  * the fire system off they must be bit-identical to the Phase 26 build.
  * Phase 28: IDENTITY_FIRE=1 adds fire scenes (room fire, burning stand, heat ignition) whose fire and thermal
  * state is hashed too — with the volcano system off they must be bit-identical to the Phase 27 build.
+ * Phase 29: IDENTITY_ATMOS=1 adds (on top of the heat and fire scenes) an empty world, a meteor entering the
+ * atmosphere, lava, ash with wind, volcano + fire and a multi-hazard town, with the volcano state hashed —
+ * without an atmosphere experiment they must be bit-identical to the Phase 28 build. (Uses only Phase 28
+ * APIs, so the same file runs on that build.)
  */
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -54,6 +58,23 @@ const FIRE_SCENES: typeof SCENES = [
   { name: 'fire: heat ignition of a dry crown', doc: () => withFire(world([conifer(0, 0, 3) as never]), { foliageMoisture: 0.2, heatIgnition: true }), events: [heat({ position: [3, 0], height: 4, power: 2e6, duration: 120 })], seconds: 120 },
 ];
 
+const erupt = (p: Record<string, unknown> = {}): EventSpec => ({ event: 'volcano', vents: [{ kind: 'central', position: [-40, 0], radius: 2 }], material: 'basalt', temperature: 1150, rate: 2, duration: 120, profile: 'constant', ...p } as EventSpec);
+const ATMOS_SCENES: typeof SCENES = [
+  { name: 'atmos: empty world', doc: () => world([]), events: [], seconds: 10 },
+  { name: 'atmos: meteor atmospheric entry', doc: () => world([{ type: 'building', building: D('house'), seed: 1, transform: tf(30, 0) }]), events: [{ event: 'impact', target: [0, 0], material: 'stony', diameter: 2, speed: 18000, angle: 45, azimuth: 90, entry: 'atmosphere', airBlast: true } as EventSpec], seconds: 20 },
+  { name: 'atmos: lava', doc: () => world([{ type: 'building', building: D('house'), seed: 1, transform: tf(-25, 0) }, conifer(-30, 8, 2) as never]), events: [erupt()], seconds: 120 },
+  { name: 'atmos: ash + wind', doc: () => world(houses(4)), events: [{ event: 'wind', speed: 8, direction: 'W', duration: 300 } as EventSpec, erupt({ ashFraction: 0.2, bombFraction: 0.05, plumeHeight: 80 })], seconds: 120 },
+  { name: 'atmos: volcano + fire + rain', doc: () => withFire(world([conifer(-32, 0, 3) as never, conifer(-26, 4, 4) as never]), { foliageMoisture: 0.2 }), events: [erupt({ rate: 3 }), { event: 'rain', intensity: 20, duration: 120 } as EventSpec], seconds: 120 },
+  { name: 'atmos: multi-hazard town', doc: () => withFire(world([...houses(8), conifer(30, 25, 9) as never])), events: [{ event: 'wind', speed: 20, direction: 'E', duration: 120 } as EventSpec, { event: 'earthquake', magnitude: 6.5, pga: 0.35, duration: 15, seed: 3, startTime: 10 } as EventSpec, { event: 'fire', position: [-30, 12], height: 1, radius: 1, duration: 300 } as EventSpec, heat({ position: [20, -30], power: 2e6, duration: 60 })], seconds: 90 },
+];
+
+function volcanoLines(c: SimulationController): string[] {
+  const vr = c.getEnvironment().volcano.rt;
+  if (!vr) return ['no-volcano'];
+  const f = vr.world.field;
+  return [Array.from(f.M).join(','), Array.from(f.dep).join(','), Array.from(f.depE).join(','), vr.world.puffs.map((p) => [p.x, p.y, p.z, p.mass].join(':')).join(','), JSON.stringify(vr.world.ledger())];
+}
+
 function fireLines(c: SimulationController): string[] {
   const fr = c.getEnvironment().fire.rt;
   if (!fr) return ['no-fire'];
@@ -79,7 +100,8 @@ function thermalLines(c: SimulationController): string[] {
 describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
   it('scenes', { timeout: 3_600_000 }, async () => {
     const out: Record<string, string> = {};
-    for (const sc of [...SCENES, ...(process.env.IDENTITY_HEAT || process.env.IDENTITY_FIRE ? HEAT_SCENES : []), ...(process.env.IDENTITY_FIRE ? FIRE_SCENES : [])]) {
+    const ATM = !!process.env.IDENTITY_ATMOS, FIRE = !!process.env.IDENTITY_FIRE || ATM, HEAT = !!process.env.IDENTITY_HEAT || FIRE;
+    for (const sc of [...SCENES, ...(HEAT ? HEAT_SCENES : []), ...(FIRE ? FIRE_SCENES : []), ...(ATM ? ATMOS_SCENES : [])]) {
       const c = new SimulationController({ headless: true });
       await c.load(sc.doc());
       for (const e of sc.events) c.addEvent(e);
@@ -95,8 +117,9 @@ describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
       if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
       const f = c.getEnvironment().flood.field;
       if (f) lines.push(Array.from(f.h).reduce((a, b) => a + b, 0).toString(), JSON.stringify(f.budget));
-      if (process.env.IDENTITY_HEAT || process.env.IDENTITY_FIRE) lines.push(...thermalLines(c));
-      if (process.env.IDENTITY_FIRE) lines.push(...fireLines(c));
+      if (HEAT) lines.push(...thermalLines(c));
+      if (FIRE) lines.push(...fireLines(c));
+      if (ATM) lines.push(...volcanoLines(c));
       out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
       c.unload();
     }

@@ -53,6 +53,11 @@ export interface FieldInit {
   tau?: number;
 }
 
+/** Layer-flow sources below this (m/s of vertical velocity) are treated as none (no solve). */
+export const LAYER_MIN = 0.02;
+/** Buoyancy-only layer flow is re-solved every this many steps (the updraft field changes slowly); sinks every step. */
+export const LAYER_EVERY = 10;
+
 /** Damping time of the column flux (s): a closure for surface friction and the adjustment leaving the 200 m domain — not calibrated. */
 export const TAU = 30;
 
@@ -210,6 +215,7 @@ export class AtmosphereField implements Grid {
   steps = 0;
   solves = 0;
   lastIterations = 0;
+  layerIterations = 0;
   maxSpeed = 0;
   maxLayerSpeed = 0;
   private readonly work: Float64Array[];
@@ -466,12 +472,14 @@ export class AtmosphereField implements Grid {
     if (any || it >= 0) {
       const iso = this.thermo === 'isothermal';
       const T0 = this.T0;
-      let work = 0;
+      let work = 0, qLast = NaN, pLast = 1;
       for (let a = 0; a < n; a++) {
         const s0 = sb[a], s1 = this.sigma[a];
         if (s0 === s1 && Tm[a] === Tl[a]) continue;
         const Tx = smid[a] === s1 ? Tm[a] : T0 + ((Tm[a] - T0) * smid[a]) / s1;
-        const Tad = Tx * Math.pow(s1 / s0, KAPPA);
+        const q = s1 / s0;
+        if (q !== qLast) { qLast = q; pLast = Math.pow(q, KAPPA); }
+        const Tad = Tx * pLast;
         work += CP_AIR * ell * s1 * A * (Tad - Tx);
         r.T2[a] = iso ? Tx : Tad;
         r.massRatio[a] = s1 / s0;
@@ -558,7 +566,8 @@ export class AtmosphereField implements Grid {
       rhs[a] = rr;
       s[a] = sigma[a] * red[a];
     }
-    const it = pcg(this, diag, kx, kz, rhs, s, this.work, 1e-13, 500);
+    // Mass is exact in flux form whatever the residual; 10⁻¹⁰ of the column load is ~10⁻⁵ Pa.
+    const it = pcg(this, diag, kx, kz, rhs, s, this.work, 1e-10, 500);
     this.lastIterations = it;
     this.solves++;
     // New fluxes from s; momentum ledger (exact split of the update into pressure and damping parts).
@@ -672,18 +681,25 @@ export class AtmosphereField implements Grid {
   /** Layer convergence potential flow: ∇²φ = −s/H, u_L = ∇φ. */
   private layerFlow(dt: number, updraft: Float64Array | null, sink: Float64Array | null) {
     const { nx, nz, dx, ulx, ulz, phi } = this;
+    // Buoyancy alone changes slowly: keep the last solution between re-solves.
+    if (!sink && updraft && this.steps % LAYER_EVERY !== 0) return;
     const n = this.count;
     const src = this.tmp;
-    let any = false, mean = 0;
+    // Buoyant updraft: only a column's excess over the domain mean draws air sideways (a local plume) —
+    // uniform convection (ground heating everywhere) overturns in place. Near-surface sinks / sources: their
+    // whole volume flux comes through the layer (open: from the edges; closed: as subsidence).
+    let wMean = 0;
+    if (updraft) { for (let a = 0; a < n; a++) wMean += updraft[a]; wMean /= n; }
+    let any = false, mean = 0, big = 0;
     for (let a = 0; a < n; a++) {
-      let w = updraft ? updraft[a] : 0;
+      let w = updraft ? updraft[a] - wMean : 0;
       // Near-surface sink: the column's removed share leaves through the layer (replenished from above
       // and around) ⇒ volume velocity dm/(ρ_L·A) = share·M/(ℓ·M/H)/dt (m/s).
-      if (sink && sink[a] !== 0) w += (sink[a] * this.H) / (this.ell * dt);
+      if (sink && sink[a] !== 0) { const v = (sink[a] * this.H) / (this.ell * dt); w += v; mean += v; }
       src[a] = w;
-      if (w !== 0) any = true;
-      mean += w;
+      if (Math.abs(w) > big) big = Math.abs(w);
     }
+    any = big > LAYER_MIN;
     if (!any) {
       if (this.maxLayerSpeed !== 0) { ulx.fill(0); ulz.fill(0); phi.fill(0); this.maxLayerSpeed = 0; }
       return;
@@ -696,7 +712,8 @@ export class AtmosphereField implements Grid {
     for (let iz = 0; iz <= nz; iz++) for (let ix = 0; ix < nx; ix++) kz[iz * nx + ix] = iz === 0 || iz === nz ? kb : 1;
     // Closed world: the updraft returns as uniform subsidence (consistent Neumann problem, tiny diagonal).
     for (let a = 0; a < n; a++) { rhs[a] = ((src[a] - (open ? 0 : mean)) * dx * dx) / this.H; diag[a] = open ? 0 : 1e-9; }
-    pcg(this, diag, kx, kz, rhs, phi, this.work, 1e-10, 500);
+    // Warm-started from the last potential; a velocity accurate to ~10⁻⁶ of its scale is plenty here.
+    this.layerIterations = pcg(this, diag, kx, kz, rhs, phi, this.work, 1e-4, 400);
     let vmax = 0;
     for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix <= nx; ix++) {
       const f = iz * (nx + 1) + ix;

@@ -81,7 +81,7 @@ export class WaterSolverSystem implements SimulationSystem {
     if (atm) this.pressureImpulse(ctx, atm, dt);
     if (U > 0.01) {
       const cd = (0.8 + 0.065 * U) * 1e-3;
-      const k = ((atm ? atm.stats.meanDensity : AIR_DENSITY) * cd * U * U) / WATER_DENSITY;
+      const k = ((atm ? atm.meanLayerDensity() : AIR_DENSITY) * cd * U * U) / WATER_DENSITY;
       const flow = ctx.env.wind.flow();
       f.windStress[0] = k * flow[0];
       f.windStress[1] = k * flow[2];

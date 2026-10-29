@@ -212,7 +212,7 @@ describe('removal, near vacuum and restoration', () => {
 });
 
 describe('buoyancy, tracers, determinism', () => {
-  it('a warm column draws layer air in (continuity: inflow volume = updraft volume)', () => {
+  it('a warm column draws layer air in (continuity: inflow volume = its updraft excess); uniform updraft draws none', () => {
     const f = mk({ boundary: 'open' });
     const up = new Float64Array(f.count);
     const c = 10 * 20 + 10;
@@ -220,13 +220,18 @@ describe('buoyancy, tracers, determinism', () => {
     f.step(0.1, { bgShare: 1, layerT: new Float64Array(f.count).fill(288.15), updraft: up, Tin: 288.15 });
     const fw = 10 * 21 + 10;
     const inflow = (f.ulx[fw] - f.ulx[fw + 1] + f.ulz[c] - f.ulz[c + 20]) * f.dx * f.H;
-    expect(inflow).toBeCloseTo(3 * f.area, 6);
+    // The plume's excess over the domain mean updraft (uniform convection overturns in place).
+    expect(inflow / ((3 - 3 / f.count) * f.area)).toBeCloseTo(1, 5);
     expect(f.ulx[fw]).toBeGreaterThan(0);
     // Closed world: the same updraft is fed by uniform subsidence (no edge flux).
     const g = mk({ boundary: 'closed' });
     g.step(0.1, { bgShare: 1, layerT: new Float64Array(g.count).fill(288.15), updraft: up, Tin: 288.15 });
     expect(g.ulx[10 * 21]).toBe(0);
     expect(g.ulx[fw]).toBeGreaterThan(0);
+    // Uniform convection (the same updraft everywhere): no horizontal flow.
+    const h = mk({ boundary: 'open' });
+    h.step(0.1, { bgShare: 1, layerT: new Float64Array(h.count).fill(288.15), updraft: new Float64Array(h.count).fill(2), Tin: 288.15 });
+    expect(h.maxLayerSpeed).toBe(0);
   });
 
   it('volcanic gas: emitted = airborne + vented + out + removed; added to the air mass', () => {
@@ -259,5 +264,55 @@ describe('buoyancy, tracers, determinism', () => {
     expect(Array.from(a.Ux)).toEqual(Array.from(b.Ux));
     expect(a.energy).toEqual(b.energy);
     expect(G).toBe(9.81);
+  });
+});
+
+describe('editor: outlook, presets, fields (Phase 29)', async () => {
+  const { atmosphereOutlook } = await import('./outlook');
+  const { ATMOS_PRESETS, atmosPreset } = await import('./presets');
+  const { atmosphere } = await import('@/phenomena/atmosphereDefinitions');
+  const { phenomena } = await import('@/phenomena/registry');
+  const { createEmptyDocument } = await import('@/world/WorldDocument');
+  const terrain = createEmptyDocument('t').terrain;
+
+  it('outlook: ISA state, world air mass p/g·A, removal amount and the adiabatic end state from the same relations', () => {
+    const spec: AtmosphereSpec = { ...defaultAtmosphereSpec(), removal: 'linear', target: 0.25, duration: 300 };
+    const o = atmosphereOutlook(spec, terrain, () => 0);
+    expect(o.p0).toBeCloseTo(101325, 6);
+    expect(o.rho0).toBeCloseTo(1.225, 3);
+    const W = (terrain.nx - 1) * terrain.cellSize;
+    expect(o.mass / ((101325 / G) * W * W)).toBeCloseTo(1, 6);
+    expect(o.removed / o.mass).toBeCloseTo(0.75, 9);
+    expect(o.rate).toBeCloseTo(o.removed / 300, 6);
+    expect(o.TendAdiabatic).toBeCloseTo(288.15 * Math.pow(0.25, KAPPA), 9);
+    expect(o.rhoEndAdiabatic).toBeGreaterThan(o.rhoEndIsothermal);
+    expect(o.boilingEnd).toBeLessThan(o.boilingStart);
+    expect(o.issues).toEqual([]);
+  });
+
+  it('every preset loads valid specs (their own schemas) with assumptions to show', () => {
+    for (const id of ATMOS_PRESETS) {
+      const p = atmosPreset(id);
+      expect(p.assumptions.length).toBeGreaterThan(0);
+      expect(p.events.some((e) => e.event === 'atmosphere')).toBe(true);
+      for (const e of p.events) {
+        const def = phenomena.implemented(e.event)!;
+        const r = def.schema.safeParse(e);
+        expect(r.success, `${id}: ${e.event} ${JSON.stringify(r.error?.issues ?? [])}`).toBe(true);
+      }
+    }
+  });
+
+  it('fields: temperature shown in °C stored in K, auto values from the ISA, restoration defaults after the removal', () => {
+    const f = (k: string) => atmosphere.fields.find((x) => x.key === k)!;
+    let s = atmosphere.defaults() as unknown as AtmosphereSpec;
+    s = f('temperature').set!(s as never, 20) as unknown as AtmosphereSpec;
+    expect(s.temperature).toBeCloseTo(293.15, 9);
+    expect(f('temperature').get!(s as never)).toBeCloseTo(20, 9);
+    expect(f('pressure').autoValue!({ ...s, altitude: 3000 } as never)).toBeCloseTo(isa(3000).p, 6);
+    s = f('removal').set!({ ...s, removal: 'none' } as never, 'linear') as unknown as AtmosphereSpec;
+    s = f('restore').set!(s as never, 'reservoir') as unknown as AtmosphereSpec;
+    expect(s.restoreAt!).toBeGreaterThanOrEqual(s.duration!);
+    expect(atmosphereIssues(s)).toEqual([]);
   });
 });

@@ -10,7 +10,8 @@ import { useWorldStore } from '@/world/worldStore';
 import { SimulationController } from '@/simulation/SimulationController';
 import { createDesign } from '@/buildings/design';
 import { presetSpec } from '@/buildings/spec';
-import type { WorldDocument } from '@/core/model';
+import { defaultWaterSettings, type WorldDocument } from '@/core/model';
+import type { LakeFeature } from '@/landscape/types';
 import { parseDocument, serializeDocument } from '@/world/serialization';
 import { worldFingerprint } from '@/world/fingerprint';
 import { createInstance } from '@/phenomena/schedule';
@@ -163,7 +164,7 @@ describe('atmosphere in the simulation (Phase 29)', () => {
     }
     expectLedgers(thin);
     // The removal took air with its composition: the O₂ mass in the layer fell with the air mass.
-    expect(art(thin).o2.layer).toBeLessThan(0.1 * art(ref).o2.layer);
+    expect(art(thin).stats.o2Layer).toBeLessThan(0.1 * art(ref).stats.o2Layer);
     ref.unload(); thin.unload();
   });
 
@@ -247,5 +248,113 @@ describe('atmosphere in the simulation (Phase 29)', () => {
     expect(r2.ok).toBe(true);
     if (!r2.ok) return;
     expect(r2.doc.scenario.experiment?.instances ?? []).toEqual([]);
+  });
+});
+
+describe('atmosphere: restoration, water, terrain, meteor, rooms, near vacuum, plume (Phase 29)', () => {
+  it('reservoir restoration brings the air mass back; the milestones mark it; ledgers close', { timeout: 300_000 }, async () => {
+    flat();
+    const c = await start(docNow(), [atmos({ boundary: 'closed', removal: 'linear', target: 0.4, duration: 30, restore: 'reservoir', restoreAt: 40, restoreDuration: 30, restoreTarget: 1 })]);
+    c.advance(35);
+    expect(art(c).stats.share).toBeCloseTo(0.4, 3);
+    c.advance(40);
+    const a = art(c);
+    expect(a.stats.share).toBeCloseTo(1, 3);
+    expect(a.field.mass.restored).toBeCloseTo(a.field.mass.removed, -3);
+    const kinds = c.getMilestones().map((m) => m.kind);
+    for (const k of ['atmosStart', 'removalStart', 'pressureMilestone', 'restorationStart', 'restorationComplete'] as const) expect(kinds).toContain(k);
+    expectLedgers(c);
+    c.unload();
+  });
+
+  it('water: a uniform removal does not move or remove water; a local low tilts it a little; the water mass stays exact', { timeout: 300_000 }, async () => {
+    flat();
+    const lake: LakeFeature = { id: 'f1', kind: 'lake', points: [[-40, -30], [40, -30], [40, 30], [-40, 30]], surface: -0.3, depth: 2, shoreWidth: 3, material: 7, filled: true };
+    S().setFeatures([lake], 2);
+    const d = docNow();
+    d.settings.simulation.water = { ...defaultWaterSettings(), infiltration: false, drainageCapacity: 0 };
+    for (const ev of [atmos({ removal: 'linear', target: 0.2, duration: 30 }), atmos({ removal: 'linear', extent: 'local', position: [0, 0], radius: 10, target: 0.995, duration: 60 })]) {
+      const c = await start(d, [ev, { event: 'rain', intensity: 0.001, duration: 1 } as EventSpec]);
+      c.advance(1);
+      const w = c.getEnvironment().flood.field!;
+      const v0 = w.totalVolume();
+      c.advance(60);
+      expect(Math.abs(w.totalVolume() - v0) / v0).toBeLessThan(1e-6);
+      expect(art(c).stats.waterAboveBoiling).toBe(0);
+      expectLedgers(c);
+      c.unload();
+    }
+  });
+
+  it('terrain deformation during the experiment: the column ground heights are re-read, the flow stays bounded, ledgers close', { timeout: 300_000 }, async () => {
+    flat();
+    const c = await start(docNow(), [atmos({ boundary: 'closed' }), { event: 'terrainDeformation', kind: 'subsidence', center: [0, 0], radius: 25, amount: 4, duration: 3, profile: 'smooth', falloff: 'smooth' } as EventSpec]);
+    c.advance(20);
+    const a = art(c);
+    expect(a.terrainUpdates).toBeGreaterThan(0);
+    // The hollow holds more air (the reduced pressure is equal in the rest state): flow settles.
+    expect(a.stats.peakSpeed).toBeLessThan(1);
+    c.advance(60);
+    expect(a.field.maxSpeed).toBeLessThan(1e-3);
+    expectLedgers(c);
+    c.unload();
+  });
+
+  it('meteor entry (opt-in): thinner air → less drag in the entry, a faster arrival; without the opt-in the Phase 23 entry', { timeout: 300_000 }, async () => {
+    flat();
+    const doc = docNow();
+    const meteor: EventSpec = { event: 'impact', target: [0, 0], material: 'stony', diameter: 0.5, speed: 15000, angle: 45, azimuth: 90, entry: 'atmosphere', airBlast: false } as EventSpec;
+    const speed = async (ev: EventSpec[]) => { const c = await start(doc, ev); c.advance(0.2); const m = c.getEnvironment().impact.models[0]; const v = m.plan.entry!.speed; c.unload(); return v; };
+    const ref = await speed([meteor]);
+    const off = await speed([atmos({ pressure: 30_000 }), meteor]);
+    const on = await speed([atmos({ pressure: 30_000, coupleMeteor: true }), meteor]);
+    expect(off).toBe(ref);
+    expect(on).toBeGreaterThan(ref);
+  });
+
+  it('rooms follow the outdoor pressure: room air leaves with its heat to the outdoor column; the thermal ledger closes', { timeout: 300_000 }, async () => {
+    flat();
+    S().applyEdit({ add: [{ type: 'building', building: house(), seed: 7, transform: tf(0, 0) }] });
+    S().doc.settings.simulation.fire = { foliageMoisture: 1.5, openings: 'asBuilt', heatIgnition: false };
+    const c = await start(docNow(), [atmos({ removal: 'linear', target: 0.5, duration: 30 }), { event: 'fire', position: [0, 0], height: 1, radius: 1, duration: 300 } as EventSpec]);
+    c.advance(40);
+    const a = art(c), w = a.trt.world;
+    const room = w.comps.find((cp) => cp.alive)!;
+    // Room heat capacity ∝ its air mass = ρ_out·V (≈ half of the start).
+    const fire = c.getEnvironment().fire.rt!;
+    const R = fire.fw.rooms[0];
+    expect(R.gas / R.V).toBeCloseTo(w.air.rhoAt(R.air), 6);
+    expect(room.C).toBeGreaterThan(0);
+    expectLedgers(c);
+    c.unload();
+  });
+
+  it('near vacuum: wind loads and drag vanish with the density, no NaN, the floor holds', { timeout: 300_000 }, async () => {
+    flat();
+    S().applyEdit({ add: [{ type: 'car', seed: 5, transform: tf(0, 0) }, tree(10, 10)] });
+    const c = await start(docNow(), [atmos({ removal: 'linear', target: 0, duration: 20 }), wind(30)]);
+    c.advance(30);
+    const a = art(c);
+    expect(a.stats.minPressure).toBeLessThan(1);
+    expect(a.stats.minDensity).toBeLessThan(1e-4);
+    for (const e of c.getRuntime()!.entities.values()) { expect(Number.isFinite(e.windLoad)).toBe(true); expect(e.windLoad).toBeLessThan(1); }
+    expect(Math.abs(a.field.massResidual()) / a.field.mass.initial).toBeLessThan(1e-11);
+    c.unload();
+  });
+
+  it('heated air rises: a volume heat source makes an updraft and draws layer air in; the plume milestone is recorded', { timeout: 300_000 }, async () => {
+    flat();
+    const c = await start(docNow(), [atmos({}), { event: 'heatSource', kind: 'volume', position: [0, 0], height: 5, radius: 4, input: 'power', power: 3e6, profile: 'constant', duration: 120 } as EventSpec]);
+    c.advance(60);
+    const a = art(c);
+    expect(a.stats.maxUpdraft).toBeGreaterThan(1);
+    const out: [number, number] = [0, 0];
+    a.flowAt(-12, 0, 2, out);
+    expect(out[0]).toBeGreaterThan(0);
+    a.flowAt(12, 0, 2, out);
+    expect(out[0]).toBeLessThan(0);
+    expect(c.getMilestones().some((m) => m.kind === 'plumeDevelopment')).toBe(true);
+    expectLedgers(c);
+    c.unload();
   });
 });

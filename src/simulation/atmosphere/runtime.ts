@@ -25,6 +25,7 @@ import { CP_AIR, KAPPA, Y_O2_AIR, boilingPoint, cunningham, density, soundSpeed,
 import { datumState } from '@/events/atmosphere/AtmosphereEvent';
 import { AIR_CELL } from '@/thermal/AirLayer';
 import { AIR_DENSITY } from '@/core/units';
+import { simProfiler as P } from '../profiling/SimProfiler';
 import { ASH_CLASSES, ASH_PARTICLE_DENSITY, settlingVelocity } from '@/volcano/ash';
 
 /** Pressure shares of the initial datum pressure recorded as timeline milestones. */
@@ -109,7 +110,15 @@ export class AtmosphereRuntime {
   private aboveBefore = 0;
   private o2Consumed0 = 0;
   private milestonesDone = new Set<string>();
-  readonly stats: AtmosphereStats;
+  /** Live statistics: the per-column ones are computed when read (HUD, results, milestones each second). */
+  get stats(): AtmosphereStats {
+    if (this.statsAt !== this.field.steps) { this.statsAt = this.field.steps; this.refreshStats(); }
+    return this.st;
+  }
+  private readonly st: AtmosphereStats;
+  private statsAt = -1;
+  private nextCheck = 0;
+  private readonly env: SystemContext['env'];
   /** Wall-clock cost (ms): last step and run total. */
   ms = 0;
   msTotal = 0;
@@ -170,8 +179,8 @@ export class AtmosphereRuntime {
     this.coupleBlast = !!rec.spec.coupleBlast;
     this.coupleMeteor = !!rec.spec.coupleMeteor;
     this.attach();
-    this.stats = this.emptyStats();
-    this.refreshStats(ctx);
+    this.env = ctx.env;
+    this.st = this.emptyStats();
   }
 
   /** Static check of a record before a runtime is built (null = acceptable). */
@@ -251,8 +260,13 @@ export class AtmosphereRuntime {
     // Plume heat of the volcano released above the layer (Phase 28 interface; informational here).
     const vrt = ctx.env.volcano.rt;
     if (vrt) for (const s of vrt.world.atmosphericSources(ctx.time)) if (s.kind === 'heat') f.energy.aboveLayerInfo += s.rate * dt;
+    let tp = P.now();
     const F = planForcing(this.spec, f, this.plan, local0, local1);
+    P.add('atmos.plan', tp);
+    tp = P.now();
     const res = f.step(dt, { ...F, layerT: this.layerT, updraft: anyUp ? this.updraft : null, Tin: this.T0 });
+    P.add('atmos.field', tp);
+    tp = P.now();
     // Removed air takes its O₂ deficit (the fire's tracer) with it.
     const fire = ctx.env.fire.rt;
     for (const a of res.removedList) {
@@ -278,6 +292,9 @@ export class AtmosphereRuntime {
     // The ground under air that left the reference temperature joins the thermal computation (its
     // surface then exchanges heat with that air; Phase 26 wakes ground tiles only on heating).
     this.wakeGround();
+    // Layer energy before the thermal step (its heat exchange = the difference minus booked flows) —
+    // taken here, so that room air leaving into the layer counts as heat from the rooms.
+    this.eBefore = this.layerEnergy();
     // Rooms follow the outdoor pressure through their leaks.
     if (res.changed.length) {
       let mr = 0;
@@ -292,11 +309,10 @@ export class AtmosphereRuntime {
       if (fire) for (let r = 0; r < fire.fw.rooms.length; r++) fire.fw.rescaleRoom(r, air.rhoAt(fire.fw.rooms[r].air));
     }
     if (fire) fire.fw.o2Limit = true;
+    P.add('atmos.couple', tp);
     // Layer face velocities: the Phase 26 mid-layer mean wind + the computed flows.
     const U = w.u10 * Math.pow(Math.max(0.5, air.H / 2) / 10, 0.14);
     f.layerFaces(U * w.flowX, U * w.flowZ, this.faces.fx, this.faces.fz);
-    // Layer energy before the thermal step (its heat exchange = the difference minus booked flows).
-    this.eBefore = this.layerEnergy();
     this.ventBefore = w.ledger.lost.atmosphere;
     this.advBefore = w.ledger.lost.airAdvection;
     this.aboveBefore = w.ledger.lost.aboveLayer;
@@ -381,6 +397,7 @@ export class AtmosphereRuntime {
     let g = 0;
     for (let a = 0; a < n; a++) g += f.gas[a];
     f.gasLedger.airborne = g;
+    let tp = P.now();
     // Energy ledger: the layer's heat exchange from the thermal state.
     const e = f.energy, L = w.ledger;
     const eAfter = this.layerEnergy();
@@ -406,10 +423,13 @@ export class AtmosphereRuntime {
     f.oxygen.consumed = this.o2.consumed;
     this.o2.final = total;
     this.o2.roomsAndMixing = total - (f.oxygen.initial - this.o2.removed + f.oxygen.restored + f.oxygen.boundaryIn - f.oxygen.boundaryOut - f.oxygen.aloft - f.o2Offset + this.o2.deficitOut - this.o2.consumed);
-    let o2l = 0;
-    for (let a = 0; a < n; a++) o2l += Y_O2_AIR * f.layerMass(a) - (fire ? fire.fw.o2def[a] : 0);
-    this.o2.layer = o2l;
-    this.refreshStats(ctx);
+    P.add('atmos.ledger', tp);
+    tp = P.now();
+    // Every step only what is cheap: the fastest flow and its peak (faces), the rest when read.
+    const v = Math.max(f.maxSpeed, f.maxLayerSpeed);
+    if (v > this.st.peakSpeed) { this.st.peakSpeed = v; this.st.peakSpeedTime = ctx.time; }
+    if (ctx.time + 1e-9 >= this.nextCheck) { this.nextCheck = ctx.time + 1; this.milestones(ctx); }
+    P.add('atmos.stats', tp);
     if (ctx.time + 1e-9 >= this.nextSample) {
       this.nextSample = ctx.time + this.seriesEvery;
       const s = this.stats;
@@ -421,9 +441,8 @@ export class AtmosphereRuntime {
         this.series.length = k;
         this.seriesEvery *= 2;
       }
-      s.waterAboveBoiling = this.boilingCells();
+      this.st.waterAboveBoiling = this.boilingCells();
     }
-    this.milestones(ctx);
     this.ms += performance.now() - t0;
     this.msTotal += this.ms;
   }
@@ -461,9 +480,12 @@ export class AtmosphereRuntime {
     return this.field.velocity(x, z, h, out);
   }
 
-  /** Mean layer density relative to the standard sea-level density (water wind stress). */
-  densityRatio(): number {
-    return this.stats.meanDensity / AIR_DENSITY;
+  /** Mean layer density (kg/m³, the columns' Boussinesq density — cheap, every call). */
+  meanLayerDensity(): number {
+    const r = this.trt.world.air.rhoA!;
+    let s = 0;
+    for (let a = 0; a < r.length; a++) s += r[a];
+    return s / r.length;
   }
 
   /** Terminal settling velocity of an ash class at a point (local density, viscosity, slip) — cached by state. */
@@ -509,10 +531,15 @@ export class AtmosphereRuntime {
     };
   }
 
-  private refreshStats(ctx: SystemContext) {
-    const f = this.field, air = this.trt.world.air, s = this.stats;
+  private refreshStats() {
+    const f = this.field, air = this.trt.world.air, s = this.st;
     const n = f.count;
-    let ps = 0, pmin = Infinity, rmin = Infinity, rs = 0, Ts = 0, up = 0, vmax = 0;
+    const fire = this.env.fire.rt;
+    let o2l = 0;
+    for (let a = 0; a < n; a++) o2l += Y_O2_AIR * f.layerMass(a) - (fire ? fire.fw.o2def[a] : 0);
+    this.o2.layer = o2l;
+    let ps = 0, pmin = Infinity, rmin = Infinity, rs = 0, Ts = 0, up = 0;
+    const vmax = Math.max(f.maxSpeed, f.maxLayerSpeed);
     for (let a = 0; a < n; a++) {
       const p = f.surfacePressure(a);
       ps += p;
@@ -523,8 +550,6 @@ export class AtmosphereRuntime {
       if (r < rmin) rmin = r;
       Ts += T;
       if (this.updraft[a] > up) up = this.updraft[a];
-      const v = f.speedAt(a);
-      if (v > vmax) vmax = v;
     }
     s.meanPressure = ps / n;
     s.minPressure = pmin;
@@ -537,7 +562,6 @@ export class AtmosphereRuntime {
     s.share = f.share();
     s.maxColumnSpeed = f.maxSpeed;
     s.maxLayerSpeed = f.maxLayerSpeed;
-    if (vmax > s.peakSpeed) { s.peakSpeed = vmax; s.peakSpeedTime = ctx.time; }
     s.maxUpdraft = up;
     s.Tcol = f.Tcol;
     s.meanLayerT = Ts / n;
@@ -545,7 +569,6 @@ export class AtmosphereRuntime {
     let ml = 0;
     for (let a = 0; a < n; a++) ml += f.layerMass(a);
     s.o2Fraction = ml > 0 ? this.o2.layer / ml : 0;
-    const fire = ctx.env.fire.rt;
     s.o2Limited = fire ? fire.fw.o2LimitedNow : 0;
     s.o2LimitedEver = fire ? fire.fw.o2LimitedEver : 0;
     s.gas = f.gasLedger.airborne;
