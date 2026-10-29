@@ -2,6 +2,8 @@
  * A/B identity (Phase 26): the same no-heat scenes run on this build and on the Phase 25 build must give
  * bit-identical results. Writes one SHA-256 per scene (damage events, collapse records, rubble, poses,
  * water) to IDENTITY_OUT.
+ * Phase 27: IDENTITY_HEAT=1 adds heat-source scenes (no fire) whose thermal state is hashed too — with
+ * the fire system off they must be bit-identical to the Phase 26 build.
  */
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -33,10 +35,30 @@ const SCENES: { name: string; doc: () => WorldDocument; events: EventSpec[]; sec
   { name: 'impact', doc: () => world([{ type: 'building', building: D('house'), seed: 1, transform: tf(30, 0) }]), events: [{ event: 'impact', target: [6, 6], material: 'stony', diameter: 1, speed: 15000, angle: 70, azimuth: 45, entry: 'direct', airBlast: true } as EventSpec], seconds: 12 },
 ];
 
+const heat = (p: Record<string, unknown>): EventSpec => ({ event: 'heatSource', kind: 'point', position: [0, 0], height: 1.5, radius: 2, input: 'power', power: 2e6, profile: 'constant', duration: 120, ...p } as EventSpec);
+const HEAT_SCENES: typeof SCENES = [
+  { name: 'heat: warehouse room fire-like source', doc: () => world([{ type: 'building', building: D('warehouse'), seed: 1, transform: tf(0, 0) }]), events: [heat({ power: 8e6, duration: 300 })], seconds: 300 },
+  { name: 'heat: house + trees, ramp', doc: () => world([{ type: 'building', building: D('house'), seed: 1, transform: tf(0, 0) }, { type: 'tree', seed: 2, transform: tf(9, 0) }, { type: 'tree', seed: 3, transform: tf(-9, 3) }]), events: [heat({ position: [5, 0], power: 3e6, profile: 'ramp', rampTime: 30, duration: 90 })], seconds: 90 },
+  { name: 'heat: apartment temperature sphere + earthquake', doc: () => world([{ type: 'building', building: D('apartment'), seed: 1, transform: tf(0, 0) }]), events: [heat({ kind: 'temperature', temperature: 1073.15, radius: 3, height: 2, duration: 120 }), { event: 'earthquake', magnitude: 6.5, pga: 0.4, duration: 15, seed: 3, startTime: 60 } as EventSpec], seconds: 90 },
+  { name: 'heat: surface + rain', doc: () => world([{ type: 'tree', seed: 2, transform: tf(3, 0) }]), events: [heat({ kind: 'surface', radius: 6, power: 1e6, duration: 60 }), { event: 'rain', intensity: 100, duration: 60 } as EventSpec], seconds: 60 },
+];
+
+function thermalLines(c: SimulationController): string[] {
+  const rt = c.getEnvironment().thermal.rt;
+  if (!rt) return ['no-thermal'];
+  const w = rt.world, B = w.bodies, L = w.ledger;
+  const lines: string[] = [];
+  for (let i = 0; i < B.n; i++) lines.push([B.kind[i], B.alive[i], B.ES[i], B.EC[i], B.mS[i], B.TmaxS[i]].join('|'));
+  w.terrain.forActive((cc) => { for (let l = 0; l < w.terrain.nl; l++) lines.push(String(w.terrain.E[cc * w.terrain.nl + l])); });
+  lines.push(Array.from(w.air.E).join(','), w.comps.map((x) => x.E).join(','));
+  lines.push([L.added, L.boundarySupply, L.impactDeposit, L.lost.radiationSky, L.lost.unresolvedRadiation, L.lost.atmosphere, L.lost.airAdvection, L.lost.aboveLayer, L.lost.deepGround, L.lost.water, L.lost.debris, L.final].join('|'));
+  return lines;
+}
+
 describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
   it('scenes', { timeout: 3_600_000 }, async () => {
     const out: Record<string, string> = {};
-    for (const sc of SCENES) {
+    for (const sc of process.env.IDENTITY_HEAT ? [...SCENES, ...HEAT_SCENES] : SCENES) {
       const c = new SimulationController({ headless: true });
       await c.load(sc.doc());
       for (const e of sc.events) c.addEvent(e);
@@ -52,6 +74,7 @@ describe.skipIf(!process.env.IDENTITY_OUT)('identity', () => {
       if (rt.structures) lines.push(...rt.structures.rubble.heaps.map((h) => [h.mass, h.height, h.cx, h.cz].join('|')));
       const f = c.getEnvironment().flood.field;
       if (f) lines.push(Array.from(f.h).reduce((a, b) => a + b, 0).toString(), JSON.stringify(f.budget));
+      if (process.env.IDENTITY_HEAT) lines.push(...thermalLines(c));
       out[sc.name] = createHash('sha256').update(lines.join('\n')).digest('hex');
       c.unload();
     }

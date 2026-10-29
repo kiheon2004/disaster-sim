@@ -1,0 +1,27 @@
+{
+ "date": "2026-10-16",
+ "note": "Same scenes on the Phase 26 build (f203b7f) and this build with the fire system off (no fire scenario, heat ignition off). Five hazard scenes without heat and four heat-source scenes; thermal state hashed too.",
+ "phase26": {
+  "street earthquake 1.1 g": "f44afc572672a38a8e5abc2ae85521d89c5e1273452025bd855e64b79c9bff47",
+  "blast 12 houses": "1f9b2e57d27af567b68b99bf620ced869e3d63d4eae488e2db37ce9d99f64db1",
+  "flood + rain": "b1126b77c447f9d8aea8b3ba5e2061c13e91ee3d482313c9b3f3ae449565816f",
+  "wind cladding": "8b0ee04a008af4bc495dcda97b23e7c4b90cb45b257ba4cfeb5c6249dd140b2a",
+  "impact": "90e51dbc100c3dceeede264f927feda82c5b3cefb06578721e149013d0474627",
+  "heat: warehouse room fire-like source": "d737044787f508c6c9fb1c2a40aaa0b87b491c8e197307539d9fa482fcc6a183",
+  "heat: house + trees, ramp": "70f7bc00fd055418114fd3d7dbb13e838449e011ed81d7223dd6cab4fc4eb02c",
+  "heat: apartment temperature sphere + earthquake": "2c08f58492acc635d5b6243683f8fe4c1eca067660a84d51dfbaa811c9159499",
+  "heat: surface + rain": "e21acba0f2b0641fd7fea0cbf4e78283914f09cef5354d9e218e914754660d55"
+ },
+ "phase27": {
+  "street earthquake 1.1 g": "f44afc572672a38a8e5abc2ae85521d89c5e1273452025bd855e64b79c9bff47",
+  "blast 12 houses": "1f9b2e57d27af567b68b99bf620ced869e3d63d4eae488e2db37ce9d99f64db1",
+  "flood + rain": "b1126b77c447f9d8aea8b3ba5e2061c13e91ee3d482313c9b3f3ae449565816f",
+  "wind cladding": "8b0ee04a008af4bc495dcda97b23e7c4b90cb45b257ba4cfeb5c6249dd140b2a",
+  "impact": "90e51dbc100c3dceeede264f927feda82c5b3cefb06578721e149013d0474627",
+  "heat: warehouse room fire-like source": "d737044787f508c6c9fb1c2a40aaa0b87b491c8e197307539d9fa482fcc6a183",
+  "heat: house + trees, ramp": "70f7bc00fd055418114fd3d7dbb13e838449e011ed81d7223dd6cab4fc4eb02c",
+  "heat: apartment temperature sphere + earthquake": "2c08f58492acc635d5b6243683f8fe4c1eca067660a84d51dfbaa811c9159499",
+  "heat: surface + rain": "e21acba0f2b0641fd7fea0cbf4e78283914f09cef5354d9e218e914754660d55"
+ },
+ "identical": true
+}
