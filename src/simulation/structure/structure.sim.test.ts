@@ -23,6 +23,8 @@ import { ACCOUNTS } from '@/structure/ledger';
 import { SimulationController } from '../SimulationController';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import { FRAGMENT_LIMITS } from './fragments';
+import { structureOf } from './state';
+import { syncFailed, weakStoryNow } from '../buildings/modular';
 import { defaultWaterSettings } from '@/core/model';
 import { WaterField, relativeError } from '../water/WaterField';
 import { captureWaterState } from '../water/waterStateCodec';
@@ -335,6 +337,23 @@ describe('flood, landslide, impact, residual strength', { timeout: 600_000 }, ()
         if (mr.damage[i] >= 0.3) expect(model(e).state[i] === MS.DAMAGED || model(e).state[i] === MS.SEVERE).toBe(true);
       }
     }
+    c.unload();
+  });
+
+  it('weakest story from the engine\'s story strengths = the Phase 17 analysis (original world), and follows a failed ground story', async () => {
+    const c = await run(doc([B(design('apartment'))]), [], 0.1);
+    const e = buildings(c)[0];
+    const mr = e.modular!;
+    const a = mr.initial;
+    mr.weakStale = true;
+    expect(weakStoryNow(mr)).toBe(Math.min(a.weakStory[0], a.weakStory[1]));
+    // Take out most of story 2's lateral members through the engine: story 2 becomes the weakest.
+    // Enough of a system context for creating the building's structure state.
+    const st = structureOf(e, { runtime: c.getRuntime()!, env: c.getEnvironment() } as unknown as Parameters<typeof structureOf>[1]);
+    const s2 = mr.storyMembers[2].filter((i) => st.model.g.vx[i] > 0 || st.model.g.vz[i] > 0);
+    st.model.fail(s2.slice(0, Math.ceil(s2.length * 0.8)), 'drift', 'earthquake', 0);
+    syncFailed(mr);
+    expect(weakStoryNow(mr)).toBe(2);
     c.unload();
   });
 });

@@ -483,12 +483,30 @@ export function syncFailed(mr: ModularRuntime) {
   }
 }
 
-/** Weakest story of the building as it stands (analysis re-run only after a load-bearing member failed). */
+/**
+ * Weakest story of the building as it stands, re-derived only after a load-bearing member failed:
+ * the Phase 17 criterion (story strength / story shear under the inverted-triangle distribution,
+ * analysis §9) with the CURRENT story strengths of the collapse engine — the same per-member
+ * contributions the lumped structural model is scaled with (`currentStories`) — and the original
+ * story masses. O(members), no full re-analysis (a collapsing building changes every step).
+ */
 export function weakStoryNow(mr: ModularRuntime): number {
   if (mr.weakStale) {
     mr.weakStale = false;
-    const cur = analysisNow(mr);
-    mr.weak = Math.min(cur.weakStory[0], cur.weakStory[1]);
+    const st = mr.initial.stories;
+    const c = currentStories(mr);
+    let fsum = 0;
+    const fz = st.map((s) => { const f = s.mass * (s.base + s.height); fsum += f; return f; });
+    let cx = Infinity, cz = Infinity, wx = 0, wz = 0, acc = 0;
+    for (let s = mr.floors - 1; s >= 0; s--) {
+      acc += fz[s];
+      if (s >= mr.collapsedFrom) continue;
+      const r = fsum > 0 ? acc / fsum : 1;
+      if (c.vx[s] / r < cx) { cx = c.vx[s] / r; wx = s; }
+      if (c.vz[s] / r < cz) { cz = c.vz[s] / r; wz = s; }
+    }
+    // As the analysis' weakStory pair: the lower of the two axes' weakest stories.
+    mr.weak = Math.min(wx, wz);
   }
   return mr.weak;
 }
