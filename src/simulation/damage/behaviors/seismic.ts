@@ -32,6 +32,8 @@ import { detachByQuake, failByQuake } from './structure';
 import { knockDown } from './human';
 import { seismicDamageIndex } from '../seismicLevels';
 import { infraProps } from '../../seismic/structuralProps';
+import { MATERIALS, type MaterialId } from '@/buildings/materials';
+import { updateModularQuake } from '../../buildings/modular';
 
 const ONSET = 0.75;
 const INSTANT = 1.3;
@@ -46,18 +48,26 @@ const CAPACITY: Partial<Record<ComponentKind, number>> = {
   roof: 1.6,
 };
 const SHOP_WINDOW = 0.007;
+/** Drift capacity of a door frame (modular buildings, Phase 17). */
+const DOOR_DRIFT = 0.015;
 
 /** Deterministic per-part scatter factor in [0.65, 1.35]. */
 function scatter(seed: number, id: string): number {
   return 0.65 + 0.7 * seededRandom((seed ^ hashString(`eq:${id}`)) >>> 0)();
 }
 
-function capacities(e: RuntimeEntity): Float64Array {
+/** Drift-based (true) or acceleration-based (false) capacity of a facade part. */
+export const isDriftPart = (kind: ComponentKind) => kind === 'window' || kind === 'cladding' || kind === 'door';
+
+export function capacities(e: RuntimeEntity): Float64Array {
   const st = e.seismic!;
   if (st.capacity) return st.capacity;
   const cap = new Float64Array(e.components.length);
   e.components.forEach((c, i) => {
-    const base = c.spec.kind === 'window' && c.spec.size[0] > 2 && c.spec.size[1] > 2 ? SHOP_WINDOW : (CAPACITY[c.spec.kind] ?? Infinity);
+    let base: number;
+    if (c.spec.kind === 'cladding') base = MATERIALS[(c.spec.material ?? 'masonry') as MaterialId]?.facadeDrift ?? 0.004; // Phase 17 envelope panels
+    else if (c.spec.kind === 'door') base = DOOR_DRIFT;
+    else base = c.spec.kind === 'window' && c.spec.size[0] > 2 && c.spec.size[1] > 2 && !e.modular ? SHOP_WINDOW : (CAPACITY[c.spec.kind] ?? Infinity);
     cap[i] = base * scatter(e.source.seed, c.spec.id);
   });
   st.partDamage = new Float64Array(e.components.length);
@@ -65,7 +75,7 @@ function capacities(e: RuntimeEntity): Float64Array {
 }
 
 /** Damage accumulation: returns true when the part fails. */
-function accumulate(dmg: Float64Array, i: number, ratio: number, dt: number): boolean {
+export function accumulate(dmg: Float64Array, i: number, ratio: number, dt: number): boolean {
   if (ratio >= INSTANT) {
     dmg[i] = 1;
     return true;
@@ -84,7 +94,7 @@ function countAndLog(e: RuntimeEntity, ctx: SystemContext, kind: string, key: 'l
 const vel: [number, number] = [0, 0];
 
 /** A facade part shaken off / broken by the earthquake. */
-function failPart(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, model: StructuralModel, response: number, cause: 'drift' | 'acceleration') {
+export function failPart(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, model: StructuralModel, response: number, cause: 'drift' | 'acceleration') {
   const st = e.seismic!;
   const pos = (c.worldPos ??= componentWorldPos(e, c.spec));
   const normal = componentWorldNormal(e, c.spec) ?? ([0, 1, 0] as Vec3);
@@ -134,10 +144,14 @@ function failPart(e: RuntimeEntity, c: RuntimeComponent, ctx: SystemContext, mod
   else countAndLog(e, ctx, 'quakePart', 'log.quake.parts');
 }
 
-const CRACK_LEVELS = [0.01, 0.6];
+export const CRACK_LEVELS = [0.01, 0.6];
 
 export function updateBuildingQuake(e: RuntimeEntity, ctx: SystemContext, model: StructuralModel, dt: number) {
   if (e.flags.collapsed) return;
+  if (e.modular) {
+    updateModularQuake(e, ctx, model, dt);
+    return;
+  }
   const st = e.seismic!;
   const th = st.thresholds!;
   const ui = st.unit;

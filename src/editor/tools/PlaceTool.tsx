@@ -17,6 +17,7 @@ import { groundPose, type GroundPose } from '@/terrain/groundPlacement';
 import { collisionFootprint, FootprintIndex } from '../build/footprint';
 import { checkPlacement, type PlacementWarning } from '../build/placementCheck';
 import { GroundCatcher } from './shared';
+import { itemDesign } from '../build/itemDesign';
 
 /** Warnings of the place ghost, for the viewport hint (render-only state). */
 export const useGhostWarnings = (() => {
@@ -52,6 +53,7 @@ export function PlaceTool() {
   const terrain = useWorldStore((s) => s.doc.terrain);
   const objects = useWorldStore((s) => s.doc.objects);
   const [variant, setVariant] = useState(() => Math.floor(Math.random() * 1e9));
+  const creatorDesign = useBuildStore((s) => s.creator.design);
 
   // Re-roll the variation whenever a new preset is armed.
   useEffect(() => setVariant(Math.floor(Math.random() * 1e9)), [itemId]);
@@ -63,13 +65,15 @@ export function PlaceTool() {
   const preview = useMemo(() => {
     if (!item) return null;
     const def = getDefinition(item.type);
+    // Modular building presets / the Building Creator's design (Phase 17).
+    const building = itemDesign(item);
     let params: ObjectParams = { ...def.defaultParams, ...(item.params ?? {}) };
-    if (item.randomize && randomize && def.randomizeParams) {
+    if (!building && item.randomize && randomize && def.randomizeParams) {
       params = { ...params, ...(def.randomizeParams(params, seededRandom(variant)) as ObjectParams) };
     }
-    const obj = createWorldObject({ type: item.type, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, params, seed: variant }, 0);
-    return { obj, dims: def.getDimensions(params) };
-  }, [item, variant, randomize]);
+    const obj = createWorldObject({ type: item.type, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, params, seed: variant, building }, 0);
+    return { obj, dims: def.getDimensions(obj.params), building };
+  }, [item, variant, randomize, creatorDesign]);
   const existing = useMemo(() => (snapping.collisionWarning ? FootprintIndex.fromObjects(Object.values(objects)) : null), [objects, snapping.collisionWarning]);
 
   if (!item || !preview) return null;
@@ -111,6 +115,7 @@ export function PlaceTool() {
       type: item.type,
       params: preview.obj.params,
       seed: preview.obj.seed,
+      building: preview.building,
       transform: { ...poseAt(at), scale: [1, 1, 1] },
     });
     useBuildStore.getState().pushRecent(item.id);

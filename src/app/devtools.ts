@@ -21,6 +21,9 @@ import { FootprintIndex } from '@/editor/build/footprint';
 import { parseDocument, serializeDocument } from '@/world/serialization';
 import { stressScene } from '@/world/stressScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
+import { createDesign } from '@/buildings/design';
+import { presetSpec, BUILDING_PRESETS } from '@/buildings/spec';
+import { analyzeBuilding } from '@/buildings/analysis';
 
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
@@ -31,6 +34,8 @@ export function installDevtools() {
     editorBatches: getEditorBatches,
     /** Phase 16 benchmarks (scripts/bench-build.mjs). */
     buildLib: { areaFill, planPlacement, acceptedInputs, DEFAULT_PLACEMENT, FootprintIndex, parseDocument, serializeDocument, stressScene, createEmptyDocument, samplerFor },
+    /** Phase 17 modular buildings (benchmarks / browser verification). */
+    buildingLib: { createDesign, presetSpec, BUILDING_PRESETS, analyzeBuilding },
     locale: useLocaleStore,
     actions,
     view: useViewStore,

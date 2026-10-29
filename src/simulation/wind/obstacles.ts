@@ -32,7 +32,11 @@ export function obstacleFromEntity(e: RuntimeEntity): WindObstacle | null {
   const nx = Math.hypot(x[0], x[2]) || 1;
   const nz = Math.hypot(z[0], z[2]) || 1;
   // Buildings include the parapet in dims; the core height is what matters for the wake.
-  const height = e.source.type === 'building' ? h - 0.7 * e.source.transform.scale[1] : h;
+  // Modular buildings (Phase 17): structure height + half of a pitched roof's rise.
+  const p = e.source.params;
+  const height = e.source.type !== 'building' ? h
+    : e.source.building ? (Number(p.floors) * Number(p.floorHeight) + 0.5 * Math.max(0, Number(p.roofHeight ?? 0) - 0.2)) * e.source.transform.scale[1]
+    : h - 0.7 * e.source.transform.scale[1];
   return {
     id: e.id,
     cx: e.initialPose.position[0],

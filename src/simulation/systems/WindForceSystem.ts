@@ -72,6 +72,9 @@ export class WindForceSystem implements SimulationSystem {
       // Residual strength (Phase 15): earthquake / flood damage lowers the capacity the wind
       // load is compared with (load ∝ v², capacity × (1 − 0.3·D)). Exactly 1 without them.
       if (interactions && (e.seismic || e.flood)) e.loadRatio /= residualStrength(e, 'wind');
+      // Modular buildings (Phase 17): failed members lower the lateral capacity (any hazard).
+      // A partial collapse leaves less building to catch the wind (load ∝ exposed area).
+      if (e.modular !== undefined && !e.flags.collapsed && (e.modular.reserve < 1 || e.modular.windShare < 1)) e.loadRatio *= e.modular.windShare / e.modular.reserve;
       if (e.loadRatio > e.peakLoadRatio) e.peakLoadRatio = e.loadRatio;
       if (speed > 0.05) {
         const inv = 1 / speed;

@@ -157,7 +157,13 @@ const storyOf = (m: BuildingMember) => m.level;
 
 export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {}): BuildingAnalysis {
   const k = opts.scale ?? [1, 1, 1];
-  const failed = opts.failed;
+  // Members that start fully damaged (initialDamage = 1) are treated as failed.
+  let failed = opts.failed;
+  if (design.members.some((m) => (m.initialDamage ?? 0) >= 0.999)) {
+    const f = new Set(failed ?? []);
+    for (const m of design.members) if ((m.initialDamage ?? 0) >= 0.999) f.add(m.id);
+    failed = f;
+  }
   const src = design.members;
   const n = src.length;
   const floors = opts.floors ?? Math.max(1, design.spec.floors);
@@ -685,6 +691,13 @@ function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: num
       a.vz = v * Math.abs(ax[1]);
       a.driftCapacity = mat.driftCapacity.wall * axialPenalty(a.utilization);
     } else continue;
+    // Pre-existing damage degrades the member like the structural model does (k·(1−0.4D), F·(1−0.3D)).
+    const d0 = m.initialDamage ?? 0;
+    if (d0 > 0) {
+      a.kx *= 1 - 0.4 * d0; a.kz *= 1 - 0.4 * d0;
+      a.vx *= 1 - 0.3 * d0; a.vz *= 1 - 0.3 * d0;
+      a.driftCapacity *= 1 - 0.5 * d0;
+    }
     const st = stories[s];
     st.kx += a.kx;
     st.kz += a.kz;

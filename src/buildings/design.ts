@@ -90,16 +90,17 @@ const round = (v: number, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
  * pressure at which ½ρ·Cd·A·v² (× the global wind force scale) equals the weakest-story base
  * shear capacity, divided by √breakThreshold (load ratio 1 = design, failure at 1.5).
  */
-export function windResistanceFor(a: BuildingAnalysis, broadside: number): number {
+export function windResistanceFor(a: BuildingAnalysis, faceX: number, faceZ: number): number {
   const W = a.totalMass * GRAVITY;
-  const cap = Math.min(a.cyX, a.cyZ) * W;
-  const v = Math.sqrt((2 * cap) / (AIR_DENSITY * DRAG * Math.max(1, broadside) * WIND_FORCE_SCALE));
-  return Math.round(Math.min(150, Math.max(12, v / Math.sqrt(BREAK))));
+  // Wind along x loads the face across x (depth × height), resisted by the x-direction members.
+  const v = (cy: number, face: number) => Math.sqrt((2 * cy * W) / (AIR_DENSITY * DRAG * Math.max(1, face) * WIND_FORCE_SCALE));
+  const vMin = Math.min(v(a.cyX, faceX), v(a.cyZ, faceZ));
+  return Math.round(Math.min(150, Math.max(12, vMin / Math.sqrt(BREAK))));
 }
 
 export function designPhysics(design: BuildingDesign, a: BuildingAnalysis = analysisOf(design)): PhysicalProperties {
   const e = designExtent(design);
-  const broadside = Math.max(e.width, e.depth) * (e.height + e.roofHeight);
+  const H = e.height + e.roofHeight * 0.5;
   const fail = MATERIALS[a.material].failure;
   return {
     mass: Math.max(100, Math.round(a.totalMass)),
@@ -107,7 +108,7 @@ export function designPhysics(design: BuildingDesign, a: BuildingAnalysis = anal
     restitution: 0.05,
     anchored: true,
     dragCoefficient: DRAG,
-    windResistance: windResistanceFor(a, broadside),
+    windResistance: windResistanceFor(a, e.depth * H, e.width * H),
     durability: fail === 'ductile' ? 100 : fail === 'semiDuctile' ? 80 : 55,
     breakThreshold: BREAK,
   };
@@ -139,11 +140,13 @@ export function componentKindOf(m: BuildingMember, floors: number): ComponentKin
   }
 }
 
-/** Design wind speed (m/s) of a facade panel: pressure at load ratio 1 ↔ ½ρ·v²·Cp(0.8). */
-function panelWind(pressure: number, area: number): number {
-  const v = Math.sqrt((2 * pressure) / (AIR_DENSITY * 0.8));
-  // Smaller panes / panels span less and take more pressure.
-  return v * Math.pow(1.9 / Math.max(0.3, area), 0.12);
+/**
+ * Design wind speed (m/s) of a facade panel: pressure at load ratio 1 ↔ ½ρ·v²·Cp(0.8).
+ * Panels are designed for their pressure whatever their size (thicker glass for bigger panes),
+ * so the area does not enter.
+ */
+function panelWind(pressure: number): number {
+  return Math.sqrt((2 * pressure) / (AIR_DENSITY * 0.8));
 }
 
 /** Facade components derived from the members (+ rooftop units / sign like legacy buildings). */
@@ -164,22 +167,21 @@ export function designComponents(design: BuildingDesign, seed: number, a: Buildi
     const mat = material(m.material);
     const b = memberBounds(m);
     const tilted = m.rotation[0] !== 0 || m.rotation[2] !== 0;
-    const area = m.size[0] * (m.type === 'roof' ? m.size[2] : m.size[1]);
     const normal: Vec3 | null = m.type === 'roof' ? rotateEuler([0, 1, 0], m.rotation) : m.facade ? facadeNormal(m.facade) : null;
     let wind: number;
     let durability: number;
     if (kind === 'window') {
-      wind = vary(panelWind(mat.facadePressure, area), 0.12, m.id);
+      wind = vary(panelWind(mat.facadePressure), 0.12, m.id);
       durability = 40;
     } else if (kind === 'roof') {
       const edge = isEdge(m, design);
-      wind = vary(panelWind(m.material === 'timber' ? 1900 : 1300, Math.min(area, 4)) * (edge ? 0.88 : 1), 0.1, m.id);
+      wind = vary(panelWind(m.material === 'timber' ? 1900 : 1300) * (edge ? 0.88 : 1), 0.1, m.id);
       durability = 60;
     } else if (kind === 'wall') {
       wind = vary(64, 0.08, m.id); // parapet (as legacy)
       durability = 70;
     } else {
-      wind = vary(panelWind(mat.facadePressure, Math.min(area, 6)), 0.08, m.id);
+      wind = vary(panelWind(mat.facadePressure), 0.08, m.id);
       durability = mat.failure === 'brittle' ? 45 : 65;
     }
     const size: Vec3 = tilted ? [...m.size] : [b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]];

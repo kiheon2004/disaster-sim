@@ -15,7 +15,15 @@ export interface PaletteItem {
   randomize?: boolean;
   /** Not implemented yet (shown as “coming soon”). */
   disabled?: boolean;
+  /**
+   * Modular building preset (Phase 17): a parameter set of the Building Creator
+   * (buildings/spec BUILDING_PRESETS). 'custom' = the design being edited in the Creator.
+   */
+  buildingPreset?: string;
 }
+
+/** Palette id of the Building Creator's current design (placed like any preset). */
+export const CUSTOM_BUILDING_ID = 'building.custom';
 
 export const CATEGORY_ORDER: ObjectCategory[] = [
   'buildings',
@@ -33,6 +41,14 @@ export const PALETTE: PaletteItem[] = [
     params: { floors: 10, width: 14, depth: 12, color: '#8d9db2', sign: false, rooftopUnits: 3 } },
   { id: 'building.house', type: 'building', category: 'buildings', labelKey: 'preset.building.house', icon: 'building',
     params: { floors: 2, width: 7, depth: 7, floorHeight: 2.9, color: '#e6d6bb', sign: false, rooftopUnits: 1 } },
+
+  // Phase 17 modular buildings (members, materials, structural model) — editable in the Building Creator.
+  { id: 'building.m.house', type: 'building', category: 'buildings', labelKey: 'building.preset.house', icon: 'building', buildingPreset: 'house' },
+  { id: 'building.m.apartment', type: 'building', category: 'buildings', labelKey: 'building.preset.apartment', icon: 'building', buildingPreset: 'apartment' },
+  { id: 'building.m.office', type: 'building', category: 'buildings', labelKey: 'building.preset.office', icon: 'building', buildingPreset: 'office' },
+  { id: 'building.m.warehouse', type: 'building', category: 'buildings', labelKey: 'building.preset.warehouse', icon: 'building', buildingPreset: 'warehouse' },
+  { id: 'building.m.industrial', type: 'building', category: 'buildings', labelKey: 'building.preset.industrial', icon: 'building', buildingPreset: 'industrial' },
+  { id: 'building.m.tower', type: 'building', category: 'buildings', labelKey: 'building.preset.tower', icon: 'building', buildingPreset: 'tower' },
 
   { id: 'tree.broadleaf', type: 'tree', category: 'nature', labelKey: 'preset.tree.broadleaf', icon: 'tree',
     params: { species: 'broadleaf', height: 8, canopyRadius: 2.6, trunkRadius: 0.3 }, randomize: true },
@@ -60,6 +76,10 @@ export const PALETTE: PaletteItem[] = [
     params: { length: 40, width: 14, lanes: 4 } },
 ];
 
+/** The Building Creator's design as a placeable item (hidden from the palette list). */
+const CUSTOM_BUILDING: PaletteItem = { id: CUSTOM_BUILDING_ID, type: 'building', category: 'buildings', labelKey: 'building.preset.custom', icon: 'building', buildingPreset: 'custom' };
+
 export function getPaletteItem(id: string | null): PaletteItem | undefined {
+  if (id === CUSTOM_BUILDING_ID) return CUSTOM_BUILDING;
   return id ? PALETTE.find((p) => p.id === id) : undefined;
 }

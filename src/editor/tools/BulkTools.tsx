@@ -16,6 +16,10 @@ import { BrushScatter, areaFill, lineLayout, type AreaShape, type Vec2 } from '.
 import { FootprintIndex } from '../build/footprint';
 import { planPlacement, type PlacementSettings, type PlannedObject } from '../build/placementPlan';
 import { commitPlan } from '@/app/buildActions';
+import { itemDesign } from '../build/itemDesign';
+
+/** A palette item with its building design resolved (Phase 17 modular presets). */
+const planItem = (it: PaletteItem) => ({ ...it, building: itemDesign(it) });
 import { BrushRing, DrapedLine, GroundCatcher, PlanPreview, ShapeOutline, groundHitOf, useOrbitLock, useSampler } from './shared';
 
 function useArmedItem(): PaletteItem | undefined {
@@ -79,7 +83,7 @@ export function BrushTool() {
     if (!s || !item) return;
     const pts = s.scatter.extend([hit[0], hit[2]]);
     if (!pts.length) return;
-    const added = planPlacement(item, pts.map(([x, z]) => ({ x, z })), settings, { terrain: sampler, existing }, s.plan.length, s.planned);
+    const added = planPlacement(planItem(item), pts.map(([x, z]) => ({ x, z })), settings, { terrain: sampler, existing }, s.plan.length, s.planned);
     s.plan = [...s.plan, ...added];
     setPlan(s.plan);
   };
@@ -131,7 +135,7 @@ export function LineTool() {
   const plan = useMemo(() => {
     if (!item || path.length < 2) return [];
     const pts = lineLayout(path, { spacing: line.spacing, orient: line.orient, yaw, offset: line.offset, bothSides: line.bothSides });
-    return planPlacement(item, pts, { ...settings, randomRotation: false, baseYaw: 0 }, { terrain: sampler, existing });
+    return planPlacement(planItem(item), pts, { ...settings, randomRotation: false, baseYaw: 0 }, { terrain: sampler, existing });
   }, [item, path, line, yaw, settings, sampler, existing]);
 
   // Enter = place, Backspace = remove the last point (the hotkey layer handles Esc).
@@ -193,7 +197,7 @@ export function LineTool() {
     const l = useBuildStore.getState().line;
     const layout = lineLayout(pts, { spacing: l.spacing, orient: l.orient, yaw: useEditorStore.getState().ghostYaw, offset: l.offset, bothSides: l.bothSides });
     const s = { ...settings, randomRotation: false, baseYaw: 0 };
-    commitPlan(planPlacement(it, layout, s, { terrain: sampler, existing: FootprintIndex.fromObjects(Object.values(useWorldStore.getState().doc.objects)) }), itemId);
+    commitPlan(planPlacement(planItem(it), layout, s, { terrain: sampler, existing: FootprintIndex.fromObjects(Object.values(useWorldStore.getState().doc.objects)) }), itemId);
     useBuildStore.getState().setLineSession({ points: [] });
   }
 }
@@ -220,7 +224,7 @@ export function planArea(item: PaletteItem, shape: AreaShape, settings: Placemen
   const doc = useWorldStore.getState().doc;
   const pts = areaFill(shape, { mode: a.mode, spacing: a.spacing, density: a.density, jitter: a.mode === 'grid' ? a.jitter : 0, seed: settings.seed });
   const sampler = samplerFor(doc.terrain);
-  return planPlacement(item, pts.map(([x, z]) => ({ x, z })), settings, { terrain: sampler, existing: FootprintIndex.fromObjects(Object.values(doc.objects)) });
+  return planPlacement(planItem(item), pts.map(([x, z]) => ({ x, z })), settings, { terrain: sampler, existing: FootprintIndex.fromObjects(Object.values(doc.objects)) });
 }
 
 /** Apply the area tool's shape with the current options (Apply button / Enter). One undo step. */

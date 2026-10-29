@@ -20,7 +20,10 @@ export type DamageEventType =
   | 'TILTED'
   | 'INUNDATED'
   | 'FLOATED'
-  | 'SCOURED';
+  | 'SCOURED'
+  // Phase 17 modular buildings: a structural member failed / the stories above a level collapsed.
+  | 'FAILED'
+  | 'STORY_COLLAPSED';
 
 /**
  * Why it happened:
@@ -31,7 +34,9 @@ export type DamageEventType =
  */
 export type DamageCause =
   | 'overload' | 'fatigue' | 'push' | 'impact' | 'drift' | 'acceleration' | 'foundation' | 'shaking'
-  | 'hydrostatic' | 'hydrodynamic' | 'buoyancy' | 'inundation' | 'scour';
+  | 'hydrostatic' | 'hydrodynamic' | 'buoyancy' | 'inundation' | 'scour'
+  // Phase 17: a member lost its load path or was overloaded by redistributed gravity load.
+  | 'gravity';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -56,6 +61,8 @@ export interface DamageEventRecord {
   objectType: ObjectType;
   componentId?: string;
   componentKind?: ComponentKind;
+  /** Modular building member type (Phase 17; componentId is the member id). */
+  memberType?: string;
   eventType: DamageEventType;
   worldPosition: Vec3;
   /** Local wind at the object / component (m/s). */

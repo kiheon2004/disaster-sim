@@ -129,7 +129,7 @@ export class SpatialWindField {
   }
 
   /** An obstacle moved or changed size/height. */
-  updateObstacle(id: EntityId, next: Omit<WindObstacle, 'id' | 'active'>) {
+  updateObstacle(id: EntityId, next: Partial<Omit<WindObstacle, 'id' | 'active'>>) {
     const idx = this.obstacles.findIndex((x) => x.id === id);
     if (idx < 0) return;
     const before = this.obstacles[idx];

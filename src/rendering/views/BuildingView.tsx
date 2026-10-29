@@ -11,6 +11,7 @@ import { foundationPlinth } from '@/terrain/groundPlacement';
 import { MergedBoxes } from './MergedBoxes';
 import { ComponentInstances } from './ComponentInstances';
 import type { ViewProps } from './types';
+import { ModularBuildingView } from './ModularBuildingView';
 
 export { groupComponents };
 const BROKEN_GLASS = new THREE.Color(0.1, 0.11, 0.13);
@@ -68,6 +69,12 @@ function useLiveComponents(
 }
 
 export function BuildingView({ obj, live }: ViewProps & { live?: RuntimeEntity }) {
+  // Modular buildings (Phase 17) draw their members through the member layer.
+  if (obj.building) return <ModularBuildingView obj={obj} />;
+  return <LegacyBuildingView obj={obj} live={live} />;
+}
+
+function LegacyBuildingView({ obj, live }: ViewProps & { live?: RuntimeEntity }) {
   const p = obj.params as BuildingParams;
   const groups = useMemo(() => groupComponents(obj.components), [obj.components]);
   const sign = groups.sign?.[0];

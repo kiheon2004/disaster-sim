@@ -83,6 +83,7 @@ export class MetricsRecorder {
       cause: ev.cause,
       componentId: ev.componentId,
       componentKind: ev.componentKind,
+      memberType: ev.memberType,
       hazard: ev.hazard ?? 'wind',
       groundAcceleration: ev.groundAcceleration ?? (ev.hazard === 'earthquake' && e.seismic ? Math.hypot(e.seismic.ground.a[0], e.seismic.ground.a[2]) : 0),
       response: ev.response ?? 0,
@@ -105,7 +106,7 @@ export class MetricsRecorder {
     const ms = this.milestones;
     const hz = r.hazard;
     ms.once(`dmg:${hz}`, { time: r.time, kind: 'firstDamage', hazard: hz, subject: r.objectType, label: { key: 'milestone.firstDamage', params: { hazard: hz, event: r.eventType } } });
-    if (r.eventType === 'COLLAPSED' && r.objectType === 'building') ms.add({ time: r.time, kind: 'collapse', hazard: hz, subject: r.objectType, label: { key: 'milestone.collapse', params: { hazard: hz } } });
+    if ((r.eventType === 'COLLAPSED' || r.eventType === 'STORY_COLLAPSED') && r.objectType === 'building') ms.add({ time: r.time, kind: 'collapse', hazard: hz, subject: r.objectType, label: { key: 'milestone.collapse', params: { hazard: hz } } });
     if (r.eventType === 'FALLEN') ms.once(`fall:${hz}`, { time: r.time, kind: 'firstFall', hazard: hz, subject: r.objectType, label: { key: 'milestone.firstFall', params: { hazard: hz } } });
     if (r.eventType === 'FLOATED') ms.once('floated', { time: r.time, kind: 'floated', hazard: hz, subject: r.objectType, label: { key: 'milestone.floated' } });
   }

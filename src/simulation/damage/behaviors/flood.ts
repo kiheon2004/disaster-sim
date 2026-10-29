@@ -41,6 +41,7 @@ import { seismicOf, STRUCTURAL_SYSTEMS } from '../../seismic/structuralProps';
 import { CAR_FLOOR } from '../../systems/WaterForceSystem';
 import type { DamageCause } from '../../analysis/DamageEvent';
 import { residualStrength } from '../../interactions/integrity';
+import { modularFloodCapacity, openDoors } from '../../buildings/modular';
 
 const RHO = WATER_DENSITY;
 /** Scratch velocity (the per-object loops are synchronous). */
@@ -148,13 +149,17 @@ export function updateBuildingFlood(e: RuntimeEntity, ctx: SystemContext, field:
   const outside = st.surface === -Infinity ? 0 : Math.max(0, st.surface - floor);
   let openings = 0;
   for (const c of e.components) if (c.spec.kind === 'window' && c.condition !== 'intact' && c.worldPos && c.worldPos[1] < floor + 3) openings++;
+  // Modular buildings (Phase 17): a door forced open by the water is an opening too.
+  const modular = e.modular !== undefined ? modularFloodCapacity(e, st.exposure, st.speed) : null;
+  if (modular) openings += openDoors(e);
   const tau = openings > 0 ? FILL_TAU_OPEN : FILL_TAU;
   st.inside += (outside - st.inside) * Math.min(1, dt / tau);
   if (st.inside < 1e-4) st.inside = 0;
 
   // Finishes / contents: depth–damage curve approached over the exposure time (never recovers).
   if (st.inside > 0.02) {
-    const target = Math.min(1, Math.sqrt(st.inside / 6));
+    // Modular buildings: timber / light walls suffer more than concrete (material water sensitivity).
+    const target = Math.min(1, Math.sqrt(st.inside / 6) * (modular ? modular.finish : 1));
     if (target > st.finish) st.finish += (target - st.finish) * Math.min(1, dt / FINISH_TAU);
   }
 
@@ -169,7 +174,9 @@ export function updateBuildingFlood(e: RuntimeEntity, ctx: SystemContext, field:
   const seismic = seismicOf(e.source);
   const cy = seismic ? STRUCTURAL_SYSTEMS[seismic.structure.system].cy * seismic.structure.strengthFactor : 0.25;
   // Residual strength (Phase 15): earthquake / wind damage lowers the lateral capacity.
-  const capacity = cy * e.source.physics.mass * GRAVITY * Math.max(0.2, k[1]) * (ctx.interactions ? residualStrength(e, 'flood') : 1);
+  // Modular buildings: the ground story's member-based lateral capacity (wet materials, scour).
+  const base = modular ? modular.capacity : cy * e.source.physics.mass * GRAVITY * Math.max(0.2, k[1]);
+  const capacity = base * (ctx.interactions ? residualStrength(e, 'flood') : 1);
   st.loadRatio = capacity > 0 ? st.load / capacity : 0;
   if (st.loadRatio > STRUCT_ONSET) st.damage += STRUCT_RATE * ((st.loadRatio - STRUCT_ONSET) / STRUCT_ONSET) * dt * (st.loadRatio >= 1.5 ? 10 : 1);
   trackPeaks(st, dt);
@@ -197,7 +204,8 @@ function envelopeParts(e: RuntimeEntity, ctx: SystemContext, st: FloodEntityStat
   const dyn = 0.5 * RHO * st.speed * st.speed;
   for (let i = 0; i < e.components.length; i++) {
     const c = e.components[i];
-    if (c.condition !== 'intact' || (c.spec.kind !== 'window' && c.spec.kind !== 'exterior')) continue;
+    // (Doors and cladding panels exist on modular buildings only, Phase 17.)
+    if (c.condition !== 'intact' || (c.spec.kind !== 'window' && c.spec.kind !== 'exterior' && c.spec.kind !== 'door' && c.spec.kind !== 'cladding')) continue;
     const pos = (c.worldPos ??= componentWorldPos(e, c.spec));
     const head = st.surface - pos[1];
     if (head <= 0) continue;

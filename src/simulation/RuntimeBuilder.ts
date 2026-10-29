@@ -12,6 +12,7 @@ import { groundFrictionFactor } from '@/terrain/GroundMaterials';
 import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { foundationPlinth } from '@/terrain/groundPlacement';
 import { newForceRecord } from './forces/ForceLedger';
+import { createModularRuntime } from './buildings/modular';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -124,6 +125,8 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     flood: undefined,
     integrity: undefined,
     exposure: undefined,
+    // Phase 17: member-level state of modular buildings (declared on every entity: one shape).
+    modular: o.type === 'building' && o.building ? createModularRuntime(o) : undefined,
   };
   e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic, foundationPlinth(o, terrain));
   if (def.inert) e.dynamic = false;

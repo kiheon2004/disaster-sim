@@ -280,14 +280,27 @@ export function generateMembers(spec: BuildingSpec): Generated {
 
 interface Line { id: string; axis: 'x' | 'z'; x0: number; z0: number; x1: number; z1: number }
 
-/** Interior bearing-wall lines of wall systems: interior grid lines along the long direction. */
+/**
+ * Interior bearing-wall lines of wall systems: every interior grid line along the long
+ * direction (floors span between them) and the middle line across it (cross walls brace the
+ * short direction).
+ */
 export function interiorLines(spec: BuildingSpec): Line[] {
   const g = planGrid(spec);
   const out: Line[] = [];
-  if (spec.width >= spec.depth) {
+  const alongX = spec.width >= spec.depth;
+  if (alongX) {
     for (let iz = 1; iz < g.nz; iz++) out.push({ id: `x${iz}`, axis: 'x', x0: -spec.width / 2, z0: g.zs[iz], x1: spec.width / 2, z1: g.zs[iz] });
+    if (g.nx >= 2) {
+      const ix = Math.floor(g.nx / 2);
+      out.push({ id: `z${ix}`, axis: 'z', x0: g.xs[ix], z0: -spec.depth / 2, x1: g.xs[ix], z1: spec.depth / 2 });
+    }
   } else {
     for (let ix = 1; ix < g.nx; ix++) out.push({ id: `z${ix}`, axis: 'z', x0: g.xs[ix], z0: -spec.depth / 2, x1: g.xs[ix], z1: spec.depth / 2 });
+    if (g.nz >= 2) {
+      const iz = Math.floor(g.nz / 2);
+      out.push({ id: `x${iz}`, axis: 'x', x0: -spec.width / 2, z0: g.zs[iz], x1: spec.width / 2, z1: g.zs[iz] });
+    }
   }
   return out;
 }

@@ -16,6 +16,10 @@ import { createGroundMotionSample, type GroundMotionSample } from './GroundMotio
 import { StructuralModel } from './StructuralModel';
 import { residualStrength } from '../interactions/integrity';
 import { FOUNDATION_TYPES, STRUCTURAL_SYSTEMS, collapseDrift, infraProps, naturalPeriod, seismicOf, type DriftThresholds } from './structuralProps';
+import type { WorldObject } from '@/core/model';
+import { modularUnit } from '@/buildings/structuralAdapter';
+import { foundationContact } from '@/buildings/foundation';
+import { attachUnit } from '../buildings/modular';
 
 export interface SeismicEntityState {
   /** Unit in the structural model (−1: not a structure). */
@@ -118,6 +122,65 @@ function blendedSoil(terrain: TerrainSampler, x: number, z: number) {
   return { G, bearing, damping, id: best };
 }
 
+/**
+ * Modular building (Phase 17): the structural unit comes from the member-based analysis through
+ * the explicit adapter (per-story stiffness / strength / masses, lumped to ≤ 5 dofs); the
+ * foundation spring uses the same soil formulas as legacy buildings, with the ground contact of
+ * the sampled foundation model (gaps under a 'preserve' foundation bear nothing).
+ */
+function buildModularUnit(e: RuntimeEntity, st: SeismicEntityState, model: StructuralModel, terrain: TerrainSampler, soil: ReturnType<typeof blendedSoil>, gravity: number) {
+  const o = e.source;
+  const mr = e.modular!;
+  const props = seismicOf(o)!;
+  const a = mr.current;
+  const unit = modularUnit(a, props);
+  const ft = FOUNDATION_TYPES[props.foundation.type];
+  const M = a.totalMass;
+  const k = o.transform.scale;
+  const width = Number(o.params.width) * k[0];
+  const depth = Number(o.params.depth) * k[2];
+  const area = width * depth;
+  const fc = foundationContact(o as WorldObject, terrain);
+  st.plinth = fc.plinth;
+  const contact = props.foundation.groundContact * Math.max(0.05, fc.contact) * (1 - 0.3 * Math.min(1, st.plinth / 3));
+  const R = Math.sqrt(area / Math.PI);
+  const kf = ((8 * soil.G * R) / (2 - 0.33)) * ft.stiffnessFactor * props.foundation.stiffness * contact;
+  const mf = Math.max(a.foundationMass, ft.massFraction * M * 0.5);
+  const W = (M + mf) * gravity;
+  const slip = props.foundation.anchorage * W * contact;
+  st.period = Math.max(unit.period[0], unit.period[1]);
+  st.thresholds = unit.thresholds;
+  st.bearing = soil.bearing * ft.bearingFactor;
+  const yw = yaw(e.initialPose.quaternion);
+  st.footprint = [Math.abs(width * Math.cos(yw)) + Math.abs(depth * Math.sin(yw)), Math.abs(width * Math.sin(yw)) + Math.abs(depth * Math.cos(yw))];
+  st.failureTilt = (props.foundation.failureThreshold * Math.PI) / 180;
+  const L = unit.lumps;
+  st.unit = model.add({
+    ndof: L.mass.length,
+    mass: M,
+    height: L.height.reduce((t, h) => t + h, 0),
+    period: st.period,
+    dampingRatio: unit.dampingRatio,
+    cyX: 0,
+    cyZ: 0,
+    hardening: unit.hardening,
+    driftU: unit.driftU,
+    yaw: yw,
+    gravity,
+    foundation: {
+      mass: mf,
+      stiffness: kf,
+      dampingRatio: props.foundation.damping > 0 ? props.foundation.damping : 0.05 + 1.5 * soil.damping,
+      slipX: slip,
+      slipZ: slip,
+    },
+    stories: { mass: L.mass, height: L.height, kx: L.kx, kz: L.kz, fyX: L.fyX, fyZ: L.fyZ },
+  });
+  attachUnit(mr, unit, st.unit);
+  st.footprint[0] *= Math.sqrt(contact);
+  st.footprint[1] *= Math.sqrt(contact);
+}
+
 /** Build the structural model and per-entity states (once, when the first earthquake starts). */
 export function buildSeismicRuntime(runtime: SimulationRuntime, terrain: TerrainSampler, gravity: number): SeismicRuntime {
   const model = new StructuralModel();
@@ -135,7 +198,10 @@ export function buildSeismicRuntime(runtime: SimulationRuntime, terrain: Terrain
     st.soil = soil.id;
     const o = e.source;
     const k = o.transform.scale;
-    if (o.type === 'building') {
+    if (o.type === 'building' && e.modular) {
+      buildModularUnit(e, st, model, terrain, soil, gravity);
+      units.push(e);
+    } else if (o.type === 'building') {
       const props = seismicOf(o)!;
       const p = o.params as BuildingParams;
       const H = buildingHeight(p) * k[1];

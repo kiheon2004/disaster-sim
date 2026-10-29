@@ -43,6 +43,8 @@ import {
   buildingPlinthParts, buildingShellParts, buildingSignParts, carParts, FACADE_KINDS, FACADE_STYLE, facadeColor, humanParts, PART_MATS,
   signParts, streetLightParts, treeParts, wallParts, type BoxPart, type FacadeKind, type PartMat,
 } from '../parts/objectParts';
+import { MATERIAL_LOOKS } from '@/buildings/materials';
+import { MemberLayer, interiorMask, type MemberSet } from './MemberLayer';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
 export const LOD_FAR = 110;
@@ -107,6 +109,9 @@ interface EntityView {
   tint?: number;
   /** Flood: wetness tint last applied (0 = dry; quantized). */
   wet?: number;
+  /** Modular building (Phase 17): its member instances and member → component index. */
+  members?: MemberSet;
+  memberComp?: Int32Array;
 }
 
 /** One BatchedMesh per material variant. */
@@ -248,6 +253,8 @@ export class SimRenderAdapter {
 
   private crackMesh: THREE.InstancedMesh;
   private quake: QuakeRenderOptions | null = null;
+  /** Members of modular buildings (Phase 17); null when the scene has none. */
+  private memberLayer: MemberLayer | null = null;
 
   constructor(private runtime: SimulationRuntime, terrain: TerrainSampler = flatSampler()) {
     this.root.name = 'sim-render-adapter';
@@ -262,6 +269,8 @@ export class SimRenderAdapter {
     type Req = { batch: PartBatch; near: string; far: string; role: Role; local: THREE.Matrix4 | null; nearOnly?: boolean };
     const reqs: Req[][] = [];
     const facadeCounts = { window: 0, roof: 0, wall: 0, exterior: 0 } as Record<FacadeKind, number>;
+    const memberCounts = MATERIAL_LOOKS.map(() => 0);
+    let modular = 0;
     const add = (list: Req[], mat: PartMat, parts: BoxPart[], role: Role, local: THREE.Matrix4 | null = null, lod?: BoxPart[], nearOnly = false) => {
       const b = batch(mat);
       const near = b.request(parts);
@@ -276,6 +285,18 @@ export class SimRenderAdapter {
       switch (o.type) {
         case 'building': {
           const p = o.params as BuildingParams;
+          if (o.building) {
+            // Modular building (Phase 17): every member is an instance of the member layer; the
+            // batch only carries the slope plinth and the shop sign. Rooftop units stay facade.
+            modular++;
+            MemberLayer.count(o.building, memberCounts);
+            const plinth = buildingPlinthParts(p, foundationPlinth(o, terrain) / o.transform.scale[1]);
+            if (plinth.length) add(list, 'standard', plinth, 'plinth');
+            const sign = o.components.find((c) => c.kind === 'sign');
+            if (sign) add(list, 'shopSign', buildingSignParts(sign), 'shopSign', translation(sign.position));
+            for (const c of o.components) if (c.kind === 'exterior') facadeCounts.exterior++;
+            break;
+          }
           add(list, 'standard', buildingShellParts(p), 'root');
           // Slope foundation plinth (Phase 13; none on flat ground).
           const plinth = buildingPlinthParts(p, foundationPlinth(o, terrain) / o.transform.scale[1]);
@@ -334,6 +355,10 @@ export class SimRenderAdapter {
     }
     this.facade = new FacadeLayer(facadeCounts);
     for (const kind of FACADE_KINDS) this.root.add(this.facade.meshes[kind]);
+    if (modular > 0) {
+      this.memberLayer = new MemberLayer(memberCounts);
+      for (const m of this.memberLayer.meshes) this.root.add(m);
+    }
     const buildings = entities.filter((e) => e.source.type === 'building').length;
     this.crackMesh = new THREE.InstancedMesh(UNIT_BOX, getMaterial('#2a2622', { roughness: 1 }), Math.max(1, buildings * CRACKS_PER_BUILDING));
     this.crackMesh.name = 'quake:cracks';
@@ -371,6 +396,7 @@ export class SimRenderAdapter {
       this.byId.set(e.id, view);
     });
     this.facade.finish();
+    this.memberLayer?.finish();
   }
 
   /** Building shells never move: write their matrices once and add facade instances. */
@@ -387,8 +413,15 @@ export class SimRenderAdapter {
     v.facade = [];
     v.facadeLocal = [];
     const wallColor = new THREE.Color(facadeColor('wall', p));
+    const design = v.e.source.building;
+    if (design && this.memberLayer) {
+      const comps = new Map(v.e.source.components.map((c, i) => [c.id, i]));
+      v.memberComp = Int32Array.from(design.members, (m) => comps.get(m.id) ?? -1);
+      v.members = this.memberLayer.add(v.e.id, design, root, interiorMask(design, (id) => comps.has(id)));
+    }
     v.e.source.components.forEach((c, ci) => {
       if (!(FACADE_KINDS as string[]).includes(c.kind)) return;
+      if (design && c.kind !== 'exterior') return; // modular: drawn as members
       const kind = c.kind as FacadeKind;
       const local = new THREE.Matrix4().compose(vPos.set(c.position[0], c.position[1], c.position[2]), qB.identity(), vScaleTmp.set(c.size[0], c.size[1], c.size[2]));
       const m = new THREE.Matrix4().multiplyMatrices(root, local);
@@ -421,9 +454,51 @@ export class SimRenderAdapter {
   /** Entity id for a picked object + instance (BatchedMesh batchId / InstancedMesh instanceId). */
   pick(object: THREE.Object3D, id: number | undefined): EntityId | null {
     if (id === undefined) return null;
+    const member = this.memberLayer?.pick(object, id);
+    if (member) return member.owner;
     for (const b of this.batches.values()) if (b.mesh === object) return b.owners[id] ?? null;
     for (const kind of FACADE_KINDS) if (this.facade.meshes[kind] === object) return this.facade.owners[kind][id] ?? null;
     return null;
+  }
+
+  /** Modular building member under a picked instance (building editor, Phase 17). */
+  pickMember(object: THREE.Object3D, id: number | undefined): { owner: EntityId; member: number } | null {
+    return this.memberLayer?.pick(object, id) ?? null;
+  }
+
+  /** Show / hide the culled interior members of a modular building (building editor x-ray). */
+  setRevealed(id: EntityId, revealed: boolean) {
+    const v = this.byId.get(id);
+    if (!v?.members || v.members.revealed === revealed) return;
+    v.members.revealed = revealed;
+    this.writeMembers(v, v.members.root);
+  }
+
+  private memberGone(v: EntityView): (i: number) => boolean {
+    const e = v.e;
+    const mr = e.modular;
+    const comp = v.memberComp!;
+    if (v.userHidden || v.hidden) return () => true;
+    return (i: number) => (mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition === 'detached');
+  }
+
+  private writeMembers(v: EntityView, root: THREE.Matrix4) {
+    this.memberLayer!.writeMatrices(v.members!, root, this.memberGone(v));
+    this.memberLayer!.markDirty(false);
+  }
+
+  private writeMemberColors(v: EntityView, mul?: THREE.Color) {
+    const e = v.e;
+    const mr = e.modular;
+    const comp = v.memberComp!;
+    const ms = v.members!.design.members;
+    this.memberLayer!.writeColors(
+      v.members!,
+      (i) => (mr ? mr.damage[i] : ms[i].initialDamage ?? 0),
+      (i) => ms[i].type === 'window' && ((mr !== undefined && mr.failed[i] === 1) || (comp[i] >= 0 && e.components[comp[i]].condition !== 'intact')),
+      mul,
+    );
+    this.memberLayer!.markDirty(true);
   }
 
   stats(): AdapterStats {
@@ -431,6 +506,7 @@ export class SimRenderAdapter {
     for (const b of this.batches.values()) instances += b.mesh.instanceCount;
     let facade = 0;
     for (const kind of FACADE_KINDS) facade += this.facade.meshes[kind].count;
+    if (this.memberLayer) for (const m of this.memberLayer.meshes) facade += m.count;
     return { instances, batches: this.batches.size, facadeInstances: facade, far: this.views.filter((v) => v.far).length };
   }
 
@@ -476,6 +552,7 @@ export class SimRenderAdapter {
     if (v.type === 'building' && (v.tint ?? 0) > 0) return;
     cTint.copy(WHITE).lerp(WET, w * 0.85);
     for (const part of v.parts) part.batch.mesh.setColorAt(part.id, cTint);
+    if (v.members) this.writeMemberColors(v, cTint);
   }
 
   /**
@@ -522,6 +599,7 @@ export class SimRenderAdapter {
         this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(mRoot, v.facadeLocal[f]));
       }
     }
+    if (v.members) this.writeMembers(v, mRoot);
     if (v.cracks) {
       v.cracksShown = crackCount;
       if (crackCount > 0) this.crackMesh.visible = true;
@@ -531,6 +609,7 @@ export class SimRenderAdapter {
       v.tint = tint;
       tintColor(tint, cTint);
       for (const part of v.parts) if (part.role === 'root') part.batch.mesh.setColorAt(part.id, cTint);
+      if (v.members) this.writeMemberColors(v, cTint);
     }
     return true;
   }
@@ -577,6 +656,12 @@ export class SimRenderAdapter {
         this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
         if (this.facade.meshes[kind].instanceColor) this.facade.meshes[kind].instanceColor!.needsUpdate = true;
       }
+    }
+    if (v.members) {
+      // Modular building: the interior shows once the envelope opens or a story collapsed.
+      if (!v.members.revealed && (e.flags.partialCollapse !== undefined || (v.memberComp && e.components.some((c) => c.condition === 'detached' && c.spec.kind !== 'exterior' && c.spec.kind !== 'sign')))) v.members.revealed = true;
+      this.writeMembers(v, v.members.root);
+      this.writeMemberColors(v, (v.tint ?? 0) > 0 ? tintColor(v.tint!, cTint) : undefined);
     }
     if (gone) return;
     for (const part of v.parts) {
@@ -708,6 +793,7 @@ export class SimRenderAdapter {
         this.facade.meshes[kind].instanceMatrix.needsUpdate = true;
       }
     }
+    if (v.members) this.writeMembers(v, v.staticRoot ?? v.members.root);
   }
 
   /** Distance LOD only — for static scenes whose transforms were written by one update(). */
@@ -729,6 +815,13 @@ export class SimRenderAdapter {
       m.castShadow = false;
       m.receiveShadow = false;
     }
+    if (this.memberLayer) {
+      for (const m of this.memberLayer.meshes) {
+        m.material = material;
+        m.castShadow = false;
+        m.receiveShadow = false;
+      }
+    }
   }
 
   /** Empty instanced layers are not drawn at all (no zero-instance draw calls). */
@@ -740,6 +833,7 @@ export class SimRenderAdapter {
     for (const b of this.batches.values()) b.mesh.dispose();
     for (const kind of FACADE_KINDS) this.facade.meshes[kind].dispose();
     this.crackMesh.dispose();
+    this.memberLayer?.dispose();
     this.root.clear();
   }
 

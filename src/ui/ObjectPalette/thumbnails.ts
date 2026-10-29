@@ -10,6 +10,7 @@ import { createWorldObject } from '@/world/WorldDocument';
 import { SimRenderAdapter } from '@/rendering/sim/SimRenderAdapter';
 import { staticRuntime } from '@/rendering/editor/EditorBatches';
 import { flatSampler } from '@/terrain/TerrainSampler';
+import { itemDesign } from '@/editor/build/itemDesign';
 
 const SIZE = 96;
 const cache = new Map<string, string>();
@@ -70,7 +71,7 @@ export function renderThumbnails(items: readonly PaletteItem[]): Promise<void> {
           let adapter: SimRenderAdapter | null = null;
           if (item.type === 'road') content = roadObject(item);
           else {
-            const obj = createWorldObject({ type: item.type, params, seed: 7, transform: { position: [0, 0, 0], rotation: [0, -0.6, 0], scale: [1, 1, 1] } }, 0);
+            const obj = createWorldObject({ type: item.type, params, seed: 7, building: itemDesign(item), transform: { position: [0, 0, 0], rotation: [0, -0.6, 0], scale: [1, 1, 1] } }, 0);
             adapter = new SimRenderAdapter(staticRuntime([obj]), flatSampler());
             adapter.update(camera, 0, 0);
             content = adapter.root;

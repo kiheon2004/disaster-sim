@@ -87,9 +87,11 @@ export interface RuntimeEntity {
   forces?: Float64Array;
   /** Flood exposure / response state; created when the water model activates (Phase 14). */
   flood?: FloodEntityState;
+  /** Member-level state of a modular building (Phase 17); absent on every other entity. */
+  modular?: import('./buildings/modular').ModularRuntime;
   components: RuntimeComponent[];
   visual: VisualState;
-  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean };
+  flags: { fallen?: boolean; snapped?: boolean; uprooted?: boolean; overturned?: boolean; collapsed?: boolean; toppled?: boolean; partialCollapse?: number };
   /** Consecutive calm, motionless steps on uneven terrain (see PoseSyncSystem). */
   quietSteps: number;
   /** Position where the current quiet window started (internal). */

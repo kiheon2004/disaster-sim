@@ -9,6 +9,7 @@ import { useBuildStore } from '@/editor/buildStore';
 import { clearSelection, clickSelect, selectAll } from '@/app/buildActions';
 import { renderThumbnails, subscribeThumbnails, thumbnail } from './thumbnails';
 import { ToolOptions } from './ToolOptions';
+import { itemParams } from '@/editor/build/itemDesign';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import { focusObject } from '@/app/actions';
@@ -163,7 +164,7 @@ function ArmedCard() {
   const tool = useEditorStore((s) => s.tool);
   if (!item) return null;
   const def = getDefinition(item.type);
-  const d = def.getDimensions({ ...def.defaultParams, ...(item.params ?? {}) });
+  const d = def.getDimensions(itemParams(item));
   const img = thumbnail(item.id);
   return (
     <div className={styles.card} data-testid="armed-card">

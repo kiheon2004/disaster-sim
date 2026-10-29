@@ -112,7 +112,7 @@ export const MATERIALS: Record<MaterialId, MaterialProps> = {
     stiffnessFactor: 0.7, // connection slip
     compressive: 21e6, // fc,0,k
     flexural: 24e6, // fm,k
-    shear: 0.05e6, // sheathed light-frame shear walls ≈ 5–10 kN/m → ≈ 0.05 MPa on a 0.16 m box
+    shear: 0.1e6, // sheathed light-frame shear walls ≈ 8–20 kN/m (single / double sheathing) → 0.1 MPa on a 0.16 m box
     driftCapacity: { column: 0.06, wall: 0.05 },
     hardening: 0.06, damping: 0.07, failure: 'semiDuctile',
     // Joist floors and stud walls are mostly voids.

@@ -10,6 +10,20 @@ import { persist } from 'zustand/middleware';
 import { DEFAULT_PLACEMENT, type PlacementSettings } from './build/placementPlan';
 import type { AreaShape, LineOrient, Vec2 } from './build/distribution';
 import type { Blueprint } from './build/blueprint';
+import type { BuildingDesign, BuildingSpec } from '@/buildings/types';
+import { defaultSpec } from '@/buildings/spec';
+
+/**
+ * Building Creator (Phase 17): the parameters of the NEW building being set up (placed with the
+ * palette's custom building item) — transient, not saved with the world.
+ */
+export interface CreatorState {
+  spec: BuildingSpec;
+  /** Preset the spec started from (informational). */
+  preset: string | null;
+  /** Design generated from `spec` (null while the spec has errors). */
+  design: BuildingDesign | null;
+}
 
 export type GridSize = 'auto' | 0.25 | 0.5 | 1 | 2 | 5;
 export const GRID_SIZES: GridSize[] = ['auto', 0.25, 0.5, 1, 2, 5];
@@ -81,6 +95,8 @@ interface BuildState {
   areaSession: AreaSession;
   /** Last bulk-placement summary for the tool options panel. */
   lastResult: { placed: number; skipped: number; reasons: Record<string, number> } | null;
+  creator: CreatorState;
+  setCreator: (patch: Partial<CreatorState>) => void;
 
   setPlacement: (patch: Partial<PlacementSettings>) => void;
   setBrushSettings: (patch: Partial<BrushSettings>) => void;
@@ -116,6 +132,8 @@ export const useBuildStore = create<BuildState>()(
       lineSession: { points: [] },
       areaSession: { shape: null, dragging: false },
       lastResult: null,
+      creator: { spec: defaultSpec(), preset: null, design: null },
+      setCreator: (patch) => set({ creator: { ...get().creator, ...patch } }),
 
       setPlacement: (patch) => set({ placement: { ...get().placement, ...patch } }),
       setBrushSettings: (patch) => {

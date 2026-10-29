@@ -12,6 +12,7 @@ import type { DamageCause, DamageEventInput } from '../../analysis/DamageEvent';
 import { seismicLevel, seismicHealth } from '../seismicLevels';
 import { floodLevel } from '../floodLevels';
 import { integrityOf } from '../../interactions/integrity';
+import { modularWindStructure, processPending } from '../../buildings/modular';
 
 /** Reused sample result for facade parts (consumed immediately). */
 const scratchWind = createLocalWind();
@@ -143,6 +144,12 @@ export function collapse(e: RuntimeEntity, ctx: SystemContext, quake?: QuakeColl
   const p = e.source.params as BuildingParams;
   const k = e.source.transform.scale;
   e.flags.collapsed = true;
+  if (e.modular !== undefined) {
+    // Every member goes with the building (renderers hide them; Phase 17).
+    e.modular.failed.fill(1);
+    e.modular.collapsedFrom = 0;
+    e.modular.rev++;
+  }
   if (e.body !== null) physics.removeBody(e.body);
   e.body = null;
   for (const c of e.components) if (c.condition === 'intact') c.condition = 'detached';
@@ -217,6 +224,8 @@ function facadeOf(e: RuntimeEntity): FacadeIndex {
 }
 
 export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number) {
+  // Modular buildings (Phase 17): members without a load path in the original world fall first.
+  if (e.modular !== undefined && e.modular.pending.length) processPending(e, ctx);
   if (e.flags.collapsed) {
     e.state = DamageState.DESTROYED;
     return;
@@ -284,7 +293,18 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
     if (e.seismic) structure.health = Math.min(structure.health, seismicHealth(e.seismic));
     if (e.flood) structure.health = Math.min(structure.health, e.flood.health);
     e.health = structure.health;
-    if (structure.health <= 0) {
+    if (e.modular !== undefined) {
+      // Wind failure of a modular building = collapse of its weakest story (and above).
+      if (modularWindStructure(e, ctx, structure.health)) {
+        if (e.flags.collapsed) {
+          e.state = DamageState.DESTROYED;
+          return;
+        }
+        // The lower stories stand: they start over with the remaining (smaller) exposure.
+        structure.health = e.health = 0.5;
+        if (e.integrity) e.integrity.windHealth = 0.5;
+      }
+    } else if (structure.health <= 0) {
       collapse(e, ctx);
       e.state = DamageState.DESTROYED;
       return;
