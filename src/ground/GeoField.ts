@@ -11,7 +11,8 @@
  *   strength                         strength multiplier (seeded spatial variability)   –
  *   bed                              static ground change since t = 0 (erosion < 0)     m
  *   loose, looseMass                 deposited (already loosened) material on top       m, kg
- *   h, mass, mu                      mobile sediment: thickness (bulked), mass, basal μ m, kg, –
+ *   h, mass, mu, muS                 mobile sediment: thickness (bulked), mass, basal μ m, kg, –
+ *                                    moving (φ'cv) / to restart from rest (hysteresis)
  *   qx, qz                           face fluxes of the mobile layer                    m²/s
  *   hfx, hfz                         flowing depth at the faces at the last flux update m
  *   fs                               last factor of safety (∞ = not evaluated / flat)   –
@@ -76,6 +77,8 @@ export class GeoField {
   readonly h: Float32Array;
   readonly mass: Float64Array;
   readonly mu: Float32Array;
+  /** Friction a layer at rest must exceed to restart (≥ mu; granular hysteresis). */
+  readonly muS: Float32Array;
   readonly qx: Float32Array;
   readonly qz: Float32Array;
   /** Flowing depth at each face when its flux was last computed (m). */
@@ -130,6 +133,7 @@ export class GeoField {
     this.h = new Float32Array(n);
     this.mass = new Float64Array(n);
     this.mu = new Float32Array(n);
+    this.muS = new Float32Array(n);
     this.qx = new Float32Array((t.nx - 1) * t.nz);
     this.qz = new Float32Array(t.nx * (t.nz - 1));
     this.hfx = new Float32Array((t.nx - 1) * t.nz);
@@ -164,7 +168,7 @@ export class GeoField {
    * loosened: no further bulking, its own density); in-situ soil below is bulked by its profile.
    * The ground drops by `depth`; returns the volume removed from the ground (m³).
    */
-  release(i: number, depth: number, mu: number): number {
+  release(i: number, depth: number, mu: number, muS = mu): number {
     const avail = this.loose[i] + this.thickness[i];
     const d = Math.min(depth, avail);
     if (d <= 0) return 0;
@@ -197,6 +201,7 @@ export class GeoField {
     this.bed[i] -= d;
     // Basal friction of the mixture: thickness-weighted.
     this.mu[i] = this.h[i] > 0 ? (this.mu[i] * this.h[i] + mu * mobile) / (this.h[i] + mobile) : mu;
+    this.muS[i] = this.h[i] > 0 ? (this.muS[i] * this.h[i] + muS * mobile) / (this.h[i] + mobile) : muS;
     this.h[i] += mobile;
     this.mass[i] += m;
     this.rest[i] = 0;

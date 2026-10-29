@@ -22,7 +22,7 @@
  */
 import type { GeoField } from './GeoField';
 import type { GroundEnv } from './common';
-import { applyVariability, areaVertices, basalFriction, slopeAt, waterRiseFrom } from './common';
+import { applyVariability, areaVertices, basalFriction, restartFriction, slopeAt, waterRiseFrom } from './common';
 import { DEG, G, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight } from './materials';
 import { criticalAcceleration, infiniteSlopeFS, newmarkStep } from './stability';
 import type { LandslideSpec } from './types';
@@ -130,7 +130,7 @@ export class LandslideModel {
     const z = f.thickness[i] + f.loose[i];
     if (z <= 0.01) return;
     f.failed[i] = 1;
-    f.release(i, z, basalFriction(p, f.water(i)));
+    f.release(i, z, basalFriction(p, f.water(i)), restartFriction(p, f.water(i)));
     this.failedCells++;
     if (cause === 'static') this.failedStatic++;
     else if (cause === 'seismic') this.failedSeismic++;

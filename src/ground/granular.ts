@@ -6,7 +6,11 @@
  *   q ← q·min(1, h_f / h_f,prev)                   momentum stays with the mass (a draining face keeps u, not q)
  *   q ← q − g·h_f·∂s/∂x·cos²β·Δt                  pressure + gravity (s = ground + mobile thickness;
  *                                                horizontal projection of the along-slope terms)
- *   Coulomb basal friction: |q| reduced by μ·g·h_f·cos²β·Δt, never reversed; a layer at rest stays
+ *   Coulomb basal friction: |q| reduced by μ·g·h_f·cos²β·Δt, never reversed. A MOVING face uses
+ *     μ = tan φ'cv (critical state); a face AT REST (q = 0) must exceed the restart friction
+ *     μ_s = tan(φ'cv + ~2°) (granular hysteresis between the angle of maximum stability and the
+ *     angle of repose) — so settled debris stops instead of creeping at the repose slope;
+ *   (single-μ form, μ_s = μ, as before:) a layer at rest stays
  *     at rest while |∂s/∂x| ≤ μ  →  it stops at a surface slope of tan⁻¹μ (angle of repose);
  *     a thin uniform layer on a plane accelerates horizontally at g·cosβ·(sinβ − μ·cosβ)
  *   Voellmy turbulent term: q ← q / (1 + g·|q|·Δt / (ξ·h_f²))
@@ -99,11 +103,11 @@ export function flowStep(f: GeoField, duration: number, opt: FlowOptions): FlowS
     // Face fluxes (x faces between ix and ix+1).
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix < x1; ix++) {
       const i = iz * nx + ix, j = i + 1, k = iz * (nx - 1) + ix;
-      qx[k] = faceFlux(qx[k], f.hfx, k, S(ix, iz), S(ix + 1, iz), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
+      qx[k] = faceFlux(qx[k], f.hfx, k, S(ix, iz), S(ix + 1, iz), opt.ground(i), opt.ground(j), h[i], h[j], qx[k] === 0 ? f.muS[i] : mu[i], qx[k] === 0 ? f.muS[j] : mu[j], dx, dt, xi);
     }
     for (let iz = z0; iz < z1; iz++) for (let ix = x0; ix <= x1; ix++) {
       const i = iz * nx + ix, j = i + nx, k = iz * nx + ix;
-      qz[k] = faceFlux(qz[k], f.hfz, k, S(ix, iz), S(ix, iz + 1), opt.ground(i), opt.ground(j), h[i], h[j], mu[i], mu[j], dx, dt, xi);
+      qz[k] = faceFlux(qz[k], f.hfz, k, S(ix, iz), S(ix, iz + 1), opt.ground(i), opt.ground(j), h[i], h[j], qz[k] === 0 ? f.muS[i] : mu[i], qz[k] === 0 ? f.muS[j] : mu[j], dx, dt, xi);
     }
     // Positivity: scale the outflows of a cell to what it holds.
     for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) {
@@ -238,17 +242,20 @@ function faceFlux(q: number, hfs: Float32Array, k: number, si: number, sj: numbe
 
 /** Move a thickness `dh` (as volume / A) from cell a to b with a's mass and μ. */
 function move(f: GeoField, a: number, b: number, dh: number) {
-  const { h, mass, mu, rest } = f;
+  const { h, mass, mu, muS, rest } = f;
   if (dh <= 0 || h[a] <= 0) return;
   const take = Math.min(dh, h[a]);
   const frac = take / h[a];
   const dm = mass[a] * frac;
-  const muA = mu[a];
+  const muA = mu[a], musA = muS[a];
   h[a] -= take;
   mass[a] -= dm;
   mu[b] = h[b] > 0 ? (mu[b] * h[b] + muA * take) / (h[b] + take) : muA;
+  muS[b] = h[b] > 0 ? (muS[b] * h[b] + musA * take) / (h[b] + take) : musA;
   h[b] += take;
   mass[b] += dm;
-  rest[b] = 0;
+  // Rest is decided by the cell's own faces (bookkeeping after transport): receiving a creeping
+  // trickle must not keep a settled column "mobile" (Phase 22 residual — settling time).
+  if (h[b] === take) rest[b] = 0;
   f.grow(b);
 }

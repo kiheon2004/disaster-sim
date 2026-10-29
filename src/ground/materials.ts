@@ -35,9 +35,15 @@ export interface MechanicalProfile {
   cohesionRange: [number, number];
   /** Apparent cohesion from matric suction in the unsaturated state (kPa) — lost when saturated. */
   apparentCohesion: number;
-  /** Effective friction angle φ' (deg) and the typical range. */
+  /** Effective friction angle φ' (deg) and the typical range — peak strength of the ground in place. */
   friction: number;
   frictionRange: [number, number];
+  /**
+   * Critical-state friction angle φ'cv (deg): the friction of the soil once it is sheared and
+   * moving (Bolton 1986: φ'peak − φ'cv grows with density; φ'cv ≈ 33° for quartz sands, ≈ peak for
+   * loose sand and normally consolidated clay). Moving sediment uses it (Phase 22 residual).
+   */
+  frictionCv: number;
   /** Bulk density of the in-situ soil (kg/m³) → unit weight γ = ρ·g. */
   density: number;
   /** Porosity n (–) and the drainable fraction of it (specific yield / n). */
@@ -55,23 +61,23 @@ export interface MechanicalProfile {
 
 export const MECHANICAL_PROFILES: Record<MechanicalId, MechanicalProfile> = {
   rock: {
-    id: 'rock', labelKey: 'geo.mat.rock', cohesion: 0, cohesionRange: [0, 0], apparentCohesion: 0, friction: 45, frictionRange: [35, 55],
+    id: 'rock', labelKey: 'geo.mat.rock', cohesion: 0, cohesionRange: [0, 0], apparentCohesion: 0, friction: 45, frictionRange: [35, 55], frictionCv: 45,
     density: 2400, porosity: 0.05, drainable: 0.5, bulking: 1.6, failureModel: false,
   },
   denseGranular: {
-    id: 'denseGranular', labelKey: 'geo.mat.denseGranular', cohesion: 0, cohesionRange: [0, 2], apparentCohesion: 2, friction: 38, frictionRange: [35, 45],
+    id: 'denseGranular', labelKey: 'geo.mat.denseGranular', cohesion: 0, cohesionRange: [0, 2], apparentCohesion: 2, friction: 38, frictionRange: [35, 45], frictionCv: 33,
     density: 2000, porosity: 0.3, drainable: 0.7, bulking: 1.15, failureModel: true,
   },
   looseGranular: {
-    id: 'looseGranular', labelKey: 'geo.mat.looseGranular', cohesion: 0, cohesionRange: [0, 1], apparentCohesion: 1, friction: 30, frictionRange: [28, 33],
+    id: 'looseGranular', labelKey: 'geo.mat.looseGranular', cohesion: 0, cohesionRange: [0, 1], apparentCohesion: 1, friction: 30, frictionRange: [28, 33], frictionCv: 30,
     density: 1750, porosity: 0.42, drainable: 0.7, bulking: 1.05, failureModel: true,
   },
   cohesive: {
-    id: 'cohesive', labelKey: 'geo.mat.cohesive', cohesion: 8, cohesionRange: [2, 25], apparentCohesion: 6, friction: 24, frictionRange: [18, 30],
+    id: 'cohesive', labelKey: 'geo.mat.cohesive', cohesion: 8, cohesionRange: [2, 25], apparentCohesion: 6, friction: 24, frictionRange: [18, 30], frictionCv: 24,
     density: 1850, porosity: 0.45, drainable: 0.3, bulking: 1.25, failureModel: true,
   },
   fill: {
-    id: 'fill', labelKey: 'geo.mat.fill', cohesion: 2, cohesionRange: [0, 8], apparentCohesion: 3, friction: 30, frictionRange: [26, 35],
+    id: 'fill', labelKey: 'geo.mat.fill', cohesion: 2, cohesionRange: [0, 8], apparentCohesion: 3, friction: 30, frictionRange: [26, 35], frictionCv: 30,
     density: 1750, porosity: 0.4, drainable: 0.6, bulking: 1.15, failureModel: true,
   },
 };
@@ -89,3 +95,10 @@ export const G = 9.81;
 export const unitWeight = (p: MechanicalProfile) => (p.density * G) / 1000;
 
 export const DEG = Math.PI / 180;
+
+/**
+ * Angle of maximum stability minus angle of repose of a granular mass at rest (deg): a settled
+ * layer restarts only above φ'cv + this (granular hysteresis, ~2° in experiments: Jaeger, Liu &
+ * Nagel 1989). It is what lets settled debris STOP instead of creeping at the repose slope.
+ */
+export const REPOSE_HYSTERESIS = 2;

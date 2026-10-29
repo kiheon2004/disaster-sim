@@ -6,7 +6,7 @@ import { Rng } from '@/core/random';
 import { ValueNoise } from '@/terrain/TerrainPresets';
 import type { GeoField } from './GeoField';
 import type { GroundArea } from './types';
-import { DEG, GAMMA_W, unitWeight, type MechanicalProfile } from './materials';
+import { DEG, GAMMA_W, REPOSE_HYSTERESIS, unitWeight, type MechanicalProfile } from './materials';
 
 export interface GroundEnv {
   /** Ground height at vertex i (terrain without the mobile layer; includes the field's bed). */
@@ -94,10 +94,17 @@ export function waterRiseFrom(infiltrated: number, p: MechanicalProfile, z: numb
 }
 
 /**
- * Basal friction of a released mass: tan φ' reduced by the pore-pressure ratio r_u = m·γw / γ
- * (effective stress on the base; saturated debris runs out farther).
+ * Basal friction of a released (moving) mass: tan φ'cv — the critical-state friction of sheared
+ * soil, not the peak φ' of the ground in place — reduced by the pore-pressure ratio
+ * r_u = m·γw / γ (effective stress on the base; saturated debris runs out farther).
  */
 export function basalFriction(p: MechanicalProfile, m: number): number {
-  const ru = Math.min(0.9, (m * GAMMA_W) / unitWeight(p));
-  return Math.tan(p.friction * DEG) * (1 - ru);
+  return Math.tan(p.frictionCv * DEG) * (1 - poreRatio(p, m));
 }
+
+/** Friction a layer AT REST must exceed to start moving again: tan(φ'cv + REPOSE_HYSTERESIS)·(1 − r_u). */
+export function restartFriction(p: MechanicalProfile, m: number): number {
+  return Math.tan((p.frictionCv + REPOSE_HYSTERESIS) * DEG) * (1 - poreRatio(p, m));
+}
+
+const poreRatio = (p: MechanicalProfile, m: number) => Math.min(0.9, (m * GAMMA_W) / unitWeight(p));

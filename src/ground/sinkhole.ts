@@ -29,7 +29,7 @@
  */
 import type { GeoField } from './GeoField';
 import type { GroundEnv } from './common';
-import { applyVariability, basalFriction } from './common';
+import { applyVariability, basalFriction, restartFriction } from './common';
 import { DEG, G, GAMMA_W, MECHANICAL_IDS, MECHANICAL_PROFILES, unitWeight, type MechanicalProfile } from './materials';
 import { fallTime, plugFS, stableCutAngle } from './stability';
 import type { SinkholeSpec } from './types';
@@ -222,7 +222,7 @@ export class SinkholeModel {
       if (tanb <= tanS * (1 + 1e-3)) continue;
       // Half the excess over the stable line (sand-pile toppling rule) leaves the vertex.
       const excess = 0.5 * (drop - dist * f.dx * tanS);
-      if (excess > 1e-3) f.release(i, excess, basalFriction(p, m));
+      if (excess > 1e-3) f.release(i, excess, basalFriction(p, m), restartFriction(p, m));
     }
   }
 

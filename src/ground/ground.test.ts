@@ -133,6 +133,21 @@ describe('granular flow', () => {
     }
   });
 
+  it('granular hysteresis: a layer at rest between tan φcv and tan(φcv + 2°) stays put; the same layer already moving keeps going', () => {
+    const run = (moving: boolean) => {
+      const n = 41, f = grid(n, 1), tb = Math.tan(34 * DEG);
+      const ground = (i: number) => -tb * (i % n) + f.bed[i];
+      const muD = Math.tan(33 * DEG), muS = Math.tan(35 * DEG);
+      for (let i = 0; i < f.n; i++) { f.thickness[i] = 0.3; f.release(i, 0.2, muD, muS); f.bed[i] += 0.2; }
+      const kx = 20 * (n - 1) + 20;
+      if (moving) for (let k = 0; k < f.qx.length; k++) f.qx[k] = 0.2 * 0.5; // 0.5 m/s downslope (+x)
+      flowStep(f, 0.5, { ground, xi: 1e9 });
+      return f.qx[kx];
+    };
+    expect(run(false)).toBe(0);
+    expect(run(true)).toBeGreaterThan(0.2 * 0.5); // driving tan 34° > μ_d = tan 33°: accelerates
+  });
+
   it('open edges record what leaves; the budget closes', () => {
     const n = 41, f = grid(n, 1), tb = Math.tan(40 * DEG);
     const ground = (i: number) => -tb * (i % n) + f.bed[i];

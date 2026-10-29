@@ -141,14 +141,16 @@ describe('sinkhole', { timeout: 300_000 }, () => {
     expect(await t(true)).toBeLessThan(await t(false));
   });
 
-  it('a settled pit comes to rest: creep below 1 cm/s deposits, the terrain stops updating and stays within 1 mm of the field', async () => {
+  it('a settled pit comes to rest within 40 s (critical-state friction, granular hysteresis, rest by own faces): the terrain stops updating and stays within 1 mm of the field', async () => {
     const c = await start(structuredClone(S().doc), [sink({ cavityRadius: 5, cavityHeight: 8, cover: 5, initiation: 'supportLoss', supportLoss: 0.9, duration: 2, growthRate: undefined })]);
-    c.advance(60);
+    c.advance(40);
     const env = c.getEnvironment(), f = gf(c).field!, eng = env.deformation.engine!;
     const u0 = eng.updates;
     c.advance(20);
-    // (Without the rest threshold and the sync tolerance: 200 updates in these 20 s.)
-    expect(eng.updates - u0).toBeLessThanOrEqual(5);
+    // Settled within 40 s and no further terrain update (Phase 22 first version: 200 updates in
+    // these 20 s — creep at the repose slope; rest is now decided by the cell's own faces and a
+    // settled layer needs the angle of maximum stability to restart).
+    expect(eng.updates - u0).toBe(0);
     expect(f.budget.mobile).toBeLessThan(0.01 * f.budget.released);
     const src = gf(c).source!;
     let drift = 0;
