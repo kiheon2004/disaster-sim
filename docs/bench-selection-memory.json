@@ -1,0 +1,83 @@
+{
+  "url": "http://localhost:4173/",
+  "objects": 1000,
+  "results": [
+    {
+      "scenario": "sameObject",
+      "cycles": 40,
+      "retainedMB": 1.55,
+      "perCycleKB": 39.8,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 2695
+    },
+    {
+      "scenario": "differentObjects",
+      "cycles": 40,
+      "retainedMB": 0.33,
+      "perCycleKB": 8.4,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 2691
+    },
+    {
+      "scenario": "switchObjects",
+      "cycles": 40,
+      "retainedMB": 0.09,
+      "perCycleKB": 2.4,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 1360
+    },
+    {
+      "scenario": "multiSelect",
+      "cycles": 40,
+      "retainedMB": 0.24,
+      "perCycleKB": 6.2,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 2693
+    },
+    {
+      "scenario": "gizmoModes",
+      "cycles": 40,
+      "retainedMB": 0.07,
+      "perCycleKB": 1.8,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 1362
+    },
+    {
+      "scenario": "renderPath",
+      "cycles": 40,
+      "retainedMB": 0.24,
+      "perCycleKB": 6.1,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 4287
+    },
+    {
+      "scenario": "hover",
+      "cycles": 40,
+      "retainedMB": 0.06,
+      "perCycleKB": 1.6,
+      "geometries": 0,
+      "textures": 0,
+      "canvasListeners": 0,
+      "documentListeners": 0,
+      "ms": 2702
+    }
+  ]
+}

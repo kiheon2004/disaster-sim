@@ -1,0 +1,101 @@
+{
+  "lang": "ko",
+  "results": [
+    {
+      "name": "1 create: modular building placed by clicking the viewport",
+      "ok": true,
+      "detail": "1 object(s), 485 members"
+    },
+    {
+      "name": "2a parameter edit is a preview until Apply",
+      "ok": true,
+      "detail": "doc floors 6"
+    },
+    {
+      "name": "2b Apply: floors 8, width 21 m",
+      "ok": true,
+      "detail": "8 floors, 21 m"
+    },
+    {
+      "name": "2c Add Floor",
+      "ok": true,
+      "detail": "9 floors"
+    },
+    {
+      "name": "3a Building Edit Mode opens with its toolbar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "3b column, wall and window added (3 members, 3 undo steps)",
+      "ok": true,
+      "detail": "778 → 781"
+    },
+    {
+      "name": "3c clicking a member selects it (member inspector)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "4 material change: light cladding, lower mass",
+      "ok": true,
+      "detail": "2700 t → 2332 t"
+    },
+    {
+      "name": "5 placed on a slope: foundation reaches the ground (plinth, full contact)",
+      "ok": true,
+      "detail": "plinth 2.90 m, contact 100 %, slope 16.1°"
+    },
+    {
+      "name": "6 duplicate: new id, same design",
+      "ok": true,
+      "detail": "2 → 3"
+    },
+    {
+      "name": "7 undo / redo of the duplicate",
+      "ok": true,
+      "detail": "2 / 3"
+    },
+    {
+      "name": "8 save → change → load restores the saved world exactly",
+      "ok": true,
+      "detail": "3 objects"
+    },
+    {
+      "name": "9 typhoon: wind damage on the buildings (envelope parts)",
+      "ok": true,
+      "detail": "293 wind events"
+    },
+    {
+      "name": "10 earthquake: structural response and damage",
+      "ok": true,
+      "detail": "198 events, 34 member failures, 4 collapses"
+    },
+    {
+      "name": "13 damage state: before / after comparison and story drifts in the inspector",
+      "ok": true,
+      "detail": "9 story bars"
+    },
+    {
+      "name": "11 flood: water reaches buildings (flood state, loads, interior fill)",
+      "ok": true,
+      "detail": "3 building(s) wet"
+    },
+    {
+      "name": "12 combined hazards run together; several hazards cause damage",
+      "ok": true,
+      "detail": "3 phenomena, hazards: earthquake, wind"
+    },
+    {
+      "name": "14 original world: geometry, members, materials, foundation, damage and ids unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no console / page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}

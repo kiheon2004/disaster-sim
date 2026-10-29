@@ -32,8 +32,16 @@ async function gcTrace(page, ms) {
   return +(gc / (ms / 1000)).toFixed(1);
 }
 
-async function newPage() {
-  const page = await browser.newPage();
+async function newPage(attempt = 0) {
+  let page;
+  try {
+    page = await browser.newPage();
+    await wait(200);
+  } catch (e) {
+    if (attempt > 3) throw e;
+    await wait(2000);
+    return newPage(attempt + 1);
+  }
   page.on('pageerror', (e) => console.error('pageerror', e.message));
   page.on('dialog', (d) => d.accept());
   await page.goto(url + '?devtools', { waitUntil: 'networkidle0' });
