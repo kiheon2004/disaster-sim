@@ -85,6 +85,21 @@ export function runtimeStateManifest(env: EnvironmentState, rt: SimulationRuntim
     },
     { id: 'fragments', owner: 'StructuresRuntime', kind: 'external', holds: 'fragment bodies (Rapier) with their member / root / hazard; settled flags', present: !!rt?.structures?.fragments.length, bytes: (rt?.structures?.fragments.length ?? 0) * 160 },
     { id: 'rubble', owner: 'RubbleField', kind: 'state', holds: 'rubble heaps (footprint, mass, volume, height, hazard) + their fixed colliders', present: !!rt?.structures?.rubble.heaps.length, bytes: (rt?.structures?.rubble.heaps.length ?? 0) * 96 },
+    // Phase 26: thermal state (only in runs with heat). Everything below would have to be saved for a
+    // mid-run checkpoint; the geometry caches are derived (rebuilt from bodies / terrain / sources).
+    {
+      id: 'thermalGround', owner: 'ThermalWorld.terrain', kind: 'state', holds: 'energy of the 4 layers of every cell of the active tiles, active tile list, peak surface temperature, covered mask (derived)',
+      present: !!env.thermal.rt, bytes: env.thermal.rt ? env.thermal.rt.world.terrain.tiles.length * 100 * env.thermal.rt.world.terrain.nl * 8 : 0,
+    },
+    { id: 'thermalWater', owner: 'WaterField.heat', kind: 'state', holds: 'heat per water cell (moves with the water), infiltrated heat pending', present: !!flood?.heat, bytes: flood?.heat ? bytesOf(flood.heat, flood.infilHeat) : 0 },
+    { id: 'thermalAir', owner: 'ThermalWorld.air / comps', kind: 'state', holds: 'air-layer column energies and peaks, building room energies (alive / opened)', present: !!env.thermal.rt, bytes: env.thermal.rt ? bytesOf(env.thermal.rt.world.air.E) + env.thermal.rt.world.comps.length * 48 : 0 },
+    {
+      id: 'thermalBodies', owner: 'ThermalBodies + ThermalRuntime', kind: 'state',
+      holds: 'per body: skin / core energy, peak temperatures, alive, LOD state (whole building / members), member → body map, fragment / heap links, applied material factors and thermal forces, restraint revision',
+      present: !!env.thermal.rt, bytes: env.thermal.rt ? env.thermal.rt.world.bodies.n * 160 : 0,
+    },
+    { id: 'thermalSources', owner: 'ThermalChannel + ThermalRuntime', kind: 'state', holds: 'heat sources (from the plan) and how far each was integrated (local time), impact heat deposits done; receiver geometry (derived)', present: env.thermal.active, bytes: env.thermal.sources.length * 64 },
+    { id: 'thermalLedger', owner: 'ThermalLedger', kind: 'state', holds: 'added / boundary / impact / lost (8 accounts) / transfers, per-source totals and contributions', present: !!env.thermal.rt, bytes: 256 },
     { id: 'metrics', owner: 'MetricsRecorder', kind: 'state', holds: 'damage records, time series, milestones (results)', present: true, bytes: 0 },
   ];
   return out;

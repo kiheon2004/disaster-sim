@@ -6,7 +6,8 @@ import { useSimStore } from '@/simulation/simStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { Section } from '@/ui/common/Panel';
 import { fmt } from '@/ui/format';
-import { THERMAL_MATERIAL_IDS } from '@/thermal/materials';
+import { THERMAL_MATERIAL_IDS, TM } from '@/thermal/materials';
+import { BK } from '@/thermal/ThermalBodies';
 import { sectionFactors, thermalStrain } from '@/thermal/structural';
 import { contributionKey, TK } from '@/thermal/ThermalWorld';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
@@ -99,6 +100,12 @@ export function ThermalObjectSection({ id }: { id: EntityId }) {
     );
     if (B.mC[b] > 0) rows.push([t('thermal.inspect.cond'), W(B.qCond[b])]);
     if (B.qGround[b] !== 0) rows.push([t('thermal.inspect.ground'), W(B.qGround[b])]);
+    // Free expansion of an object along its longest side (no restraint: no stress).
+    if (B.kind[b] === BK.entity && B.matS[b] !== TM.foliage) {
+      const L = Math.max(B.sx[b], B.sy[b], B.sz[b]);
+      const eps = thermalStrain(B.matS[b], B.meanT(b), Tref);
+      if (eps !== 0) rows.push([t('thermal.inspect.expansion'), `ε ${fmt(eps * 1000, 3)} ‰ · ΔL ${fmt(eps * L * 1000, 2)} mm (${t('thermal.inspect.free')})`]);
+    }
     rows.push([t('thermal.inspect.sources'), energyText(B.Esrc[b])]);
     for (const [name, v] of contributions(TK.body, b)) rows.push([`  · ${name}`, energyText(v)]);
     return rows;
