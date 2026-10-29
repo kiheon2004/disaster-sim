@@ -15,14 +15,15 @@ import { hGround } from '@/thermal/convection';
 import { boilingPointWater, dewPointChecked, esWater, humidityFromRH, qSat, saturationAdjust, specificHumidity } from './psychro';
 import { ClimateForcing } from './forcing';
 import { climateOutlook } from './outlook';
-import { snowAlbedo } from './snow';
+import { phaseState, snowAlbedo } from './snow';
+import { emptyResult, stepNode } from './cover';
 import { CLIMATE_SCENARIOS, climateWarnings, defaultClimateSpec, type ClimateSpec } from './types';
 import { CLIMATE_PRESETS, climatePreset, scenarioDefaults } from './presets';
 import { climate as climateDefinition } from '@/phenomena/climateDefinitions';
 import type { EventSpec } from '@/events/specs';
 import { parseCommands } from '@/commands/RuleBasedParser';
 import { ClimateWorld, computeShade, STORE, type ClimateWaterLink } from './ClimateWorld';
-import { CP_AIR, L_V, RHO_ICE, SIGMA, T_MELT } from './constants';
+import { CP_AIR, CROWN_BREAK, L_F, L_S, L_V, LEWIS, RHO_ICE, SIGMA, T_MELT } from './constants';
 
 const K = (c: number) => c + 273.15;
 
@@ -343,5 +344,46 @@ describe('audit: text commands keep their Phase 29 meaning', () => {
     const r = parseCommands('폭설', { direction: 'E', duration: 60, gustStrength: 0.2 } as never);
     expect(r.commands).toHaveLength(0);
     expect(r.unsupported.map((u) => u.event)).toContain('climate');
+  });
+});
+
+describe('audit: cover node vapour flux of a thin cooling node', () => {
+  it('has the sign and size of the exact flux at its surface temperature (before: deposition 24× the true sublimation)', () => {
+    for (const M of [0.001, 0.01, 0.1, 10]) {
+      const Ta = K(-30), p = 101325, qa = 0.9 * qSat(Ta, p, true);
+      const n = { M, U: M * (2108 * -1 - L_F), snow: 0, ice: M, rho: 917, A: 1, Ta, qa, p, u2: 4, pr: 1, Tsky: K(-60), S: 0, Tb: K(-1), Gb: 0, dt: 5, open: true };
+      const r = stepNode(n, emptyResult());
+      const k = hGround(r.T, Ta, 4, 1, 1) / (CP_AIR * Math.pow(LEWIS, 2 / 3));
+      const exact = k * (qSat(r.Ts, p, true) - qa);
+      expect(r.L).toBe(L_S);
+      expect(Math.sign(r.evap)).toBe(Math.sign(exact));
+      expect(r.evap / exact).toBeGreaterThan(0.5);
+      expect(r.evap / exact).toBeLessThan(1.5);
+      // Energy of the step: dU = −(conv + rad + latent)·dt (adiabatic bottom, no sun), and the end state is physical.
+      expect(r.dU).toBeCloseTo(-5 * (r.qConv + r.qRad + r.qLatent), 6);
+      expect(phaseState(n.U + r.dU, M).T).toBeGreaterThan(n.Tsky - 1);
+    }
+  });
+});
+
+describe('audit: object stores', () => {
+  it('freezing rain on a crown below 0 °C becomes glaze ice (before: stored ice only ever decreased)', () => {
+    const r = setup(spec({ temperature: K(-6), target: K(-6), forcing: 'prescribed', humidity: 0.95, precipitation: 20, precipPhase: 'rain' } as Partial<ClimateSpec>));
+    const k = r.cw.addStoreSlot({ kind: STORE.crown, area: 15, air: 0, body: -1, path: 0.05, cells: Int32Array.from([20 * 40 + 20]), lai: 3.5, ref: 0 });
+    r.cw.sT[k] = K(-6);
+    r.step(300);
+    expect(r.cw.sM[k]).toBeGreaterThan(0);
+    expect(r.cw.sIce[k]).toBeGreaterThan(0.5 * r.cw.sM[k]);
+  });
+  it('a crown never starts loaded beyond the load that breaks it', () => {
+    // A run registers the stores before the initial state: register on a world without snow, then apply 1 m of
+    // 60 kg/m³ snow (the interception maximum of a conifer at that density, 23.9 kg/m², is above the break load).
+    const t = setup(spec({ temperature: K(-3), target: K(-3), humidity: 0.8 }));
+    const k = t.cw.addStoreSlot({ kind: STORE.crown, area: 15, air: 0, body: -1, path: 0.05, cells: Int32Array.from([0]), lai: 3.5, ref: 0 });
+    (t.cw.spec as { initialSnow?: number; initialSnowDensity?: number }).initialSnow = 1;
+    (t.cw.spec as { initialSnow?: number; initialSnowDensity?: number }).initialSnowDensity = 60;
+    t.cw.applyInitialState();
+    expect(t.cw.sM[k] / 15).toBeLessThan(CROWN_BREAK);
+    expect(t.cw.sM[k] / 15).toBeGreaterThan(0.9 * CROWN_BREAK);
   });
 });

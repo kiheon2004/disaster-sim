@@ -41,8 +41,8 @@ const LOAD_QUANTUM = 0.02;
 const LOAD_QUANTUM_KPA = 0.05;
 /** Seconds between roof-load updates of a building. */
 const LOAD_EVERY = 5;
-/** Snow + ice on a crown (kg per m² of crown projection) from which stems / large branches break — indicative (Nykänen et al. 1997: ≈ 20–30 kg/m²). */
-export const CROWN_BREAK = 20;
+export { CROWN_BREAK } from '@/climate/constants';
+import { CROWN_BREAK } from '@/climate/constants';
 /** Snow depth (m) from which a road is impassable for ordinary vehicles — indicative. */
 export const ROAD_SNOW_IMPASSABLE = 0.25;
 /** Roof thermal resistance between a building's envelope node and its roof snow (m²K/W, U ≈ 0.4 W/(m²K)). */
@@ -355,6 +355,9 @@ export class ClimateRuntime {
     const w = this.trt.world;
     const local = ctx.time - this.rec.start;
     this.cw.after(dt, local, { surface: (dtg) => this.surface(ctx, dtg) });
+    // A roof that just failed lets its snow go in the same step (the structural model dropped the load at once; the
+    // once-per-second object pass left the snow on the store for up to 1 s).
+    for (const s of this.stores) if (!this.cw.sGone[s.k] && this.cw.stores[s.k].kind === STORE.roof && this.roofGone(s.e)) this.dropRoof(ctx, s);
     w.ledger.final = w.internalEnergy();
     if (ctx.time + 1e-9 >= this.nextSecond) {
       this.nextSecond = ctx.time + 1;
@@ -470,8 +473,7 @@ export class ClimateRuntime {
       const e = s.e, st = cw.stores[s.k];
       if (cw.sGone[s.k]) continue;
       if (st.kind === STORE.roof) {
-        const gone = e.flags.collapsed || e.flags.toppled || (e.modular ? Number.isFinite(e.modular.collapsedFrom) : false);
-        if (gone) { cw.dropStore(s.k); this.once(ctx, `roofDrop:${e.id}`, 'snowFromRoof', { kg: 0 }); continue; }
+        if (this.roofGone(e)) { this.dropRoof(ctx, s); continue; }
         if (ctx.time >= s.nextLoad) { s.nextLoad = ctx.time + LOAD_EVERY; this.roofLoad(ctx, s); }
       } else if (st.kind === STORE.crown) {
         if (e.flags.toppled || e.flags.snapped || e.flags.uprooted) { cw.dropStore(s.k); continue; }
@@ -511,6 +513,17 @@ export class ClimateRuntime {
       cs.minAirT = Math.min(cs.minAirT, cs.airT);
       cs.maxAirT = Math.max(cs.maxAirT, cs.airT);
     }
+  }
+
+  private roofGone(e: RuntimeEntity): boolean {
+    return e.flags.collapsed || e.flags.toppled || (e.modular ? Number.isFinite(e.modular.collapsedFrom) : false);
+  }
+
+  /** The roof's snow to the ground of its footprint; its loads leave the bookkeeping (the members carrying them failed). */
+  private dropRoof(ctx: SystemContext, s: StoreRef) {
+    this.cw.dropStore(s.k);
+    s.applied = null;
+    this.once(ctx, `roofDrop:${s.e.id}`, 'snowFromRoof', { kg: 0 });
   }
 
   climateState(e: RuntimeEntity) {
@@ -562,8 +575,8 @@ export class ClimateRuntime {
         const d = cw.snowDepth(c), i = cw.iceThickness(c), hw = wf ? wf.h[c] : 0;
         snow = Math.max(snow, d); ice = Math.max(ice, i); film = Math.max(film, hw);
         Ts = Math.min(Ts, cw.cM[c] > 0 ? cw.coverT(c) : g.T(c, 0));
-        const s = surfaceState(cw.swe(c) * cw.cellArea, cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, hw, cw.cRho[c]);
-        const f = frictionFactor(1, cw.swe(c) * cw.cellArea, cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, cw.cRho[c], WET_GRIP, hw);
+        const s = surfaceState(cw.swe(c), cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, hw, cw.cRho[c]);
+        const f = frictionFactor(1, cw.swe(c), cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, cw.cRho[c], WET_GRIP, hw);
         if (f < fric) { fric = f; state = s; }
       }
       if (!Number.isFinite(Ts)) continue;
@@ -590,7 +603,7 @@ export class ClimateRuntime {
     for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) {
       const c = g.index(x + dx, z + dz);
       if (c < 0) continue;
-      s += frictionFactor(groundFactor, cw.swe(c) * cw.cellArea, cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, cw.cRho[c], WET_GRIP, waterDepth);
+      s += frictionFactor(groundFactor, cw.swe(c), cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, cw.cRho[c], WET_GRIP, waterDepth);
       n++;
     }
     return n ? s / n : groundFactor;
@@ -614,7 +627,7 @@ export class ClimateRuntime {
       airT: T, rh: cw.rh(a), q, dew: dewPointChecked(e), p, surfaceT: cw.cM[c] > 0 ? cw.coverT(c) : hw > WATER_MERGE ? w.waterT(c) : g.T(c, 0),
       snowDepth: cw.snowDepth(c), swe: cw.swe(c), snowDensity: cw.cRho[c], iceThickness: cw.iceThickness(c), liquid: cw.cLiq[c] / cw.cellArea,
       albedo: cw.albedo(c), solar: cw.surf.solar[c], shade: cw.shade[c] === 1, water: hw, soilWater: soilW / cw.cellArea, soilIce: soilI / cw.cellArea, frostDepth: frost,
-      freezeThaw: cw.ftCycles[c], state: SURFACE_STATES[surfaceState(cw.swe(c) * cw.cellArea, cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, hw, cw.cRho[c])],
+      freezeThaw: cw.ftCycles[c], state: SURFACE_STATES[surfaceState(cw.swe(c), cw.cIce[c] / cw.cellArea, cw.cLiq[c] / cw.cellArea, hw, cw.cRho[c])],
       friction: this.frictionAt(x, z, 1, hw) * 0.55, condensate: cw.cond[a] ?? 0, Tsky: cw.surf.Tsky,
     };
   }

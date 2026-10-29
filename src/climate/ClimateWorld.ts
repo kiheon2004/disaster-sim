@@ -28,7 +28,7 @@ import type { ThermalWorld } from '@/thermal/ThermalWorld';
 import type { SurfaceClimate } from '@/thermal/TerrainThermal';
 import { WATER_MERGE } from '@/thermal/TerrainThermal';
 import { hWaterSide, hGround } from '@/thermal/convection';
-import { C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
+import { CROWN_BREAK, C_ICE, C_WATER, CP_AIR, EPS_SNOW, GROUND_ALBEDO, ICE_ALBEDO, L_F, L_S, L_V, RHO_ICE, RHO_WATER, SNOW_ALBEDO_MAX, SNOW_HOLDING, T_MELT, WATER_ALBEDO, P_TRIPLE, PAVEMENT_FILM } from './constants';
 import { ClimateForcing, type BackgroundState } from './forcing';
 import type { ClimateSpec } from './types';
 import { boilingPointWater, humidityFromRH, qSat, relativeHumidity, saturationAdjust, wetBulb } from './psychro';
@@ -512,7 +512,8 @@ export class ClimateWorld {
       for (let k = 0; k < this.stores.length; k++) {
         const st = this.stores[k];
         if (s.roofSnow === false) continue;
-        const per = st.kind === STORE.crown ? Math.min(d * rho, interceptionMax(rho, st.lai ?? 2)) : st.kind === STORE.vehicle ? Math.min(d, 0.3) * rho : d * rho;
+        // A crown starts with what it can hold — below the load that breaks it (light snow can be held beyond it).
+        const per = st.kind === STORE.crown ? Math.min(d * rho, interceptionMax(rho, st.lai ?? 2), 0.95 * CROWN_BREAK) : st.kind === STORE.vehicle ? Math.min(d, 0.3) * rho : d * rho;
         this.addStore(k, per * st.area, Ts, false, rho);
       }
     }
@@ -1374,6 +1375,9 @@ export class ClimateWorld {
       const liq = Un > 0 ? Mn : ph.liquid;
       const frozen = Mn - liq;
       if (frozen < Math.min(this.sIce[k], Mn)) this.sIce[k] = frozen;
+      // Liquid that froze on a store without snow (freezing rain on a crown, roof or car) is glaze ice (cf. settleCover).
+      const F0s = M - liq0, snow0s = Math.max(0, F0s - ice);
+      if (frozen > F0s && snow0s < 0.5 * st.area) this.sIce[k] = Math.min(frozen, this.sIce[k] + (frozen - F0s));
       const hold = SNOW_HOLDING * Math.max(0, frozen - this.sIce[k]);
       const drain = Un > 0 ? Mn : Math.max(0, liq - hold);
       if (drain > 0) {

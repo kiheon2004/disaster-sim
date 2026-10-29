@@ -95,25 +95,31 @@ function solveNode(n: NodeInput, out: NodeResult, melting: boolean) {
   // Top face linearization (per area) about the node temperature.
   let a = 0, b = 0, hc = 0, hr = 0, k = 0, L = L_V, q0 = 0, s = 0, Tl = T;
   const wetTop = ph.liquid > 0 && T >= T_MELT - 1e-9;
-  if (n.open) {
-    hc = hGround(T, n.Ta, n.u2, 1, n.pr);
-    hr = EPS_SNOW * SIGMA * (T * T + n.Tsky * n.Tsky) * (T + n.Tsky);
+  L = wetTop ? L_V : L_S;
+  // Top face linearized about Tl: the node temperature first; when the implicit step moves the node far from it (a
+  // thin node cooling 20–30 K in one step) again about the solved temperature — a linearization about the start
+  // otherwise turns the vapour flux of a cooling node into a deposition it never has (q_s falls exponentially).
+  const linearize = () => {
+    hc = hGround(Tl, n.Ta, n.u2, 1, n.pr);
+    hr = EPS_SNOW * SIGMA * (Tl * Tl + n.Tsky * n.Tsky) * (Tl + n.Tsky);
     k = hc * KLE;
-    L = wetTop ? L_V : L_S;
-    q0 = qSat(T, n.p, !wetTop);
-    s = dqSatdT(T, n.p, !wetTop);
-    Tl = T;
+    q0 = qSat(Tl, n.p, !wetTop);
+    s = dqSatdT(Tl, n.p, !wetTop);
     const den = 1 / Rh + hc + hr + L * k * s;
     a = (n.S + hc * n.Ta + hr * n.Tsky - L * k * (q0 - s * Tl - n.qa)) / den;
     b = 1 / Rh / den;
-  }
-  const Gt = n.open ? ((1 - b) / Rh) * A : 0;
-  const Tt = n.open && b < 1 ? a / (1 - b) : T;
-  let Tstar: number;
-  if (C === Infinity) Tstar = T_MELT;
-  else {
+  };
+  let Tstar = T_MELT;
+  for (let it = 0; it < 4; it++) {
+    if (n.open) linearize();
+    const Gt = n.open ? ((1 - b) / Rh) * A : 0;
+    const Tt = n.open && b < 1 ? a / (1 - b) : T;
+    if (C === Infinity) { Tstar = T_MELT; break; }
     const Tn = (C * T / dt + Gt * Tt + Gbot * n.Tb) / (C / dt + Gt + Gbot);
     Tstar = Math.min(Tn, T_MELT);
+    // q0, s, hc, hr stay those of the last linearization (the evaporation below uses them about Tl).
+    if (!n.open || it === 3 || Math.abs(Tstar - Tl) < 0.5) break;
+    Tl = Tstar;
   }
   let Ts = Tstar, qConv = 0, qRad = 0, evap = 0, qLat = 0, qSolar = 0;
   if (n.open) {

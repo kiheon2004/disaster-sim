@@ -62,3 +62,6 @@ export const FROZEN_ICE_FRACTION = 0.25;
 
 /** Water depth the storm drains leave on paved cells during a climate experiment (m): pavement depression storage. */
 export const PAVEMENT_FILM = 0.0005;
+
+/** Snow + ice on a crown (kg per m² of crown projection) from which stems / large branches break — indicative (Nykänen et al. 1997: ≈ 20–30 kg/m²). */
+export const CROWN_BREAK = 20;
