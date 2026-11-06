@@ -14,6 +14,8 @@ import { foundationPlinth } from '@/terrain/groundPlacement';
 import { newForceRecord } from './forces/ForceLedger';
 import { createModularRuntime } from './buildings/modular';
 import { createHumanState, SERIES_PEOPLE } from './human/state';
+import { createPhysioEntity, SERIES_PEOPLE as PHYSIO_SERIES_PEOPLE, type PhysiologyRuntime } from './physiology/state';
+import type { PhysiologySettings } from '@/physiology/settings';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
 export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
@@ -151,11 +153,18 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
 }
 
 /** WorldDocument (read-only) → fresh SimulationRuntime with physics bodies. */
-export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain), humans?: HumanSettings): SimulationRuntime {
+export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain), humans?: HumanSettings, physiology?: PhysiologySettings): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
   const series = { n: 0 };
   for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain, humans, series));
   let modular = false;
   for (const e of entities.values()) if (e.modular) { modular = true; break; }
-  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}) };
+  // Phase 34: physiology of the extended-model people (absent setting: nothing is created).
+  let physio: PhysiologyRuntime | undefined;
+  if (humans && physiology) {
+    physio = { settings: structuredClone(physiology), compartments: new Map(), initialized: false };
+    let n = 0;
+    for (const e of entities.values()) if (e.human) e.physio = createPhysioEntity(e.id, e.human.model.mass, e.human.model.height, physiology, n++ < PHYSIO_SERIES_PEOPLE);
+  }
+  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}), ...(physio ? { physiology: physio } : {}) };
 }

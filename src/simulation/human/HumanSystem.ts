@@ -53,7 +53,7 @@ const EXTREME_SPIN = 50, EXTREME_DV = 60;
 /** Memory (s) of the recent tipping impulses the fall is attributed to. */
 const TIP_MEMORY = 0.5;
 /** Fall causes beyond the ledger sources. */
-type FallCause = (typeof FORCE_SOURCES)[number] | 'gravity' | 'slip' | 'contact' | 'noSupport';
+type FallCause = (typeof FORCE_SOURCES)[number] | 'gravity' | 'slip' | 'contact' | 'noSupport' | 'physiological';
 const CAUSE: Record<FallCause, [DamageCause, Hazard | null]> = {
   wind: ['overload', 'wind'],
   groundMotion: ['shaking', 'earthquake'],
@@ -66,6 +66,8 @@ const CAUSE: Record<FallCause, [DamageCause, Hazard | null]> = {
   slip: ['push', null],
   contact: ['impact', null],
   noSupport: ['gravity', 'gravity'],
+  // Phase 34: the physiology left the person unable to act — posture control lost (legs give way, see stance()).
+  physiological: ['physiology', 'thermal'],
 };
 
 // ── small vector helpers (rotation by a unit quaternion) ──
@@ -286,7 +288,7 @@ export class HumanSystem implements SimulationSystem {
     const h = e.body!;
     // Fast path: a standing person asleep in Rapier with no load this step and the lean at rest has nothing to update (a
     // change of gravity or any force wakes the body first) — only the chart series keeps its samples.
-    if (st.standing && st.started && st.episodes.size === 0 && physics.isSleeping(h) && quiet(st)) {
+    if (st.standing && st.started && st.episodes.size === 0 && physics.isSleeping(h) && quiet(st) && (!e.physio || e.physio.couple.canStand)) {
       const ser = st.series;
       if (ser && ctx.time - ser.t[ser.t.length - 1] >= ser.dt - 1e-9 && ser.t.length < SERIES_MAX) {
         ser.t.push(ctx.time); ser.speed.push(0); ser.height.push(ser.height[ser.height.length - 1]); ser.spin.push(0);
@@ -350,6 +352,10 @@ export class HumanSystem implements SimulationSystem {
           if (cause === 'noSupport') cause = recentCause(st, null, 'noSupport');
         }
         this.release(ctx, e, st, cause, axis, e1, e2, v);
+      } else if (e.physio && !e.physio.couple.canStand) {
+        // Phase 34: unable to act (physiology) — posture control is lost; the released body sinks down (stance()).
+        a.fill(0);
+        this.release(ctx, e, st, 'physiological', axis, e1, e2, v);
       } else {
         // Tipping moment per ledger source about the stance point s = p0: τ = Σ p×F − s×ΣF + (c − s)×ΣF_com; tip = τ × axis.
         const tip = this.tip;
@@ -374,7 +380,8 @@ export class HumanSystem implements SimulationSystem {
         const bx1 = -m * hc * dot(ab, e1), bx2 = -m * hc * dot(ab, e2);
         t1 += gx1 + bx1;
         t2 += gx2 + bx2;
-        const out = stepBalance(st.bp, st.bal, { gn, t1, t2, f1: 0, f2: 1 }, dt);
+        // Phase 34: physiological capacity scales the available ankle moment (absent: the Phase 33 model unchanged).
+        const out = stepBalance(st.bp, st.bal, e.physio ? { gn, t1, t2, f1: 0, f2: 1, control: e.physio.couple.balance } : { gn, t1, t2, f1: 0, f2: 1 }, dt);
         // Recent tipping angular impulse per cause (decaying memory; contacts are added in humanContact).
         const hist = st.tipHist, ns = FORCE_SOURCES.length;
         for (let k = 0; k < ns; k++) { hist[2 * k] += tip[2 * k] * dt; hist[2 * k + 1] += tip[2 * k + 1] * dt; }
@@ -527,7 +534,7 @@ export class HumanSystem implements SimulationSystem {
     if (st.uprightFor < STANCE_TIME) return;
     st.uprightFor = 0;
     const h = e.body!;
-    if (!st.incapacitated && st.mobility !== 'immobile' && -dot(g, axis) >= MIN_GN) {
+    if (!st.incapacitated && st.mobility !== 'immobile' && (!e.physio || e.physio.couple.canStand) && -dot(g, axis) >= MIN_GN) {
       st.standing = true;
       st.regained++;
       st.bal.th[0] = st.bal.th[1] = st.bal.om[0] = st.bal.om[1] = 0;

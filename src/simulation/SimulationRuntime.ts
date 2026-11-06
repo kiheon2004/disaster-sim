@@ -120,6 +120,8 @@ export interface RuntimeEntity {
   counters: Record<string, number>;
   /** Phase 33: extended human model state (people of an 'extended' run only). */
   human?: import('./human/state').HumanState;
+  /** Phase 34: physiology of an extended-model person (physiology runs only). */
+  physio?: import('./physiology/state').PhysioEntity;
   /** Phase 33: ForceLedger accumulator of a standing extended person (see ForceOwner.hum). */
   hum?: Float64Array;
 }
@@ -174,6 +176,8 @@ export interface SimulationLogEntry {
 
 export interface SimulationRuntime {
   entities: Map<EntityId, RuntimeEntity>;
+  /** Phase 34: physiology run state (absent = no physiology). */
+  physiology?: import('./physiology/state').PhysiologyRuntime;
   debris: DebrisPiece[];
   particles: Particle[];
   /** Simulation time the particle positions correspond to (they update at a lower rate). */

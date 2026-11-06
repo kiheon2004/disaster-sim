@@ -78,6 +78,8 @@ export interface BalanceInput {
   /** Facing in the plane (unit; for the support rectangle). */
   f1: number;
   f2: number;
+  /** Phase 34: share of the ankle moment available (physiological capacity, 0…1; absent = 1). */
+  control?: number;
 }
 
 export type BalanceOutcome = 'standing' | 'fall';
@@ -107,7 +109,7 @@ export function stepBalance(p: BalanceParams, s: BalanceState, inp: BalanceInput
   const cm = Math.hypot(c1, c2);
   let demand = 0;
   if (cm > 0) {
-    const cap = W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2);
+    const cap = inp.control === undefined ? W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2) : W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2) * inp.control;
     demand = cm / cap;
     if (cm > cap) {
       c1 *= cap / cm;

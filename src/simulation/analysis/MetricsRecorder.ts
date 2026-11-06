@@ -104,6 +104,7 @@ export class MetricsRecorder {
       ...(ev.chain ? { chain: ev.chain } : {}),
       ...(ev.secondary ? { secondary: ev.secondary } : {}),
       ...(ev.human ? { human: ev.human } : {}),
+      ...(ev.physio ? { physio: ev.physio } : {}),
     };
     // The origin: the channel that had done the most damage (ties and undamaged → the trigger).
     let best = rec.contributors[rec.hazard];

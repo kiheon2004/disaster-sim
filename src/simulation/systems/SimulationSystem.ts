@@ -39,7 +39,9 @@ export type StateKey =
   // Phase 21: the ground surface itself (heights, collider) — written only by the DeformationSystem.
   | 'terrain'
   // Phase 26: the thermal state (temperatures, heat) — written only by the ThermalSystem.
-  | 'temperature';
+  | 'temperature'
+  // Phase 34: the physiology of people (body temperature, doses, capacity) — written only by the PhysiologySystem.
+  | 'physiology';
 
 /**
  * A unit of simulation logic run on the fixed-step clock.

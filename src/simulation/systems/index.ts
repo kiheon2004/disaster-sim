@@ -1,4 +1,5 @@
 import { HumanSystem } from '../human/HumanSystem';
+import { PhysiologySystem } from '../physiology/PhysiologySystem';
 import type { SimulationSystem } from './SimulationSystem';
 import { WindForceSystem } from './WindForceSystem';
 import { PoseSyncSystem } from './PoseSyncSystem';
@@ -72,5 +73,7 @@ export function createDefaultSystems(): SimulationSystem[] {
     new DebrisSystem(),
     new ParticleSystem(),
     new ExposureSystem(),
+    // Phase 34: physiology of extended people — after every environment system of the step (reads them, writes none).
+    new PhysiologySystem(),
   ];
 }

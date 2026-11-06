@@ -29,7 +29,10 @@ export type DamageEventType =
   // Phase 28: touched by lava (recorded once; the effects are separate events / exposure).
   | 'LAVA_CONTACT'
   // Phase 33: an extended-model person's body segment reached a higher educational injury-risk level.
-  | 'INJURED';
+  | 'INJURED'
+  // Phase 34: physiology state changes of an extended-model person (one event per change, educational model states).
+  | 'THERMAL_STRESS' | 'THERMAL_RECOVERED' | 'RESPIRATORY_STRESS' | 'AIRWAY_SUBMERGED' | 'AIRWAY_CLEARED' | 'GAS_EXPOSURE'
+  | 'HYDRATION_STRESS' | 'FATIGUE_LIMIT' | 'CAPACITY_CHANGED';
 
 /**
  * Why it happened:
@@ -61,7 +64,9 @@ export type DamageCause =
   // Phase 31: own weight under a changed gravity field (dead load × g / g₀) and the members it overloaded.
   | 'gravityLoad'
   // Phase 32: lateral / differential / uplift load of a celestial source's field, capture by a source.
-  | 'tidalLoad' | 'captured';
+  | 'tidalLoad' | 'captured'
+  // Phase 34: a physiology state change (not damage — the physiology owns no health).
+  | 'physiology';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -147,8 +152,10 @@ export interface DamageEventRecord {
    * educational risk index and level reached, the partner ('ground', an object or debris id), the posture.
    */
   human?: { segment?: string; impulse?: number; dv?: number; decel?: number; index?: number; level?: string; partner?: string; posture?: string };
+  /** Phase 34: physiology transition (kind, from → to, value in the kind's unit, limiting causes of a capacity change). */
+  physio?: { kind: string; from: string; to: string; value: number; causes?: string };
 }
 
-type Optional = 'human' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
+type Optional = 'human' | 'physio' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
 
 export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'contributors' | 'origin' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

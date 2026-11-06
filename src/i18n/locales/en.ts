@@ -22,6 +22,9 @@ import { enCelestial } from './en.celestial';
 import { enHuman } from './en.human';
 import { enHumanUi } from './en.humanUi';
 import { enHumanPresets } from './en.humanPresets';
+import { enPhysiology } from './en.physiology';
+import { enPhysiologyUi } from './en.physiologyUi';
+import { enPhysiologyPresets } from './en.physiologyPresets';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -620,4 +623,7 @@ export const en: Record<MessageKey, string> = {
   ...enHuman,
   ...enHumanUi,
   ...enHumanPresets,
+  ...enPhysiology,
+  ...enPhysiologyUi,
+  ...enPhysiologyPresets,
 };
