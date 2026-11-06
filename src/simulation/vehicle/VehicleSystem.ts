@@ -23,6 +23,8 @@ import type { BodyUserData } from '@/physics/PhysicsEngine';
 import { physiologySnapshot } from '../physiology/interface';
 import type { VehicleEntity } from './state';
 
+/** Time at rest (s) before a quiet vehicle's body is put to sleep. */
+export const REST_TIME = 1;
 const BODY_MU = 0.7;
 const BODY_CRR = 0.015;
 const CAP_INPUT: Record<string, number> = { normal: 1, stressed: 1, impaired: 0.8, severelyImpaired: 0.4, unableToAct: 0 };
@@ -100,6 +102,22 @@ export class VehicleSystem implements SimulationSystem {
       this.driver(ctx, v, c);
       // Under its own power: what this car strikes is the vehicle's doing (attribution of collisions, injuries, structure strikes).
       if (c.throttle > 0 && v.avail.drive * v.avail.driver > 0 && c.gear !== 'N' && c.gear !== 'P') e.lastHazard = 'vehicle';
+      // A car at rest without inputs lets Rapier put its body to sleep (its wheel forces do not wake it); asleep, nothing changes —
+      // the step is skipped (wheel states kept) until a contact, a hazard force or an input wakes it.
+      // Quiet: no input and nothing the vehicle model itself must apply (its own air drag in a wind, a changed gravity field).
+      const lw = e.localWind.velocity;
+      const gNow = ctx.env.gravity.at(pose.position[0], pose.position[1], pose.position[2], [0, 0, 0]);
+      const gMoved = Math.hypot(gNow[0] - v.sleepG[0], gNow[1] - v.sleepG[1], gNow[2] - v.sleepG[2]) > 0.01 * Math.max(1e-6, Math.hypot(...v.sleepG));
+      const quiet = c.throttle === 0 && v.live === null && v.autopilot === null && v.program.length <= v.programIdx && Math.hypot(lw[0], lw[1], lw[2]) < 0.5 && !gMoved;
+      if (quiet && ctx.physics.isSleeping(h)) { v.asleep = true; continue; }
+      if (ctx.physics.isSleeping(h) && !quiet) ctx.physics.wake(h);
+      v.asleep = false;
+      // Rest: no input, body and wheels still (|v|, |ω| < 0.1 mm/s, 0.1 mrad/s) for REST_TIME s → the body is put to sleep (Rapier
+      // keeps a body with applied forces awake; asleep, any contact, hazard force or input wakes it again).
+      const still = quiet && Math.hypot(vel[0], vel[1], vel[2]) < 1e-4 && Math.hypot(w[0], w[1], w[2]) < 1e-4 && v.dyn.wheels.every((W) => Math.abs(W.omega) < 1e-4);
+      v.restTime = still ? v.restTime + dt : 0;
+      if (v.restTime >= REST_TIME) { ctx.physics.sleep(h); v.asleep = true; v.restTime = 0; v.sleepG = [gNow[0], gNow[1], gNow[2]]; continue; }
+      v.sleepG = [gNow[0], gNow[1], gNow[2]];
       // Wheel rays (along −up from each strut mount).
       const ts = simProfiler.now();
       const up = rotate(pose.quaternion, [0, 1, 0]);
@@ -149,7 +167,7 @@ export class VehicleSystem implements SimulationSystem {
       const ta = simProfiler.now();
       const fs: Vec3[] = [], ps: Vec3[] = [];
       for (const W of v.dyn.wheels) if (W.contact) { fs.push(W.force); ps.push(W.point); }
-      if (fs.length) ctx.forces.contactForces('wheels', h, fs, ps);
+      if (fs.length) ctx.forces.contactForces('wheels', h, fs, ps, !quiet);
       const react = new Map<number, { f: Vec3[]; p: Vec3[] }>();
       for (let i = 0; i < 4; i++) {
         const b = this.hitBody[i], W = v.dyn.wheels[i];

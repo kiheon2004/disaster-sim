@@ -136,19 +136,20 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('vehicle long runs', ()
     const loopPath: [number, number][] = [[0, 0], [60, 0], [60, 40], [0, 40], [0, 0]];
     const shore = (_x: number, z: number) => Math.min(4, Math.max(0, (85 - z) * 0.1));
     const slope = (x: number) => Math.max(0, Math.min(6, (20 - x) * Math.tan((8 * Math.PI) / 180)));
-    const brakes: { t: number; throttle?: number; brake?: number; gear?: 'D' }[] = [{ t: 0, gear: 'D' }];
-    for (let t = 0; t < T; t += 10) brakes.push({ t, throttle: 0.5, brake: 0 }, { t: t + 6, throttle: 0, brake: 0.8 });
+    // Repeated braking that stays in the world: 5 s forward, brake, 5 s in reverse, brake (a 20 s cycle about the start).
+    const brakes: { t: number; throttle?: number; brake?: number; gear?: 'D' | 'R' }[] = [];
+    for (let t = 0; t < T && brakes.length < 990; t += 20) brakes.push({ t, gear: 'D', throttle: 0.5, brake: 0 }, { t: t + 5, throttle: 0, brake: 0.8 }, { t: t + 10, gear: 'R', throttle: 0.5, brake: 0 }, { t: t + 15, throttle: 0, brake: 0.8 });
     const scenes: Record<string, () => { doc: WorldDocument; events: EventSpec[] }> = {
       stationary: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2)], () => ({})), events: [] }),
       straight: () => ({ doc: mk([car(0, 0, 1)], () => ({ autopilot: { path: loopPath, speed: 12, loop: true, avoid: false } })), events: [] }),
       braking: () => ({ doc: mk([car(-100, 0, 1)], () => ({ program: brakes.slice(0, 1000) })), events: [] }),
       circle: () => ({ doc: mk([car(0, 0, 1)], () => ({ controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [] }),
       slope: () => ({ doc: mk([car(0, 0, 1), car(8, 6, 2)], (i) => (i === 0 ? {} : { program: [{ t: 0, gear: 'D' }, { t: 5, throttle: 0.3 }, { t: 30, throttle: 0, brake: 1 }] }), slope), events: [] }),
-      wind: () => ({ doc: mk([car(0, 0, 1)], () => ({ controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [{ event: 'wind', speed: 28, direction: 'E', duration: T, gustStrength: 0.3, rampDuration: 10, startTime: 0 } as EventSpec] }),
+      wind: () => ({ doc: mk([car(0, 0, 1)], () => ({ autopilot: { path: loopPath, speed: 10, loop: true, avoid: false } })), events: [{ event: 'wind', speed: 28, direction: 'E', duration: T, gustStrength: 0.3, rampDuration: 10, startTime: 0 } as EventSpec] }),
       flood: () => ({ doc: mk([car(0, 95, 1), car(10, 92, 2)], () => ({}), shore), events: [{ event: 'risingWater', boundary: 'S', level: 1.2, riseRate: 1, duration: T, startTime: 0 } as EventSpec] }),
       earthquake: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2)], (i) => (i === 0 ? {} : { controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [{ event: 'earthquake', magnitude: 7, pga: 0.6, duration: 30, seed: 4, startTime: 5 } as unknown as EventSpec] }),
       crashDebris: () => ({ doc: mk([car(0, 0, 1), car(30, 0, 2, Math.PI)], () => ({ controls: { gear: 'D', throttle: 0.8 } })), events: [] }),
-      combined: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2), person(5, 5, 3)], (i) => (i === 0 ? { controls: { gear: 'D', throttle: 0.2, steer: 0.5 } } : {})), events: [
+      combined: () => ({ doc: mk([car(0, 0, 1), car(10, -30, 2), person(5, -25, 3)], (i) => (i === 0 ? { autopilot: { path: loopPath, speed: 10, loop: true, avoid: true } } : {})), events: [
         { event: 'wind', speed: 20, direction: 'E', duration: T, gustStrength: 0.3, rampDuration: 10, startTime: 0 } as EventSpec,
         { event: 'earthquake', magnitude: 6.5, pga: 0.4, duration: 20, seed: 5, startTime: 60 } as unknown as EventSpec,
       ] }),
@@ -182,6 +183,9 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('vehicle long runs', ()
             maxSpin: +Math.max(0, ...live.map((e) => Math.hypot(...P.getAngularVelocity(e.body!)))).toFixed(2),
             maxWheel: +Math.max(0, ...live.map((e) => Math.max(...e.vehicle!.dyn.wheels.map((w) => Math.abs(w.omega))))).toFixed(1),
             residual: +Math.max(0, ...live.map((e) => Math.abs(e.vehicle!.energy.residual))).toExponential(2),
+            // Residual relative to the work done on the car (drive + |losses|) — the ledger's closure in relative terms.
+            residualShare: +Math.max(0, ...live.map((e) => { const L = e.vehicle!.dyn.ledger; const scale = L.drive + L.brake + L.rolling + L.slip + L.damper + L.aero + e.vehicle!.energy.collision; return scale > 1e3 ? Math.abs(e.vehicle!.energy.residual) / scale : 0; })).toExponential(2),
+            outside: live.some((e) => Math.abs(e.pose.position[0]) > 700 || Math.abs(e.pose.position[2]) > 700),
             episodes: cars.reduce((a, e) => a + e.vehicle!.episodes.length + e.vehicle!.open.size, 0),
             events: c.getDamageEvents().length,
             series: cars.reduce((a, e) => a + (e.vehicle!.series?.t.length ?? 0), 0),
@@ -193,7 +197,7 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('vehicle long runs', ()
       const ms = performance.now() - t0;
       await c.reset();
       c.unload();
-      const bad = checks.filter((x) => x.nonFinite || x.maxSpeed > 100 || x.maxSpin > 50 || x.maxWheel > 400).map((x) => x.t);
+      const bad = checks.filter((x) => x.nonFinite || x.outside || x.maxSpeed > 100 || x.maxSpin > 50 || x.maxWheel > 400).map((x) => x.t);
       const row = { scene: name, seconds: T, wallS: +(ms / 1000).toFixed(1), bad, first: checks[0], last: checks[checks.length - 1], eventsAt: checks.map((x) => x.events).filter((_, i) => i % 10 === 9), heapAt: checks.map((x) => x.heapMB).filter((_, i) => i % 10 === 9) };
       rows.push(row);
       console.log(JSON.stringify(row));

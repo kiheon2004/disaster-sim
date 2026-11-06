@@ -91,6 +91,12 @@ export interface VehicleEntity {
   frozen: boolean;
   /** Engine stopped by water in the intake (stays stopped for the run). */
   stalled: boolean;
+  /** The body is asleep in Rapier and the car has no input: its step is skipped. */
+  asleep: boolean;
+  /** Time quietly at rest (s), towards putting the body to sleep. */
+  restTime: number;
+  /** Local gravity when the body was last awake (m/s²): a change wakes the vehicle. */
+  sleepG: Vec3;
   /** Time afloat (s): buoyancy carrying the weight with no wheel on the ground. */
   floatTime: number;
 }
@@ -138,5 +144,8 @@ export function createVehicleEntity(objectId: string, variant: Variant, dims: { 
     frozen: false,
     stalled: false,
     floatTime: 0,
+    asleep: false,
+    restTime: 0,
+    sleepG: [0, 0, 0],
   };
 }
