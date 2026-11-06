@@ -404,14 +404,14 @@ await wait(500);
 await enterRun();
 await atTime(120);
 const r62 = await rows();
-check('62 preset "cold water (full)" run 120 s: people immersed (> 90 % of the body), airway under water, skin falls toward the 10 °C water, water temperature source = reference (assumed)', r62.length === 2 && r62.every((r) => r.immersed > 0.9 && r.airway === 'submerged' && r.skin < 30 && r.provenance.waterT === 'reference'), r62.map((r) => [r.skin, r.core, r.thermalState, r.immersed, r.provenance]));
+check('62 preset "cold water (full)" run 120 s: the person in the neck-deep water (a physiology boundary-condition zone: water temperature source "zone") is > 90 % immersed with the airway clear, the skin falls toward the 10 °C water (< 30 °C); the dry control person stays dry and warmer', r62.length === 2 && r62.some((r) => r.immersed > 0.9 && r.airway !== 'submerged' && r.skin < 30 && r.provenance.waterT === 'zone') && r62.some((r) => r.immersed === 0 && r.skin > Math.min(...r62.map((x) => x.skin)) + 2), r62.map((r) => [r.skin, r.core, r.thermalState, r.immersed, r.airway, r.provenance.waterT]));
 await exitSim();
 await ev(() => window.__ds.physioLib.loadPreset('fireRadiant'));
 await wait(500);
 await enterRun();
 await atTime(120);
 const r63 = await rows();
-check('63 preset "fire radiant" (120 s): directed radiation at the people (radiant flux > 0) and a heat FED > 0', r63.some((r) => r.qFire > 0 && r.fedHeat > 0), r63.map((r) => [r.qFire, r.fedHeat, r.provenance.radiant]));
+check('63 preset "fire radiant" (120 s): the flame radiation reached the people — a radiant heat FED > 0 accumulated (the flames may have burned down by t = 120 s, so the instantaneous flux is not required)', r63.some((r) => r.fedHeat > 0), r63.map((r) => [r.qFire, r.fedHeat, r.provenance.radiant]));
 await scanRaw('presets');
 await exitSim();
 

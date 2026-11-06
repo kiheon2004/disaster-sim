@@ -186,9 +186,11 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('physiology long runs',
         }
       }
       const ms = performance.now() - t0;
+      const eventTypes: Record<string, number> = {};
+      for (const d of c.getDamageEvents()) if (d.cause === 'physiology') { const k = `${d.eventType}:${d.physio?.to ?? ''}`; eventTypes[k] = (eventTypes[k] ?? 0) + 1; }
       await c.reset();
       c.unload();
-      const row = { scene: name, seconds: T, wallS: +(ms / 1000).toFixed(1), bad: checks.filter((x) => x.nonFinite || x.negativeWater).map((x) => x.t), first: checks[0], last: checks[checks.length - 1], eventsAt: checks.map((x) => x.events).filter((_, i) => i % 10 === 9) };
+      const row = { scene: name, seconds: T, wallS: +(ms / 1000).toFixed(1), bad: checks.filter((x) => x.nonFinite || x.negativeWater).map((x) => x.t), first: checks[0], last: checks[checks.length - 1], eventsAt: checks.map((x) => x.events).filter((_, i) => i % 10 === 9), eventTypes };
       rows.push(row);
       console.log(JSON.stringify(row));
     }

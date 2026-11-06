@@ -1,0 +1,462 @@
+{
+  "date": "2026-10-28T04:30:40.136Z",
+  "load": [
+    11.4,
+    7,
+    8.1
+  ],
+  "rows": [
+    {
+      "scene": "baseline",
+      "seconds": 3600,
+      "wallS": 8.4,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 0,
+        "series": 1200,
+        "residual": 2.14e-7,
+        "o2": null,
+        "heapMB": 65.9
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.83,
+        "coreMax": 36.83,
+        "events": 40,
+        "series": 72000,
+        "residual": 0.0000012,
+        "o2": null,
+        "heapMB": 80.9
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        40,
+        40
+      ],
+      "eventTypes": {
+        "THERMAL_STRESS:coldStress": 20,
+        "CAPACITY_CHANGED:stressed": 20
+      }
+    },
+    {
+      "scene": "cold",
+      "seconds": 3600,
+      "wallS": 8.5,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 0,
+        "series": 1200,
+        "residual": 1.91e-7,
+        "o2": null,
+        "heapMB": 66.1
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.55,
+        "coreMax": 36.55,
+        "events": 80,
+        "series": 72000,
+        "residual": 0.00000124,
+        "o2": null,
+        "heapMB": 81.1
+      },
+      "eventsAt": [
+        80,
+        80,
+        80,
+        80,
+        80,
+        80
+      ],
+      "eventTypes": {
+        "THERMAL_STRESS:coldStress": 20,
+        "CAPACITY_CHANGED:stressed": 20,
+        "THERMAL_STRESS:severeColdStress": 20,
+        "CAPACITY_CHANGED:impaired": 20
+      }
+    },
+    {
+      "scene": "heatwave",
+      "seconds": 3600,
+      "wallS": 8.4,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.84,
+        "coreMax": 36.84,
+        "events": 0,
+        "series": 1200,
+        "residual": 1.56e-7,
+        "o2": null,
+        "heapMB": 66.2
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 37.5,
+        "coreMax": 37.5,
+        "events": 0,
+        "series": 72000,
+        "residual": 0.0000019,
+        "o2": null,
+        "heapMB": 81.2
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "eventTypes": {}
+    },
+    {
+      "scene": "hotHumid",
+      "seconds": 3600,
+      "wallS": 8.3,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.84,
+        "coreMax": 36.84,
+        "events": 0,
+        "series": 1200,
+        "residual": 1.43e-7,
+        "o2": null,
+        "heapMB": 66.3
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 38.21,
+        "coreMax": 38.23,
+        "events": 40,
+        "series": 72000,
+        "residual": 0.00000152,
+        "o2": null,
+        "heapMB": 81.2
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        40,
+        40
+      ],
+      "eventTypes": {
+        "THERMAL_STRESS:heatStress": 20,
+        "CAPACITY_CHANGED:stressed": 20
+      }
+    },
+    {
+      "scene": "smoke",
+      "seconds": 3600,
+      "wallS": 8.4,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 0,
+        "series": 1200,
+        "residual": 2.14e-7,
+        "o2": null,
+        "heapMB": 66.5
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.83,
+        "coreMax": 36.83,
+        "events": 80,
+        "series": 72000,
+        "residual": 0.0000012,
+        "o2": null,
+        "heapMB": 81.5
+      },
+      "eventsAt": [
+        40,
+        40,
+        60,
+        60,
+        80,
+        80
+      ],
+      "eventTypes": {
+        "GAS_EXPOSURE:stressed": 20,
+        "CAPACITY_CHANGED:stressed": 20,
+        "CAPACITY_CHANGED:impaired": 20,
+        "THERMAL_STRESS:coldStress": 20
+      }
+    },
+    {
+      "scene": "hypoxia",
+      "seconds": 3600,
+      "wallS": 8.4,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 40,
+        "series": 1200,
+        "residual": 2.14e-7,
+        "o2": null,
+        "heapMB": 66.5
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.83,
+        "coreMax": 36.83,
+        "events": 100,
+        "series": 72000,
+        "residual": 0.0000012,
+        "o2": null,
+        "heapMB": 81.5
+      },
+      "eventsAt": [
+        40,
+        60,
+        60,
+        60,
+        100,
+        100
+      ],
+      "eventTypes": {
+        "RESPIRATORY_STRESS:stressed": 20,
+        "CAPACITY_CHANGED:stressed": 20,
+        "GAS_EXPOSURE:stressed": 20,
+        "CAPACITY_CHANGED:impaired": 20,
+        "THERMAL_STRESS:coldStress": 20
+      }
+    },
+    {
+      "scene": "submersion",
+      "seconds": 3600,
+      "wallS": 9.2,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 187,
+        "series": 1200,
+        "residual": 1.59e-7,
+        "o2": null,
+        "heapMB": 66.6
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.61,
+        "coreMax": 36.61,
+        "events": 9421,
+        "series": 72000,
+        "residual": 0.00000172,
+        "o2": null,
+        "heapMB": 86.8
+      },
+      "eventsAt": [
+        1621,
+        3181,
+        4741,
+        6301,
+        7861,
+        9421
+      ],
+      "eventTypes": {
+        "AIRWAY_SUBMERGED:submerged": 3600,
+        "AIRWAY_CLEARED:clear": 3600,
+        "RESPIRATORY_STRESS:stressed": 20,
+        "CAPACITY_CHANGED:stressed": 39,
+        "CAPACITY_CHANGED:impaired": 1075,
+        "THERMAL_STRESS:coldStress": 20,
+        "CAPACITY_CHANGED:severelyImpaired": 1047,
+        "THERMAL_STRESS:severeColdStress": 20
+      }
+    },
+    {
+      "scene": "dehydration",
+      "seconds": 3600,
+      "wallS": 8.3,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.87,
+        "coreMax": 36.87,
+        "events": 0,
+        "series": 1200,
+        "residual": 1.66e-7,
+        "o2": null,
+        "heapMB": 66.7
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 37.93,
+        "coreMax": 37.94,
+        "events": 0,
+        "series": 72000,
+        "residual": 0.00000128,
+        "o2": null,
+        "heapMB": 81.5
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "eventTypes": {}
+    },
+    {
+      "scene": "buried",
+      "seconds": 3600,
+      "wallS": 8.7,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.81,
+        "events": 0,
+        "series": 1200,
+        "residual": 2.14e-7,
+        "o2": 0.2093,
+        "heapMB": 66.7
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.83,
+        "coreMax": 36.83,
+        "events": 40,
+        "series": 72000,
+        "residual": 0.0000012,
+        "o2": 0.1993,
+        "heapMB": 81.6
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        40,
+        40
+      ],
+      "eventTypes": {
+        "THERMAL_STRESS:coldStress": 20,
+        "CAPACITY_CHANGED:stressed": 20
+      }
+    },
+    {
+      "scene": "combined",
+      "seconds": 3600,
+      "wallS": 51.6,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.81,
+        "coreMax": 36.82,
+        "events": 4,
+        "series": 1200,
+        "residual": 1.62e-7,
+        "o2": null,
+        "heapMB": 83.4
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "negativeWater": false,
+        "outOfRange": 0,
+        "coreMin": 36.77,
+        "coreMax": 39.45,
+        "events": 43,
+        "series": 72000,
+        "residual": 0.00000173,
+        "o2": null,
+        "heapMB": 98.5
+      },
+      "eventsAt": [
+        4,
+        4,
+        7,
+        9,
+        12,
+        43
+      ],
+      "eventTypes": {
+        "CAPACITY_CHANGED:unableToAct": 4,
+        "THERMAL_STRESS:heatStress": 2,
+        "CAPACITY_CHANGED:stressed": 16,
+        "GAS_EXPOSURE:stressed": 2,
+        "THERMAL_STRESS:severeHeatStress": 2,
+        "CAPACITY_CHANGED:impaired": 1,
+        "THERMAL_STRESS:coldStress": 16
+      }
+    }
+  ]
+}

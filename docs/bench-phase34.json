@@ -1,0 +1,1942 @@
+{
+  "date": "2026-10-28T04:25:59.180Z",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "ncpu": 8,
+  "load": [
+    6.9,
+    7.1,
+    8.9
+  ],
+  "rows": [
+    {
+      "micro": true,
+      "flowsNs": 793,
+      "fedNs": 257,
+      "personStepNs": 4000
+    },
+    {
+      "n": 1,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.253,
+        "min": 1.019,
+        "max": 2.277
+      },
+      "p95": {
+        "median": 0.052,
+        "min": 0.046,
+        "max": 0.079
+      },
+      "worst": {
+        "median": 0.627,
+        "min": 0.351,
+        "max": 4.194
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 0.148,
+        "min": 0.101,
+        "max": 0.356
+      },
+      "physics": {
+        "median": 0.654,
+        "min": 0.507,
+        "max": 0.864
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 64.5,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.23,
+        "min": 1.139,
+        "max": 1.451
+      },
+      "p95": {
+        "median": 0.048,
+        "min": 0.043,
+        "max": 0.058
+      },
+      "worst": {
+        "median": 0.424,
+        "min": 0.409,
+        "max": 1.516
+      },
+      "physiology": {
+        "median": 0.213,
+        "min": 0.188,
+        "max": 0.358
+      },
+      "sample": {
+        "median": 0.043,
+        "min": 0.036,
+        "max": 0.146
+      },
+      "step": {
+        "median": 0.146,
+        "min": 0.131,
+        "max": 0.148
+      },
+      "record": {
+        "median": 0.009,
+        "min": 0.009,
+        "max": 0.038
+      },
+      "humans": {
+        "median": 0.101,
+        "min": 0.099,
+        "max": 0.101
+      },
+      "physics": {
+        "median": 0.493,
+        "min": 0.462,
+        "max": 0.528
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 64.7,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 2.169,
+        "min": 1.926,
+        "max": 2.295
+      },
+      "p95": {
+        "median": 0.097,
+        "min": 0.083,
+        "max": 0.158
+      },
+      "worst": {
+        "median": 0.477,
+        "min": 0.409,
+        "max": 0.813
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 0.315,
+        "min": 0.281,
+        "max": 0.605
+      },
+      "physics": {
+        "median": 0.839,
+        "min": 0.782,
+        "max": 0.851
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 65.2,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 2.92,
+        "min": 2.694,
+        "max": 3.705
+      },
+      "p95": {
+        "median": 0.144,
+        "min": 0.117,
+        "max": 0.188
+      },
+      "worst": {
+        "median": 0.624,
+        "min": 0.62,
+        "max": 1.28
+      },
+      "physiology": {
+        "median": 0.944,
+        "min": 0.931,
+        "max": 1.388
+      },
+      "sample": {
+        "median": 0.08,
+        "min": 0.078,
+        "max": 0.159
+      },
+      "step": {
+        "median": 0.798,
+        "min": 0.772,
+        "max": 1.105
+      },
+      "record": {
+        "median": 0.042,
+        "min": 0.027,
+        "max": 0.057
+      },
+      "humans": {
+        "median": 0.477,
+        "min": 0.229,
+        "max": 0.61
+      },
+      "physics": {
+        "median": 0.745,
+        "min": 0.745,
+        "max": 0.807
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 65.5,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 4.099,
+        "min": 4.054,
+        "max": 4.391
+      },
+      "p95": {
+        "median": 0.281,
+        "min": 0.272,
+        "max": 0.29
+      },
+      "worst": {
+        "median": 0.821,
+        "min": 0.809,
+        "max": 1.513
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 1.036,
+        "min": 1.025,
+        "max": 1.39
+      },
+      "physics": {
+        "median": 1.567,
+        "min": 1.517,
+        "max": 1.611
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 7.015,
+        "min": 6.893,
+        "max": 8.539
+      },
+      "p95": {
+        "median": 0.372,
+        "min": 0.318,
+        "max": 0.539
+      },
+      "worst": {
+        "median": 1.506,
+        "min": 1.356,
+        "max": 1.902
+      },
+      "physiology": {
+        "median": 3.029,
+        "min": 2.542,
+        "max": 4.163
+      },
+      "sample": {
+        "median": 0.641,
+        "min": 0.397,
+        "max": 0.789
+      },
+      "step": {
+        "median": 2.124,
+        "min": 1.888,
+        "max": 3.086
+      },
+      "record": {
+        "median": 0.091,
+        "min": 0.09,
+        "max": 0.109
+      },
+      "humans": {
+        "median": 0.949,
+        "min": 0.941,
+        "max": 1.081
+      },
+      "physics": {
+        "median": 1.566,
+        "min": 1.522,
+        "max": 1.581
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66.3,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 7.281,
+        "min": 6.619,
+        "max": 10.542
+      },
+      "p95": {
+        "median": 0.502,
+        "min": 0.457,
+        "max": 1.235
+      },
+      "worst": {
+        "median": 1.367,
+        "min": 1.326,
+        "max": 2.643
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 2.078,
+        "min": 1.786,
+        "max": 5.381
+      },
+      "physics": {
+        "median": 2.33,
+        "min": 2.279,
+        "max": 2.355
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66.8,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 12.088,
+        "min": 11.449,
+        "max": 13.317
+      },
+      "p95": {
+        "median": 0.602,
+        "min": 0.567,
+        "max": 0.704
+      },
+      "worst": {
+        "median": 2.378,
+        "min": 1.944,
+        "max": 3.692
+      },
+      "physiology": {
+        "median": 4.889,
+        "min": 4.768,
+        "max": 5.428
+      },
+      "sample": {
+        "median": 0.587,
+        "min": 0.535,
+        "max": 0.95
+      },
+      "step": {
+        "median": 3.831,
+        "min": 3.781,
+        "max": 3.863
+      },
+      "record": {
+        "median": 0.139,
+        "min": 0.135,
+        "max": 0.201
+      },
+      "humans": {
+        "median": 1.988,
+        "min": 1.756,
+        "max": 2.638
+      },
+      "physics": {
+        "median": 2.237,
+        "min": 2.224,
+        "max": 2.357
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 67.3,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 15.263,
+        "min": 15.194,
+        "max": 15.452
+      },
+      "p95": {
+        "median": 1.158,
+        "min": 1.137,
+        "max": 1.159
+      },
+      "worst": {
+        "median": 2.957,
+        "min": 2.791,
+        "max": 3.614
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 4.403,
+        "min": 4.308,
+        "max": 4.405
+      },
+      "physics": {
+        "median": 4.956,
+        "min": 4.937,
+        "max": 4.987
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 68.5,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 28.051,
+        "min": 27.999,
+        "max": 35.445
+      },
+      "p95": {
+        "median": 1.43,
+        "min": 1.427,
+        "max": 1.792
+      },
+      "worst": {
+        "median": 4.284,
+        "min": 4.082,
+        "max": 8.711
+      },
+      "physiology": {
+        "median": 12.248,
+        "min": 12.197,
+        "max": 14.14
+      },
+      "sample": {
+        "median": 1.527,
+        "min": 1.421,
+        "max": 2.459
+      },
+      "step": {
+        "median": 9.872,
+        "min": 9.832,
+        "max": 10.374
+      },
+      "record": {
+        "median": 0.204,
+        "min": 0.199,
+        "max": 0.311
+      },
+      "humans": {
+        "median": 4.574,
+        "min": 4.546,
+        "max": 9.382
+      },
+      "physics": {
+        "median": 4.95,
+        "min": 4.943,
+        "max": 5.032
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 69.5,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 31.246,
+        "min": 30.412,
+        "max": 36.439
+      },
+      "p95": {
+        "median": 2.387,
+        "min": 2.345,
+        "max": 2.599
+      },
+      "worst": {
+        "median": 7.441,
+        "min": 5.813,
+        "max": 9.708
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 9.4,
+        "min": 9.216,
+        "max": 14.01
+      },
+      "physics": {
+        "median": 9.681,
+        "min": 9.278,
+        "max": 9.697
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 71.2,
+      "load": [
+        4.3,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 56.036,
+        "min": 55.051,
+        "max": 59.996
+      },
+      "p95": {
+        "median": 2.894,
+        "min": 2.846,
+        "max": 3.348
+      },
+      "worst": {
+        "median": 8.899,
+        "min": 8.234,
+        "max": 15.231
+      },
+      "physiology": {
+        "median": 25.173,
+        "min": 24.564,
+        "max": 27.513
+      },
+      "sample": {
+        "median": 3.124,
+        "min": 2.99,
+        "max": 4.224
+      },
+      "step": {
+        "median": 20.196,
+        "min": 19.771,
+        "max": 20.894
+      },
+      "record": {
+        "median": 0.359,
+        "min": 0.357,
+        "max": 0.481
+      },
+      "humans": {
+        "median": 9.463,
+        "min": 9.377,
+        "max": 10.362
+      },
+      "physics": {
+        "median": 9.398,
+        "min": 9.35,
+        "max": 9.867
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 72.9,
+      "load": [
+        4.2,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 75.535,
+        "min": 73.699,
+        "max": 87.375
+      },
+      "p95": {
+        "median": 4.916,
+        "min": 4.874,
+        "max": 5.554
+      },
+      "worst": {
+        "median": 12.59,
+        "min": 11.946,
+        "max": 20.112
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 26.025,
+        "min": 25.414,
+        "max": 35.532
+      },
+      "physics": {
+        "median": 25.133,
+        "min": 25.076,
+        "max": 25.581
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 76.5,
+      "load": [
+        4.2,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 133.088,
+        "min": 127.737,
+        "max": 140.415
+      },
+      "p95": {
+        "median": 6.595,
+        "min": 6.398,
+        "max": 7.42
+      },
+      "worst": {
+        "median": 18.069,
+        "min": 16.985,
+        "max": 28.686
+      },
+      "physiology": {
+        "median": 53.072,
+        "min": 51.298,
+        "max": 58.329
+      },
+      "sample": {
+        "median": 7.815,
+        "min": 6.87,
+        "max": 9.672
+      },
+      "step": {
+        "median": 40.667,
+        "min": 40.193,
+        "max": 42.757
+      },
+      "record": {
+        "median": 0.666,
+        "min": 0.661,
+        "max": 0.898
+      },
+      "humans": {
+        "median": 28.263,
+        "min": 26.737,
+        "max": 30.812
+      },
+      "physics": {
+        "median": 25.274,
+        "min": 24.942,
+        "max": 26.112
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 79.9,
+      "load": [
+        4.2,
+        6.9,
+        8.9
+      ]
+    },
+    {
+      "n": 5000,
+      "kind": "calm",
+      "model": "L1",
+      "seconds": 5,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 648.986,
+        "min": 648.986,
+        "max": 648.986
+      },
+      "p95": {
+        "median": 30.648,
+        "min": 30.648,
+        "max": 30.648
+      },
+      "worst": {
+        "median": 160.946,
+        "min": 160.946,
+        "max": 160.946
+      },
+      "physiology": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sample": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "record": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "humans": {
+        "median": 218.399,
+        "min": 218.399,
+        "max": 218.399
+      },
+      "physics": {
+        "median": 182.864,
+        "min": 182.864,
+        "max": 182.864
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 119.3,
+      "load": [
+        4.1,
+        6.8,
+        8.8
+      ]
+    },
+    {
+      "n": 5000,
+      "kind": "calm",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 1053.435,
+        "min": 1053.435,
+        "max": 1053.435
+      },
+      "p95": {
+        "median": 41.801,
+        "min": 41.801,
+        "max": 41.801
+      },
+      "worst": {
+        "median": 222.529,
+        "min": 222.529,
+        "max": 222.529
+      },
+      "physiology": {
+        "median": 318.489,
+        "min": 318.489,
+        "max": 318.489
+      },
+      "sample": {
+        "median": 63.794,
+        "min": 63.794,
+        "max": 63.794
+      },
+      "step": {
+        "median": 213.89,
+        "min": 213.89,
+        "max": 213.89
+      },
+      "record": {
+        "median": 4.385,
+        "min": 4.385,
+        "max": 4.385
+      },
+      "humans": {
+        "median": 245.82,
+        "min": 245.82,
+        "max": 245.82
+      },
+      "physics": {
+        "median": 192.169,
+        "min": 192.169,
+        "max": 192.169
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 135.5,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 0.987,
+        "min": 0.929,
+        "max": 0.99
+      },
+      "p95": {
+        "median": 0.03,
+        "min": 0.029,
+        "max": 0.03
+      },
+      "worst": {
+        "median": 0.307,
+        "min": 0.265,
+        "max": 0.854
+      },
+      "physiology": {
+        "median": 0.182,
+        "min": 0.176,
+        "max": 0.241
+      },
+      "sample": {
+        "median": 0.032,
+        "min": 0.031,
+        "max": 0.054
+      },
+      "step": {
+        "median": 0.133,
+        "min": 0.129,
+        "max": 0.15
+      },
+      "record": {
+        "median": 0.007,
+        "min": 0.006,
+        "max": 0.007
+      },
+      "humans": {
+        "median": 0.029,
+        "min": 0.028,
+        "max": 0.03
+      },
+      "physics": {
+        "median": 0.353,
+        "min": 0.342,
+        "max": 0.376
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 65.8,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 2.385,
+        "min": 1.984,
+        "max": 3.096
+      },
+      "p95": {
+        "median": 0.102,
+        "min": 0.086,
+        "max": 0.144
+      },
+      "worst": {
+        "median": 0.5,
+        "min": 0.41,
+        "max": 3.101
+      },
+      "physiology": {
+        "median": 0.789,
+        "min": 0.675,
+        "max": 1.238
+      },
+      "sample": {
+        "median": 0.18,
+        "min": 0.156,
+        "max": 0.215
+      },
+      "step": {
+        "median": 0.495,
+        "min": 0.436,
+        "max": 0.986
+      },
+      "record": {
+        "median": 0.038,
+        "min": 0.023,
+        "max": 0.048
+      },
+      "humans": {
+        "median": 0.212,
+        "min": 0.177,
+        "max": 0.232
+      },
+      "physics": {
+        "median": 0.665,
+        "min": 0.573,
+        "max": 0.704
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66.1,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 6.744,
+        "min": 5.976,
+        "max": 7.372
+      },
+      "p95": {
+        "median": 0.365,
+        "min": 0.291,
+        "max": 0.422
+      },
+      "worst": {
+        "median": 1.078,
+        "min": 1.016,
+        "max": 1.208
+      },
+      "physiology": {
+        "median": 2.83,
+        "min": 2.451,
+        "max": 3.432
+      },
+      "sample": {
+        "median": 0.635,
+        "min": 0.39,
+        "max": 0.974
+      },
+      "step": {
+        "median": 1.94,
+        "min": 1.823,
+        "max": 2.176
+      },
+      "record": {
+        "median": 0.088,
+        "min": 0.083,
+        "max": 0.101
+      },
+      "humans": {
+        "median": 0.897,
+        "min": 0.855,
+        "max": 0.948
+      },
+      "physics": {
+        "median": 1.337,
+        "min": 1.294,
+        "max": 1.4
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66.9,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 11.508,
+        "min": 11.48,
+        "max": 12.746
+      },
+      "p95": {
+        "median": 0.574,
+        "min": 0.562,
+        "max": 0.633
+      },
+      "worst": {
+        "median": 2.064,
+        "min": 1.791,
+        "max": 2.788
+      },
+      "physiology": {
+        "median": 4.763,
+        "min": 4.684,
+        "max": 5.437
+      },
+      "sample": {
+        "median": 0.696,
+        "min": 0.61,
+        "max": 0.88
+      },
+      "step": {
+        "median": 3.712,
+        "min": 3.632,
+        "max": 4.109
+      },
+      "record": {
+        "median": 0.137,
+        "min": 0.105,
+        "max": 0.196
+      },
+      "humans": {
+        "median": 1.785,
+        "min": 1.745,
+        "max": 1.863
+      },
+      "physics": {
+        "median": 2.241,
+        "min": 2.185,
+        "max": 2.413
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 67.6,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 28.108,
+        "min": 28.052,
+        "max": 28.452
+      },
+      "p95": {
+        "median": 1.445,
+        "min": 1.442,
+        "max": 1.456
+      },
+      "worst": {
+        "median": 4.162,
+        "min": 4.132,
+        "max": 4.345
+      },
+      "physiology": {
+        "median": 12.447,
+        "min": 12.345,
+        "max": 12.736
+      },
+      "sample": {
+        "median": 1.632,
+        "min": 1.567,
+        "max": 1.765
+      },
+      "step": {
+        "median": 9.907,
+        "min": 9.794,
+        "max": 10.162
+      },
+      "record": {
+        "median": 0.201,
+        "min": 0.198,
+        "max": 0.201
+      },
+      "humans": {
+        "median": 4.572,
+        "min": 4.552,
+        "max": 4.596
+      },
+      "physics": {
+        "median": 4.977,
+        "min": 4.971,
+        "max": 5.007
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 69.7,
+      "load": [
+        4,
+        6.7,
+        8.8
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 56.695,
+        "min": 56.556,
+        "max": 57.019
+      },
+      "p95": {
+        "median": 2.962,
+        "min": 2.905,
+        "max": 2.981
+      },
+      "worst": {
+        "median": 8.383,
+        "min": 8.292,
+        "max": 8.627
+      },
+      "physiology": {
+        "median": 25.551,
+        "min": 25.485,
+        "max": 25.698
+      },
+      "sample": {
+        "median": 3.371,
+        "min": 3.294,
+        "max": 3.388
+      },
+      "step": {
+        "median": 20.316,
+        "min": 20.281,
+        "max": 20.4
+      },
+      "record": {
+        "median": 0.359,
+        "min": 0.355,
+        "max": 0.361
+      },
+      "humans": {
+        "median": 9.634,
+        "min": 9.566,
+        "max": 9.659
+      },
+      "physics": {
+        "median": 9.539,
+        "min": 9.487,
+        "max": 9.558
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 73.1,
+      "load": [
+        3.9,
+        6.7,
+        8.7
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 139.804,
+        "min": 136.922,
+        "max": 158.606
+      },
+      "p95": {
+        "median": 7.061,
+        "min": 6.955,
+        "max": 8.436
+      },
+      "worst": {
+        "median": 18.312,
+        "min": 17.839,
+        "max": 18.913
+      },
+      "physiology": {
+        "median": 57.091,
+        "min": 55.48,
+        "max": 64.145
+      },
+      "sample": {
+        "median": 8.919,
+        "min": 8.754,
+        "max": 10.546
+      },
+      "step": {
+        "median": 42.191,
+        "min": 41.522,
+        "max": 45.404
+      },
+      "record": {
+        "median": 0.933,
+        "min": 0.661,
+        "max": 0.946
+      },
+      "humans": {
+        "median": 28.656,
+        "min": 28.345,
+        "max": 32.372
+      },
+      "physics": {
+        "median": 27.534,
+        "min": 27.105,
+        "max": 29.812
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 80.1,
+      "load": [
+        3.9,
+        6.7,
+        8.7
+      ]
+    },
+    {
+      "n": 5000,
+      "kind": "heat",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 1043.118,
+        "min": 1043.118,
+        "max": 1043.118
+      },
+      "p95": {
+        "median": 43.875,
+        "min": 43.875,
+        "max": 43.875
+      },
+      "worst": {
+        "median": 201.085,
+        "min": 201.085,
+        "max": 201.085
+      },
+      "physiology": {
+        "median": 326.38,
+        "min": 326.38,
+        "max": 326.38
+      },
+      "sample": {
+        "median": 59.627,
+        "min": 59.627,
+        "max": 59.627
+      },
+      "step": {
+        "median": 219.129,
+        "min": 219.129,
+        "max": 219.129
+      },
+      "record": {
+        "median": 4.456,
+        "min": 4.456,
+        "max": 4.456
+      },
+      "humans": {
+        "median": 235.839,
+        "min": 235.839,
+        "max": 235.839
+      },
+      "physics": {
+        "median": 203.911,
+        "min": 203.911,
+        "max": 203.911
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 134.7,
+      "load": [
+        3.7,
+        6.6,
+        8.7
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 0.854,
+        "min": 0.853,
+        "max": 0.855
+      },
+      "p95": {
+        "median": 0.025,
+        "min": 0.024,
+        "max": 0.026
+      },
+      "worst": {
+        "median": 0.335,
+        "min": 0.223,
+        "max": 0.433
+      },
+      "physiology": {
+        "median": 0.14,
+        "min": 0.139,
+        "max": 0.145
+      },
+      "sample": {
+        "median": 0.03,
+        "min": 0.028,
+        "max": 0.033
+      },
+      "step": {
+        "median": 0.094,
+        "min": 0.094,
+        "max": 0.095
+      },
+      "record": {
+        "median": 0.005,
+        "min": 0.004,
+        "max": 0.007
+      },
+      "humans": {
+        "median": 0.025,
+        "min": 0.024,
+        "max": 0.027
+      },
+      "physics": {
+        "median": 0.338,
+        "min": 0.331,
+        "max": 0.342
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 64.7,
+      "load": [
+        3.7,
+        6.6,
+        8.7
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.823,
+        "min": 1.785,
+        "max": 2.308
+      },
+      "p95": {
+        "median": 0.071,
+        "min": 0.071,
+        "max": 0.116
+      },
+      "worst": {
+        "median": 0.407,
+        "min": 0.35,
+        "max": 0.473
+      },
+      "physiology": {
+        "median": 0.505,
+        "min": 0.501,
+        "max": 0.918
+      },
+      "sample": {
+        "median": 0.073,
+        "min": 0.071,
+        "max": 0.126
+      },
+      "step": {
+        "median": 0.376,
+        "min": 0.371,
+        "max": 0.731
+      },
+      "record": {
+        "median": 0.021,
+        "min": 0.02,
+        "max": 0.022
+      },
+      "humans": {
+        "median": 0.169,
+        "min": 0.166,
+        "max": 0.17
+      },
+      "physics": {
+        "median": 0.565,
+        "min": 0.56,
+        "max": 0.589
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 65.1,
+      "load": [
+        3.7,
+        6.6,
+        8.7
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 7.007,
+        "min": 6.731,
+        "max": 7.355
+      },
+      "p95": {
+        "median": 0.336,
+        "min": 0.331,
+        "max": 0.348
+      },
+      "worst": {
+        "median": 1.165,
+        "min": 1.137,
+        "max": 1.249
+      },
+      "physiology": {
+        "median": 2.818,
+        "min": 2.734,
+        "max": 2.904
+      },
+      "sample": {
+        "median": 0.395,
+        "min": 0.346,
+        "max": 0.41
+      },
+      "step": {
+        "median": 2.126,
+        "min": 2.118,
+        "max": 2.224
+      },
+      "record": {
+        "median": 0.096,
+        "min": 0.089,
+        "max": 0.099
+      },
+      "humans": {
+        "median": 1.024,
+        "min": 0.982,
+        "max": 1.025
+      },
+      "physics": {
+        "median": 1.5,
+        "min": 1.45,
+        "max": 1.529
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 65.8,
+      "load": [
+        3.7,
+        6.6,
+        8.7
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 11.454,
+        "min": 11.394,
+        "max": 11.773
+      },
+      "p95": {
+        "median": 0.582,
+        "min": 0.563,
+        "max": 0.593
+      },
+      "worst": {
+        "median": 1.89,
+        "min": 1.807,
+        "max": 1.917
+      },
+      "physiology": {
+        "median": 4.689,
+        "min": 4.668,
+        "max": 5.012
+      },
+      "sample": {
+        "median": 0.596,
+        "min": 0.596,
+        "max": 0.618
+      },
+      "step": {
+        "median": 3.757,
+        "min": 3.739,
+        "max": 3.984
+      },
+      "record": {
+        "median": 0.103,
+        "min": 0.102,
+        "max": 0.126
+      },
+      "humans": {
+        "median": 1.789,
+        "min": 1.74,
+        "max": 1.833
+      },
+      "physics": {
+        "median": 2.168,
+        "min": 2.151,
+        "max": 2.317
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 66.5,
+      "load": [
+        3.8,
+        6.5,
+        8.7
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 28.334,
+        "min": 28.041,
+        "max": 28.776
+      },
+      "p95": {
+        "median": 1.455,
+        "min": 1.454,
+        "max": 1.485
+      },
+      "worst": {
+        "median": 4.15,
+        "min": 4.075,
+        "max": 4.177
+      },
+      "physiology": {
+        "median": 12.62,
+        "min": 12.609,
+        "max": 13.03
+      },
+      "sample": {
+        "median": 1.618,
+        "min": 1.59,
+        "max": 1.663
+      },
+      "step": {
+        "median": 10.187,
+        "min": 10.108,
+        "max": 10.526
+      },
+      "record": {
+        "median": 0.197,
+        "min": 0.193,
+        "max": 0.207
+      },
+      "humans": {
+        "median": 4.581,
+        "min": 4.478,
+        "max": 4.647
+      },
+      "physics": {
+        "median": 4.901,
+        "min": 4.9,
+        "max": 4.99
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 68.6,
+      "load": [
+        3.8,
+        6.5,
+        8.7
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 10,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 54.894,
+        "min": 54.683,
+        "max": 55.46
+      },
+      "p95": {
+        "median": 2.864,
+        "min": 2.85,
+        "max": 2.887
+      },
+      "worst": {
+        "median": 8.041,
+        "min": 7.884,
+        "max": 8.323
+      },
+      "physiology": {
+        "median": 24.817,
+        "min": 24.692,
+        "max": 24.944
+      },
+      "sample": {
+        "median": 3.266,
+        "min": 3.109,
+        "max": 3.277
+      },
+      "step": {
+        "median": 20.03,
+        "min": 19.812,
+        "max": 20.081
+      },
+      "record": {
+        "median": 0.349,
+        "min": 0.343,
+        "max": 0.351
+      },
+      "humans": {
+        "median": 9.118,
+        "min": 9.111,
+        "max": 9.325
+      },
+      "physics": {
+        "median": 9.491,
+        "min": 9.438,
+        "max": 9.553
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 72.1,
+      "load": [
+        3.8,
+        6.5,
+        8.7
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 126.504,
+        "min": 124.496,
+        "max": 163.621
+      },
+      "p95": {
+        "median": 6.293,
+        "min": 5.896,
+        "max": 8.026
+      },
+      "worst": {
+        "median": 17.206,
+        "min": 16.951,
+        "max": 82.642
+      },
+      "physiology": {
+        "median": 51.157,
+        "min": 50.457,
+        "max": 71.71
+      },
+      "sample": {
+        "median": 6.819,
+        "min": 6.786,
+        "max": 10
+      },
+      "step": {
+        "median": 40.756,
+        "min": 40.195,
+        "max": 53.915
+      },
+      "record": {
+        "median": 0.659,
+        "min": 0.657,
+        "max": 0.705
+      },
+      "humans": {
+        "median": 25.652,
+        "min": 25.294,
+        "max": 31.265
+      },
+      "physics": {
+        "median": 25.917,
+        "min": 25.469,
+        "max": 32.156
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 79,
+      "load": [
+        6.9,
+        7.1,
+        8.9
+      ]
+    },
+    {
+      "n": 5000,
+      "kind": "cold",
+      "model": "L2",
+      "seconds": 5,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 897.655,
+        "min": 897.655,
+        "max": 897.655
+      },
+      "p95": {
+        "median": 37.403,
+        "min": 37.403,
+        "max": 37.403
+      },
+      "worst": {
+        "median": 223.901,
+        "min": 223.901,
+        "max": 223.901
+      },
+      "physiology": {
+        "median": 305.041,
+        "min": 305.041,
+        "max": 305.041
+      },
+      "sample": {
+        "median": 61.877,
+        "min": 61.877,
+        "max": 61.877
+      },
+      "step": {
+        "median": 210.109,
+        "min": 210.109,
+        "max": 210.109
+      },
+      "record": {
+        "median": 3.046,
+        "min": 3.046,
+        "max": 3.046
+      },
+      "humans": {
+        "median": 207.62,
+        "min": 207.62,
+        "max": 207.62
+      },
+      "physics": {
+        "median": 169.682,
+        "min": 169.682,
+        "max": 169.682
+      },
+      "nonFinite": false,
+      "events": 0,
+      "heapMB": 134.4,
+      "load": [
+        6.9,
+        7.1,
+        8.9
+      ]
+    },
+    {
+      "rapierWorldsLeft": 0
+    }
+  ]
+}

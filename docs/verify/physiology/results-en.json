@@ -1,0 +1,632 @@
+{
+  "lang": "en",
+  "url": "http://localhost:4199/",
+  "results": [
+    {
+      "name": "1 settings: the physiology switch writes physiology = { model: reduced } AND switches the extended human model on",
+      "ok": true,
+      "detail": {
+        "s1": {
+          "humans": null,
+          "physiology": null
+        },
+        "s1b": {
+          "humans": {
+            "model": "extended"
+          },
+          "physiology": {
+            "model": "reduced"
+          }
+        }
+      }
+    },
+    {
+      "name": "2 advanced (collapsed by default): activity and clothing selects store activity = moderate, clothing = insulated",
+      "ok": true,
+      "detail": {
+        "model": "reduced",
+        "activity": "moderate",
+        "clothing": "insulated"
+      }
+    },
+    {
+      "name": "3 explicit water intake field stores 0.5 L/h (no automatic drinking)",
+      "ok": true,
+      "detail": 0.5
+    },
+    {
+      "name": "4 six module toggles; switching \"gas\" off stores modules.gas = false (on again → true)",
+      "ok": true,
+      "detail": {
+        "modSwitches": 6,
+        "m": {
+          "gas": false
+        }
+      }
+    },
+    {
+      "name": "5 reference values (humidity / pressure / O₂ / CO₂ / water temperature) with the \"assumed\" note; humidity 70 % stored as 0.7",
+      "ok": true,
+      "detail": {
+        "refIn": 6,
+        "ref": {
+          "humidity": 0.7
+        }
+      }
+    },
+    {
+      "name": "6 switching the extended human model off drops the physiology too (it needs the extended model)",
+      "ok": true,
+      "detail": {
+        "humans": null,
+        "physiology": null
+      }
+    },
+    {
+      "name": "7 physiology off → the key is removed, the extended human model stays on",
+      "ok": true,
+      "detail": {
+        "humans": {
+          "model": "extended"
+        },
+        "physiology": null
+      }
+    },
+    {
+      "name": "8 other settings edits keep the physiology setting",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "9 people placed: 2 people with physiology state in the run",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "name": "10 calm scene (60 s): core stays near 36.8 °C, capacity normal, no physiology events",
+      "ok": true,
+      "detail": [
+        36.81152623209442,
+        36.81152623209442
+      ]
+    },
+    {
+      "name": "11 calm scene sources: air = scene ambient, humidity / pressure / gas = reference (assumed values)",
+      "ok": true,
+      "detail": {
+        "airT": "scene.ambient",
+        "humidity": "reference",
+        "pressure": "reference",
+        "wind": "stillAir",
+        "mrt": "assumedAir",
+        "gas": "reference",
+        "airway": "noWater"
+      }
+    },
+    {
+      "name": "12 inspector: physiology section with core / skin / air temperature (source) / heat balance in-out W / ventilation L/min / O₂ supply index",
+      "ok": true,
+      "detail": "ModelReduced physiology (educational)Core temperature36.81 °CMean skin temperature33.76 °CAir temperature at the person (source)15.0 °C · scene ambient temperature (assumed)Thermal statenormal rangeHe"
+    },
+    {
+      "name": "13 inspector value sources: translated labels, assumed ones marked \"assumed\" (reference value)",
+      "ok": true,
+      "detail": "Air temperaturescene ambient temperature (assumed) (assumed)Humidityreference value (assumed) (assumed)Pressurereference value (assumed) (assumed)Windstill airMean radiant temperatureassumed equal to "
+    },
+    {
+      "name": "14 inspector: model level legend (A / B / C) and the limitation line (no diagnosis / time of death / survival probability)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "15 inspector: capacity (physiological and combined) and activity / clothing translated",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "16 calm scene: no \"NaN\" / \"undefined\" in the physiology section; uncomputed shown as text, not 0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "17 reset: back to t = 0 — physiology state re-created (time 0, no doses, no series)",
+      "ok": true,
+      "detail": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "18 original world: leaving the run shows the untouched world (fingerprint equal, physiology setting kept)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "19 cold zone (0 °C, 8 m/s wind, light clothing, 300 s): skin falls well below 33 °C (core held by vasoconstriction, < 37 °C), provenance \"zone\"",
+      "ok": true,
+      "detail": {
+        "skin": 26.009252487439937,
+        "core": 36.804514276035434
+      }
+    },
+    {
+      "name": "20 cold stress: thermal state cold / severe cold and a THERMAL_STRESS event",
+      "ok": true,
+      "detail": {
+        "st": "coldStress",
+        "ev": [
+          "THERMAL_STRESS",
+          "CAPACITY_CHANGED",
+          "THERMAL_STRESS",
+          "CAPACITY_CHANGED"
+        ]
+      }
+    },
+    {
+      "name": "21 inspector (cold): the translated thermal state and the zone as the air source",
+      "ok": true,
+      "detail": "ModelReduced physiology (educational)Core temperature36.80 °CMean skin temperature26.01 °CAir temperature at the person (source)0.0 °C · experimental zone (boun"
+    },
+    {
+      "name": "22 cold: net heat loss (heat out > heat in, W) — the body is cooling",
+      "ok": true,
+      "detail": {
+        "in": 128.96341980450754,
+        "out": 677.2382428747485,
+        "shiver": 0
+      }
+    },
+    {
+      "name": "23 hot humid zone (45 °C, 85 %, strenuous, 600 s): core rises above 37.5 °C",
+      "ok": true,
+      "detail": 38.825525736802945
+    },
+    {
+      "name": "24 heat: sweating (sweat rate > 0 g/h), water lost (deficit > 0 %)",
+      "ok": true,
+      "detail": {
+        "sweat": 924.0715090606733,
+        "deficit": 0.12314859383066938
+      }
+    },
+    {
+      "name": "25 heat stress state and a THERMAL_STRESS event (once per change, not every step)",
+      "ok": true,
+      "detail": {
+        "st": "heatStress",
+        "n": 4
+      }
+    },
+    {
+      "name": "26 radiant flux zone (6 kW/m², 120 s): absorbed radiation → heat FED > 0, radiant source \"zone\", heat in > heat out direction",
+      "ok": true,
+      "detail": {
+        "fed": 3.160209726664624,
+        "q": 6000,
+        "src": "zone"
+      }
+    },
+    {
+      "name": "27 inspector details: radiant flux W/m², sweat g/h, strain index, immersed share",
+      "ok": true,
+      "detail": "Sweat rate226 g/hShivering heat0 WThermal strain index0.04 KRadiant flux (fires / sources)6000 W/m²Solar radiation0 W/m²Body surface under water0 %Deposited smo"
+    },
+    {
+      "name": "28 smoke + CO zone (3000 ppm, 1 g/m³, 120 s): CO dose ≈ 3000 ppm × 2 min, FED(CO) > 0",
+      "ok": true,
+      "detail": {
+        "dose": 6000,
+        "fed": 0.1728055003721634
+      }
+    },
+    {
+      "name": "29 smoke dose (mg·min/m³) ≈ 1000 × 2 min and inhaled mass (mg) > 0 from the ventilation",
+      "ok": true,
+      "detail": {
+        "d": 2000.0000000000402,
+        "m": 19.152983139283812
+      }
+    },
+    {
+      "name": "30 GAS_EXPOSURE event once the asphyxiant FED passes 0.1",
+      "ok": true,
+      "detail": 0.1728055003721634
+    },
+    {
+      "name": "31 inspector: FED line (CO / O₂ / CO₂), CO dose ppm·min, smoke dose and inhaled mg",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "32 hypoxic zone (10 % O₂): O₂ supply index < 0.5, respiratory strain event",
+      "ok": true,
+      "detail": 0.3876755521344776
+    },
+    {
+      "name": "33 hypoxia: capacity limited with \"respiratory\" among the limiting causes",
+      "ok": true,
+      "detail": {
+        "cap": "impaired",
+        "lim": [
+          "respiratory"
+        ]
+      }
+    },
+    {
+      "name": "34 low pressure zone (50 kPa): supply index falls below 0.7, pressure source zone",
+      "ok": true,
+      "detail": 0.3692106244089442
+    },
+    {
+      "name": "35 physiology-only water over the airway (t = 5–25 s): airway under water at 15 s, not breathing",
+      "ok": true,
+      "detail": {
+        "a": "submerged"
+      }
+    },
+    {
+      "name": "36 overlay on: one marker per person, an airway ring for each submerged person, the legend states the unit (°C) and the meaning",
+      "ok": true,
+      "detail": {
+        "L36": {
+          "found": true,
+          "markers": 2,
+          "rings": 2,
+          "color0": "0.631,0.651,0.686"
+        },
+        "leg36": "30.035.036.838.542.0unit: °CModel core temperature (°C). Grey = reference (36.8 °C), blue = lower, amber = higher.small "
+      }
+    },
+    {
+      "name": "37 metric switch (airway time): marker colour changes, legend unit s and the \"not computed\" key",
+      "ok": true,
+      "detail": {
+        "c36": "0.631,0.651,0.686",
+        "c37": "0.278,0.541,0.821"
+      }
+    },
+    {
+      "name": "38 eight metrics offered with translated names (core, strain, O₂ supply, smoke, airway, water deficit, fatigue, capacity)",
+      "ok": true,
+      "detail": [
+        "Core temperature",
+        "Thermal strain index",
+        "O₂ supply index",
+        "Smoke dose",
+        "Airway time under water",
+        "Water deficit",
+        "Fatigue index",
+        "Combined capacity"
+      ]
+    },
+    {
+      "name": "39 overlay off unmounts the layer; 10× toggling: GPU geometries / textures do not grow",
+      "ok": true,
+      "detail": {
+        "L39": {
+          "found": false,
+          "markers": 0,
+          "rings": 0,
+          "color0": ""
+        },
+        "glA": {
+          "geometries": 16,
+          "textures": 5
+        },
+        "glB": {
+          "geometries": 16,
+          "textures": 5
+        }
+      }
+    },
+    {
+      "name": "40 airway events: AIRWAY_SUBMERGED and AIRWAY_CLEARED once each per person; cumulative ≈ 20 s, first ≥ 5 s",
+      "ok": true,
+      "detail": {
+        "cum": 20.000000000000014,
+        "first": 5.116666666666654
+      }
+    },
+    {
+      "name": "41 inspector airway history: first / cumulative / longest in s and the number of submersions",
+      "ok": true,
+      "detail": "ModelReduced physiology (educational)Core temperature36.81 °CMean skin temperature33.13 °CAir temperature at the person (source)15.0 °C · scene ambient temperature (assumed)Thermal statenormal rangeHe"
+    },
+    {
+      "name": "42 overlay after clearing: no airway rings (overlay switched off → layer unmounted, nothing drawn)",
+      "ok": true,
+      "detail": {
+        "found": false,
+        "markers": 0,
+        "rings": 0,
+        "color0": ""
+      }
+    },
+    {
+      "name": "43 hot dry zone, strenuous (600 s): water deficit grows (> 0.05 % body mass in 10 min)",
+      "ok": true,
+      "detail": 0.09543505696435879
+    },
+    {
+      "name": "44 fatigue index rises under strenuous activity in heat with reduced O₂ (16 %) (> 0.2)",
+      "ok": true,
+      "detail": 0.5826078525159869
+    },
+    {
+      "name": "45 CO zone (5 %, 90 s): capacity unable to act, limiting cause \"gas\" recorded",
+      "ok": true,
+      "detail": {
+        "c": "unableToAct",
+        "causes": [
+          "gas"
+        ]
+      }
+    },
+    {
+      "name": "46 physiological collapse: the person is down (not standing), fall cause \"physiological\", no impact episode",
+      "ok": true,
+      "detail": {
+        "posture": "resting",
+        "standing": false,
+        "fallCause": "physiological",
+        "impacts": 0,
+        "collapsed": 1
+      }
+    },
+    {
+      "name": "47 inspector: combined capacity \"unable to act\" with the limiting cause translated (gas exposure)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "48 human inspector shows the physiological fall cause translated",
+      "ok": true,
+      "detail": "ModelExtended human modelMass · height70.0 kg · 1.75 mPostureRestingBalancefallen (no posture control)Falls1 · first at 41.62 s · cause physiologically unable t"
+    },
+    {
+      "name": "49 results block: ≥ 10 aggregate cards (unable to act 2), capacity table, people table (2 rows), the limitation line",
+      "ok": true,
+      "detail": {
+        "cards49": 42,
+        "tab49": 2
+      }
+    },
+    {
+      "name": "50 charts: 10 charts with lines, time axis in s, units on the value axis (°C)",
+      "ok": true,
+      "detail": {
+        "charts": 11,
+        "lines": 13,
+        "axis": "Temperature■ core■ skin■ air36.81 °C|0 s15.00 °C89 s"
+      }
+    },
+    {
+      "name": "51 physiology CSV: schema v1 line, model note \"not a medical prediction\", units line, columns incl. provenance / core / FED / doses / airway / capacity",
+      "ok": true,
+      "detail": [
+        "# schema: disaster-sim.physiology v1",
+        "# model: reduced-1 — educational reduced model — not a medical prediction (no diagnosis, no time of death, no survival probability)"
+      ]
+    },
+    {
+      "name": "52 CSV row: full width, provenance \"zone\" for the gas, capacity unableToAct, events and series sections",
+      "ok": true,
+      "detail": {
+        "n": 50,
+        "h": 50
+      }
+    },
+    {
+      "name": "53 results JSON: a physiology block (schema 1, model reduced, units, levels A/B/C, parameters, people, events) next to the intact Phase 33 humans block",
+      "ok": true,
+      "detail": {
+        "p": true,
+        "h": "extended"
+      }
+    },
+    {
+      "name": "54 damage-events CSV keeps the human columns and adds the physiology columns (kind, from, to, value, causes)",
+      "ok": true,
+      "detail": "s2,human_risk_index,human_level,human_partner,human_posture,physio_kind,physio_from,physio_to,physio_value,physio_causes"
+    },
+    {
+      "name": "55 not computed ≠ 0: gas module off → FED / doses null, the smoke chart is a gap (\"not computed\"), JSON series null",
+      "ok": true,
+      "detail": {
+        "g55": {
+          "empty": "true",
+          "txt": "Smoke dosenot computed"
+        },
+        "fed": null
+      }
+    },
+    {
+      "name": "56 inspector with the gas module off: FED / CO dose / smoke read \"not computed\", not 0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "57 save → reload → load: physiology (clothing, water intake, zone) and the extended model survive",
+      "ok": true,
+      "detail": {
+        "model": "reduced",
+        "clothing": "protective",
+        "waterIntake": 0.25,
+        "zones": [
+          {
+            "id": "z1",
+            "name": "test",
+            "shape": "box",
+            "center": [
+              0,
+              1,
+              0
+            ],
+            "size": [
+              40,
+              8,
+              40
+            ],
+            "airTemperature": 278.15
+          }
+        ]
+      }
+    },
+    {
+      "name": "58 serialization round trip of the physiology setting (schema validated)",
+      "ok": true,
+      "detail": {
+        "model": "reduced",
+        "clothing": "protective",
+        "waterIntake": 0.25,
+        "zones": [
+          {
+            "id": "z1",
+            "name": "test",
+            "shape": "box",
+            "center": [
+              0,
+              1,
+              0
+            ],
+            "size": [
+              40,
+              8,
+              40
+            ],
+            "airTemperature": 278.15
+          }
+        ]
+      }
+    },
+    {
+      "name": "59 language switch: the physiology inspector re-renders in the other language without raw keys, and back",
+      "ok": true,
+      "detail": {
+        "raw59": [],
+        "a": "모델축약 생리 모델(교육용)심부 체온36.80 °C평균 피부 온도33.94 °C주변 공기 온도(출처)5.0 °C · 실험 영역(경계 조건)체온 "
+      }
+    },
+    {
+      "name": "60 presets: 24 physiology presets, each builds a world with the extended model, physiology and people",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "61 preset names translated (no raw physioPresets.* key)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "62 preset \"cold water (full)\" run 120 s: the person in the neck-deep water (a physiology boundary-condition zone: water temperature source \"zone\") is > 90 % immersed with the airway clear, the skin falls toward the 10 °C water (< 30 °C); the dry control person stays dry and warmer",
+      "ok": true,
+      "detail": [
+        [
+          27.78790407971229,
+          36.80929701943211,
+          "coldStress",
+          0.9140735574727612,
+          "clear",
+          "zone"
+        ],
+        [
+          33.55178624952964,
+          36.82008230876215,
+          "normal",
+          0,
+          "clear",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "63 preset \"fire radiant\" (120 s): the flame radiation reached the people — a radiant heat FED > 0 accumulated (the flames may have burned down by t = 120 s, so the instantaneous flux is not required)",
+      "ok": true,
+      "detail": [
+        [
+          0,
+          1.6341067783978003,
+          null
+        ],
+        [
+          0,
+          0.6184121430519607,
+          null
+        ],
+        [
+          0,
+          0.08956756305423692,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "64 combined hazard (cold water + CO + smoke + wind + earthquake): everything finite, export valid with doses and immersion",
+      "ok": true,
+      "detail": [
+        [
+          196.66666666666666,
+          1
+        ],
+        [
+          196.66666666666666,
+          1
+        ],
+        [
+          190,
+          1
+        ]
+      ]
+    },
+    {
+      "name": "65 extended model without physiology: no physiology section / overlay toggle / results block; the human section works",
+      "ok": true,
+      "detail": {
+        "hasSec": false,
+        "hasHuman": true,
+        "ov65": false,
+        "res65": false
+      }
+    },
+    {
+      "name": "66 export without physiology: no physiology block, the humans block unchanged; physioLib empty",
+      "ok": true,
+      "detail": {
+        "h": "extended"
+      }
+    },
+    {
+      "name": "67 no raw i18n keys of the physiology visible anywhere checked",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "68 no \"NaN\" / \"Infinity\" / \"undefined\" text shown (calm, results)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "69 resources: GPU geometries back to the start after all runs",
+      "ok": true,
+      "detail": {
+        "geo0": 17,
+        "geo1": 8
+      }
+    },
+    {
+      "name": "70 whole run: no page / console errors, the tab alive",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "heapMB": 52
+      }
+    }
+  ],
+  "errors": [],
+  "geometries": [
+    17,
+    8
+  ],
+  "heapMB": 52,
+  "crashed": false
+}

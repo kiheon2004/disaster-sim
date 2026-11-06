@@ -200,7 +200,7 @@
       "detail": {
         "ev": 4,
         "fin": 4,
-        "sample": "0.233,human_73a89ab12q,extended,FALLEN,falling,0.163364,0,none,none,none,none,none,none,none,none,none,none,noSupport,none"
+        "sample": "0.233,human_9c62a0782q,extended,FALLEN,falling,0.163364,0,none,none,none,none,none,none,none,none,none,none,noSupport,none"
       }
     },
     {
@@ -219,7 +219,7 @@
     {
       "name": "25 damage-events CSV carries the human detail columns (segment, impulse, Δv, deceleration lower bound, index, level, partner, posture)",
       "ok": true,
-      "detail": "ndary_member,human_segment,human_impulse_Ns,human_dv_ms,human_decel_lower_bound_ms2,human_risk_index,human_level,human_partner,human_posture"
+      "detail": "_decel_lower_bound_ms2,human_risk_index,human_level,human_partner,human_posture,physio_kind,physio_from,physio_to,physio_value,physio_causes"
     },
     {
       "name": "26 reset: back to t = 0 — every person standing again, no falls, no impacts, zero risk",
