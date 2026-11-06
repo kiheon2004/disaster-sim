@@ -250,7 +250,8 @@ const EXPECT: Record<PhysioPresetId, (r: Run) => void | Promise<void>> = {
     expect(dk).toBeLessThan(dd);
     const expected = (100 * 0.4 * (r.T / 3600)) / m;
     expect(Math.abs(dd - dk - expected) / expected).toBeLessThan(0.15);
-    expect(st(drink).ledger.intake).toBeCloseTo(0.4 * (r.T / 3600), 6);
+    // Integrated over the physiology clock (the last sample, ≤ 5 physics steps before the simulation time — H5 correction).
+    expect(st(drink).ledger.intake).toBeCloseTo(0.4 * (st(drink).time / 3600), 6);
   },
   // Flame radiation of a burning stand on people at 6, 12 and 24 m: the radiant dose falls with distance (point source ∝ 1/r²,
   // dose ∝ q^(4/3)), the farthest stays below the reference FED.

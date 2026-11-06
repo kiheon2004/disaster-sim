@@ -162,7 +162,7 @@ export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngin
   // Phase 34: physiology of the extended-model people (absent setting: nothing is created).
   let physio: PhysiologyRuntime | undefined;
   if (humans && physiology) {
-    physio = { settings: structuredClone(physiology), compartments: new Map(), initialized: false };
+    physio = { settings: structuredClone(physiology), compartments: new Map(), initialized: false, lastTime: null };
     let n = 0;
     for (const e of entities.values()) if (e.human) e.physio = createPhysioEntity(e.id, e.human.model.mass, e.human.model.height, physiology, n++ < PHYSIO_SERIES_PEOPLE);
   }

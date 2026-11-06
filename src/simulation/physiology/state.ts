@@ -35,6 +35,8 @@ export interface PhysiologyRuntime {
   /** Confined compartments by zone index (created at the first update). */
   compartments: Map<number, Compartment>;
   initialized: boolean;
+  /** Simulation time of the last physiology sample (s; null before the first). */
+  lastTime: number | null;
 }
 
 export function createPhysioEntity(objectId: string, mass: number, height: number, settings: PhysiologySettings, withSeries: boolean): PhysioEntity {

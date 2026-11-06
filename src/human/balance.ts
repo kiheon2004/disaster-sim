@@ -107,6 +107,15 @@ export function stepBalance(p: BalanceParams, s: BalanceState, inp: BalanceInput
   let c1 = g1 + Ia * (KP * (s.th[0] - l1) + KD * s.om[0]);
   let c2 = g2 + Ia * (KP * (s.th[1] - l2) + KD * s.om[1]);
   const cm = Math.hypot(c1, c2);
+  // Phase 34: no ankle moment available (control ≤ 0 — the physiology's 'unable to act') means no posture control at all:
+  // the standing model does not apply and the step is a loss of balance (the caller releases the body, as it does for
+  // canStand = false). The demand is then reported against the physical support capacity (finite; the request the
+  // missing control could not meet), and no corrective moment acts.
+  if (inp.control !== undefined && !(inp.control > 0)) {
+    s.mc[0] = s.mc[1] = 0;
+    s.demand = cm > 0 ? cm / (W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2)) : 0;
+    return 'fall';
+  }
   let demand = 0;
   if (cm > 0) {
     const cap = inp.control === undefined ? W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2) : W * edgeDistance(p, c1 / cm, c2 / cm, inp.f1, inp.f2) * inp.control;

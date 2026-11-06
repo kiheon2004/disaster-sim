@@ -186,6 +186,9 @@ export function sample(ctx: SystemContext, e: RuntimeEntity, cfg: PhysiologySett
   // ── gases ──
   let xO2: number | undefined = ref.o2, xCO2: number | undefined = ref.co2, xCO: number | undefined = 0, smoke: number | undefined = 0;
   prov.gas = 'reference';
+  // CO / CO₂ separately: a fire run estimates them (CO from the soot, CO₂ from the O₂ deficit) — estimates, not transported species.
+  prov.co = 'reference';
+  prov.co2 = 'reference';
   const frt = ctx.env.fire.rt;
   if (frt) {
     const trt = ctx.env.thermal.rt;
@@ -205,6 +208,8 @@ export function sample(ctx: SystemContext, e: RuntimeEntity, cfg: PhysiologySett
       smoke = soot;
       // CO mass concentration = soot × ratio → mole fraction x = c R T / (p M).
       xCO = (soot * CO_SOOT_RATIO * R_GAS * Tair) / (p * M_CO);
+      prov.co = 'fire.sootRatio';
+      prov.co2 = 'fire.o2Deficit';
     }
   }
   const vg = ctx.env.atmosphere.rt?.field.gas;
@@ -221,8 +226,8 @@ export function sample(ctx: SystemContext, e: RuntimeEntity, cfg: PhysiologySett
     if (Z.pressure !== undefined) { p = blend(p, Z.pressure, w)!; prov.pressure = 'zone'; }
     if (Z.wind !== undefined) { vAir = blend(vAir, Z.wind, w)!; prov.wind = 'zone'; }
     if (Z.o2 !== undefined) { xO2 = blend(xO2, Z.o2, w); prov.gas = 'zone'; }
-    if (Z.co2 !== undefined) { xCO2 = blend(xCO2, Z.co2, w); prov.gas = 'zone'; }
-    if (Z.co !== undefined) { xCO = blend(xCO, Z.co, w); prov.gas = 'zone'; }
+    if (Z.co2 !== undefined) { xCO2 = blend(xCO2, Z.co2, w); prov.gas = 'zone'; prov.co2 = 'zone'; }
+    if (Z.co !== undefined) { xCO = blend(xCO, Z.co, w); prov.gas = 'zone'; prov.co = 'zone'; }
     if (Z.smoke !== undefined) { smoke = blend(smoke, Z.smoke, w); prov.gas = 'zone'; }
     if (Z.surfaceTemperature !== undefined && lying) { Tsurf = Z.surfaceTemperature; prov.contact = 'zone'; }
     if (Z.water) {
@@ -235,7 +240,7 @@ export function sample(ctx: SystemContext, e: RuntimeEntity, cfg: PhysiologySett
     }
     if (Z.confined) {
       const c = compartments.get(z.index);
-      if (c) { const f = compartmentFractions(c); xO2 = f.o2; xCO2 = f.co2; compartment = z.index; prov.gas = 'confined'; }
+      if (c) { const f = compartmentFractions(c); xO2 = f.o2; xCO2 = f.co2; compartment = z.index; prov.gas = 'confined'; prov.co2 = 'confined'; }
     }
   }
   const qDirZone = z?.zone.radiantFlux !== undefined ? z.zone.radiantFlux * z.w : 0;
@@ -261,7 +266,7 @@ export function sample(ctx: SystemContext, e: RuntimeEntity, cfg: PhysiologySett
   if (buried) {
     airwaySubmerged = undefined;
     prov.airway = 'buried';
-    if (compartment < 0) { xO2 = xCO2 = xCO = smoke = undefined; prov.gas = 'buriedUnknown'; }
+    if (compartment < 0) { xO2 = xCO2 = xCO = smoke = undefined; prov.gas = prov.co = prov.co2 = 'buriedUnknown'; }
   } else prov.airway = surfaceAirway > -Infinity ? prov.water ?? 'flood' : 'noWater';
   const pa = RH !== undefined ? RH * esWater(Ta) : undefined;
   if (pa === undefined) prov.humidity = 'unknown';

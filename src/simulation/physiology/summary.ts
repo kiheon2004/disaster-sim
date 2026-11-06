@@ -14,7 +14,8 @@ import { SERIES_KEYS, type PhysioEntity, type PhysiologyRuntime, type SeriesKey 
 import { compartmentFractions } from './zones';
 
 /** Version of the physiology export rows (CSV header comment, JSON field). Bump on a column / field change. */
-export const PHYSIO_EXPORT_SCHEMA = 1;
+/** v2 (Phase 34 correction): src_co / src_co2 columns and sourceClasses — the gases a fire run estimates are marked. */
+export const PHYSIO_EXPORT_SCHEMA = 2;
 /** Version of the reduced model the rows were produced with. */
 export const PHYSIO_MODEL_VERSION = 'reduced-1';
 export const PHYSIO_NOTE = 'educational reduced model — not a medical prediction (no diagnosis, no time of death, no survival probability)';
@@ -29,10 +30,14 @@ export function physioEntities(entities: Iterable<RuntimeEntity>): PhysioPerson[
 }
 
 /** The provenance fields shown / exported, in order (sampler codes: see sampler.ts). */
-export const PROVENANCE_FIELDS = ['airT', 'humidity', 'pressure', 'wind', 'mrt', 'solar', 'radiant', 'water', 'waterT', 'gas', 'contact', 'airway', 'volcanicGas', 'zone'] as const;
+export const PROVENANCE_FIELDS = ['airT', 'humidity', 'pressure', 'wind', 'mrt', 'solar', 'radiant', 'water', 'waterT', 'gas', 'co', 'co2', 'contact', 'airway', 'volcanicGas', 'zone'] as const;
 export type ProvenanceField = (typeof PROVENANCE_FIELDS)[number];
 /** Codes that mean "an explicit model assumption, not a value from the environment simulation". */
 export const ASSUMED_SOURCES = new Set(['scene.ambient', 'reference', 'assumedAir', 'unknown', 'buriedUnknown']);
+/** Codes that mean "estimated from another simulated quantity by an assumed relation" (not a transported species). */
+export const ESTIMATED_SOURCES = new Set(['fire.sootRatio', 'fire.o2Deficit']);
+/** Codes that mean "an experimental boundary condition given by the user, not a simulation result". */
+export const BOUNDARY_SOURCES = new Set(['zone']);
 
 const mod = (p: PhysioEntity, m: keyof PhysioEntity['cfg']['modules']) => p.cfg.modules[m];
 const fin = (v: number | null | undefined): number | null => (v === null || v === undefined || !Number.isFinite(v) ? null : v);
@@ -233,7 +238,7 @@ export function physioCsv(entities: Iterable<RuntimeEntity>, events: readonly Da
     `# schema: disaster-sim.physiology v${PHYSIO_EXPORT_SCHEMA}`,
     `# model: ${PHYSIO_MODEL_VERSION} — ${PHYSIO_NOTE}`,
     '# units: time s, temperatures °C, heat flows W, sweat g/h, ventilation L/min, O₂ supply index 1 (alveolar O₂ / sea-level reference), FED 1 (ISO 13571 form), CO dose ppm·min, smoke dose mg·min/m³, smoke mass mg, airway times s, water deficit % body mass, fatigue index 0–1',
-    '# src_* = where each environment value came from (scene.ambient / reference / assumedAir = an explicit assumption; zone = experimental boundary condition); empty cell = not computed',
+    '# src_* = where each environment value came from (scene.ambient / reference / assumedAir = an explicit assumption; fire.sootRatio / fire.o2Deficit = estimated by an assumed relation, not a transported species; zone = experimental boundary condition); empty cell = not computed',
     PHYSIO_CSV_COLUMNS.join(','),
   ];
   for (const e of people) {
@@ -281,6 +286,7 @@ export function physioJson(entities: Iterable<RuntimeEntity>, events: readonly D
     levels: LEVEL_LEGEND,
     parameters: PARAMS,
     settings: rt.settings,
+    sourceClasses: { assumed: [...ASSUMED_SOURCES], estimated: [...ESTIMATED_SOURCES], boundaryCondition: [...BOUNDARY_SOURCES] },
     aggregate: aggregatePhysio(people),
     compartments: [...rt.compartments.values()].map((c) => ({ zone: c.zone, zoneId: rt.settings.zones?.[c.zone]?.id ?? null, volume: c.V, exchange: c.lambda, ...compartmentFractions(c), ledger: { ...c.ledger } })),
     people: people.map((e) => {

@@ -4,7 +4,7 @@ import type { EntityId } from '@/core/types';
 import { CAPACITY_LEVELS, type CapacityLevel } from '@/physiology/engine';
 import { simulationController } from '@/simulation/SimulationController';
 import { useSimStore } from '@/simulation/simStore';
-import { ASSUMED_SOURCES, physioRow, PROVENANCE_FIELDS, type PhysioPerson } from '@/simulation/physiology/summary';
+import { ASSUMED_SOURCES, ESTIMATED_SOURCES, physioRow, PROVENANCE_FIELDS, type PhysioPerson } from '@/simulation/physiology/summary';
 import { Section } from '@/ui/common/Panel';
 import { fmt } from '@/ui/format';
 import styles from './Inspector.module.css';
@@ -67,7 +67,7 @@ export function PhysiologyObjectSection({ id }: { id: EntityId }) {
   const nc = t('physioUi.notComputed');
   const yn = (b: boolean | null) => (b === null ? nc : b ? t('physioUi.yes') : t('physioUi.no'));
   const p = r.provenance;
-  const assumed = (f: string) => (p[f] && ASSUMED_SOURCES.has(p[f]) ? ` (${t('physioUi.assumed')})` : '');
+  const assumed = (f: string) => (p[f] && ASSUMED_SOURCES.has(p[f]) ? ` (${t('physioUi.assumed')})` : p[f] && ESTIMATED_SOURCES.has(p[f]) ? ` (${t('physioUi.estimated')})` : '');
   const rows: [string, React.ReactNode][] = [
     [t('physioUi.inspect.model'), t('physioUi.model.reduced')],
     [t('physioUi.inspect.core'), val(t, r.core, 2, '°C')],

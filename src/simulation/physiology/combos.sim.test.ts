@@ -85,7 +85,8 @@ describe('combined exposures (spec §62)', () => {
     const m = dry.physio!.cfg.mass;
     for (const e of [dry, drink]) { ledgerCloses(st(e)); waterCloses(st(e)); }
     expect(st(dry).ledger.intake).toBe(0);
-    expect(st(drink).ledger.intake).toBeCloseTo(0.4, 6);
+    // 0.4 L/h over the physiology clock (the last sample, ≤ 5 physics steps before the simulation time — H5 correction).
+    expect(st(drink).ledger.intake).toBeCloseTo(0.4 * (st(drink).time / 3600), 6);
     expect(deficitPercent(st(dry), m)).toBeCloseTo((100 * (st(dry).waterLost - 0)) / m, 9);
     expect(deficitPercent(st(drink), m)).toBeCloseTo((100 * (st(drink).waterLost - st(drink).waterIntake)) / m, 9);
     // Dehydration shifts the core set point upward (≤ 0.15 K per %): the person without water ends warmer, by at most that shift.
@@ -154,9 +155,10 @@ describe('combined exposures (spec §62)', () => {
     const c = await load(scene([{ x: 0, z: 0 }], { activity: 'resting', zones }));
     c.advance(300);
     const s = st(humans(c)[0]);
-    // Constant concentration from t = 0: smoke dose = c · t (trapezoid exact for constant exposure).
-    expect(s.dose.smoke).toBeCloseTo(0.002 * 300, 6);
-    expect(s.dose.o2Deficit).toBeCloseTo((0.2095 - 0.15) * 300, 6);
+    // Constant concentration from t = 0: smoke dose = c · t (trapezoid exact for constant exposure), t = the physiology clock
+    // (the last sample, ≤ 5 physics steps before the simulation time — H5 correction).
+    expect(s.dose.smoke).toBeCloseTo(0.002 * s.time, 6);
+    expect(s.dose.o2Deficit).toBeCloseTo((0.2095 - 0.15) * s.time, 6);
     expect(s.resp.supply!).toBeLessThan(1);
     expect(s.fed.o2).toBeGreaterThan(0);
     // Inhaled smoke ≤ concentration × the largest ventilation over the run (ventilation demand of the metabolic rate).

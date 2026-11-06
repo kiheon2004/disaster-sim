@@ -58,9 +58,13 @@ export class PhysiologySystem implements SimulationSystem {
         if (z.confined) rt.compartments.set(i, createCompartment(i, z, ref.o2, ref.co2, z.pressure ?? ref.pressure, z.airTemperature ?? ctx.env.thermal.rt?.world.Tref ?? 288.15));
       });
     }
-    // Time at the end of the physics step that just ran.
+    // The sample is taken after the physics step that just ran: its time is the end of that step. The physiology integrates
+    // from the previous sample to this one (the first call: from the start of the run, one physics step) — the scheduler's
+    // dt × interval is the spacing of the calls, not the time elapsed since the last sample on the first call.
     const t = ctx.time + dt / this.interval;
-    const uptake = new Map<number, { o2: number; co2: number }>();
+    const h = t - (rt.lastTime ?? ctx.time);
+    rt.lastTime = t;
+    const uptake = new Map<number, { o2: number; co2: number; people: { pe: PhysioEntity; o2: number }[] }>();
     for (const e of ctx.runtime.entities.values()) {
       const pe = e.physio;
       if (!pe || !e.human) continue;
@@ -79,13 +83,14 @@ export class PhysiologySystem implements SimulationSystem {
       }
       const o2Before = pe.s.ledger.o2, debtBefore = pe.s.ledger.o2Debt, co2Before = pe.s.ledger.co2;
       const tp = simProfiler.now();
-      const trs = stepPhysiology(pe.s, pe.cfg, smp.exposure, dt, t);
+      const trs = stepPhysiology(pe.s, pe.cfg, smp.exposure, h, t);
       simProfiler.add('physio.step', tp);
       const tr0 = simProfiler.now();
       if (smp.compartment >= 0) {
         const breathed = (pe.s.ledger.o2 - o2Before) - (pe.s.ledger.o2Debt - debtBefore);
-        const u = uptake.get(smp.compartment) ?? { o2: 0, co2: 0 };
+        const u = uptake.get(smp.compartment) ?? { o2: 0, co2: 0, people: [] };
         u.o2 += breathed;
+        if (breathed > 0) u.people.push({ pe, o2: breathed });
         // CO₂ leaves with the breath only while breathing (the share of the step breathed).
         const share = pe.s.ledger.o2 - o2Before > 0 ? breathed / (pe.s.ledger.o2 - o2Before) : 0;
         u.co2 += (pe.s.ledger.co2 - co2Before) * share;
@@ -98,9 +103,17 @@ export class PhysiologySystem implements SimulationSystem {
       if (pe.series) this.seriesPush(pe, t);
       simProfiler.add('physio.record', tr0);
     }
+    // Confined compartments: the occupants' breathed O₂ is drawn from the stock; when the stock cannot cover it, each
+    // occupant gets the same share of what is there (proportional to the demand — independent of the iteration order) and
+    // the rest of the step's consumption is O₂ from the body store (the person's o2Debt), so Σ breathed = taken exactly.
     for (const [i, c] of rt.compartments) {
-      const u = uptake.get(i) ?? { o2: 0, co2: 0 };
-      stepCompartment(c, u.o2, u.co2, dt);
+      const u = uptake.get(i);
+      if (u && u.o2 > c.o2) {
+        const f = c.o2 / u.o2;
+        for (const o of u.people) o.pe.s.ledger.o2Debt += o.o2 * (1 - f);
+        c.ledger.clamped += u.o2 - c.o2;
+      }
+      stepCompartment(c, u ? Math.min(u.o2, c.o2) : 0, u?.co2 ?? 0, h);
     }
     simProfiler.add('physiology', t0);
   }
