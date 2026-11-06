@@ -204,6 +204,12 @@ export interface SimulationSettings {
    * `riskScale` multiplies the reference velocity changes of the risk index (model parameter, 0.5–2).
    */
   humans?: HumanSettings;
+  /**
+   * Human physiology (Phase 34): the reduced, educational physiology (body temperature, respiration, gas / smoke / heat
+   * exposure, airway submersion, body water, fatigue, functional capacity) on top of the extended human model. Absent =
+   * no physiology (bit-identical to Phase 33); requires `humans`.
+   */
+  physiology?: import('@/physiology/settings').PhysiologySettings;
 }
 
 export interface HumanSettings {

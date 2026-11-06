@@ -150,7 +150,7 @@ export interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -593,6 +593,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
               ...(patch.vegetation || cur.vegetation ? { vegetation: { canopyShelter: false, floodResponse: false, ...(cur.vegetation ?? {}), ...(patch.vegetation ?? {}) } } : {}),
               // Phase 33: extended human model (null in the patch switches it off; kept when other settings change).
               ...(patch.humans !== undefined ? (patch.humans ? { humans: patch.humans } : {}) : cur.humans ? { humans: cur.humans } : {}),
+              // Phase 34: physiology (null switches it off; needs the extended human model — dropped with it).
+              ...((patch.humans !== undefined ? patch.humans : cur.humans) ? (patch.physiology !== undefined ? (patch.physiology ? { physiology: patch.physiology } : {}) : cur.physiology ? { physiology: cur.physiology } : {}) : {}),
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },
