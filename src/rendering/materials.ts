@@ -11,9 +11,9 @@ export const MaterialModeContext = createContext<MaterialMode>('normal');
 
 /** Whether meshes below should cast shadows (turned off for small objects in large scenes). */
 export const CastShadowContext = createContext(true);
-/** Above this many objects, small objects (people, cars, poles, signs) stop casting shadows. */
+/** Above this many objects, small objects (people, cars, poles, signs, Phase 35 loose objects) stop casting shadows. */
 export const SHADOW_LOD_THRESHOLD = 400;
-const SMALL_TYPES = new Set(['human', 'car', 'streetLight', 'sign']);
+const SMALL_TYPES = new Set(['human', 'car', 'streetLight', 'sign', 'crate', 'barrel', 'furniture', 'roadBarrier', 'ball']);
 export function castsShadow(type: string, objectCount: number) {
   return objectCount < SHADOW_LOD_THRESHOLD || !SMALL_TYPES.has(type);
 }

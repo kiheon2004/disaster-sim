@@ -142,7 +142,7 @@ export class SimulationController {
     this.physics = physics;
     const sim = this.snapshot.settings.simulation ?? defaultSimulationSettings();
     const terrain = new TerrainSampler(runTerrain);
-    this.runtime = buildRuntime(this.snapshot, physics, terrain, sim.humans, sim.physiology);
+    this.runtime = buildRuntime(this.snapshot, physics, terrain, sim.humans, sim.physiology, sim.vehicles);
     // Phase 19 vegetation options (opt-in per project).
     if (sim.vegetation?.canopyShelter) computeCanopy(this.runtime);
     if (sim.vegetation?.floodResponse) this.runtime.vegetation = { flood: true };

@@ -17,7 +17,8 @@ import type { ChannelId } from '@/phenomena/types';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import type { SystemContext } from '../systems/SimulationSystem';
 
-export type ObjectCategory = 'human' | 'vehicle' | 'building' | 'tree' | 'infrastructure' | 'debris';
+/** Phase 35: 'object' = Level 1 passive free rigid bodies (crate, barrel, container, furniture, road barrier, ball). */
+export type ObjectCategory = 'human' | 'vehicle' | 'building' | 'tree' | 'infrastructure' | 'debris' | 'object';
 export type ResponseKind = 'motion' | 'stability' | 'structural' | 'exposure' | 'transition';
 
 export function objectCategory(type: ObjectType | 'debris'): ObjectCategory {
@@ -32,6 +33,13 @@ export function objectCategory(type: ObjectType | 'debris'): ObjectCategory {
       return 'tree';
     case 'debris':
       return 'debris';
+    case 'crate':
+    case 'barrel':
+    case 'container':
+    case 'furniture':
+    case 'roadBarrier':
+    case 'ball':
+      return 'object';
     default:
       return 'infrastructure'; // street lights, signs, walls, roads
   }
@@ -87,9 +95,9 @@ export class ResponseRegistry {
  * listed so the full matrix (UI, docs, tests) is complete. "planned" = channel not implemented.
  */
 export const FORCE_RESPONSES: { channel: ChannelId; categories: ObjectCategory[]; kinds: ResponseKind[]; via: string }[] = [
-  { channel: 'airflow', categories: ['human', 'vehicle', 'debris', 'tree', 'infrastructure'], kinds: ['motion', 'stability'], via: 'WindForceSystem → ForceLedger' },
+  { channel: 'airflow', categories: ['human', 'vehicle', 'debris', 'tree', 'infrastructure', 'object'], kinds: ['motion', 'stability'], via: 'WindForceSystem → ForceLedger' },
   { channel: 'airflow', categories: ['building', 'tree', 'infrastructure', 'human', 'vehicle'], kinds: ['structural', 'stability', 'transition'], via: 'DamageSystem (wind behaviors)' },
-  { channel: 'groundMotion', categories: ['human', 'vehicle', 'debris'], kinds: ['motion'], via: 'SeismicForceSystem → ForceLedger' },
-  { channel: 'water', categories: ['human', 'vehicle', 'debris', 'tree', 'infrastructure'], kinds: ['motion', 'stability'], via: 'WaterForceSystem → ForceLedger' },
+  { channel: 'groundMotion', categories: ['human', 'vehicle', 'debris', 'object'], kinds: ['motion'], via: 'SeismicForceSystem → ForceLedger' },
+  { channel: 'water', categories: ['human', 'vehicle', 'debris', 'tree', 'infrastructure', 'object'], kinds: ['motion', 'stability'], via: 'WaterForceSystem → ForceLedger' },
   { channel: 'pressure', categories: ['debris'], kinds: ['motion'], via: 'BlastSystem → ForceLedger (Phase 24)' },
 ];

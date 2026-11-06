@@ -210,6 +210,11 @@ export interface SimulationSettings {
    * no physiology (bit-identical to Phase 33); requires `humans`.
    */
   physiology?: import('@/physiology/settings').PhysiologySettings;
+  /**
+   * Dynamic objects & vehicles (Phase 35): 'dynamics' = cars are wheeled vehicles (ray-cast suspension, tyres, wheel spin,
+   * powertrain, brakes, steering, aerodynamics, collisions, damage, occupants). Absent = the legacy cars (bit-identical).
+   */
+  vehicles?: import('@/vehicle/settings').VehicleSettings;
 }
 
 export interface HumanSettings {

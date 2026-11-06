@@ -28,6 +28,10 @@ import { koHumanPresets } from './ko.humanPresets';
 import { koPhysiology } from './ko.physiology';
 import { koPhysiologyUi } from './ko.physiologyUi';
 import { koPhysiologyPresets } from './ko.physiologyPresets';
+import { koVehicle } from './ko.vehicle';
+import { koVehicleUi } from './ko.vehicleUi';
+import { koVehiclePresets } from './ko.vehiclePresets';
+import { koDynamicObjects } from './ko.dynamicObjects';
 
 export const ko = {
   // App
@@ -629,6 +633,10 @@ export const ko = {
   ...koPhysiology,
   ...koPhysiologyUi,
   ...koPhysiologyPresets,
+  ...koVehicle,
+  ...koVehicleUi,
+  ...koVehiclePresets,
+  ...koDynamicObjects,
 } as const;
 
 export type MessageKey = keyof typeof ko;

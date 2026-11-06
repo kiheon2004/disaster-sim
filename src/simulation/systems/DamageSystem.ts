@@ -1,10 +1,12 @@
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import { updateHuman, knockDown } from '../damage/behaviors/human';
 import { humanContact } from '../human/HumanSystem';
+import { vehicleContact } from '../vehicle/collisions';
 import { updateTree } from '../damage/behaviors/tree';
 import { updateCar } from '../damage/behaviors/car';
 import { updateBuilding } from '../damage/behaviors/building';
 import { updateAnchoredStructure } from '../damage/behaviors/structure';
+import { passiveImpact, updatePassiveObject } from '../damage/behaviors/passiveObject';
 import type { RuntimeEntity } from '../SimulationRuntime';
 import { pushedByBlast, pushedByImpact, pushedBySediment } from '../forces/ForceLedger';
 import type { BodyUserData } from '@/physics/PhysicsEngine';
@@ -47,6 +49,9 @@ export class DamageSystem implements SimulationSystem {
         case 'wall':
           updateAnchoredStructure(e, ctx, dt);
           break;
+        default:
+          // Phase 35 Level 1 passive objects (crate, barrel, container, furniture, road barrier, ball).
+          if (e.def.passive) updatePassiveObject(e, ctx);
       }
     }
     simProfiler.add('damage.entities', t0);
@@ -62,9 +67,12 @@ export class DamageSystem implements SimulationSystem {
       if (ev.detail) {
         const ea = ev.a && !ev.a.debrisId ? ctx.runtime.entities.get(ev.a.entityId) : undefined;
         const eb = ev.b && !ev.b.debrisId ? ctx.runtime.entities.get(ev.b.entityId) : undefined;
+        // Phase 35: vehicle-mode cars — collision episodes of the vehicle model (it owns the car's damage; no legacy health hit).
         if (ea?.human) humanContact(ctx, ea, ev.b, ev, true, dt);
+        else if (ea?.vehicle) vehicleContact(ctx, ea, ev.b, ev, true, dt);
         else this.impact(ctx, ev.a, ev.b, ev.force);
         if (eb?.human) humanContact(ctx, eb, ev.a, ev, false, dt);
+        else if (eb?.vehicle) vehicleContact(ctx, eb, ev.a, ev, false, dt);
         else this.impact(ctx, ev.b, ev.a, ev.force);
         continue;
       }
@@ -142,6 +150,14 @@ export class DamageSystem implements SimulationSystem {
           ctx.log(e.id, 'warn', { key: 'log.car.hit' });
         }
       }
+    } else if (e.def.passive) {
+      // Phase 35 passive objects: breakage from contact forces (behaviors/passiveObject.ts), the car's episode rules.
+      passiveImpact(e, ctx, force, {
+        episode: (d) => (episodic ? episodePeak(ctx, key, d) : { inc: d, first: true }),
+        hazard: () => this.hazardOf(ctx, other, e),
+        strike: frag ? (d) => noteBodyStrike(ctx, e, frag, force, d) : undefined,
+        recorded: episodic ? () => markRecorded(ctx, key) : undefined,
+      });
     }
   }
 }

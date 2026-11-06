@@ -7,6 +7,7 @@ import type {
   BodyHandle,
   BodyKind,
   BodyUserData,
+  RayHit,
   ContactEvent,
   PhysicsEngine,
   Pose,
@@ -168,6 +169,33 @@ export class RapierEngine implements PhysicsEngine {
     return best;
   }
 
+  castRay(origin: Vec3, dir: Vec3, maxDist: number, exclude: BodyHandle | null, skip?: (u: BodyUserData) => boolean): RayHit | null {
+    const w = this.w();
+    const ray = new RAPIER.Ray({ x: origin[0], y: origin[1], z: origin[2] }, { x: dir[0], y: dir[1], z: dir[2] });
+    const ex = exclude !== null ? this.bodies.get(exclude) : undefined;
+    const pred = skip
+      ? (c: RAPIER.Collider) => {
+          const p = c.parent();
+          if (!p) return true;
+          const u = this.userData.get(p.handle);
+          return !(u && skip(u));
+        }
+      : undefined;
+    const hit = w.castRayAndGetNormal(ray, maxDist, true, undefined, undefined, undefined, ex, pred);
+    if (!hit) return null;
+    const t = hit.timeOfImpact;
+    const parent = hit.collider.parent();
+    const isGround = !parent || (this.ground !== null && parent.handle === this.ground.handle);
+    const body = isGround ? null : parent!.handle;
+    return {
+      toi: t,
+      normal: [hit.normal.x, hit.normal.y, hit.normal.z],
+      point: [origin[0] + dir[0] * t, origin[1] + dir[1] * t, origin[2] + dir[2] * t],
+      body,
+      user: body === null ? null : this.userData.get(body) ?? null,
+    };
+  }
+
   private w(): RAPIER.World {
     if (!this.world) throw new Error('PhysicsEngine not initialized');
     return this.world;
@@ -201,7 +229,7 @@ export class RapierEngine implements PhysicsEngine {
       this.colliderBody.set(c.handle, body.handle);
     });
     if (mp) {
-      body.setAdditionalMassProperties(desc.mass, { x: mp.com[0], y: mp.com[1], z: mp.com[2] }, { x: mp.inertia[0], y: mp.inertia[1], z: mp.inertia[2] }, { x: 0, y: 0, z: 0, w: 1 }, true);
+      body.setAdditionalMassProperties(desc.mass, { x: mp.com[0], y: mp.com[1], z: mp.com[2] }, { x: mp.inertia[0], y: mp.inertia[1], z: mp.inertia[2] }, mp.frame ? { x: mp.frame[0], y: mp.frame[1], z: mp.frame[2], w: mp.frame[3] } : { x: 0, y: 0, z: 0, w: 1 }, true);
       body.recomputeMassPropertiesFromColliders();
     }
     if (desc.lockRotations) body.lockRotations(true, true);
@@ -355,6 +383,11 @@ export class RapierEngine implements PhysicsEngine {
     if (!b) return;
     b.setTranslation({ x: pos[0], y: pos[1], z: pos[2] }, false);
     b.setLinvel({ x: vel[0], y: vel[1], z: vel[2] }, false);
+  }
+
+  setBodyEnabled(h: BodyHandle, enabled: boolean) {
+    const b = this.bodies.get(h);
+    if (b && b.isEnabled() !== enabled) b.setEnabled(enabled);
   }
 
   setVelocity(h: BodyHandle, v: Readonly<Vec3>, w: Readonly<Vec3>) {

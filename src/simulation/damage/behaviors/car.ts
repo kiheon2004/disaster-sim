@@ -33,13 +33,14 @@ export function updateCar(e: RuntimeEntity, ctx: SystemContext) {
     ctx.log(e.id, 'danger', { key: 'log.car.overturned' });
     ctx.recordDamage(e, { eventType: 'OVERTURNED', cause: pushCause, hazard: flood });
   }
-  if (e.displacement > 1 && !e.counters.movedLogged) {
+  // Phase 35: a vehicle-mode car moving under its own power is travelling, not displaced by a hazard.
+  if (e.displacement > 1 && !e.counters.movedLogged && !(e.vehicle && e.lastHazard === 'vehicle')) {
     e.counters.movedLogged = 1;
     ctx.log(e.id, 'warn', { key: hit ? 'log.impact.carMoved' : blast ? 'log.blast.carMoved' : ground ? 'log.ground.carMoved' : shaken ? 'log.car.moved' : flood ? 'log.flood.carMoved' : 'log.car.moved' });
     ctx.recordDamage(e, { eventType: 'MOVED', cause: pushCause, hazard: flood });
   }
   let s = worst(loadLevel(e.loadRatio), healthLevel(e.health));
-  if (e.displacement > 1) s = worst(s, DamageState.DAMAGED);
+  if (e.displacement > 1 && !(e.vehicle && e.lastHazard === 'vehicle')) s = worst(s, DamageState.DAMAGED);
   if (e.flags.overturned) s = worst(s, DamageState.CRITICAL);
   if (e.flood) s = worst(s, floodLevel(e.flood));
   e.state = s;

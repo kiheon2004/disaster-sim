@@ -32,7 +32,9 @@ export type DamageEventType =
   | 'INJURED'
   // Phase 34: physiology state changes of an extended-model person (one event per change, educational model states).
   | 'THERMAL_STRESS' | 'THERMAL_RECOVERED' | 'RESPIRATORY_STRESS' | 'AIRWAY_SUBMERGED' | 'AIRWAY_CLEARED' | 'GAS_EXPOSURE'
-  | 'HYDRATION_STRESS' | 'FATIGUE_LIMIT' | 'CAPACITY_CHANGED';
+  | 'HYDRATION_STRESS' | 'FATIGUE_LIMIT' | 'CAPACITY_CHANGED'
+  // Phase 35: vehicles — a collision episode, a rollover state, a damage level, an occupant thrown out, the engine stopped by water.
+  | 'VEHICLE_COLLISION' | 'VEHICLE_ROLLOVER' | 'VEHICLE_DAMAGED' | 'OCCUPANT_EJECTED' | 'VEHICLE_STALLED';
 
 /**
  * Why it happened:
@@ -66,7 +68,9 @@ export type DamageCause =
   // Phase 32: lateral / differential / uplift load of a celestial source's field, capture by a source.
   | 'tidalLoad' | 'captured'
   // Phase 34: a physiology state change (not damage — the physiology owns no health).
-  | 'physiology';
+  | 'physiology'
+  // Phase 35: a vehicle's collision (contact episode), rollover, water in the engine intake.
+  | 'collision' | 'rollover' | 'stall';
 
 /**
  * Which hazard produced the event (Phase 13). Earthquake causes:
@@ -81,9 +85,12 @@ export type DamageCause =
  *  - inundation:   standing in water for a time (finishes, interiors, vehicle electrics)
  *  - scour:        fast flow eroding a road surface
  */
-export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire' | 'volcano' | 'climate' | 'gravity';
+export type Hazard = 'wind' | 'earthquake' | 'flood' | 'ground' | 'impact' | 'blast' | 'thermal' | 'fire' | 'volcano' | 'climate' | 'gravity' | 'vehicle';
 /** Order matters only for ties (origin); later phases append so earlier hazards keep their indices. */
-export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire', 'volcano', 'climate', 'gravity'];
+// Phase 35: 'vehicle' = a driven vehicle's own motion (a car under power striking something).
+/** Per-hazard values; 'vehicle' only where a vehicle-mode run produced it (other runs keep their shape). */
+export type HazardRecord = Record<Exclude<Hazard, 'vehicle'>, number> & { vehicle?: number };
+export const HAZARDS: readonly Hazard[] = ['wind', 'earthquake', 'flood', 'ground', 'impact', 'blast', 'thermal', 'fire', 'volcano', 'climate', 'gravity', 'vehicle'];
 
 export interface DamageEventRecord {
   id: number;
@@ -128,7 +135,7 @@ export interface DamageEventRecord {
    * is what triggered THIS event; `origin` is the hazard that had done the most damage so far —
    * e.g. a building cracked by an earthquake and finished by wind: hazard wind, origin earthquake.
    */
-  contributors: Record<Hazard, number>;
+  contributors: HazardRecord;
   origin: Hazard;
   /** Phenomenon kind that produced it when more specific than the hazard (sinkhole, landslide …). */
   source?: string;
@@ -154,8 +161,10 @@ export interface DamageEventRecord {
   human?: { segment?: string; impulse?: number; dv?: number; decel?: number; index?: number; level?: string; partner?: string; posture?: string };
   /** Phase 34: physiology transition (kind, from → to, value in the kind's unit, limiting causes of a capacity change). */
   physio?: { kind: string; from: string; to: string; value: number; causes?: string };
+  /** Phase 35: vehicle detail — collision (partner, kind, Δv m/s, closing speed m/s, impulse N·s, KE lost J), rollover / damage level. */
+  vehicle?: { kind: string; partner?: string; partnerKind?: string; dv?: number; closing?: number; impulse?: number; energy?: number; level?: string };
 }
 
-type Optional = 'human' | 'physio' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
+type Optional = 'human' | 'physio' | 'vehicle' | 'worldPosition' | 'localWindSpeed' | 'force' | 'damageBefore' | 'damageAfter' | 'shadowSource' | 'hazard' | 'groundAcceleration' | 'response' | 'waterDepth' | 'flowSpeed' | 'exposure' | 'state' | 'source' | 'failure' | 'chain' | 'secondary';
 
 export type DamageEventInput = Omit<DamageEventRecord, 'id' | 'time' | 'objectId' | 'objectType' | 'globalWindSpeed' | 'contributors' | 'origin' | Optional> & Partial<Pick<DamageEventRecord, Optional>>;

@@ -2,6 +2,7 @@ import type { ObjectCategory, ObjectType, Vec3 } from '@/core/types';
 import type { ComponentSpec, ObjectParams, PhysicalProperties } from '@/core/model';
 import type { ShapeSpec } from '@/core/shapes';
 import type { MessageKey } from '@/i18n/i18n';
+import type { MassModel } from './massProperties';
 
 /**
  * How the simulation treats an object's rigid body.
@@ -37,6 +38,24 @@ export interface ParamSchema {
   options?: { value: string; labelKey: MessageKey }[];
 }
 
+/**
+ * Phase 35 Level 1: a passive free rigid body (crate, barrel, container, furniture, road barrier, ball). Only the body's
+ * mass properties, its water displacement and its breakage differ from the generic dynamic path — every force reaches it
+ * through the existing hazard systems (wind, ground motion, water, sediment, blast, gravity, contacts).
+ */
+export interface PassiveDynamics<P extends ObjectParams = ObjectParams> {
+  /** Part model (unscaled params; mass = the type's default mass) → explicit COM + principal inertia of the body. */
+  massModel(params: P): MassModel;
+  /** Water displaced when fully submerged (m³, unscaled) — the flood buoyancy volume V_eff (WaterForceSystem). */
+  displacedVolume(params: P): number;
+  /** Drag coefficient in water (WaterForceSystem; air uses physics.dragCoefficient). */
+  waterDrag: number;
+  /** Breakage: a contact force F costs F / (m·g·factor) of health (Infinity = unbreakable). */
+  impactFactor(params: P): number;
+  /** Lying on its side is reported (TOPPLED) — not for a ball. */
+  toppleEvent: boolean;
+}
+
 export interface ObjectDefinition<P extends ObjectParams = ObjectParams> {
   type: ObjectType;
   category: ObjectCategory;
@@ -64,6 +83,8 @@ export interface ObjectDefinition<P extends ObjectParams = ObjectParams> {
   frontalArea?(params: P): number;
   /** Collision shapes in local space. */
   colliders(params: P): ShapeSpec[];
+  /** Phase 35: passive free rigid body (explicit mass properties); absent on every older type. */
+  passive?: PassiveDynamics<P>;
   /** Params that change from placement to placement for natural variety. */
   randomizeParams?(params: P, rnd: () => number): Partial<P>;
 }

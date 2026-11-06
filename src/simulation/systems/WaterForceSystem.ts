@@ -16,6 +16,8 @@
  *           0.3–0.5 m of water depending on its mass, sinks again as the cabin floods
  *   person  mass / 985 kg/m³ (close to neutral)
  *   debris  mass / material density (roof panels float, concrete chunks sink)
+ *   Phase 35 passive objects (crate, barrel, container, furniture, barrier, ball): their definition's displaced
+ *           volume — sealed outer volume (closed drum, container, sealed crate, ball) or material volume
  * Drag is capped so one step never reverses the relative velocity (stiff for light debris).
  *
  * The water field is read only; nothing here changes the water (no displacement, no wakes —
@@ -63,6 +65,9 @@ const qc: Quat = [0, 0, 0, 1];
 export function effectiveVolume(e: RuntimeEntity): number {
   const box = e.dims[0] * e.dims[1] * e.dims[2];
   if (e.source.type === 'car') return box * (CAR_SOLID + CAR_SEALED * (1 - (e.flood?.ingress ?? 0)));
+  // Phase 35 passive objects: the type's displaced volume (sealed outer volume or material volume), scaled with the object.
+  const pv = e.def.passive;
+  if (pv) { const k = e.source.transform.scale; return pv.displacedVolume(e.source.params) * k[0] * k[1] * k[2]; }
   return e.source.physics.mass / (TYPE_DENSITY[e.source.type] ?? 2000);
 }
 
@@ -196,7 +201,7 @@ export class WaterForceSystem implements SimulationSystem {
         st.ingress += ((1 - st.ingress) * above * dt) / CAR_INGRESS_TAU;
       }
       // Body origin sits at the base: the box center is dims.y / 2 up the body's own axis.
-      applyWater(physics, ctx.forces, e, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? 1.2, e.areaFactor, dt, st, st, ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY));
+      applyWater(physics, ctx.forces, e, field, e.body, e.pose.position, e.pose.quaternion, e.dims, e.dims[1] / 2, effectiveVolume(e), CD[type] ?? e.def.passive?.waterDrag ?? 1.2, e.areaFactor, dt, st, st, ctx.env.gravity.down(e.pose.position[0], e.pose.position[1], e.pose.position[2], GRAVITY));
       // The water dominates when its drag exceeds the wind load on the body.
       st.dominant = st.submerged > 0 && st.load > Math.max(50, e.windLoad);
     }

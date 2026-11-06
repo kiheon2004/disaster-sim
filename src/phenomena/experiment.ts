@@ -7,7 +7,7 @@
  */
 import type { WorldDocument } from '@/core/model';
 import { SimulationController } from '@/simulation/SimulationController';
-import type { Hazard } from '@/simulation/analysis/DamageEvent';
+import type { HazardRecord } from '@/simulation/analysis/DamageEvent';
 import type { WaterStateSnapshot } from '@/simulation/water/waterStateCodec';
 import { isWaterEvent } from '@/events/specs';
 import { resolveSchedule, type ScheduleIssue } from './schedule';
@@ -29,7 +29,7 @@ export interface ScenarioResult {
   /** Peak flooded area (m², depth ≥ 0.1 m). */
   floodedArea: number;
   totalDamageEvents: number;
-  eventsByHazard: Record<Hazard, number>;
+  eventsByHazard: HazardRecord;
   simTime: number;
   /** Wall-clock cost of the scenario (ms) and per simulated second. */
   wallMs: number;
@@ -96,10 +96,10 @@ export async function runComparison(
     const wallMs = performance.now() - t0;
     const m = c.getMetrics()!;
     const events = c.getDamageEvents();
-    const byHazard: Record<Hazard, number> = { wind: 0, earthquake: 0, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0, volcano: 0, climate: 0, gravity: 0 };
+    const byHazard: HazardRecord = { wind: 0, earthquake: 0, flood: 0, ground: 0, impact: 0, blast: 0, thermal: 0, fire: 0, volcano: 0, climate: 0, gravity: 0 };
     const collapsed = new Set<string>();
     for (const e of events) {
-      byHazard[e.hazard]++;
+      byHazard[e.hazard] = (byHazard[e.hazard] ?? 0) + 1;
       if (e.eventType === 'COLLAPSED' && e.objectType === 'building') collapsed.add(e.objectId);
     }
     let displaced = 0;

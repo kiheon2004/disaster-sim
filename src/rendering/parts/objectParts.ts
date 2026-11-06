@@ -170,7 +170,8 @@ export function humanParts(p: HumanParams) {
 
 // ── Vehicles ──────────────────────────────────────────────────────────────
 
-export function carParts(p: CarParams) {
+/** `wheels = false` (Phase 35): body without the four wheel boxes — a wheeled vehicle's wheels are drawn by the vehicle layer. */
+export function carParts(p: CarParams, wheels = true) {
   const L = p.length;
   const W = p.width;
   const chassisH = (p.height - CAR_CLEARANCE) * 0.5;
@@ -193,7 +194,7 @@ export function carParts(p: CarParams) {
     );
   }
   const shell = out.length;
-  for (const [x, z] of [[wx, wz], [wx, -wz], [-wx, wz], [-wx, -wz]]) {
+  if (wheels) for (const [x, z] of [[wx, wz], [wx, -wz], [-wx, wz], [-wx, -wz]]) {
     out.push({ size: [wheel, wheel, 0.28], position: [x, wheel / 2, z], color: '#1c1d20' });
   }
   for (const s of [1, -1]) {

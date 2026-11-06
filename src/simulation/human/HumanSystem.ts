@@ -278,6 +278,11 @@ export class HumanSystem implements SimulationSystem {
         e.hum = undefined;
         continue;
       }
+      // Phase 35: seated in a vehicle — the body is out of the collision world, carried with the seat (vehicle occupant model).
+      if (e.occupant) {
+        if (e.hum) e.hum.fill(0);
+        continue;
+      }
       this.person(ctx, e, st, dt);
     }
     simProfiler.add('humans', t0);

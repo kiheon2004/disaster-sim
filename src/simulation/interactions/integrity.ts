@@ -16,7 +16,7 @@
  *    "earthquake 12 s DAMAGED → wind 40 s CRITICAL".
  */
 import type { RuntimeEntity } from '../SimulationRuntime';
-import { HAZARDS, type Hazard } from '../analysis/DamageEvent';
+import { HAZARDS, type Hazard, type HazardRecord } from '../analysis/DamageEvent';
 import { blastGovernsStructure, gravityGovernsStructure, impactGovernsShaking } from '../seismic/SeismicState';
 import { seismicDamageIndex } from '../damage/seismicLevels';
 
@@ -37,7 +37,7 @@ export function integrityOf(e: RuntimeEntity): IntegrityState {
 }
 
 /** Damage index 0–1 each hazard has caused to the object's structure so far. */
-export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
+export function hazardDamage(e: RuntimeEntity): HazardRecord {
   const wind = e.integrity ? 1 - e.integrity.windHealth : 0;
   const earthquake = e.seismic ? Math.min(1, seismicDamageIndex(e.seismic)) : 0;
   const flood = e.flood ? Math.min(1, e.flood.damage) : 0;
@@ -62,7 +62,9 @@ export function hazardDamage(e: RuntimeEntity): Record<Hazard, number> {
     // Phase 30: snow / ice load breakage of crowns (structural snow loads act through the collapse model).
     climate: e.climate ? Math.min(1, e.climate.damage) : 0,
     // Phase 31: gravity loads act through the collapse model (member failures with hazard 'gravity'), not a second index.
-    gravity: byGravity ? earthquake : 0 };
+    gravity: byGravity ? earthquake : 0,
+    // Phase 35: a vehicle's own damage index (collisions, rollover) — vehicle-mode cars only.
+    ...(e.vehicle ? { vehicle: e.vehicle.damage.index } : {}) };
 }
 
 /**
@@ -73,7 +75,7 @@ export function residualStrength(e: RuntimeEntity, hazard: Hazard): number {
   if (!e.seismic && !e.flood && !e.integrity && !e.ground && !e.impact && !e.blast && !e.volcano && !e.climate) return 1;
   const d = hazardDamage(e);
   let worst = 0;
-  for (const h of HAZARDS) if (h !== hazard && d[h] > worst) worst = d[h];
+  for (const h of HAZARDS) { const v = d[h] ?? 0; if (h !== hazard && v > worst) worst = v; }
   return worst > 0 ? 1 - STRENGTH_LOSS * Math.min(1, worst) : 1;
 }
 

@@ -9,6 +9,7 @@ import { streetLightDefinition } from './definitions/streetLight';
 import { signDefinition } from './definitions/sign';
 import { wallDefinition } from './definitions/wall';
 import { roadDefinition } from './definitions/road';
+import { PASSIVE_DEFINITIONS } from './definitions/dynamicObjects';
 
 /** Single source of truth for every placeable object type. Add new types here. */
 const definitions = [
@@ -20,6 +21,8 @@ const definitions = [
   signDefinition,
   wallDefinition,
   roadDefinition,
+  // Phase 35 Level 1 passive dynamic objects (appended: earlier types keep their order).
+  ...PASSIVE_DEFINITIONS,
 ] as unknown as ObjectDefinition<ObjectParams>[];
 
 const byType = new Map<ObjectType, ObjectDefinition<ObjectParams>>(definitions.map((d) => [d.type, d]));

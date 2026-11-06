@@ -6,6 +6,7 @@ import { TreeView } from './TreeView';
 import { CarView } from './CarView';
 import { HumanView } from './HumanView';
 import { RoadView, SignView, StreetLightView, WallView } from './InfrastructureViews';
+import { PassiveObjectView } from './PassiveObjectView';
 
 /** Editor-time (static) view for each object type. */
 export const STATIC_VIEWS: Partial<Record<ObjectType, ComponentType<ViewProps>>> = {
@@ -17,6 +18,13 @@ export const STATIC_VIEWS: Partial<Record<ObjectType, ComponentType<ViewProps>>>
   sign: SignView,
   wall: WallView,
   road: RoadView,
+  // Phase 35 Level 1 passive dynamic objects.
+  crate: PassiveObjectView,
+  barrel: PassiveObjectView,
+  container: PassiveObjectView,
+  furniture: PassiveObjectView,
+  roadBarrier: PassiveObjectView,
+  ball: PassiveObjectView,
 };
 
 export function StaticObjectView({ obj }: ViewProps) {

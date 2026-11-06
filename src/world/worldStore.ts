@@ -150,7 +150,7 @@ export interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null; vehicles?: NonNullable<WorldDocument['settings']['simulation']['vehicles']> | null }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -595,6 +595,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
               ...(patch.humans !== undefined ? (patch.humans ? { humans: patch.humans } : {}) : cur.humans ? { humans: cur.humans } : {}),
               // Phase 34: physiology (null switches it off; needs the extended human model — dropped with it).
               ...((patch.humans !== undefined ? patch.humans : cur.humans) ? (patch.physiology !== undefined ? (patch.physiology ? { physiology: patch.physiology } : {}) : cur.physiology ? { physiology: cur.physiology } : {}) : {}),
+              // Phase 35: vehicle dynamics (null switches it off).
+              ...(patch.vehicles !== undefined ? (patch.vehicles ? { vehicles: patch.vehicles } : {}) : cur.vehicles ? { vehicles: cur.vehicles } : {}),
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },

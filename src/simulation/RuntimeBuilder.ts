@@ -15,6 +15,11 @@ import { newForceRecord } from './forces/ForceLedger';
 import { createModularRuntime } from './buildings/modular';
 import { createHumanState, SERIES_PEOPLE } from './human/state';
 import { createPhysioEntity, SERIES_PEOPLE as PHYSIO_SERIES_PEOPLE, type PhysiologyRuntime } from './physiology/state';
+import { createVehicleEntity, VEHICLE_SERIES_CARS, type VehicleRuntime } from './vehicle/state';
+import { rigidMassProps } from '@/vehicle/geometry';
+import { bodyMassProps } from '@/objects/massProperties';
+import { VEHICLE_VARIANTS, type Variant } from '@/vehicle/params';
+import type { VehicleSettings } from '@/vehicle/settings';
 import type { PhysiologySettings } from '@/physiology/settings';
 
 /** Apply a (possibly non-uniform) object scale to a local collision shape. */
@@ -36,14 +41,60 @@ export function scaleShape(s: ShapeSpec, k: Vec3): ShapeSpec {
 /** Contact-force threshold so resting contact is ignored but impacts are reported. */
 export const impactThreshold = (mass: number) => Math.max(800, mass * 9.81 * 2.5);
 
-export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction' | 'human'>, dynamic: boolean, plinth = 0): BodyHandle {
+export function createEntityBody(physics: PhysicsEngine, e: Pick<RuntimeEntity, 'source' | 'def' | 'profile' | 'initialPose' | 'groundFriction' | 'human' | 'vehicle'>, dynamic: boolean, plinth = 0): BodyHandle {
   const o = e.source;
+  // Phase 35: a wheeled vehicle — chassis / cabin raised on the suspension (the wheels are ray casts), composite mass properties,
+  // no artificial damping (air drag and the tyres dissipate), CCD, contact detail for its collision episodes.
+  const veh = e.vehicle;
+  if (veh && dynamic) {
+    const g = veh.geo;
+    const rigid = veh.level === 'rigid';
+    const mp = rigid ? rigidMassProps(g) : { com: g.com, inertia: g.inertiaDiag };
+    return physics.createBody({
+      kind: 'dynamic',
+      position: e.initialPose.position,
+      quaternion: e.initialPose.quaternion,
+      shapes: rigid
+        ? e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale))
+        : [{ type: 'box', halfExtents: g.chassis.half, offset: g.chassis.centre }, { type: 'box', halfExtents: g.cabin.half, offset: g.cabin.centre }],
+      mass: o.physics.mass,
+      friction: o.physics.friction * e.groundFriction,
+      restitution: o.physics.restitution,
+      linearDamping: rigid ? 0.05 : 0,
+      angularDamping: rigid ? 0.35 : 0,
+      contactForceThreshold: impactThreshold(o.physics.mass),
+      massProps: { com: mp.com, inertia: mp.inertia },
+      ccd: true,
+      userData: { entityId: o.id, detail: true },
+    });
+  }
   const shapes = e.def.colliders(o.params).map((s) => scaleShape(s, o.transform.scale));
   // Slope foundation plinth (buildings on terrain, Phase 13): solid down to the ground.
   if (plinth > 0) {
     const d = e.def.getDimensions(o.params);
     const k = o.transform.scale;
     shapes.push({ type: 'box', halfExtents: [(d[0] * k[0]) / 2 + 0.1, plinth / 2, (d[2] * k[2]) / 2 + 0.1], offset: [0, -plinth / 2, 0] });
+  }
+  // Phase 35 Level 1 passive objects: COM + principal inertia of the type's part model (scaled to the entity's mass and
+  // object scale), CCD, and no artificial damping — drag comes from the wind / water systems; Rapier has no rolling
+  // resistance, so a ball or a barrel on its side keeps rolling on level ground until something stops it.
+  const pm = e.def.passive && dynamic ? bodyMassProps(e.def.passive.massModel(o.params), o.physics.mass, o.transform.scale) : null;
+  if (pm) {
+    return physics.createBody({
+      kind: 'dynamic',
+      position: e.initialPose.position,
+      quaternion: e.initialPose.quaternion,
+      shapes,
+      mass: o.physics.mass,
+      friction: o.physics.friction * e.groundFriction,
+      restitution: o.physics.restitution,
+      linearDamping: 0,
+      angularDamping: 0,
+      contactForceThreshold: impactThreshold(o.physics.mass),
+      massProps: pm,
+      ccd: true,
+      userData: { entityId: o.id },
+    });
   }
   return physics.createBody({
     kind: dynamic ? 'dynamic' : 'fixed',
@@ -72,7 +123,7 @@ function naturalStrength(o: WorldObject): number {
   return 1 + (seededRandom(o.seed ^ 0x5bd1e995)() * 2 - 1) * spread;
 }
 
-function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSampler, humans?: HumanSettings, series?: { n: number }): RuntimeEntity {
+function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSampler, humans?: HumanSettings, series?: { n: number }, vehicles?: VehicleSettings, vseries?: { n: number }): RuntimeEntity {
   const def = getDefinition(o.type);
   const k = o.transform.scale;
   const d = def.getDimensions(o.params);
@@ -137,6 +188,8 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
     modular: o.type === 'building' && o.building ? createModularRuntime(o) : undefined,
     human: undefined,
     hum: undefined,
+    vehicle: undefined,
+    occupant: undefined,
   };
   // Phase 33: extended people (dynamic, valid body) — the model state exists before the body (mass properties).
   if (humans && o.type === 'human' && dynamic) {
@@ -147,16 +200,25 @@ function buildEntity(o: WorldObject, physics: PhysicsEngine, terrain: TerrainSam
       if (series && st.series) series.n++;
     }
   }
+  // Phase 35: vehicle-mode cars (dynamic) — the vehicle state exists before the body (geometry, mass properties).
+  if (vehicles && o.type === 'car' && dynamic) {
+    const p = o.params as { variant?: string };
+    const variant = (VEHICLE_VARIANTS as readonly string[]).includes(p.variant ?? '') ? (p.variant as Variant) : 'sedan';
+    e.vehicle = createVehicleEntity(o.id, variant, { length: e.dims[0], width: e.dims[2], height: e.dims[1] }, o.physics.mass, vehicles, vseries !== undefined && vseries.n++ < VEHICLE_SERIES_CARS);
+  }
   e.body = def.inert || def.colliders(o.params).length === 0 ? null : createEntityBody(physics, e, dynamic, foundationPlinth(o, terrain));
   if (def.inert) e.dynamic = false;
   return e;
 }
 
 /** WorldDocument (read-only) → fresh SimulationRuntime with physics bodies. */
-export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain), humans?: HumanSettings, physiology?: PhysiologySettings): SimulationRuntime {
+export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngine, terrain: TerrainSampler = samplerFor(doc.terrain), humans?: HumanSettings, physiology?: PhysiologySettings, vehicles?: VehicleSettings): SimulationRuntime {
   const entities = new Map<string, RuntimeEntity>();
   const series = { n: 0 };
-  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain, humans, series));
+  // Phase 35: vehicle series for the first cars in id order (deterministic).
+  const carIds = vehicles ? Object.values(doc.objects).filter((o) => o.type === 'car').map((o) => o.id).sort() : [];
+  const charted = new Set(carIds.slice(0, VEHICLE_SERIES_CARS));
+  for (const o of Object.values(doc.objects)) entities.set(o.id, buildEntity(o, physics, terrain, humans, series, vehicles, vehicles ? { n: charted.has(o.id) ? 0 : VEHICLE_SERIES_CARS } : undefined));
   let modular = false;
   for (const e of entities.values()) if (e.modular) { modular = true; break; }
   // Phase 34: physiology of the extended-model people (absent setting: nothing is created).
@@ -166,5 +228,19 @@ export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngin
     let n = 0;
     for (const e of entities.values()) if (e.human) e.physio = createPhysioEntity(e.id, e.human.model.mass, e.human.model.height, physiology, n++ < PHYSIO_SERIES_PEOPLE);
   }
-  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}), ...(physio ? { physiology: physio } : {}) };
+  // Phase 35: vehicle dynamics of the run (absent setting: nothing is created).
+  const veh: VehicleRuntime | undefined = vehicles ? { settings: structuredClone(vehicles), order: carIds.filter((id) => entities.get(id)?.vehicle) } : undefined;
+  // Occupants must be extended-model people (segments, posture, physiology) and sit in one vehicle only; others stay outside.
+  if (veh) {
+    const seated = new Set<string>();
+    for (const id of veh.order) {
+      const v = entities.get(id)!.vehicle!;
+      for (const o of v.occupants) {
+        const he = entities.get(o.human);
+        if (!he?.human || seated.has(o.human) || v.level !== 'vehicle') o.state = 'outside';
+        else seated.add(o.human);
+      }
+    }
+  }
+  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}), ...(physio ? { physiology: physio } : {}), ...(veh ? { vehicles: veh } : {}) };
 }

@@ -53,6 +53,7 @@ import type { FireRuntime } from '@/simulation/fire/runtime';
 import { FS, isBurning } from '@/fire/FireWorld';
 import { factorColor, temperatureColor, utilColor } from '../thermal/thermalColors';
 import { leanQuaternion } from '../human/lean';
+import { passiveParts } from '../parts/dynamicObjectParts';
 
 /** Distance (m) beyond which simplified geometry is used (with hysteresis). */
 export const LOD_FAR = 110;
@@ -348,7 +349,8 @@ export class SimRenderAdapter {
           break;
         }
         case 'car': {
-          const c = carParts(o.params as CarParams);
+          // Phase 35: a wheeled vehicle's wheels are drawn by the vehicle layer (spin / steer / suspension from the model state).
+          const c = carParts(o.params as CarParams, e.vehicle?.level !== 'vehicle');
           add(list, 'car', c.body, 'root', null, c.lod);
           break;
         }
@@ -367,6 +369,11 @@ export class SimRenderAdapter {
         case 'wall':
           add(list, 'standard', wallParts(o.params as WallParams), 'root');
           break;
+        default: {
+          // Phase 35 Level 1 passive objects: one rigid part list following the body pose.
+          const pp = passiveParts(o.type, o.params);
+          if (pp) add(list, pp.mat, pp.body, 'root', null, pp.lod);
+        }
       }
       reqs.push(list);
       extra.push(x);
@@ -943,6 +950,11 @@ export class SimRenderAdapter {
         return;
       }
       case 'human': {
+        // Phase 35: a person seated in a vehicle is not drawn standing through the roof (the vehicle layer marks the seat).
+        if (e.occupant) {
+          for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, HIDDEN);
+          return;
+        }
         const h = e.human;
         const lean = !e.flags.fallen && e.dynamic;
         // Extended model (Phase 33): a standing person leans by its computed balance lean (instead of the wind sway); a
@@ -970,7 +982,10 @@ export class SimRenderAdapter {
         let q = setQ(qA, e.pose.quaternion);
         const st = e.seismic;
         if (this.quake && st) {
-          if (v.type === 'car') {
+          // Phase 35: a wheeled vehicle rolls / pitches on its computed suspension — the body pose IS the physics; no visual rocking.
+          if (v.type === 'car' && e.vehicle?.level === 'vehicle') {
+            // (no extra rotation)
+          } else if (v.type === 'car') {
             // Visual rocking on the suspension: roll/pitch against the ground acceleration.
             const ax = st.ground.a[0];
             const az = st.ground.a[2];
@@ -1012,6 +1027,13 @@ export class SimRenderAdapter {
   }
 
   // ── Editor use (Phase 16): static world objects, no simulation state ─────
+
+  /** Verification hook (devtools, Phase 35): the largest axis scale of each of an entity's instances (0 = drawn hidden). */
+  instanceScales(id: EntityId): number[] {
+    const v = this.byId.get(id);
+    if (!v) return [];
+    return v.parts.map((p) => (p.batch.mesh.getMatrixAt(p.id, mTmp), mTmp.getMaxScaleOnAxis()));
+  }
 
   /**
    * Hide / show one entity's instances (the editor draws a selected object separately while

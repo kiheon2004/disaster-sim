@@ -21,7 +21,14 @@ export type ObjectType =
   | 'streetLight'
   | 'sign'
   | 'wall'
-  | 'custom';
+  | 'custom'
+  // Phase 35 Level 1 passive dynamic objects (free rigid bodies with explicit mass properties).
+  | 'crate'
+  | 'barrel'
+  | 'container'
+  | 'furniture'
+  | 'roadBarrier'
+  | 'ball';
 
 export type ObjectCategory =
   | 'environment'
@@ -29,7 +36,9 @@ export type ObjectCategory =
   | 'nature'
   | 'vehicles'
   | 'people'
-  | 'infrastructure';
+  | 'infrastructure'
+  // Phase 35: loose objects (crates, barrels, containers, furniture, barriers, balls).
+  | 'objects';
 
 export const IDENTITY_QUAT: Quat = [0, 0, 0, 1];
 

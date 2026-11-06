@@ -1,3 +1,5 @@
+import { VehicleMonitorSystem } from '../vehicle/VehicleMonitorSystem';
+import { VehicleSystem } from '../vehicle/VehicleSystem';
 import { HumanSystem } from '../human/HumanSystem';
 import { PhysiologySystem } from '../physiology/PhysiologySystem';
 import type { SimulationSystem } from './SimulationSystem';
@@ -53,6 +55,8 @@ export function createDefaultSystems(): SimulationSystem[] {
     new WaterForceSystem(),
     new SedimentForceSystem(),
     new GroundContactSystem(),
+    // Phase 35: wheeled vehicles — after every hazard force of the step (dormant without vehicle settings).
+    new VehicleSystem(),
     // Phase 31: the gravity ledger is the first postPhysics system (the integrated step, before any body is spawned or removed).
     new GravityLedgerSystem(),
     new PoseSyncSystem(),
@@ -62,6 +66,8 @@ export function createDefaultSystems(): SimulationSystem[] {
     new RoadSystem(),
     new SwaySystem(),
     new DamageSystem(),
+    // Phase 35: vehicle state after the step (collision episodes from the contacts the DamageSystem drained, rollover, energy, occupants).
+    new VehicleMonitorSystem(),
     // Phase 33: extended people (balance, release, contact episodes, injury index) — after the contacts were drained.
     new HumanSystem(),
     // Phase 26: heat sources → heat transfer → temperatures → material factors / thermal forces, read

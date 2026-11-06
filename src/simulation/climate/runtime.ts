@@ -677,6 +677,14 @@ export class ClimateRuntime {
     }
   }
 
+  /** Phase 35: the surface cover of the cell at a point for a tyre (state, ice kg/m², snow depth m); null outside the grid. */
+  coverAt(x: number, z: number, waterDepth: number): { state: number; ice: number; snowDepth: number } | null {
+    const cw = this.cw, c = this.trt.world.terrain.index(x, z);
+    if (c < 0) return null;
+    const ice = cw.cIce[c] / cw.cellArea;
+    return { state: surfaceState(cw.swe(c), ice, cw.cLiq[c] / cw.cellArea, waterDepth, cw.cRho[c]), ice, snowDepth: cw.snowDepth(c) };
+  }
+
   /** Contact friction factor at a point (multiplier of an object's own friction): ground factor × cover state. */
   frictionAt(x: number, z: number, groundFactor: number, waterDepth: number): number {
     // The contact patches (wheels, feet) ring the body: the mean of four points 1.2 m around its centre — the cell under

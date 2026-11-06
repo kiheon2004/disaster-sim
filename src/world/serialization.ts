@@ -1,4 +1,5 @@
 import { normalizePhysiology, physiologySchema } from '@/physiology/settings';
+import { normalizeVehicles, vehicleSchema } from '@/vehicle/settings';
 import { AMBIENT_LIMITS } from '@/thermal/units';
 import { MOISTURE_LIMITS } from '@/fire/types';
 import { z } from 'zod';
@@ -159,6 +160,8 @@ const documentSchema = z.object({
         humans: z.object({ model: z.literal('extended'), riskScale: z.number().min(0.5).max(2).optional() }).optional().catch(undefined),
         // Phase 34: physiology (absent = none; invalid values are dropped, not fixed; needs `humans`, checked below).
         physiology: physiologySchema.optional().catch(undefined),
+        // Phase 35: vehicle dynamics (absent = legacy cars; invalid values are dropped, not fixed).
+        vehicles: vehicleSchema.optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -364,6 +367,7 @@ export function parseDocument(json: string): LoadResult {
       ...(sim?.vegetation ? { vegetation: { canopyShelter: !!sim.vegetation.canopyShelter, floodResponse: !!sim.vegetation.floodResponse } } : {}),
       ...(sim?.humans ? { humans: { model: 'extended' as const, ...(sim.humans.riskScale !== undefined ? { riskScale: sim.humans.riskScale } : {}) } } : {}),
       ...(sim?.humans && sim?.physiology ? { physiology: normalizePhysiology(sim.physiology) } : {}),
+      ...(sim?.vehicles ? { vehicles: normalizeVehicles(sim.vehicles) } : {}),
     },
   };
   const rawFlood = res.data.scenario?.flood;

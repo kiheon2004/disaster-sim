@@ -105,10 +105,11 @@ export class MetricsRecorder {
       ...(ev.secondary ? { secondary: ev.secondary } : {}),
       ...(ev.human ? { human: ev.human } : {}),
       ...(ev.physio ? { physio: ev.physio } : {}),
+      ...(ev.vehicle ? { vehicle: ev.vehicle } : {}),
     };
     // The origin: the channel that had done the most damage (ties and undamaged → the trigger).
-    let best = rec.contributors[rec.hazard];
-    for (const h of HAZARDS) if (rec.contributors[h] > best + 1e-12) { best = rec.contributors[h]; rec.origin = h; }
+    let best = rec.contributors[rec.hazard] ?? 0;
+    for (const h of HAZARDS) { const v = rec.contributors[h] ?? 0; if (v > best + 1e-12) { best = v; rec.origin = h; } }
     if (best <= 0) rec.origin = rec.hazard;
     this.events.push(rec);
     this.noteMilestone(rec);

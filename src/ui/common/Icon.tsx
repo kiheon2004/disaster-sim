@@ -12,6 +12,13 @@ const paths = {
   sign: 'M12 22v-9M4 3h16v10H4z',
   wall: 'M3 7h18M3 12h18M3 17h18M3 4v16h18V4M8 7v5M14 12v5M16 7v5M9 17v3',
   road: 'M6 21L9 3M18 21L15 3M12 5v2M12 11v2M12 17v2',
+  // Phase 35 passive objects
+  crate: 'M4 7h16v13H4zM4 7l3-3h10l3 3M4 12h16M9 7v13M15 7v13',
+  barrel: 'M6 4h12v16H6zM6 4c0-1 12-1 12 0M6 9h12M6 15h12',
+  container: 'M2 8h20v10H2zM5 8v10M8 8v10M11 8v10M14 8v10M17 8v10M20 8v10',
+  sofa: 'M4 11V7h16v4M2 11h4v4h12v-4h4v7H2zM4 18v2M20 18v2',
+  barrier: 'M2 20h20M5 20l2-6h1l1-8h6l1 8h1l2 6',
+  ball: 'M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3c3 2.5 3 15.5 0 18',
   cursor: 'M5 3l14 8-6 2-2 6z',
   move: 'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3',
   rotate: 'M20 11a8 8 0 10-2.3 5.7M20 4v7h-7',

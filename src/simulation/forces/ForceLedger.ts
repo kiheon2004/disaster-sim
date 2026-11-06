@@ -55,9 +55,21 @@ function accumulate(a: Float64Array, source: ForceSource, f: Readonly<Vec3>, p: 
   }
 }
 
+/**
+ * Phase 35: contact channels of vehicles — NOT environment sources (they are not in FORCE_SOURCES, so no per-entity record,
+ * balance accumulator or attribution changes). 'wheels' = the four tyre / suspension contact forces of a vehicle on its own
+ * chassis, 'wheelReaction' = their reactions on a dynamic body under the wheels. Each is ONE claim per body and step that
+ * applies several points at once (four calls of one source would be rejected as duplicates).
+ */
+export const CONTACT_CHANNELS = ['wheels', 'wheelReaction'] as const;
+export type ContactChannel = (typeof CONTACT_CHANNELS)[number];
+const CHANNEL_BIT: Record<ContactChannel, number> = { wheels: 1, wheelReaction: 2 };
+
 export class ForceLedger {
   /** Bodies without an owner record (fallback; every current caller passes an owner). */
   private readonly applied = new Map<BodyHandle, number>();
+  /** Phase 35: contact-channel claims of this step (body → channel bits). */
+  private readonly contact = new Map<BodyHandle, number>();
   /** Rejected duplicate applications since the run started. */
   duplicates = 0;
   /** Fixed step the ledger is collecting for. */
@@ -68,6 +80,26 @@ export class ForceLedger {
   beginStep(step: number) {
     this.step = step;
     if (this.applied.size) this.applied.clear();
+    if (this.contact.size) this.contact.clear();
+  }
+
+  /**
+   * Phase 35: several contact forces (world, at world points) on one body under ONE claim of a contact channel for this step.
+   * Returns false (nothing applied, counted as a duplicate) when the channel was already claimed for the body this step.
+   */
+  contactForces(channel: ContactChannel, h: BodyHandle, fs: readonly Readonly<Vec3>[], ps: readonly Readonly<Vec3>[], wake = true): boolean {
+    const bit = CHANNEL_BIT[channel];
+    const mask = this.contact.get(h) ?? 0;
+    if (mask & bit) {
+      this.duplicates++;
+      return false;
+    }
+    this.contact.set(h, mask | bit);
+    for (let i = 0; i < fs.length; i++) {
+      const f = fs[i];
+      if (f[0] !== 0 || f[1] !== 0 || f[2] !== 0) this.physics.addForceAtPoint(h, f as Vec3, ps[i] as Vec3, wake);
+    }
+    return true;
   }
 
   /**

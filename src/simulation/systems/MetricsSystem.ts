@@ -9,7 +9,7 @@ import type { RuntimeEntity } from '../SimulationRuntime';
 function damagingHazard(e: RuntimeEntity): Hazard | null {
   const d = hazardDamage(e);
   let best: Hazard | null = null, max = 0;
-  for (const h of HAZARDS) if (d[h] > max) { max = d[h]; best = h; }
+  for (const h of HAZARDS) { const v = d[h] ?? 0; if (v > max) { max = v; best = h; } }
   return best;
 }
 

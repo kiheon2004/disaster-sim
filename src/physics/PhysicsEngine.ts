@@ -16,6 +16,16 @@ export interface BodyUserData {
   detail?: boolean;
 }
 
+/** Phase 35: a world ray hit (PhysicsEngine.castRay). */
+export interface RayHit {
+  toi: number;
+  normal: Vec3;
+  point: Vec3;
+  /** Hit body (null = the ground body). */
+  body: BodyHandle | null;
+  user: BodyUserData | null;
+}
+
 export interface BodyDesc {
   kind: BodyKind;
   position: Vec3;
@@ -35,8 +45,10 @@ export interface BodyDesc {
   /**
    * Phase 33: explicit mass properties (local COM, principal moments along the local axes) instead of the colliders'
    * uniform density — `mass` is then the whole mass, the colliders carry none.
+   * Phase 35: `frame` = rotation of the principal axes in the body frame (identity when absent; passive objects with an
+   * asymmetric part model, e.g. a sofa).
    */
-  massProps?: { com: Vec3; inertia: Vec3 };
+  massProps?: { com: Vec3; inertia: Vec3; frame?: Quat };
   userData: BodyUserData;
 }
 
@@ -80,6 +92,12 @@ export interface PhysicsEngine {
   setTerrain(terrain: TerrainColliderDesc | null): void;
   /** Distance along a unit ray to the ground collider (null = no hit within maxDist). */
   castGroundRay(origin: Vec3, dir: Vec3, maxDist: number): number | null;
+  /**
+   * Phase 35: closest hit of a unit ray against every collider of the world (ground, buildings, rubble, other bodies) except the
+   * colliders of `exclude` and of bodies whose user data `skip` rejects. Returns the distance, the surface normal (unit, facing
+   * the ray origin), the hit point and the hit body (null = the ground) — null when nothing is within maxDist.
+   */
+  castRay(origin: Vec3, dir: Vec3, maxDist: number, exclude: BodyHandle | null, skip?: (u: BodyUserData) => boolean): RayHit | null;
   createBody(desc: BodyDesc): BodyHandle;
   removeBody(h: BodyHandle): void;
   setBodyKind(h: BodyHandle, kind: BodyKind): void;
@@ -133,6 +151,8 @@ export interface PhysicsEngine {
   writeMotion(h: BodyHandle, pos: ArrayLike<number>, vel: ArrayLike<number>): void;
   /** Phase 33: set a body's linear and angular velocity (world; wakes it) — the release of a standing person's lean. */
   setVelocity(h: BodyHandle, v: Readonly<Vec3>, w: Readonly<Vec3>): void;
+  /** Phase 35: take a body out of the simulation (no collisions, no motion) or put it back (a seated vehicle occupant). */
+  setBodyEnabled(h: BodyHandle, enabled: boolean): void;
   /** The body had a solver contact in the last step (any collider, ground included). */
   touching(h: BodyHandle): boolean;
   /** The body is dynamic (not fixed / kinematic) — Phase 32.1: only dynamic bodies take the orbit integrator. */

@@ -71,5 +71,7 @@ responses.register({
   },
 });
 responses.register({ channel: 'pressure', target: { category: 'vehicle' }, kinds: ['motion', 'stability'], model: 'blastLoading', update: respondBody });
+// Phase 35 passive objects: the free-body response (face pressure impulses + blast-wind drag); anchored ones stay put.
+responses.register({ channel: 'pressure', target: { category: 'object' }, kinds: ['motion', 'stability'], model: 'blastLoading', update: (e, ctx, dt) => { if (e.dynamic) respondBody(e, ctx, dt); } });
 responses.register({ channel: 'pressure', target: { category: 'human' }, kinds: ['motion', 'stability', 'transition'], model: 'blastLoading', update: respondBody });
 responses.register({ channel: 'pressure', target: { category: 'tree' }, kinds: ['structural', 'transition'], model: 'blastLoading', update: respondTree });

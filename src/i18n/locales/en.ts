@@ -25,6 +25,10 @@ import { enHumanPresets } from './en.humanPresets';
 import { enPhysiology } from './en.physiology';
 import { enPhysiologyUi } from './en.physiologyUi';
 import { enPhysiologyPresets } from './en.physiologyPresets';
+import { enVehicle } from './en.vehicle';
+import { enVehicleUi } from './en.vehicleUi';
+import { enVehiclePresets } from './en.vehiclePresets';
+import { enDynamicObjects } from './en.dynamicObjects';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -626,4 +630,8 @@ export const en: Record<MessageKey, string> = {
   ...enPhysiology,
   ...enPhysiologyUi,
   ...enPhysiologyPresets,
+  ...enVehicle,
+  ...enVehicleUi,
+  ...enVehiclePresets,
+  ...enDynamicObjects,
 };

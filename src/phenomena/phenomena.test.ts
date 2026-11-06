@@ -154,8 +154,8 @@ describe('scheduler and pipeline', () => {
     const systems = [...createDefaultSystems(), new MetricsSystem(new MetricsRecorder(1))];
     expect(validatePipeline(systems)).toEqual([]);
     expect(describePipeline(systems).map((s) => `${s.phase === 'prePhysics' ? 'pre' : 'post'}:${s.name}`)).toEqual([
-      'pre:gravity', 'pre:impact', 'pre:groundFailure', 'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:blast', 'pre:waterSolver', 'pre:waterForce', 'pre:sedimentForce', 'pre:groundContact',
-      'post:gravityLedger', 'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:humans', 'post:thermal', 'post:structuralCollapse', 'post:debris', 'post:particles', 'post:exposure', 'post:physiology', 'post:metrics',
+      'pre:gravity', 'pre:impact', 'pre:groundFailure', 'pre:deformation', 'pre:windForce', 'pre:groundMotion', 'pre:blast', 'pre:waterSolver', 'pre:waterForce', 'pre:sedimentForce', 'pre:groundContact', 'pre:vehicles',
+      'post:gravityLedger', 'post:poseSync', 'post:structural', 'post:seismicDamage', 'post:floodDamage', 'post:roads', 'post:sway', 'post:damage', 'post:vehicleMonitor', 'post:humans', 'post:thermal', 'post:structuralCollapse', 'post:debris', 'post:particles', 'post:exposure', 'post:physiology', 'post:metrics',
     ]);
     // Moving the water solver after the water forces breaks the data flow → reported.
     const bad = [...systems];

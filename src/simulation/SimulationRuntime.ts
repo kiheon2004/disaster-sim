@@ -124,6 +124,10 @@ export interface RuntimeEntity {
   physio?: import('./physiology/state').PhysioEntity;
   /** Phase 33: ForceLedger accumulator of a standing extended person (see ForceOwner.hum). */
   hum?: Float64Array;
+  /** Phase 35: wheeled-vehicle state of a car (vehicle-dynamics runs only). */
+  vehicle?: import('./vehicle/state').VehicleEntity;
+  /** Phase 35: a person seated in a vehicle (body out of the collision world, carried with the seat). */
+  occupant?: { vehicle: string; seat: import('@/vehicle/settings').Seat };
 }
 
 export interface DebrisPiece {
@@ -178,6 +182,8 @@ export interface SimulationRuntime {
   entities: Map<EntityId, RuntimeEntity>;
   /** Phase 34: physiology run state (absent = no physiology). */
   physiology?: import('./physiology/state').PhysiologyRuntime;
+  /** Phase 35: vehicle dynamics of the run (settings, cars in id order). */
+  vehicles?: import('./vehicle/state').VehicleRuntime;
   debris: DebrisPiece[];
   particles: Particle[];
   /** Simulation time the particle positions correspond to (they update at a lower rate). */

@@ -114,6 +114,8 @@ export class WindForceSystem implements SimulationSystem {
       } else e.windLoad = 0;
 
       if (calm || !e.dynamic || e.body === null) continue;
+      // Phase 35: a wheeled vehicle's air drag (relative to this local wind) is the vehicle model's — one 'wind' claim.
+      if (e.vehicle?.level === 'vehicle') continue;
       const vRel = vSub(v, physics.getLinearVelocity(e.body));
       const rel = vLen(vRel);
       if (rel < 0.05) continue;
