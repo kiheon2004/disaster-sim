@@ -1,0 +1,2611 @@
+{
+  "date": "2026-10-29T13:35:47.906Z",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "ncpu": 8,
+  "load": [
+    5.9,
+    13.4,
+    16.4
+  ],
+  "rows": [
+    {
+      "n": 1,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.269,
+        "min": 1.216,
+        "max": 1.568
+      },
+      "p95": {
+        "median": 0.027,
+        "min": 0.025,
+        "max": 0.037
+      },
+      "worst": {
+        "median": 0.434,
+        "min": 0.407,
+        "max": 0.629
+      },
+      "physics": {
+        "median": 0.706,
+        "min": 0.507,
+        "max": 0.708
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.034,
+        "min": 0.014,
+        "max": 0.035
+      },
+      "humans": {
+        "median": 0.027,
+        "min": 0.025,
+        "max": 0.037
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 0.657,
+        "min": 0.444,
+        "max": 0.722
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 65.2,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.057,
+        "min": 1.049,
+        "max": 1.341
+      },
+      "p95": {
+        "median": 0.021,
+        "min": 0.02,
+        "max": 0.03
+      },
+      "worst": {
+        "median": 0.035,
+        "min": 0.034,
+        "max": 0.054
+      },
+      "physics": {
+        "median": 0.41,
+        "min": 0.4,
+        "max": 0.433
+      },
+      "vehicles": {
+        "median": 0.044,
+        "min": 0.044,
+        "max": 0.085
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0.176,
+        "min": 0.162,
+        "max": 0.338
+      },
+      "damage.impacts": {
+        "median": 0.015,
+        "min": 0.013,
+        "max": 0.017
+      },
+      "humans": {
+        "median": 0.026,
+        "min": 0.024,
+        "max": 0.027
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 0.6,
+        "min": 0.583,
+        "max": 0.85
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 65.7,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.773,
+        "min": 1.481,
+        "max": 1.808
+      },
+      "p95": {
+        "median": 0.081,
+        "min": 0.078,
+        "max": 0.092
+      },
+      "worst": {
+        "median": 0.13,
+        "min": 0.115,
+        "max": 0.828
+      },
+      "physics": {
+        "median": 0.434,
+        "min": 0.428,
+        "max": 0.461
+      },
+      "vehicles": {
+        "median": 0.626,
+        "min": 0.464,
+        "max": 0.729
+      },
+      "vehicle.rays": {
+        "median": 0.132,
+        "min": 0.112,
+        "max": 0.316
+      },
+      "vehicle.step": {
+        "median": 0.187,
+        "min": 0.184,
+        "max": 0.211
+      },
+      "vehicle.apply": {
+        "median": 0.059,
+        "min": 0.045,
+        "max": 0.061
+      },
+      "vehicleMonitor": {
+        "median": 0.152,
+        "min": 0.152,
+        "max": 0.189
+      },
+      "damage.impacts": {
+        "median": 0.013,
+        "min": 0.012,
+        "max": 0.013
+      },
+      "humans": {
+        "median": 0.025,
+        "min": 0.024,
+        "max": 0.026
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 1.252,
+        "min": 0.986,
+        "max": 1.283
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.4,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 1,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 4.346,
+        "min": 3.745,
+        "max": 4.593
+      },
+      "p95": {
+        "median": 0.083,
+        "min": 0.069,
+        "max": 0.102
+      },
+      "worst": {
+        "median": 0.187,
+        "min": 0.146,
+        "max": 0.218
+      },
+      "physics": {
+        "median": 0.716,
+        "min": 0.678,
+        "max": 0.75
+      },
+      "vehicles": {
+        "median": 2.876,
+        "min": 2.433,
+        "max": 3.075
+      },
+      "vehicle.rays": {
+        "median": 0.772,
+        "min": 0.768,
+        "max": 0.827
+      },
+      "vehicle.step": {
+        "median": 1.461,
+        "min": 1.154,
+        "max": 1.617
+      },
+      "vehicle.apply": {
+        "median": 0.414,
+        "min": 0.364,
+        "max": 0.459
+      },
+      "vehicleMonitor": {
+        "median": 0.172,
+        "min": 0.145,
+        "max": 0.185
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.013,
+        "max": 0.027
+      },
+      "humans": {
+        "median": 0.028,
+        "min": 0.025,
+        "max": 0.028
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 3.54,
+        "min": 2.988,
+        "max": 3.745
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.6,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1.739,
+        "min": 1.708,
+        "max": 1.944
+      },
+      "p95": {
+        "median": 0.036,
+        "min": 0.036,
+        "max": 0.04
+      },
+      "worst": {
+        "median": 0.057,
+        "min": 0.049,
+        "max": 0.265
+      },
+      "physics": {
+        "median": 0.748,
+        "min": 0.726,
+        "max": 0.787
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.013,
+        "min": 0.013,
+        "max": 0.016
+      },
+      "humans": {
+        "median": 0.029,
+        "min": 0.029,
+        "max": 0.033
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 0.961,
+        "min": 0.904,
+        "max": 1.088
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.6,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 3.397,
+        "min": 3.024,
+        "max": 3.718
+      },
+      "p95": {
+        "median": 0.07,
+        "min": 0.066,
+        "max": 0.076
+      },
+      "worst": {
+        "median": 0.119,
+        "min": 0.112,
+        "max": 0.125
+      },
+      "physics": {
+        "median": 0.902,
+        "min": 0.713,
+        "max": 0.952
+      },
+      "vehicles": {
+        "median": 0.27,
+        "min": 0.227,
+        "max": 0.271
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 1.329,
+        "min": 0.994,
+        "max": 1.345
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.011,
+        "max": 0.017
+      },
+      "humans": {
+        "median": 0.03,
+        "min": 0.024,
+        "max": 0.033
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 2.367,
+        "min": 2.257,
+        "max": 2.746
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.8,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 8.924,
+        "min": 7.455,
+        "max": 9.444
+      },
+      "p95": {
+        "median": 0.713,
+        "min": 0.608,
+        "max": 0.739
+      },
+      "worst": {
+        "median": 1.083,
+        "min": 0.849,
+        "max": 1.322
+      },
+      "physics": {
+        "median": 1.297,
+        "min": 1.041,
+        "max": 1.355
+      },
+      "vehicles": {
+        "median": 5.127,
+        "min": 4.285,
+        "max": 5.328
+      },
+      "vehicle.rays": {
+        "median": 1.091,
+        "min": 1.042,
+        "max": 1.287
+      },
+      "vehicle.step": {
+        "median": 2.338,
+        "min": 1.926,
+        "max": 2.359
+      },
+      "vehicle.apply": {
+        "median": 0.49,
+        "min": 0.458,
+        "max": 0.524
+      },
+      "vehicleMonitor": {
+        "median": 1.127,
+        "min": 1.061,
+        "max": 1.232
+      },
+      "damage.impacts": {
+        "median": 0.019,
+        "min": 0.018,
+        "max": 0.022
+      },
+      "humans": {
+        "median": 0.034,
+        "min": 0.032,
+        "max": 0.039
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 7.47,
+        "min": 6.318,
+        "max": 8.024
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.9,
+      "load": [
+        13,
+        18.8,
+        18.6
+      ]
+    },
+    {
+      "n": 10,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 22.005,
+        "min": 20.336,
+        "max": 25.607
+      },
+      "p95": {
+        "median": 0.503,
+        "min": 0.363,
+        "max": 0.579
+      },
+      "worst": {
+        "median": 1.734,
+        "min": 1.604,
+        "max": 1.909
+      },
+      "physics": {
+        "median": 1.385,
+        "min": 1.338,
+        "max": 1.416
+      },
+      "vehicles": {
+        "median": 18.917,
+        "min": 17.305,
+        "max": 22.195
+      },
+      "vehicle.rays": {
+        "median": 4.728,
+        "min": 4.402,
+        "max": 6.315
+      },
+      "vehicle.step": {
+        "median": 10.592,
+        "min": 10.001,
+        "max": 11.729
+      },
+      "vehicle.apply": {
+        "median": 2.565,
+        "min": 2.021,
+        "max": 2.779
+      },
+      "vehicleMonitor": {
+        "median": 0.761,
+        "min": 0.748,
+        "max": 0.943
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.013,
+        "max": 0.017
+      },
+      "humans": {
+        "median": 0.026,
+        "min": 0.024,
+        "max": 0.027
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 20.487,
+        "min": 18.832,
+        "max": 24.019
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 3.739,
+        "min": 3.617,
+        "max": 3.93
+      },
+      "p95": {
+        "median": 0.076,
+        "min": 0.075,
+        "max": 0.082
+      },
+      "worst": {
+        "median": 0.134,
+        "min": 0.126,
+        "max": 0.144
+      },
+      "physics": {
+        "median": 1.265,
+        "min": 1.26,
+        "max": 1.269
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.014,
+        "min": 0.013,
+        "max": 0.014
+      },
+      "humans": {
+        "median": 0.035,
+        "min": 0.033,
+        "max": 0.035
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 2.413,
+        "min": 2.301,
+        "max": 2.605
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 66.9,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 8.037,
+        "min": 7.652,
+        "max": 8.427
+      },
+      "p95": {
+        "median": 0.147,
+        "min": 0.141,
+        "max": 0.16
+      },
+      "worst": {
+        "median": 0.894,
+        "min": 0.889,
+        "max": 1.009
+      },
+      "physics": {
+        "median": 1.278,
+        "min": 1.266,
+        "max": 1.281
+      },
+      "vehicles": {
+        "median": 0.977,
+        "min": 0.845,
+        "max": 1.215
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 3.18,
+        "min": 3.096,
+        "max": 3.406
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.015,
+        "max": 0.019
+      },
+      "humans": {
+        "median": 0.044,
+        "min": 0.035,
+        "max": 0.058
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 6.702,
+        "min": 6.315,
+        "max": 7.105
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.5,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 27.253,
+        "min": 24.817,
+        "max": 32.212
+      },
+      "p95": {
+        "median": 2.45,
+        "min": 2.447,
+        "max": 2.637
+      },
+      "worst": {
+        "median": 3.53,
+        "min": 3.036,
+        "max": 3.772
+      },
+      "physics": {
+        "median": 1.978,
+        "min": 1.668,
+        "max": 2.846
+      },
+      "vehicles": {
+        "median": 17.85,
+        "min": 16.57,
+        "max": 19.601
+      },
+      "vehicle.rays": {
+        "median": 3.482,
+        "min": 3.278,
+        "max": 3.842
+      },
+      "vehicle.step": {
+        "median": 9.224,
+        "min": 8.554,
+        "max": 9.584
+      },
+      "vehicle.apply": {
+        "median": 1.564,
+        "min": 1.562,
+        "max": 1.749
+      },
+      "vehicleMonitor": {
+        "median": 4.111,
+        "min": 3.671,
+        "max": 5.288
+      },
+      "damage.impacts": {
+        "median": 0.015,
+        "min": 0.013,
+        "max": 0.025
+      },
+      "humans": {
+        "median": 0.046,
+        "min": 0.039,
+        "max": 0.06
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 25.155,
+        "min": 23.044,
+        "max": 29.19
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.8,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 50,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 121.829,
+        "min": 115.041,
+        "max": 127.111
+      },
+      "p95": {
+        "median": 2.431,
+        "min": 2.281,
+        "max": 2.683
+      },
+      "worst": {
+        "median": 3.729,
+        "min": 2.931,
+        "max": 4.133
+      },
+      "physics": {
+        "median": 4.576,
+        "min": 4.249,
+        "max": 4.855
+      },
+      "vehicles": {
+        "median": 109.285,
+        "min": 103.536,
+        "max": 113.902
+      },
+      "vehicle.rays": {
+        "median": 28.446,
+        "min": 26.478,
+        "max": 29.442
+      },
+      "vehicle.step": {
+        "median": 62.388,
+        "min": 60.095,
+        "max": 65.451
+      },
+      "vehicle.apply": {
+        "median": 13.112,
+        "min": 12.131,
+        "max": 13.616
+      },
+      "vehicleMonitor": {
+        "median": 4.181,
+        "min": 3.776,
+        "max": 4.298
+      },
+      "damage.impacts": {
+        "median": 0.017,
+        "min": 0.015,
+        "max": 0.023
+      },
+      "humans": {
+        "median": 0.048,
+        "min": 0.043,
+        "max": 0.052
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 116.855,
+        "min": 110.427,
+        "max": 121.81
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.9,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 8.33,
+        "min": 7.717,
+        "max": 10.531
+      },
+      "p95": {
+        "median": 0.165,
+        "min": 0.142,
+        "max": 0.235
+      },
+      "worst": {
+        "median": 0.997,
+        "min": 0.951,
+        "max": 1.328
+      },
+      "physics": {
+        "median": 2.669,
+        "min": 2.623,
+        "max": 3.061
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.013,
+        "min": 0.013,
+        "max": 0.016
+      },
+      "humans": {
+        "median": 0.059,
+        "min": 0.051,
+        "max": 0.105
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 5.651,
+        "min": 4.998,
+        "max": 7.409
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.4,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 16.889,
+        "min": 16.704,
+        "max": 19.241
+      },
+      "p95": {
+        "median": 0.366,
+        "min": 0.306,
+        "max": 0.371
+      },
+      "worst": {
+        "median": 1.31,
+        "min": 1.133,
+        "max": 1.325
+      },
+      "physics": {
+        "median": 2.598,
+        "min": 2.484,
+        "max": 2.664
+      },
+      "vehicles": {
+        "median": 2.108,
+        "min": 1.908,
+        "max": 2.599
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 6.919,
+        "min": 6.83,
+        "max": 8.427
+      },
+      "damage.impacts": {
+        "median": 0.015,
+        "min": 0.015,
+        "max": 0.016
+      },
+      "humans": {
+        "median": 0.056,
+        "min": 0.056,
+        "max": 0.093
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 14.167,
+        "min": 14.164,
+        "max": 16.583
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 68.4,
+      "load": [
+        12.2,
+        18.5,
+        18.5
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 43.441,
+        "min": 42.305,
+        "max": 48.412
+      },
+      "p95": {
+        "median": 4.064,
+        "min": 3.985,
+        "max": 4.134
+      },
+      "worst": {
+        "median": 4.565,
+        "min": 4.419,
+        "max": 5.24
+      },
+      "physics": {
+        "median": 2.699,
+        "min": 2.686,
+        "max": 3.213
+      },
+      "vehicles": {
+        "median": 29.046,
+        "min": 27.731,
+        "max": 31.02
+      },
+      "vehicle.rays": {
+        "median": 5.78,
+        "min": 5.465,
+        "max": 6.163
+      },
+      "vehicle.step": {
+        "median": 15.191,
+        "min": 14.227,
+        "max": 15.565
+      },
+      "vehicle.apply": {
+        "median": 2.544,
+        "min": 2.298,
+        "max": 2.628
+      },
+      "vehicleMonitor": {
+        "median": 6.657,
+        "min": 6.535,
+        "max": 7.86
+      },
+      "damage.impacts": {
+        "median": 0.015,
+        "min": 0.014,
+        "max": 0.018
+      },
+      "humans": {
+        "median": 0.056,
+        "min": 0.056,
+        "max": 0.066
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 40.617,
+        "min": 39.504,
+        "max": 45.064
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 68.6,
+      "load": [
+        11.5,
+        18.3,
+        18.4
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 219.138,
+        "min": 214.196,
+        "max": 231.85
+      },
+      "p95": {
+        "median": 4.466,
+        "min": 4.069,
+        "max": 4.82
+      },
+      "worst": {
+        "median": 5.571,
+        "min": 5.393,
+        "max": 6.426
+      },
+      "physics": {
+        "median": 7.428,
+        "min": 7.39,
+        "max": 8.145
+      },
+      "vehicles": {
+        "median": 197.761,
+        "min": 193.041,
+        "max": 208.461
+      },
+      "vehicle.rays": {
+        "median": 51.979,
+        "min": 50.77,
+        "max": 54.773
+      },
+      "vehicle.step": {
+        "median": 112.631,
+        "min": 110.244,
+        "max": 118.854
+      },
+      "vehicle.apply": {
+        "median": 23.341,
+        "min": 22.284,
+        "max": 24.278
+      },
+      "vehicleMonitor": {
+        "median": 7.598,
+        "min": 7.388,
+        "max": 8.197
+      },
+      "damage.impacts": {
+        "median": 0.019,
+        "min": 0.018,
+        "max": 0.024
+      },
+      "humans": {
+        "median": 0.062,
+        "min": 0.06,
+        "max": 0.069
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 211.125,
+        "min": 206.147,
+        "max": 223.026
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 68.6,
+      "load": [
+        10.9,
+        18.1,
+        18.3
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 19.202,
+        "min": 17.482,
+        "max": 23.609
+      },
+      "p95": {
+        "median": 0.417,
+        "min": 0.343,
+        "max": 0.461
+      },
+      "worst": {
+        "median": 1.383,
+        "min": 1.348,
+        "max": 1.721
+      },
+      "physics": {
+        "median": 5.715,
+        "min": 5.401,
+        "max": 7.318
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.014,
+        "max": 0.02
+      },
+      "humans": {
+        "median": 0.126,
+        "min": 0.094,
+        "max": 0.127
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 13.429,
+        "min": 12.025,
+        "max": 16.216
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 68.2,
+      "load": [
+        10.9,
+        18.1,
+        18.3
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 41.146,
+        "min": 40.101,
+        "max": 44.093
+      },
+      "p95": {
+        "median": 0.829,
+        "min": 0.722,
+        "max": 0.848
+      },
+      "worst": {
+        "median": 1.894,
+        "min": 1.787,
+        "max": 2.018
+      },
+      "physics": {
+        "median": 5.518,
+        "min": 5.361,
+        "max": 5.667
+      },
+      "vehicles": {
+        "median": 5.246,
+        "min": 5.155,
+        "max": 5.861
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 17.349,
+        "min": 17.014,
+        "max": 18.576
+      },
+      "damage.impacts": {
+        "median": 0.014,
+        "min": 0.013,
+        "max": 0.016
+      },
+      "humans": {
+        "median": 0.107,
+        "min": 0.103,
+        "max": 0.133
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 35.564,
+        "min": 34.679,
+        "max": 38.357
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 70.3,
+      "load": [
+        10.9,
+        18.1,
+        18.3
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 108.536,
+        "min": 107.212,
+        "max": 114.045
+      },
+      "p95": {
+        "median": 10.192,
+        "min": 10.097,
+        "max": 10.309
+      },
+      "worst": {
+        "median": 10.95,
+        "min": 10.768,
+        "max": 12.804
+      },
+      "physics": {
+        "median": 6.345,
+        "min": 6.176,
+        "max": 6.694
+      },
+      "vehicles": {
+        "median": 72.049,
+        "min": 71.833,
+        "max": 76.419
+      },
+      "vehicle.rays": {
+        "median": 14.621,
+        "min": 14.362,
+        "max": 15.478
+      },
+      "vehicle.step": {
+        "median": 37.251,
+        "min": 36.82,
+        "max": 39.185
+      },
+      "vehicle.apply": {
+        "median": 5.966,
+        "min": 5.902,
+        "max": 6.348
+      },
+      "vehicleMonitor": {
+        "median": 17.309,
+        "min": 16.502,
+        "max": 17.709
+      },
+      "damage.impacts": {
+        "median": 0.014,
+        "min": 0.014,
+        "max": 0.014
+      },
+      "humans": {
+        "median": 0.106,
+        "min": 0.102,
+        "max": 0.108
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 101.969,
+        "min": 100.811,
+        "max": 107.106
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 70.4,
+      "load": [
+        10.3,
+        17.8,
+        18.3
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 5,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 611.815,
+        "min": 548.537,
+        "max": 629.236
+      },
+      "p95": {
+        "median": 12.456,
+        "min": 10.648,
+        "max": 16.649
+      },
+      "worst": {
+        "median": 14.014,
+        "min": 11.902,
+        "max": 58.874
+      },
+      "physics": {
+        "median": 19.887,
+        "min": 17.713,
+        "max": 21.731
+      },
+      "vehicles": {
+        "median": 552.031,
+        "min": 496.396,
+        "max": 564.609
+      },
+      "vehicle.rays": {
+        "median": 148.813,
+        "min": 132.834,
+        "max": 151.21
+      },
+      "vehicle.step": {
+        "median": 310.107,
+        "min": 281.369,
+        "max": 314.941
+      },
+      "vehicle.apply": {
+        "median": 64.302,
+        "min": 56.885,
+        "max": 67.881
+      },
+      "vehicleMonitor": {
+        "median": 22.194,
+        "min": 19.094,
+        "max": 23.119
+      },
+      "damage.impacts": {
+        "median": 0.029,
+        "min": 0.019,
+        "max": 0.036
+      },
+      "humans": {
+        "median": 0.147,
+        "min": 0.119,
+        "max": 0.168
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 590.244,
+        "min": 529.375,
+        "max": 605.657
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 64.2,
+      "load": [
+        9.6,
+        17.4,
+        18.1
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 42.787,
+        "min": 42.489,
+        "max": 43.394
+      },
+      "p95": {
+        "median": 0.876,
+        "min": 0.796,
+        "max": 0.916
+      },
+      "worst": {
+        "median": 1.922,
+        "min": 1.889,
+        "max": 2.019
+      },
+      "physics": {
+        "median": 12.425,
+        "min": 12.383,
+        "max": 13.073
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.018,
+        "min": 0.016,
+        "max": 0.022
+      },
+      "humans": {
+        "median": 0.208,
+        "min": 0.196,
+        "max": 0.228
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 30.031,
+        "min": 29.641,
+        "max": 30.885
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 63.2,
+      "load": [
+        9.6,
+        17.4,
+        18.1
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 85.02,
+        "min": 83.922,
+        "max": 86.233
+      },
+      "p95": {
+        "median": 1.692,
+        "min": 1.674,
+        "max": 1.787
+      },
+      "worst": {
+        "median": 2.165,
+        "min": 2.05,
+        "max": 2.315
+      },
+      "physics": {
+        "median": 10.855,
+        "min": 10.827,
+        "max": 11.017
+      },
+      "vehicles": {
+        "median": 11.368,
+        "min": 11.111,
+        "max": 11.588
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 36.06,
+        "min": 35.62,
+        "max": 36.414
+      },
+      "damage.impacts": {
+        "median": 0.015,
+        "min": 0.015,
+        "max": 0.017
+      },
+      "humans": {
+        "median": 0.192,
+        "min": 0.19,
+        "max": 0.198
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 74.096,
+        "min": 73.021,
+        "max": 75.139
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.1,
+      "load": [
+        9.1,
+        17.2,
+        18
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 313.147,
+        "min": 309.031,
+        "max": 361.054
+      },
+      "p95": {
+        "median": 21.88,
+        "min": 21.185,
+        "max": 26.303
+      },
+      "worst": {
+        "median": 29.233,
+        "min": 27.156,
+        "max": 36.685
+      },
+      "physics": {
+        "median": 13.831,
+        "min": 13.131,
+        "max": 16.256
+      },
+      "vehicles": {
+        "median": 237.398,
+        "min": 229.665,
+        "max": 266.966
+      },
+      "vehicle.rays": {
+        "median": 54.027,
+        "min": 51.91,
+        "max": 60.615
+      },
+      "vehicle.step": {
+        "median": 128.836,
+        "min": 124.435,
+        "max": 142.153
+      },
+      "vehicle.apply": {
+        "median": 21.92,
+        "min": 20.266,
+        "max": 24.127
+      },
+      "vehicleMonitor": {
+        "median": 37.968,
+        "min": 35.998,
+        "max": 45.054
+      },
+      "damage.impacts": {
+        "median": 0.022,
+        "min": 0.02,
+        "max": 0.031
+      },
+      "humans": {
+        "median": 0.193,
+        "min": 0.187,
+        "max": 0.245
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 299.341,
+        "min": 294.545,
+        "max": 343.929
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.1,
+      "load": [
+        8.4,
+        16.8,
+        17.9
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 3,
+      "msPerSimS": {
+        "median": 1134.387,
+        "min": 1122.861,
+        "max": 1243.859
+      },
+      "p95": {
+        "median": 21.741,
+        "min": 20.321,
+        "max": 24.27
+      },
+      "worst": {
+        "median": 27.502,
+        "min": 25.594,
+        "max": 28.154
+      },
+      "physics": {
+        "median": 37.742,
+        "min": 37.557,
+        "max": 41.349
+      },
+      "vehicles": {
+        "median": 1018.014,
+        "min": 1007.475,
+        "max": 1112.001
+      },
+      "vehicle.rays": {
+        "median": 280.069,
+        "min": 277.608,
+        "max": 305.618
+      },
+      "vehicle.step": {
+        "median": 566.785,
+        "min": 560.785,
+        "max": 616.134
+      },
+      "vehicle.apply": {
+        "median": 115.033,
+        "min": 114.682,
+        "max": 127.741
+      },
+      "vehicleMonitor": {
+        "median": 44.507,
+        "min": 44.492,
+        "max": 51.668
+      },
+      "damage.impacts": {
+        "median": 0.042,
+        "min": 0.04,
+        "max": 0.067
+      },
+      "humans": {
+        "median": 0.235,
+        "min": 0.229,
+        "max": 0.274
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 1093.421,
+        "min": 1082.164,
+        "max": 1199.002
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.3,
+      "load": [
+        7.2,
+        15.9,
+        17.5
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "legacy",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 73.006,
+        "min": 73.006,
+        "max": 73.006
+      },
+      "p95": {
+        "median": 1.343,
+        "min": 1.343,
+        "max": 1.343
+      },
+      "worst": {
+        "median": 1.829,
+        "min": 1.829,
+        "max": 1.829
+      },
+      "physics": {
+        "median": 20.97,
+        "min": 20.97,
+        "max": 20.97
+      },
+      "vehicles": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage.impacts": {
+        "median": 0.016,
+        "min": 0.016,
+        "max": 0.016
+      },
+      "humans": {
+        "median": 0.329,
+        "min": 0.329,
+        "max": 0.329
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 51.963,
+        "min": 51.963,
+        "max": 51.963
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 65.8,
+      "load": [
+        7.2,
+        15.9,
+        17.5
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "rigid",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 271.349,
+        "min": 271.349,
+        "max": 271.349
+      },
+      "p95": {
+        "median": 10.073,
+        "min": 10.073,
+        "max": 10.073
+      },
+      "worst": {
+        "median": 30.812,
+        "min": 30.812,
+        "max": 30.812
+      },
+      "physics": {
+        "median": 36.382,
+        "min": 36.382,
+        "max": 36.382
+      },
+      "vehicles": {
+        "median": 32.645,
+        "min": 32.645,
+        "max": 32.645
+      },
+      "vehicle.rays": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.step": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicle.apply": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "vehicleMonitor": {
+        "median": 123.521,
+        "min": 123.521,
+        "max": 123.521
+      },
+      "damage.impacts": {
+        "median": 0.067,
+        "min": 0.067,
+        "max": 0.067
+      },
+      "humans": {
+        "median": 0.95,
+        "min": 0.95,
+        "max": 0.95
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 234.648,
+        "min": 234.648,
+        "max": 234.648
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 73.2,
+      "load": [
+        7.2,
+        15.9,
+        17.5
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "parked",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 682.708,
+        "min": 682.708,
+        "max": 682.708
+      },
+      "p95": {
+        "median": 45.893,
+        "min": 45.893,
+        "max": 45.893
+      },
+      "worst": {
+        "median": 56.015,
+        "min": 56.015,
+        "max": 56.015
+      },
+      "physics": {
+        "median": 28.164,
+        "min": 28.164,
+        "max": 28.164
+      },
+      "vehicles": {
+        "median": 500.993,
+        "min": 500.993,
+        "max": 500.993
+      },
+      "vehicle.rays": {
+        "median": 116.441,
+        "min": 116.441,
+        "max": 116.441
+      },
+      "vehicle.step": {
+        "median": 256.953,
+        "min": 256.953,
+        "max": 256.953
+      },
+      "vehicle.apply": {
+        "median": 45.166,
+        "min": 45.166,
+        "max": 45.166
+      },
+      "vehicleMonitor": {
+        "median": 92.177,
+        "min": 92.177,
+        "max": 92.177
+      },
+      "damage.impacts": {
+        "median": 0.041,
+        "min": 0.041,
+        "max": 0.041
+      },
+      "humans": {
+        "median": 0.454,
+        "min": 0.454,
+        "max": 0.454
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 653.046,
+        "min": 653.046,
+        "max": 653.046
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 73.2,
+      "load": [
+        6.5,
+        15.5,
+        17.4
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "circle",
+      "people": 0,
+      "seconds": 3,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 2418.894,
+        "min": 2418.894,
+        "max": 2418.894
+      },
+      "p95": {
+        "median": 50.308,
+        "min": 50.308,
+        "max": 50.308
+      },
+      "worst": {
+        "median": 86.109,
+        "min": 86.109,
+        "max": 86.109
+      },
+      "physics": {
+        "median": 78.238,
+        "min": 78.238,
+        "max": 78.238
+      },
+      "vehicles": {
+        "median": 2139.731,
+        "min": 2139.731,
+        "max": 2139.731
+      },
+      "vehicle.rays": {
+        "median": 586.974,
+        "min": 586.974,
+        "max": 586.974
+      },
+      "vehicle.step": {
+        "median": 1162.564,
+        "min": 1162.564,
+        "max": 1162.564
+      },
+      "vehicle.apply": {
+        "median": 245.45,
+        "min": 245.45,
+        "max": 245.45
+      },
+      "vehicleMonitor": {
+        "median": 118.188,
+        "min": 118.188,
+        "max": 118.188
+      },
+      "damage.impacts": {
+        "median": 0.09,
+        "min": 0.09,
+        "max": 0.09
+      },
+      "humans": {
+        "median": 0.64,
+        "min": 0.64,
+        "max": 0.64
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 2333.042,
+        "min": 2333.042,
+        "max": 2333.042
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 73.6,
+      "load": [
+        5.8,
+        14.8,
+        17.1
+      ]
+    },
+    {
+      "n": 100,
+      "kind": "circle+people",
+      "people": 100,
+      "seconds": 3,
+      "repeats": 2,
+      "msPerSimS": {
+        "median": 484.929,
+        "min": 240.646,
+        "max": 484.929
+      },
+      "p95": {
+        "median": 22.352,
+        "min": 5.4,
+        "max": 22.352
+      },
+      "worst": {
+        "median": 90.59,
+        "min": 6.74,
+        "max": 90.59
+      },
+      "physics": {
+        "median": 25.685,
+        "min": 10.719,
+        "max": 25.685
+      },
+      "vehicles": {
+        "median": 405.128,
+        "min": 208.995,
+        "max": 405.128
+      },
+      "vehicle.rays": {
+        "median": 101.808,
+        "min": 55.093,
+        "max": 101.808
+      },
+      "vehicle.step": {
+        "median": 223.083,
+        "min": 118.176,
+        "max": 223.083
+      },
+      "vehicle.apply": {
+        "median": 52.435,
+        "min": 24.283,
+        "max": 52.435
+      },
+      "vehicleMonitor": {
+        "median": 20.924,
+        "min": 8.602,
+        "max": 20.924
+      },
+      "damage.impacts": {
+        "median": 0.094,
+        "min": 0.025,
+        "max": 0.094
+      },
+      "humans": {
+        "median": 5.675,
+        "min": 2.051,
+        "max": 5.675
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 457.291,
+        "min": 229.206,
+        "max": 457.291
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 63.8,
+      "load": [
+        5.8,
+        14.8,
+        17.1
+      ]
+    },
+    {
+      "n": 250,
+      "kind": "circle+people",
+      "people": 250,
+      "seconds": 3,
+      "repeats": 2,
+      "msPerSimS": {
+        "median": 624.659,
+        "min": 582.4,
+        "max": 624.659
+      },
+      "p95": {
+        "median": 15.947,
+        "min": 11.186,
+        "max": 15.947
+      },
+      "worst": {
+        "median": 20.245,
+        "min": 12.168,
+        "max": 20.245
+      },
+      "physics": {
+        "median": 26.651,
+        "min": 24.284,
+        "max": 26.651
+      },
+      "vehicles": {
+        "median": 546.12,
+        "min": 509.91,
+        "max": 546.12
+      },
+      "vehicle.rays": {
+        "median": 151.425,
+        "min": 139.808,
+        "max": 151.425
+      },
+      "vehicle.step": {
+        "median": 294.961,
+        "min": 284.698,
+        "max": 294.961
+      },
+      "vehicle.apply": {
+        "median": 69.631,
+        "min": 58.701,
+        "max": 69.631
+      },
+      "vehicleMonitor": {
+        "median": 22.54,
+        "min": 21.173,
+        "max": 22.54
+      },
+      "damage.impacts": {
+        "median": 0.032,
+        "min": 0.021,
+        "max": 0.032
+      },
+      "humans": {
+        "median": 4.746,
+        "min": 4.135,
+        "max": 4.746
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 596.173,
+        "min": 556.463,
+        "max": 596.173
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 67.2,
+      "load": [
+        5.7,
+        14.4,
+        16.9
+      ]
+    },
+    {
+      "n": 500,
+      "kind": "circle+people",
+      "people": 500,
+      "seconds": 3,
+      "repeats": 2,
+      "msPerSimS": {
+        "median": 1335.886,
+        "min": 1249.92,
+        "max": 1335.886
+      },
+      "p95": {
+        "median": 27.253,
+        "min": 25.719,
+        "max": 27.253
+      },
+      "worst": {
+        "median": 43.378,
+        "min": 37.91,
+        "max": 43.378
+      },
+      "physics": {
+        "median": 61.595,
+        "min": 54.576,
+        "max": 61.595
+      },
+      "vehicles": {
+        "median": 1127.376,
+        "min": 1077.737,
+        "max": 1127.376
+      },
+      "vehicle.rays": {
+        "median": 326.607,
+        "min": 306.947,
+        "max": 326.607
+      },
+      "vehicle.step": {
+        "median": 602.017,
+        "min": 582.658,
+        "max": 602.017
+      },
+      "vehicle.apply": {
+        "median": 130.07,
+        "min": 125.806,
+        "max": 130.07
+      },
+      "vehicleMonitor": {
+        "median": 61.753,
+        "min": 49.526,
+        "max": 61.753
+      },
+      "damage.impacts": {
+        "median": 0.078,
+        "min": 0.05,
+        "max": 0.078
+      },
+      "humans": {
+        "median": 14.316,
+        "min": 11.415,
+        "max": 14.316
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 1270.039,
+        "min": 1191.64,
+        "max": 1270.039
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 72.7,
+      "load": [
+        5.5,
+        14,
+        16.7
+      ]
+    },
+    {
+      "n": 1000,
+      "kind": "circle+people",
+      "people": 1000,
+      "seconds": 3,
+      "repeats": 1,
+      "msPerSimS": {
+        "median": 3506.264,
+        "min": 3506.264,
+        "max": 3506.264
+      },
+      "p95": {
+        "median": 115.612,
+        "min": 115.612,
+        "max": 115.612
+      },
+      "worst": {
+        "median": 334.367,
+        "min": 334.367,
+        "max": 334.367
+      },
+      "physics": {
+        "median": 160.738,
+        "min": 160.738,
+        "max": 160.738
+      },
+      "vehicles": {
+        "median": 2904.729,
+        "min": 2904.729,
+        "max": 2904.729
+      },
+      "vehicle.rays": {
+        "median": 860.844,
+        "min": 860.844,
+        "max": 860.844
+      },
+      "vehicle.step": {
+        "median": 1450.743,
+        "min": 1450.743,
+        "max": 1450.743
+      },
+      "vehicle.apply": {
+        "median": 355.358,
+        "min": 355.358,
+        "max": 355.358
+      },
+      "vehicleMonitor": {
+        "median": 184.096,
+        "min": 184.096,
+        "max": 184.096
+      },
+      "damage.impacts": {
+        "median": 0.165,
+        "min": 0.165,
+        "max": 0.165
+      },
+      "humans": {
+        "median": 42.068,
+        "min": 42.068,
+        "max": 42.068
+      },
+      "windForce": {
+        "median": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dispatch": {
+        "median": 3331.401,
+        "min": 3331.401,
+        "max": 3331.401
+      },
+      "nonFinite": false,
+      "collisions": 0,
+      "duplicates": 0,
+      "heapMB": 83.6,
+      "load": [
+        5.9,
+        13.4,
+        16.4
+      ]
+    },
+    {
+      "micro": true,
+      "tireForceNs": 89,
+      "implicitSpinNs": 74,
+      "vehicleStepNs": 32818
+    }
+  ]
+}

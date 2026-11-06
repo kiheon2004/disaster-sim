@@ -1,0 +1,532 @@
+{
+  "date": "2026-10-29T13:39:00.315Z",
+  "load": [
+    5.2,
+    10,
+    14.4
+  ],
+  "rows": [
+    {
+      "scene": "stationary",
+      "seconds": 3600,
+      "wallS": 5,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 0.00865,
+        "residualShare": 0,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 66.2
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 0.00865,
+        "residualShare": 0,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 67.1
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        66.7,
+        66.8,
+        67.1,
+        66.8,
+        67.1,
+        67.1
+      ]
+    },
+    {
+      "scene": "straight",
+      "seconds": 3600,
+      "wallS": 15.2,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 11.59,
+        "maxSpin": 0.34,
+        "maxWheel": 38.5,
+        "residual": 8720,
+        "residualShare": 0.00376,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 240,
+        "duplicates": 0,
+        "heapMB": 66.4
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 11.65,
+        "maxSpin": 0.31,
+        "maxWheel": 38.5,
+        "residual": 591000,
+        "residualShare": 0.00507,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 3600,
+        "duplicates": 0,
+        "heapMB": 67
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        66.7,
+        66.8,
+        67,
+        66.8,
+        67,
+        67
+      ]
+    },
+    {
+      "scene": "braking",
+      "seconds": 3600,
+      "wallS": 45.4,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 840,
+        "residualShare": 0.000351,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 240,
+        "duplicates": 0,
+        "heapMB": 66.3
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 51500,
+        "residualShare": 0.000358,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 3600,
+        "duplicates": 0,
+        "heapMB": 66.7
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        66.6,
+        66.6,
+        66.8,
+        66.6,
+        66.8,
+        66.7
+      ]
+    },
+    {
+      "scene": "circle",
+      "seconds": 3600,
+      "wallS": 17.6,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 11.56,
+        "maxSpin": 0.27,
+        "maxWheel": 42.8,
+        "residual": 6600,
+        "residualShare": 0.00316,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 240,
+        "duplicates": 0,
+        "heapMB": 66.7
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 11.57,
+        "maxSpin": 0.27,
+        "maxWheel": 42.8,
+        "residual": 432000,
+        "residualShare": 0.00302,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 3600,
+        "duplicates": 0,
+        "heapMB": 67.1
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        67,
+        66.9,
+        67.1,
+        67,
+        67.1,
+        67.1
+      ]
+    },
+    {
+      "scene": "slope",
+      "seconds": 3600,
+      "wallS": 4.5,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 5530,
+        "residualShare": 0.302,
+        "outside": false,
+        "episodes": 0,
+        "events": 1,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 66.9
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 5530,
+        "residualShare": 0.302,
+        "outside": false,
+        "episodes": 0,
+        "events": 1,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 67.8
+      },
+      "eventsAt": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "heapAt": [
+        67.4,
+        67.4,
+        67.8,
+        67.4,
+        67.8,
+        67.8
+      ]
+    },
+    {
+      "scene": "wind",
+      "seconds": 3600,
+      "wallS": 12.2,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 9.75,
+        "maxSpin": 0.23,
+        "maxWheel": 32.2,
+        "residual": 4850,
+        "residualShare": 0.00266,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 240,
+        "duplicates": 0,
+        "heapMB": 67.1
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 9.77,
+        "maxSpin": 0.18,
+        "maxWheel": 32.1,
+        "residual": 296000,
+        "residualShare": 0.00372,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 3600,
+        "duplicates": 0,
+        "heapMB": 67.6
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        67.4,
+        67.4,
+        67.6,
+        67.4,
+        67.6,
+        67.6
+      ]
+    },
+    {
+      "scene": "flood",
+      "seconds": 3600,
+      "wallS": 51.3,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0.34,
+        "maxSpin": 0.28,
+        "maxWheel": 0,
+        "residual": 15700,
+        "residualShare": 0,
+        "outside": false,
+        "episodes": 0,
+        "events": 10,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 67.8
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 0,
+        "residual": 7230,
+        "residualShare": 0,
+        "outside": false,
+        "episodes": 0,
+        "events": 12,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 68.9
+      },
+      "eventsAt": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12
+      ],
+      "heapAt": [
+        68.5,
+        68.4,
+        68.8,
+        68.5,
+        68.9,
+        68.9
+      ]
+    },
+    {
+      "scene": "earthquake",
+      "seconds": 3600,
+      "wallS": 13.1,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 11.56,
+        "maxSpin": 0.27,
+        "maxWheel": 42.7,
+        "residual": 8960,
+        "residualShare": 1,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 68.1
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 11.57,
+        "maxSpin": 0.27,
+        "maxWheel": 42.8,
+        "residual": 434000,
+        "residualShare": 1,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 68.8
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        68.4,
+        68.4,
+        68.8,
+        68.4,
+        68.8,
+        68.8
+      ]
+    },
+    {
+      "scene": "crashDebris",
+      "seconds": 3600,
+      "wallS": 23,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 53,
+        "residual": 70.8,
+        "residualShare": 1.26e-05,
+        "outside": false,
+        "episodes": 2,
+        "events": 6,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 67.9
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "maxWheel": 91.1,
+        "residual": 620,
+        "residualShare": 1.81e-06,
+        "outside": false,
+        "episodes": 2,
+        "events": 6,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 68.7
+      },
+      "eventsAt": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "heapAt": [
+        68.4,
+        68.4,
+        68.7,
+        68.4,
+        68.8,
+        68.7
+      ]
+    },
+    {
+      "scene": "combined",
+      "seconds": 3600,
+      "wallS": 23.3,
+      "bad": [],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 9.58,
+        "maxSpin": 0.28,
+        "maxWheel": 36.3,
+        "residual": 6920,
+        "residualShare": 0.00373,
+        "outside": false,
+        "episodes": 0,
+        "events": 0,
+        "series": 480,
+        "duplicates": 0,
+        "heapMB": 68.3
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 9.77,
+        "maxSpin": 0.2,
+        "maxWheel": 32.1,
+        "residual": 299000,
+        "residualShare": 1,
+        "outside": false,
+        "episodes": 2,
+        "events": 16,
+        "series": 7200,
+        "duplicates": 0,
+        "heapMB": 69.9
+      },
+      "eventsAt": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "heapAt": [
+        69.4,
+        69.4,
+        69.9,
+        69.5,
+        69.8,
+        69.9
+      ]
+    }
+  ],
+  "note": "braking row re-run after the scene fix (4.5 s reverse); the first run (5 s reverse) drifted 6.7 m per cycle and left |x| > 700 m at 1800 s",
+  "brakingRerunDate": "2026-10-29T13:41:16.703Z"
+}

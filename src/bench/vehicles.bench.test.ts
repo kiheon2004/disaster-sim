@@ -136,9 +136,11 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('vehicle long runs', ()
     const loopPath: [number, number][] = [[0, 0], [60, 0], [60, 40], [0, 40], [0, 0]];
     const shore = (_x: number, z: number) => Math.min(4, Math.max(0, (85 - z) * 0.1));
     const slope = (x: number) => Math.max(0, Math.min(6, (20 - x) * Math.tan((8 * Math.PI) / 180)));
-    // Repeated braking that stays in the world: 5 s forward, brake, 5 s in reverse, brake (a 20 s cycle about the start).
+    // Repeated braking that stays in the world: 5 s forward, brake, 4.5 s in reverse, brake (a 20 s cycle about the start). Reverse is
+    // geared shorter than D, so equal 5 s halves backed 6.7 m further than they drove and the car left the world after ~1800 s;
+    // 4.5 s leaves 1.3 m per cycle (≈ 230 m in an hour).
     const brakes: { t: number; throttle?: number; brake?: number; gear?: 'D' | 'R' }[] = [];
-    for (let t = 0; t < T && brakes.length < 990; t += 20) brakes.push({ t, gear: 'D', throttle: 0.5, brake: 0 }, { t: t + 5, throttle: 0, brake: 0.8 }, { t: t + 10, gear: 'R', throttle: 0.5, brake: 0 }, { t: t + 15, throttle: 0, brake: 0.8 });
+    for (let t = 0; t < T && brakes.length < 990; t += 20) brakes.push({ t, gear: 'D', throttle: 0.5, brake: 0 }, { t: t + 5, throttle: 0, brake: 0.8 }, { t: t + 10, gear: 'R', throttle: 0.5, brake: 0 }, { t: t + 14.5, throttle: 0, brake: 0.8 });
     const scenes: Record<string, () => { doc: WorldDocument; events: EventSpec[] }> = {
       stationary: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2)], () => ({})), events: [] }),
       straight: () => ({ doc: mk([car(0, 0, 1)], () => ({ autopilot: { path: loopPath, speed: 12, loop: true, avoid: false } })), events: [] }),
