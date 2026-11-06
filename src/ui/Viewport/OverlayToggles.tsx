@@ -22,6 +22,7 @@ import { PHYSIO_METRICS, type PhysioMetric } from '@/rendering/viewStore';
 import { AIRWAY_COLOR, NOT_COMPUTED_COLOR, PHYSIO_SCALES, scaleGradient } from '@/rendering/physiology/PhysiologyLayer';
 import { capLabel } from '@/ui/Inspector/PhysiologyInspector';
 import { CAPACITY_LEVELS } from '@/physiology/engine';
+import { LTR_STOPS, SLIP_COLORS, VEC_COLORS, VEHICLE_SCALES } from '@/rendering/vehicle/VehicleLayer';
 import { FUEL_GRADIENT, HRR_GRADIENT, ROOM_COLORS, STATE_COLORS, VISIBILITY_GRADIENT } from '@/rendering/fire/fireColors';
 import { FIRE_STATES } from '@/fire/FireWorld';
 import { GLOW_GRADIENT, OVERLAY_SCALE, overlayGradient } from '@/rendering/volcano/volcanoColors';
@@ -302,6 +303,7 @@ export function OverlayToggles() {
       <CelestialToggles />
       <HumanToggles />
       <PhysiologyToggles />
+      <VehicleToggles />
       <ClimateToggles />
       <FireToggles />
       <StructureToggles />
@@ -516,6 +518,59 @@ function HumanToggles() {
             </div>
           )}
           <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('humanUi.overlay.note')}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Vehicle debug overlay (Phase 35): shown while a run has wheeled vehicles. Render-only; legend with the arrow scales. */
+function VehicleToggles() {
+  const t = useT();
+  const version = useSimStore((s) => s.runtimeVersion);
+  const viz = useViewStore((s) => s.vehicleViz);
+  const set = useViewStore.getState().setVehicleViz;
+  const live = useMemo(() => {
+    const rt = simulationController.getRuntime();
+    return !!rt?.vehicles?.order.some((id) => rt.entities.get(id)?.vehicle?.level === 'vehicle');
+  }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!live) return null;
+  const dot = (c: string, label: string) => (
+    <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-1)', fontSize: 11 }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />{label}
+    </span>
+  );
+  const subs = ['contacts', 'normals', 'tyre', 'suspension', 'com', 'velocity', 'slip', 'ltr', 'impulse'] as const;
+  return (
+    <>
+      <Toggle checked={viz.enabled} onChange={(b) => set({ enabled: b })} label={t('vehicleUi.overlay')} />
+      {viz.enabled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 38 }} data-testid="vehicle-overlay">
+          {subs.map((k) => <Toggle key={k} checked={viz[k]} onChange={(b) => set({ [k]: b })} label={t(`vehicleUi.overlay.${k}` as MessageKey)} />)}
+          <div data-testid="vehicle-legend" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {viz.slip && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {(Object.keys(SLIP_COLORS) as (keyof typeof SLIP_COLORS)[]).map((k) => dot(SLIP_COLORS[k], t(`vehicleUi.legend.${k}` as MessageKey)))}
+              </div>
+            )}
+            {viz.ltr && (
+              <div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('vehicleUi.legend.ltr')}</div>
+                <div style={{ height: 6, borderRadius: 3, background: `linear-gradient(90deg, ${LTR_STOPS.map(([v, c]) => `${c} ${v * 100}%`).join(', ')})` }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  {LTR_STOPS.map(([v]) => <span key={v}>{v}</span>)}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {viz.normals && dot(VEC_COLORS.normal, t('vehicleUi.legend.normal', { l: VEHICLE_SCALES.normal }))}
+              {viz.tyre && dot(VEC_COLORS.tyre, t('vehicleUi.legend.tyre', { k: VEHICLE_SCALES.forcePerM / 1000 }))}
+              {viz.suspension && dot(VEC_COLORS.suspension, t('vehicleUi.legend.suspension', { k: VEHICLE_SCALES.forcePerM / 1000 }))}
+              {viz.velocity && dot(VEC_COLORS.velocity, t('vehicleUi.legend.velocity', { k: VEHICLE_SCALES.velocityPerM }))}
+              {viz.impulse && dot(VEC_COLORS.impulse, t('vehicleUi.legend.impulse', { k: VEHICLE_SCALES.impulsePerM / 1000 }))}
+            </div>
+          </div>
+          <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('vehicleUi.overlay.note', { cap: VEHICLE_SCALES.cap })}</span>
         </div>
       )}
     </>

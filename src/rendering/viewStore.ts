@@ -233,6 +233,24 @@ export interface PhysioViz {
   airway: boolean;
 }
 
+/**
+ * Vehicle debug overlay (Phase 35, vehicle-dynamics runs only; render-only — reads e.vehicle, never writes): wheel contact
+ * points (coloured by slip), contact normals, tyre force vectors, suspension forces, COM (coloured by the rollover risk LTR),
+ * velocity vector, last collision impulse arrow.
+ */
+export interface VehicleViz {
+  enabled: boolean;
+  contacts: boolean;
+  normals: boolean;
+  tyre: boolean;
+  suspension: boolean;
+  com: boolean;
+  velocity: boolean;
+  slip: boolean;
+  ltr: boolean;
+  impulse: boolean;
+}
+
 /** Gravity views (Phase 31): field arrows, a ground / building overlay on fixed SI legends, the local sources. */
 export interface GravityViz {
   overlay: import('./gravity/gravityColors').GravityOverlay;
@@ -326,6 +344,8 @@ interface ViewState {
   setHumanViz: (patch: Partial<HumanViz>) => void;
   physioViz: PhysioViz;
   setPhysioViz: (patch: Partial<PhysioViz>) => void;
+  vehicleViz: VehicleViz;
+  setVehicleViz: (patch: Partial<VehicleViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -394,6 +414,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setHumanViz: (patch) => set((s) => ({ humanViz: { ...s.humanViz, ...patch } })),
   physioViz: { enabled: false, metric: 'core', airway: true },
   setPhysioViz: (patch) => set((s) => ({ physioViz: { ...s.physioViz, ...patch } })),
+  vehicleViz: { enabled: false, contacts: true, normals: true, tyre: true, suspension: true, com: true, velocity: true, slip: true, ltr: true, impulse: true },
+  setVehicleViz: (patch) => set((s) => ({ vehicleViz: { ...s.vehicleViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,

@@ -7,6 +7,9 @@ import { NumberField, SelectField, ToggleField } from '@/ui/common/fields';
 import { DEFAULT_REFERENCE, PHYSIO_LIMITS, PHYSIO_MODULES, type PhysiologyReference, type PhysiologySettings } from '@/physiology/settings';
 import { ACTIVITIES, CLOTHING, type Activity, type Clothing } from '@/physiology/thermal';
 import { activityLabel, clothingLabel } from './PhysiologyInspector';
+import { DEFAULT_SUBSTEPS, type VehicleSettings } from '@/vehicle/settings';
+import type { TireModel } from '@/vehicle/tire';
+import { tireLabel } from './VehicleInspector';
 import styles from './Inspector.module.css';
 
 /**
@@ -69,6 +72,34 @@ function PhysiologySettingsBlock({ readOnly }: { readOnly: boolean }) {
   );
 }
 
+/**
+ * Vehicle dynamics (Phase 35): `settings.simulation.vehicles` set / removed (absent = the legacy rigid cars, bit-identical).
+ * The per-car entries (controls, programs, autopilot, occupants) are kept while an option changes; switching the model off
+ * removes them with it.
+ */
+function VehicleSettingsBlock({ readOnly }: { readOnly: boolean }) {
+  const t = useT();
+  const vs = useWorldStore((s) => s.doc.settings.simulation.vehicles);
+  const upd = useWorldStore.getState().updateSimulationSettings;
+  const set = (patch: Partial<VehicleSettings>) => upd({ vehicles: { ...(vs ?? { model: 'dynamics' }), ...patch, model: 'dynamics' } });
+  return (
+    <div data-testid="vehicle-settings" style={{ display: 'contents' }}>
+      <ToggleField label={t('vehicleUi.settings.on')} checked={!!vs} disabled={readOnly} hint={t('vehicleUi.settings.on.hint')}
+        onChange={(b) => upd({ vehicles: b ? { model: 'dynamics' } : null })} />
+      {vs && (
+        <>
+          <SelectField<TireModel> label={t('vehicleUi.settings.tire')} value={vs.tire ?? 'saturating'} disabled={readOnly}
+            options={(['saturating', 'linear'] as const).map((m) => ({ value: m, label: tireLabel(t, m) }))} onChange={(m) => set({ tire: m })} />
+          <ToggleField label={t('vehicleUi.settings.abs')} checked={vs.abs ?? true} disabled={readOnly} hint={t('vehicleUi.settings.abs.hint')} onChange={(b) => set({ abs: b })} />
+          <NumberField label={t('vehicleUi.settings.substeps')} value={vs.substeps ?? DEFAULT_SUBSTEPS} min={1} max={32} step={1} precision={0} disabled={readOnly}
+            hint={t('vehicleUi.settings.substeps.hint')} onChange={(n) => set({ substeps: Math.min(32, Math.max(1, Math.round(n))) })} />
+          <div className={styles.note}>{t('vehicleUi.limitation')}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Seed + approximate wind-model parameters, stored in the world document. */
 export function SimulationSettingsSection({ readOnly }: { readOnly: boolean }) {
   const t = useT();
@@ -108,6 +139,7 @@ export function SimulationSettingsSection({ readOnly }: { readOnly: boolean }) {
         {sim.humans && <div className={styles.note}>{t('humanUi.limitation')}</div>}
       </div>
       <PhysiologySettingsBlock readOnly={readOnly} />
+      <VehicleSettingsBlock readOnly={readOnly} />
     </Section>
   );
 }

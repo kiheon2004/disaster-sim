@@ -46,7 +46,7 @@ export function seriesRange(vs: readonly (readonly number[])[]): [number, number
 }
 
 /** One chart of one or more series of a person (time axis in s, value axis printed at both ends with its unit; NaN = gap). */
-function Chart({ title, unit, series, t, testId, label, empty }: { title: string; unit: string; series: { name: string; v: number[] }[]; t: number[]; testId: string; label?: (x: number) => string; empty: string }) {
+export function Chart({ title, unit, series, t, testId, label, empty }: { title: string; unit: string; series: { name: string; v: number[] }[]; t: number[]; testId: string; label?: (x: number) => string; empty: string }) {
   const r = seriesRange(series.map((s) => s.v));
   if (t.length < 2 || !r) {
     return (

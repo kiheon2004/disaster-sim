@@ -24,6 +24,7 @@ import styles from './ResultsPanel.module.css';
 import { CelestialSummary, celestialObjects } from './CelestialResults';
 import { HumanSummary, humanResultsJson } from './HumanResults';
 import { PhysiologySummary, physiologyResultsJson } from './PhysiologyResults';
+import { VehicleSummary, vehicleResultsJson } from './VehicleResults';
 
 const PAGE = 400;
 
@@ -103,7 +104,9 @@ function ResultsDialog() {
     const head = ['time_s', 'object_id', 'object_name', 'object_type', 'component', 'event', 'cause', 'x', 'y', 'z', 'local_wind_ms', 'global_wind_ms', 'force_N', 'damage_before', 'damage_after', 'shadow_source', 'hazard', 'ground_accel_g', 'response', 'water_depth_m', 'flow_speed_ms', 'exposure_s', 'damage_state', 'origin', 'damage_wind', 'damage_earthquake', 'damage_flood', 'damage_ground', 'source',
       'failure', 'chain_trigger', 'chain_root', 'chain_depth', 'secondary_striker', 'secondary_source', 'secondary_member',
       'human_segment', 'human_impulse_Ns', 'human_dv_ms', 'human_decel_lower_bound_ms2', 'human_risk_index', 'human_level', 'human_partner', 'human_posture',
-      'physio_kind', 'physio_from', 'physio_to', 'physio_value', 'physio_causes'];
+      'physio_kind', 'physio_from', 'physio_to', 'physio_value', 'physio_causes',
+      // Phase 35 (appended — earlier columns keep their order): vehicle collision / rollover / damage / ejection / stall detail.
+      'vehicle_kind', 'vehicle_partner', 'vehicle_partner_kind', 'vehicle_dv_ms', 'vehicle_closing_ms', 'vehicle_impulse_Ns', 'vehicle_energy_J', 'vehicle_level'];
     const rows = events.map((e) => [
       e.time.toFixed(2), e.objectId, objects[e.objectId] ? displayName(objects[e.objectId], t) : '', e.objectType, e.componentId ?? '', e.eventType, e.cause,
       ...e.worldPosition.map((v) => v.toFixed(2)), e.localWindSpeed.toFixed(2), e.globalWindSpeed.toFixed(2), e.force.toFixed(0),
@@ -114,6 +117,7 @@ function ResultsDialog() {
       e.failure ?? '', e.chain?.trigger ?? '', e.chain?.root ?? '', e.chain?.depth ?? '', e.secondary?.striker ?? '', e.secondary?.source ?? '', e.secondary?.member ?? '',
       e.human?.segment ?? '', e.human?.impulse?.toFixed(2) ?? '', e.human?.dv?.toFixed(3) ?? '', e.human?.decel?.toFixed(1) ?? '', e.human?.index?.toFixed(3) ?? '', e.human?.level ?? '', e.human?.partner ?? '', e.human?.posture ?? '',
       e.physio?.kind ?? '', e.physio?.from ?? '', e.physio?.to ?? '', e.physio && Number.isFinite(e.physio.value) ? +e.physio.value.toPrecision(6) : '', e.physio?.causes ?? '',
+      e.vehicle?.kind ?? '', e.vehicle?.partner ?? '', e.vehicle?.partnerKind ?? '', ...[e.vehicle?.dv, e.vehicle?.closing, e.vehicle?.impulse, e.vehicle?.energy].map((x) => (x !== undefined && Number.isFinite(x) ? +x.toPrecision(6) : '')), e.vehicle?.level ?? '',
     ].map((v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v)).join(','));
     download(`${name || 'simulation'}-damage-events.csv`, [head.join(','), ...rows].join('\n'), 'text/csv');
   };
@@ -131,6 +135,7 @@ function ResultsDialog() {
     celestial: useSimStore.getState().celestial ? { ...useSimStore.getState().celestial, model: 'Newtonian softened point masses (real G); educational capture radius; no general relativity', units: { mass: 'kg', length: 'm', time: 's', energy: 'J', impulse: 'N·s' } } : undefined, celestialObjects: celestialObjects(),
     humans: humanResultsJson(),
     physiology: physiologyResultsJson(),
+    vehicles: vehicleResultsJson(),
     milestones, models: modelsUsed(runEvents.map((e) => e.type), useWorldStore.getState().doc.settings.simulation.interactions?.enabled ?? true).map((id) => MODELS[id]),
   }, null, 2), 'application/json');
 
@@ -165,6 +170,7 @@ function ResultsDialog() {
           <CelestialSummary t={t} name={name} />
           <HumanSummary t={t} name={name} />
           <PhysiologySummary t={t} name={name} />
+          <VehicleSummary t={t} name={name} />
           <ClimateSummary t={t} name={name} />
           <FireSummary t={t} name={name} />
           <StructureSummary t={t} name={name} />

@@ -8,6 +8,13 @@ import { HUMAN_PRESETS, humanPreset, type HumanPresetId } from '@/human/presets'
 import { aggregateHumans, humanCsv, humanEntities, humanJson, humanRow } from '@/simulation/human/summary';
 import { PHYSIO_PRESETS, physioPreset, type PhysioPresetId } from '@/physiology/presets';
 import { aggregatePhysio, physioCsv, physioEntities, physioJson, physioRow } from '@/simulation/physiology/summary';
+import { aggregateVehicles, vehicleCsv, vehicleEntities, vehicleJson, vehicleRow } from '@/simulation/vehicle/summary';
+import { VEHICLE_PRESETS, vehiclePreset, type VehiclePresetId } from '@/vehicle/presets';
+import { clearLiveInput, enableLiveInput, setLiveInput, startAutopilot, stopAutopilot } from '@/simulation/vehicle/control';
+import type { ControlInput, VehicleSettings } from '@/vehicle/settings';
+import { buildWorld, type DemoObject } from '@/human/demos';
+import { getActiveAdapter } from '@/rendering/sim/renderStats';
+import type { EventSpec } from '@/events/specs';
 import { createInstance } from '@/phenomena/schedule';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import { parseCommands } from '@/commands/RuleBasedParser';
@@ -279,6 +286,101 @@ export function installDevtools() {
         useWorldStore.getState().replaceDocument(doc);
         useWorldStore.setState({ past: [], future: [] });
         return true;
+      },
+    },
+    /** Phase 35: vehicles of the run (rows / CSV / JSON as exported) and the live-input API (same path as the UI and keyboard). */
+    vehicleLib: {
+      cars: () => { const rt = simulationController.getRuntime(); return rt ? vehicleEntities(rt.entities.values()).map((e) => vehicleRow(e, simulationController.getPhysics())) : []; },
+      row: (id: string) => { const e = simulationController.getRuntime()?.entities.get(id); return e?.vehicle ? vehicleRow(e as Parameters<typeof vehicleRow>[0], simulationController.getPhysics()) : null; },
+      aggregate: () => { const rt = simulationController.getRuntime(); return rt?.vehicles ? aggregateVehicles(rt.entities.values(), simulationController.getPhysics()) : null; },
+      csv: () => { const rt = simulationController.getRuntime(); return rt ? vehicleCsv(rt.entities.values(), useSimStore.getState().damageEvents, simulationController.getTime(), simulationController.getPhysics()) : ''; },
+      json: () => { const rt = simulationController.getRuntime(); return rt ? vehicleJson(rt.entities.values(), useSimStore.getState().damageEvents, rt.vehicles, simulationController.getPhysics()) ?? null : null; },
+      /** JSON-safe copy of one car's raw vehicle state (null when it has none). */
+      inspect: (id: string) => {
+        const e = simulationController.getRuntime()?.entities.get(id);
+        const v = e?.vehicle;
+        if (!v) return null;
+        return JSON.parse(JSON.stringify({ id, level: v.level, variant: v.variant, controls: v.controls, live: v.live, base: v.base, autopilot: v.autopilot, avail: v.avail, damage: v.damage, rollover: v.rollover,
+          ltr: v.ltr, peakLtr: v.peakLtr, accel: v.accel, energy: v.energy, dyn: { ...v.dyn, wheels: v.dyn.wheels }, occupants: v.occupants, episodes: v.episodes, open: [...v.open.values()],
+          stalled: v.stalled, frozen: v.frozen, pose: e.pose, series: v.series ? { dt: v.series.dt, n: v.series.t.length } : null }));
+      },
+      setLive: (id: string, input: ControlInput) => setLiveInput(simulationController, id, input),
+      enableLive: (id: string) => enableLiveInput(simulationController, id),
+      clearLive: (id: string) => clearLiveInput(simulationController, id),
+      startAutopilot: (id: string, target?: { x: number; z: number; speed?: number }) => startAutopilot(simulationController, id, target),
+      stopAutopilot: (id: string) => stopAutopilot(simulationController, id),
+      /** Phase 35 presets: id, seed, simulated time and i18n keys of each. */
+      presets: VEHICLE_PRESETS.map((p) => ({ id: p.id, seed: p.seed, seconds: p.seconds, keys: p.keys })),
+      listPresets: () => VEHICLE_PRESETS.map((p) => p.id),
+      /** Replace the world with a preset's world, its events as experiment instances (no undo history). */
+      loadPreset: (id: VehiclePresetId) => {
+        const p = vehiclePreset(id);
+        if (!p) return false;
+        const { doc, events } = p.build();
+        const instances: PhenomenonInstance[] = [];
+        for (const ev of events) instances.push(createInstance(ev.event, instances, ev));
+        doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+        useEditorStore.getState().select(null);
+        useWorldStore.getState().replaceDocument(doc);
+        useWorldStore.setState({ past: [], future: [] });
+        return true;
+      },
+      /**
+       * Replace the world with a scene (verification fallback when no preset fits): objects placed on the terrain (optional
+       * shore: height min(max, max(0, (z0 − z)·k)) — rising to −z), the vehicle settings with per-car entries keyed by the
+       * index of the car in `objects` (ids are assigned here), people referenced by their index too, events as experiment
+       * instances. Returns the object ids in the order of `objects`.
+       */
+      loadScene: (sc: { objects: DemoObject[]; vehicles?: Omit<VehicleSettings, 'cars'> & { cars?: Record<number, Record<string, unknown>> } | null; shore?: { z0: number; k: number; max: number }; events?: EventSpec[]; extended?: boolean }) => {
+        const sh = sc.shore;
+        const doc = buildWorld({ objects: sc.objects, seed: 3599, name: 'vehicle scene', ...(sh ? { height: (_x: number, z: number) => Math.min(sh.max, Math.max(0, (sh.z0 - z) * sh.k)) } : {}) });
+        if (sc.extended === false) delete doc.settings.simulation.humans;
+        // buildWorld numbers ids per type in insertion order — map them back to the input order.
+        const ids: string[] = [];
+        const byType = new Map<string, string[]>();
+        for (const o of Object.values(doc.objects)) byType.set(o.type, [...(byType.get(o.type) ?? []), o.id]);
+        const used = new Map<string, number>();
+        for (const o of sc.objects) { const k = used.get(o.type) ?? 0; used.set(o.type, k + 1); ids.push(byType.get(o.type)![k]); }
+        if (sc.vehicles) {
+          const ref = (x: unknown): unknown => (typeof x === 'number' ? ids[x] : x);
+          const cars: Record<string, unknown> = {};
+          for (const [k, c] of Object.entries(sc.vehicles.cars ?? {})) {
+            const occ = (c.occupants as { human: unknown }[] | undefined)?.map((o) => ({ ...o, human: ref(o.human) }));
+            cars[ids[Number(k)]] = { ...c, ...(occ ? { occupants: occ } : {}) };
+          }
+          doc.settings.simulation.vehicles = { ...sc.vehicles, model: 'dynamics', ...(Object.keys(cars).length ? { cars } : {}) } as VehicleSettings;
+        }
+        const instances: PhenomenonInstance[] = [];
+        for (const ev of sc.events ?? []) instances.push(createInstance(ev.event, instances, ev));
+        doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+        useEditorStore.getState().select(null);
+        useWorldStore.getState().replaceDocument(doc);
+        useWorldStore.setState({ past: [], future: [] });
+        return ids;
+      },
+      /** Largest axis scale of each instance the simulation renderer draws for an object (0 = hidden). */
+      drawnScales: (id: string) => getActiveAdapter()?.instanceScales(id) ?? null,
+      /** World matrices (column-major 16) of the vehicle layer's tyre instances, 4 per wheeled car in entity order. */
+      tyres: () => {
+        const r3f = (window as unknown as { __r3f?: { get(): { scene: import('three').Object3D } } }).__r3f;
+        const g = r3f?.get().scene.getObjectByName('vehicle-wheels');
+        const m = g?.children[0] as unknown as { count: number; instanceMatrix: { array: ArrayLike<number> } } | undefined;
+        if (!m) return [];
+        const out: number[][] = [];
+        for (let i = 0; i < m.count; i++) out.push(Array.from(m.instanceMatrix.array).slice(16 * i, 16 * i + 16));
+        return out;
+      },
+      /** Instances drawn by the vehicle layer (wheels, spokes, seat markers, debug markers, debug line vertices). */
+      layer: () => {
+        const r3f = (window as unknown as { __r3f?: { get(): { scene: import('three').Object3D } } }).__r3f;
+        const out: Record<string, number> = {};
+        r3f?.get().scene.getObjectByName('vehicle-layer')?.traverse((o) => {
+          const m = o as unknown as { isInstancedMesh?: boolean; count: number; isLineSegments?: boolean; geometry?: { drawRange: { count: number } } };
+          const key = o.parent?.name ?? 'vehicle-layer';
+          if (m.isInstancedMesh) out[key] = (out[key] ?? 0) + m.count;
+          else if (m.isLineSegments && m.geometry) out[`${key}:lines`] = m.geometry.drawRange.count;
+        });
+        return out;
       },
     },
     volcanoLib: {

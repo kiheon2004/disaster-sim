@@ -3,6 +3,7 @@ import { GravityObjectSection, GravityProbeSection } from './GravityInspector';
 import { CelestialObjectSection, CelestialProbeSection } from './CelestialInspector';
 import { HumanObjectSection } from './HumanInspector';
 import { PhysiologyObjectSection } from './PhysiologyInspector';
+import { VehicleObjectSection } from './VehicleInspector';
 import { countRender } from '@/utils/renderCounter';
 import { useMemo } from 'react';
 import { useT } from '@/i18n/i18n';
@@ -57,6 +58,7 @@ export function InspectorPanel() {
           {inSim && <LiveStatusSection id={obj.id} />}
           {inSim && <HumanObjectSection id={obj.id} />}
           {inSim && <PhysiologyObjectSection id={obj.id} />}
+          {inSim && <VehicleObjectSection id={obj.id} />}
           {inSim && <QuakeLiveSection id={obj.id} />}
           {inSim && <FloodLiveSection id={obj.id} />}
           {inSim && <DeformationLiveSection id={obj.id} />}
@@ -118,6 +120,7 @@ function NoSelection() {
     ['G', 'shortcut.snap'],
     ['[ / ]', 'shortcut.brush'],
     ['Esc', 'shortcut.escape'],
+    ['W A S D / ↑ ← ↓ →, X, 1–4', 'vehicleUi.shortcut.drive'],
   ];
 
   return (
