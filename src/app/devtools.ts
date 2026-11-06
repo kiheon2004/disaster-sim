@@ -6,6 +6,8 @@ import { celestialOutlook } from '@/celestial/outlook';
 import { celestialCsv } from '@/ui/Results/CelestialResults';
 import { HUMAN_PRESETS, humanPreset, type HumanPresetId } from '@/human/presets';
 import { aggregateHumans, humanCsv, humanEntities, humanJson, humanRow } from '@/simulation/human/summary';
+import { PHYSIO_PRESETS, physioPreset, type PhysioPresetId } from '@/physiology/presets';
+import { aggregatePhysio, physioCsv, physioEntities, physioJson, physioRow } from '@/simulation/physiology/summary';
 import { createInstance } from '@/phenomena/schedule';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import { parseCommands } from '@/commands/RuleBasedParser';
@@ -234,6 +236,40 @@ export function installDevtools() {
       /** Replace the world with a preset's world, its events as experiment instances (no undo history). */
       loadPreset: (id: HumanPresetId) => {
         const p = humanPreset(id);
+        if (!p) return false;
+        const { doc, events } = p.build();
+        const instances: PhenomenonInstance[] = [];
+        for (const ev of events) instances.push(createInstance(ev.event, instances, ev));
+        doc.scenario.experiment = { ...doc.scenario.experiment, instances };
+        useEditorStore.getState().select(null);
+        useWorldStore.getState().replaceDocument(doc);
+        useWorldStore.setState({ past: [], future: [] });
+        return true;
+      },
+    },
+    /** Phase 34 physiology (browser verification): the run's physiology rows / aggregate / CSV / JSON, a person's snapshot, the presets. */
+    physioLib: {
+      people: () => { const rt = simulationController.getRuntime(); return rt ? physioEntities(rt.entities.values()).map(physioRow) : []; },
+      aggregate: () => { const rt = simulationController.getRuntime(); return rt?.physiology ? aggregatePhysio(rt.entities.values()) : null; },
+      csv: () => { const rt = simulationController.getRuntime(); return rt ? physioCsv(rt.entities.values(), useSimStore.getState().damageEvents, simulationController.getTime()) : ''; },
+      json: () => { const rt = simulationController.getRuntime(); return rt ? physioJson(rt.entities.values(), useSimStore.getState().damageEvents, rt.physiology) ?? null : null; },
+      /** JSON-safe copy of one person's physiology (or of every person's when id is omitted); null without physiology. */
+      snapshot: (id?: string) => {
+        const rt = simulationController.getRuntime();
+        if (!rt?.physiology) return null;
+        const one = (e: ReturnType<typeof physioEntities>[number]) => {
+          const pe = e.physio;
+          return JSON.parse(JSON.stringify({ id: e.id, row: physioRow(e), cfg: pe.cfg, s: { ...pe.s, flags: [...pe.s.flags] }, provenance: pe.provenance, sample: pe.sample, couple: pe.couple, frozen: pe.frozen, series: pe.series ? { dt: pe.series.dt, n: pe.series.t.length } : null, human: e.human ? { posture: e.human.posture, standing: e.human.standing, fallCause: e.human.fallCause, impacts: e.human.impacts, collapsed: e.human.collapsed } : null }));
+        };
+        const all = physioEntities(rt.entities.values());
+        if (id !== undefined) { const e = all.find((x) => x.id === id); return e ? one(e) : null; }
+        return all.map(one);
+      },
+      compartments: () => { const rt = simulationController.getRuntime(); return rt?.physiology ? [...rt.physiology.compartments.values()].map((c) => ({ ...c, ledger: { ...c.ledger } })) : []; },
+      presets: PHYSIO_PRESETS.map((p) => ({ id: p.id, seed: p.seed, seconds: p.seconds, keys: p.keys })),
+      /** Replace the world with a preset's world, its events as experiment instances (no undo history). */
+      loadPreset: (id: PhysioPresetId) => {
+        const p = physioPreset(id);
         if (!p) return false;
         const { doc, events } = p.build();
         const instances: PhenomenonInstance[] = [];

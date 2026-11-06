@@ -18,6 +18,10 @@ import { useSimStore } from '@/simulation/simStore';
 import { simulationController } from '@/simulation/SimulationController';
 import { INJURY_LEVELS } from '@/human/injury';
 import { LEVEL_COLORS } from '@/ui/Inspector/HumanInspector';
+import { PHYSIO_METRICS, type PhysioMetric } from '@/rendering/viewStore';
+import { AIRWAY_COLOR, NOT_COMPUTED_COLOR, PHYSIO_SCALES, scaleGradient } from '@/rendering/physiology/PhysiologyLayer';
+import { capLabel } from '@/ui/Inspector/PhysiologyInspector';
+import { CAPACITY_LEVELS } from '@/physiology/engine';
 import { FUEL_GRADIENT, HRR_GRADIENT, ROOM_COLORS, STATE_COLORS, VISIBILITY_GRADIENT } from '@/rendering/fire/fireColors';
 import { FIRE_STATES } from '@/fire/FireWorld';
 import { GLOW_GRADIENT, OVERLAY_SCALE, overlayGradient } from '@/rendering/volcano/volcanoColors';
@@ -297,6 +301,7 @@ export function OverlayToggles() {
       <GravityToggles />
       <CelestialToggles />
       <HumanToggles />
+      <PhysiologyToggles />
       <ClimateToggles />
       <FireToggles />
       <StructureToggles />
@@ -511,6 +516,60 @@ function HumanToggles() {
             </div>
           )}
           <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('humanUi.overlay.note')}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Physiology overlay (Phase 34): shown while a run has physiology. One metric at a time on a fixed, non-clinical scale. */
+function PhysiologyToggles() {
+  const t = useT();
+  const version = useSimStore((s) => s.runtimeVersion);
+  const viz = useViewStore((s) => s.physioViz);
+  const set = useViewStore.getState().setPhysioViz;
+  const live = useMemo(() => !!simulationController.getRuntime()?.physiology, [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!live) return null;
+  const sc = PHYSIO_SCALES[viz.metric];
+  const lab = (v: number) => (viz.metric === 'capacity' ? capLabel(t, CAPACITY_LEVELS[v]) : `${v.toFixed(sc.digits)}`);
+  return (
+    <>
+      <Toggle checked={viz.enabled} onChange={(b) => set({ enabled: b })} label={t('physioUi.overlay')} />
+      {viz.enabled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 38 }} data-testid="physio-overlay">
+          <select value={viz.metric} onChange={(e) => set({ metric: e.target.value as PhysioMetric })} aria-label={t('physioUi.overlay.metric')} data-testid="physio-metric" style={{ fontSize: 11.5 }}>
+            {PHYSIO_METRICS.map((m) => <option key={m} value={m}>{t(`physioUi.metric.${m}` as MessageKey)}</option>)}
+          </select>
+          <div data-testid="physio-legend">
+            {sc.discrete ? (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {sc.stops.map(([v, c]) => (
+                  <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-1)', fontSize: 11 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />{lab(v)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div style={{ height: 6, borderRadius: 3, background: scaleGradient(sc) }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
+                  {sc.stops.map(([v]) => <span key={v}>{lab(v)}</span>)}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-2)' }}>{t('physioUi.overlay.unit', { u: sc.unit || t('physioUi.overlay.dimensionless') })}</div>
+              </>
+            )}
+            <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-2)', lineHeight: 1.35, marginTop: 3 }}>{t(`physioUi.metric.${viz.metric}.meaning` as MessageKey)}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)', fontSize: 10.5, marginTop: 3 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: NOT_COMPUTED_COLOR, border: '1px solid var(--text-3)' }} />{t('physioUi.overlay.notComputed')}
+            </span>
+          </div>
+          <Toggle checked={viz.airway} onChange={(b) => set({ airway: b })} label={t('physioUi.overlay.airway')} />
+          {viz.airway && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)', fontSize: 10.5 }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', border: `2px solid ${AIRWAY_COLOR}` }} />{t('physioUi.overlay.airwayLegend')}
+            </span>
+          )}
+          <span style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{t('physioUi.overlay.note')}</span>
         </div>
       )}
     </>

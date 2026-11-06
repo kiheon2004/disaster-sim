@@ -223,6 +223,16 @@ export interface HumanViz {
   trail: boolean;
 }
 
+/** Physiology overlay (Phase 34, physiology runs only; render-only — reads e.physio, never writes): one marker per person
+ * coloured by the chosen metric, an airway-under-water ring. */
+export const PHYSIO_METRICS = ['core', 'strain', 'supply', 'smoke', 'airway', 'deficit', 'fatigue', 'capacity'] as const;
+export type PhysioMetric = (typeof PHYSIO_METRICS)[number];
+export interface PhysioViz {
+  enabled: boolean;
+  metric: PhysioMetric;
+  airway: boolean;
+}
+
 /** Gravity views (Phase 31): field arrows, a ground / building overlay on fixed SI legends, the local sources. */
 export interface GravityViz {
   overlay: import('./gravity/gravityColors').GravityOverlay;
@@ -314,6 +324,8 @@ interface ViewState {
   setCelestialViz: (patch: Partial<CelestialViz>) => void;
   humanViz: HumanViz;
   setHumanViz: (patch: Partial<HumanViz>) => void;
+  physioViz: PhysioViz;
+  setPhysioViz: (patch: Partial<PhysioViz>) => void;
   /** Member picked in simulation mode (structural inspector, Phase 25). */
   simMember: { owner: string; member: number } | null;
   setSimMember: (m: { owner: string; member: number } | null) => void;
@@ -380,6 +392,8 @@ export const useViewStore = create<ViewState>((set) => ({
   setCelestialViz: (patch) => set((s) => ({ celestialViz: { ...s.celestialViz, ...patch } })),
   humanViz: { enabled: false, com: true, support: true, gravity: true, velocity: true, contact: true, segments: true, trail: true },
   setHumanViz: (patch) => set((s) => ({ humanViz: { ...s.humanViz, ...patch } })),
+  physioViz: { enabled: false, metric: 'core', airway: true },
+  setPhysioViz: (patch) => set((s) => ({ physioViz: { ...s.physioViz, ...patch } })),
   simMember: null,
   setSimMember: (simMember) => set({ simMember }),
   groundPick: null,
