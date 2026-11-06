@@ -52,6 +52,17 @@ describe('vehicle dynamics in the simulation', () => {
     b.unload();
   });
 
+  it('first step (found by the Chrome check): the wheel rays see the ground from the first step (fresh colliders); a parked car\'s energy residual stays < 1 % of its energy', async () => {
+    const c = await load(world([{ x: 0, z: 0 }], DYN));
+    const e = cars(c)[0], v = e.vehicle!;
+    c.advance(1 / 60);
+    expect(v.dyn.touching).toBe(4);
+    expect(v.dyn.springEnergy).toBeGreaterThan(0);
+    c.advance(10);
+    expect(Math.abs(v.energy.residual)).toBeLessThan(0.01 * Math.abs(v.energy.E0));
+    c.unload();
+  });
+
   it('static loads (§71): parked on flat ground ΣF_z = m g, each wheel the statics of the COM; no creep in 10 s', async () => {
     const c = await load(world([{ x: 0, z: 0 }], DYN));
     const e = cars(c)[0], v = e.vehicle!;

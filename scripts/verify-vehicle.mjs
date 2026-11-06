@@ -57,6 +57,8 @@ const clickText = (re, root = 'body') => ev(([src, root]) => {
 }, [re.source, root]);
 const tr = (k, p) => ev(([k, p]) => (p ? window.__ds.tr(k).replace(/\{(\w+)\}/g, (_, n) => String(p[n])) : window.__ds.tr(k)), [k, p]);
 const text = (sel) => ev((sel) => document.querySelector(sel)?.textContent ?? '', sel);
+/** Text of the whole section around an element (its notes and sub-sections included). */
+const sectionText = (sel) => ev((sel) => document.querySelector(sel)?.parentElement?.textContent ?? '', sel);
 const has = (sel) => ev((sel) => !!document.querySelector(sel), sel);
 const glInfo = () => ev(() => { const g = window.__r3f.get().gl.info; return { geometries: g.memory.geometries, textures: g.memory.textures }; });
 async function view(x, z, h = 6, back = 9) {
@@ -80,7 +82,8 @@ const addObjects = (list) => ev((list) => {
 const O = (type, x, z, seed = 1, yaw = 0) => ({ type, seed, transform: { position: [x, 0, z], rotation: [0, yaw, 0], scale: [1, 1, 1] } });
 const scene = (sc) => ev((sc) => window.__ds.vehicleLib.loadScene(sc), sc);
 async function enterRun() {
-  if ((await inst()).length) await clickText(/^\s*실험 실행|Run experiment/);
+  // With experiment instances: the experiment run (schedule → events → play), as the bottom panel's run button does.
+  if ((await inst()).length) await ev(() => window.__ds.actions.runExperiment());
   else await ev(() => window.__ds.actions.enterSimulation());
   await page.waitForFunction(() => window.__ds.sim.isLoaded() && window.__ds.simStore.getState().status !== 'loading', { timeout: 180_000 });
 }
@@ -201,10 +204,12 @@ check('17 the seated person is not drawn standing (all instances scale 0); one s
 check('18 wheel layer: 4 tyres + 8 spoke bars for the one wheeled car (the rigid car draws none)', L17.found && L17.tyres === 4 && L17.spokes === 8, L17);
 await openSub('vehicleUi.inspect.energy');
 const en19 = await text('[data-testid="vehicle-energy"]');
-check('19 energy ledger: E, E0, ledger entries and residual computed (kJ shown), residual small when parked (< 5 % of |E0| + 2 kJ)', r9.E !== null && r9.E0 !== null && r9.residual !== null && Math.abs(r9.residual) < 0.05 * Math.abs(r9.E0) + 2000 && en19.includes('kJ') && en19.includes(await tr('vehicleUi.energy.residual')), { E: r9.E, E0: r9.E0, res: r9.residual });
+// A parked car only settles on its springs: every change of E is damper dissipation (in the ledger), so the residual is numerical —
+// 1 % of |E0| (≈ 85 J for the sedan, a tenth of the static spring energy Σ ½ k x² ≈ 0.88 kJ).
+check('19 energy ledger: E, E0, ledger entries and residual computed (kJ shown); parked, the residual is numerical only (< 1 % of |E0|)', r9.E !== null && r9.E0 !== null && r9.residual !== null && Math.abs(r9.residual) < 0.01 * Math.abs(r9.E0) && en19.includes('kJ') && en19.includes(await tr('vehicleUi.energy.residual')), { E: r9.E, E0: r9.E0, res: r9.residual });
 check('20 limitation and model-level lines in the inspector', (await text('[data-testid="vehicle-limitation"]')) === (await tr('vehicleUi.limitation')) && (await has('[data-testid="vehicle-levels"]')), '');
 await select(carR);
-const insp21 = await text('[data-testid="vehicle-object"]');
+const insp21 = await sectionText('[data-testid="vehicle-object"]');
 const r21 = await row(carR);
 check('21 rigid car: "rigid vehicle" model, no wheels table, wheels / gear / LTR not computed (null)', insp21.includes(await tr('vehicleUi.level.rigid')) && insp21.includes(await tr('vehicleUi.inspect.rigidNote')) && !(await has('[data-testid="vehicle-wheels"]')) && r21.wheels === null && r21.gear === null && r21.ltr === null, { w: r21.wheels, g: r21.gear });
 check('22 the rigid car has no live control section (only wheeled cars are drivable)', !(await has('[data-testid="vehicle-control"]')), '');
@@ -230,7 +235,11 @@ await atTime(7);
 const r25 = await row(car1);
 check('25 throttle → the car accelerates forward (> 3 m/s after 5 s), engine speed and gear computed', r25.speed > 3 && r25.engineRpm > 0 && r25.gear >= 1 && r25.controlSource === 'live', { v: r25.speed, rpm: r25.engineRpm, g: r25.gear });
 const insp26 = await text('[data-testid="vehicle-object"]');
-check('26 inspector follows the motion: speed in m/s and km/h, drive torque > 0', insp26.includes('km/h') && r25.driveTorque > 0, insp26.slice(0, 80));
+// Drive WORK, not the instantaneous torque: with the wheels spinning on grass the engine sits at its rev limiter, where the
+// delivered torque is zero in some steps (rev limiter, powertrain.ts) — the integrated drive work must still grow.
+await step(1);
+const r26 = await row(car1);
+check('26 inspector follows the motion: speed in m/s and km/h; drive work at the wheels grows while the throttle is held', insp26.includes('km/h') && r25.ledgerDrive > 0 && r26.ledgerDrive > r25.ledgerDrive, { w0: r25.ledgerDrive, w1: r26.ledgerDrive, kmh: insp26.includes('km/h') });
 const ty1 = await tyres();
 await step(0.37);
 const ty2 = await tyres();
@@ -330,20 +339,23 @@ await page.keyboard.press('Space');
 await wait(300);
 const st41b = await ev(() => window.__ds.simStore.getState().status);
 await ev(() => window.__ds.sim.pause());
-check('41 live control off: keys do nothing (live stays null); Space still toggles play / pause', l41 === null && st41a === 'paused' && st41b === 'running', { l41, st41a, st41b });
+// Space = play: 'running', or 'finished' at once when the clock is already past the planned end of this event-less run.
+check('41 live control off: keys do nothing (live stays null); Space still toggles play (paused → running / finished at the planned end)', l41 === null && st41a === 'paused' && (st41b === 'running' || st41b === 'finished'), { l41, st41a, st41b });
 await scanRaw('controls');
 
 // ══ 42–46: autopilot ═════════════════════════════════════════════════════════════════════
 const p42 = await ev((id) => [...window.__ds.sim.getRuntime().entities.get(id).pose.position], car1);
 const tgt = { x: p42[0] + 30, z: p42[2], speed: 6 };
 const ok42 = await ev(([id, t]) => window.__ds.vehicleLib.startAutopilot(id, t), [car1, tgt]);
-await wait(200);
+// The devtools call does not re-render React: one short step refreshes the inspector (it follows the sim time).
+await step(0.05);
 const r42 = await row(car1);
 check('42 autopilot to a typed point starts (inputs only): source "autopilot", 2 path points, inspector line', ok42 && r42.controlSource === 'autopilot' && r42.autopilot?.points === 2 && (await text('[data-testid="vehicle-object"]')).includes(await tr('vehicleUi.inspect.autopilot')), r42.autopilot);
 await step(40);
 const r43 = await row(car1);
 const d43 = Math.hypot(r43.position[0] - tgt.x, r43.position[2] - tgt.z);
-check('43 the autopilot drives to the point and stops there (≤ 6 m, |v| < 1 m/s, done)', d43 < 6 && Math.abs(r43.speed) < 1 && r43.autopilot?.done === true, { d43, v: r43.speed, ap: r43.autopilot });
+// The autopilot's own rule (VehicleSystem): target speed √(2·2.5·(d − 2)) → it stops ≈ 2 m before the end; done = d < 2.5 m and |v| < 0.3 m/s.
+check('43 the autopilot drives to the point and stops there (done: < 2.5 m from it, |v| < 0.3 m/s)', d43 < 2.5 && Math.abs(r43.speed) < 0.3 && r43.autopilot?.done === true, { d43, v: r43.speed, ap: r43.autopilot });
 check('44 stop autopilot removes it (source no longer autopilot)', (await ev((id) => window.__ds.vehicleLib.stopAutopilot(id), car1)) && (await row(car1)).autopilot === null, '');
 await ev(([id, t]) => window.__ds.vehicleLib.startAutopilot(id, t), [car1, { x: p42[0], z: p42[2], speed: 5 }]);
 await ev((id) => window.__ds.vehicleLib.enableLive(id), car1);
@@ -370,13 +382,13 @@ await wait(700);
 const L48 = await layer();
 await shot('48-overlay');
 check('47 overlay toggle present in the view options and switches the debug overlay on', ok47 && L48.debug, L48);
-check('48 debug overlay (car under throttle): contact points + COM (≥ 5 markers) and normal / suspension / tyre / velocity lines (≥ 13)', L48.marks >= 5 && L48.lines >= 2 * 13, L48);
+check('48 debug overlay (car under throttle): contact points + COM (≥ 5 markers) and normal / suspension / tyre / velocity lines (≥ 13)', L48.marks >= 5 && L48.lines >= 2 * 13, L48); // 4 contacts + COM; per wheel normal + strut + tyre (12 lines) + velocity = 13 lines
 const leg49 = await text('[data-testid="vehicle-legend"]');
 check('49 legend with units: kN for forces, m/s for velocity, kN·s for the impulse, slip colours, LTR scale', ['kN', 'm/s', 'kN·s', await tr('vehicleUi.legend.sliding'), await tr('vehicleUi.legend.grip')].every((s) => leg49.includes(s)), leg49.slice(0, 160));
 await overlaySwitch(await tr('vehicleUi.overlay.tyre'));
 await wait(400);
 const L50 = await layer();
-check('50 sub-toggle "tyre forces" off → fewer lines drawn', L50.lines < L48.lines, { before: L48.lines, after: L50.lines });
+check('50 sub-toggle "tyre forces" off → exactly the 4 tyre-force lines (8 vertices) fewer', L50.lines === L48.lines - 8, { before: L48.lines, after: L50.lines });
 await overlaySwitch(ovLabel);
 await wait(800);
 const L51 = await layer();
@@ -449,7 +461,7 @@ check('66 vehicleLib.csv / json equal the exported content (schema line, block)'
 await exitSim();
 
 // ══ 67–68: flood → engine stall ══════════════════════════════════════════════════════════
-const [floodCar] = await scene({ objects: [O('car', 0, 95, 1)], shore: { z0: 85, k: 0.1, max: 4 }, vehicles: { model: 'dynamics', cars: { 0: { program: [{ t: 0, gear: 'D', throttle: 0 }] } } }, events: [{ event: 'risingWater', boundary: 'S', level: 2.0, riseRate: 30, duration: 600, startTime: 0 }], extended: false });
+const [floodCar] = await scene({ objects: [O('car', 0, 95, 1)], shore: { z0: 85, k: 0.1, max: 4 }, vehicles: { model: 'dynamics', cars: { 0: { program: [{ t: 0, gear: 'D', throttle: 0 }] } } }, events: [{ event: 'risingWater', boundary: 'S', level: 2.0, riseRate: 10, duration: 600, startTime: 0 }], extended: false });
 await enterRun();
 await atTime(60);
 const r67 = await row(floodCar);
@@ -490,7 +502,9 @@ const ballMoved = Math.hypot(q72[2][0] - p72[2][0], q72[2][2] - p72[2][2]);
 check('72 the passive objects are dynamic rigid bodies with finite poses', dyn72.every(Boolean) && q72.flat().every(Number.isFinite), dyn72);
 await view(4, 66, 5, 10);
 await shot('73-passive');
-check('73 the ball rolls down the 5.7° slope (> 1 m in 6 s, toward +z)', ballMoved > 1 && q72[2][2] > p72[2][2], { ballMoved });
+// A solid sphere rolling without slip: a = (5/7) g sin θ, θ = atan 0.1 → d = ½ a t² ≈ 12.5 m in 6 s (± 10 %: settling, terrain quantization).
+const d73 = 0.5 * (5 / 7) * G * Math.sin(Math.atan(0.1)) * 36;
+check('73 the ball rolls down the 5.7° slope like a rolling solid sphere: d ≈ ½ (5/7) g sin θ t² (± 10 %), toward +z', Math.abs(ballMoved - d73) < 0.1 * d73 && q72[2][2] > p72[2][2], { ballMoved, expected: d73 });
 await exitSim();
 
 // ══ 74–75: presets (or the devtools scene fallback) ══════════════════════════════════════

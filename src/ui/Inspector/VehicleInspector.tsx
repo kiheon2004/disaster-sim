@@ -87,9 +87,10 @@ export function VehicleObjectSection({ id }: { id: EntityId }) {
     [t('vehicleUi.inspect.accel'), r.accelLong === null ? nc : t('vehicleUi.inspect.accelLine', { a: fmt(r.accelLong, 2), l: fmt(r.accelLat ?? NaN, 2) })],
     [t('vehicleUi.inspect.yawRate'), r.yawRate === null ? nc : `${fmt(r.yawRate * DEG, 1)} °/s`],
     [t('vehicleUi.inspect.rollPitch'), `${fmt(r.roll * DEG, 1)}° / ${fmt(r.pitch * DEG, 1)}°`],
-    [t('vehicleUi.inspect.inputs'), t('vehicleUi.inspect.inputsLine', { th: fmt(r.throttle * 100, 0), br: fmt(r.brake * 100, 0), st: fmt(r.steer, 2), g: r.gearSelector })],
-    [t('vehicleUi.inspect.handbrake'), yn(r.handbrake)],
-    [t('vehicleUi.inspect.source'), sourceLabel(t, r.controlSource)],
+    // A rigid (Level 1) car takes no inputs: the vehicle system never resolves its controls.
+    [t('vehicleUi.inspect.inputs'), r.level !== 'vehicle' ? nc : t('vehicleUi.inspect.inputsLine', { th: fmt(r.throttle * 100, 0), br: fmt(r.brake * 100, 0), st: fmt(r.steer, 2), g: r.gearSelector })],
+    [t('vehicleUi.inspect.handbrake'), r.level !== 'vehicle' ? nc : yn(r.handbrake)],
+    [t('vehicleUi.inspect.source'), r.level !== 'vehicle' ? nc : sourceLabel(t, r.controlSource)],
     [t('vehicleUi.inspect.gear'), r.gear === null ? nc : t('vehicleUi.inspect.gearLine', { g: r.gear, rpm: fmt(r.engineRpm!, 0), tq: fmt(r.engineTorque!, 0) })],
     [t('vehicleUi.inspect.steerAngle'), r.steerAngle === null ? nc : `${fmt(r.steerAngle * DEG, 1)}°`],
     [t('vehicleUi.inspect.torque'), r.driveTorque === null ? nc : t('vehicleUi.inspect.torqueLine', { d: fmt(r.driveTorque, 0), b: fmt(r.brakeTorque!, 0) })],

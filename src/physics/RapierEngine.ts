@@ -116,6 +116,7 @@ export class RapierEngine implements PhysicsEngine {
    * four slabs around it carrying the y = 0 surroundings.
    */
   setTerrain(terrain: TerrainColliderDesc | null) {
+    this.queriesStale = true;
     const world = this.w();
     if (this.ground) world.removeRigidBody(this.ground);
     const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
@@ -173,6 +174,9 @@ export class RapierEngine implements PhysicsEngine {
     const w = this.w();
     const ray = new RAPIER.Ray({ x: origin[0], y: origin[1], z: origin[2] }, { x: dir[0], y: dir[1], z: dir[2] });
     const ex = exclude !== null ? this.bodies.get(exclude) : undefined;
+    // The world's query structure only knows colliders after a step: until the world has stepped since a body or the terrain
+    // was added / removed, every collider is tested directly (the first step of a run would otherwise see no ground).
+    if (this.queriesStale) return this.castRayDirect(ray, origin, dir, maxDist, ex, skip);
     const pred = skip
       ? (c: RAPIER.Collider) => {
           const p = c.parent();
@@ -196,6 +200,28 @@ export class RapierEngine implements PhysicsEngine {
     };
   }
 
+  private queriesStale = true;
+
+  private castRayDirect(ray: RAPIER.Ray, origin: Vec3, dir: Vec3, maxDist: number, ex: RAPIER.RigidBody | undefined, skip?: (u: BodyUserData) => boolean): RayHit | null {
+    let best: { t: number; n: { x: number; y: number; z: number }; c: RAPIER.Collider } | null = null;
+    this.w().forEachCollider((c) => {
+      const p = c.parent();
+      if (p && ex && p.handle === ex.handle) return;
+      if (p && skip) {
+        const u = this.userData.get(p.handle);
+        if (u && skip(u)) return;
+      }
+      const hit = c.castRayAndGetNormal(ray, maxDist, true);
+      if (hit && (best === null || hit.timeOfImpact < best.t)) best = { t: hit.timeOfImpact, n: { x: hit.normal.x, y: hit.normal.y, z: hit.normal.z }, c };
+    });
+    if (best === null) return null;
+    const { t, n, c } = best as { t: number; n: { x: number; y: number; z: number }; c: RAPIER.Collider };
+    const parent = c.parent();
+    const isGround = !parent || (this.ground !== null && parent.handle === this.ground.handle);
+    const body = isGround ? null : parent!.handle;
+    return { toi: t, normal: [n.x, n.y, n.z], point: [origin[0] + dir[0] * t, origin[1] + dir[1] * t, origin[2] + dir[2] * t], body, user: body === null ? null : this.userData.get(body) ?? null };
+  }
+
   private w(): RAPIER.World {
     if (!this.world) throw new Error('PhysicsEngine not initialized');
     return this.world;
@@ -203,6 +229,7 @@ export class RapierEngine implements PhysicsEngine {
 
   createBody(desc: BodyDesc): BodyHandle {
     const world = this.w();
+    this.queriesStale = true;
     const bd = (desc.kind === 'fixed' ? RAPIER.RigidBodyDesc.fixed() : RAPIER.RigidBodyDesc.dynamic())
       .setTranslation(desc.position[0], desc.position[1], desc.position[2])
       .setRotation({ x: desc.quaternion[0], y: desc.quaternion[1], z: desc.quaternion[2], w: desc.quaternion[3] })
@@ -241,6 +268,7 @@ export class RapierEngine implements PhysicsEngine {
   }
 
   removeBody(h: BodyHandle) {
+    this.queriesStale = true;
     const b = this.bodies.get(h);
     if (!b || !this.world) return;
     for (let i = 0; i < b.numColliders(); i++) this.colliderBody.delete(b.collider(i).handle);
@@ -435,6 +463,7 @@ export class RapierEngine implements PhysicsEngine {
     const world = this.w();
     world.timestep = dt;
     world.step(this.events ?? undefined);
+    this.queriesStale = false;
     this.events?.drainCollisionEvents((c1, c2, started) => {
       const key = c1 < c2 ? `${c1}:${c2}` : `${c2}:${c1}`;
       if (started) {
