@@ -103,7 +103,8 @@ export const CIRCLE_R = 20;
 export const CIRCLE_V = 8;
 export const SLALOM = { x0: -80, pitch: 18, n: 8, offset: 2.5, speed: 8 } as const;
 export const WIND_SPEED = 25;
-export const QUAKE_PGA = 0.35 * EARTH_G;
+/** Peak ground acceleration of the earthquake presets — the event's `pga` is in g (not m/s²). */
+export const QUAKE_PGA = 0.35;
 export const BLAST = { energy: 2e8, near: 12, far: 30 } as const;
 export const MOON_G = 1.62;
 /** Final flood level (m) of the flood preset. */
@@ -228,7 +229,7 @@ export function vehicleDemo(id: VehiclePresetId, seed: number): VehicleDemo {
     // Earthquake + side wind + a blast while a car drives an autopilot lane and another is parked.
     case 'combined': return {
       doc: W([vcar(-80, 10, 1), vcar(0, -15, 2, Math.PI / 2), person(20, -25, 3)], [straight(-80, 95, 10, 8), PARKED]),
-      events: [quakeEvent(0.25 * EARTH_G, 12, 1), windEvent(20, 'N', 60), blastEvent(-10, -35, BLAST.energy, 6)],
+      events: [quakeEvent(0.25, 12, 1), windEvent(20, 'N', 60), blastEvent(-10, -35, BLAST.energy, 6)],
     };
   }
 }

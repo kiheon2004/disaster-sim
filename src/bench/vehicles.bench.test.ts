@@ -146,11 +146,11 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('vehicle long runs', ()
       slope: () => ({ doc: mk([car(0, 0, 1), car(8, 6, 2)], (i) => (i === 0 ? {} : { program: [{ t: 0, gear: 'D' }, { t: 5, throttle: 0.3 }, { t: 30, throttle: 0, brake: 1 }] }), slope), events: [] }),
       wind: () => ({ doc: mk([car(0, 0, 1)], () => ({ controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [{ event: 'wind', speed: 28, direction: 'E', duration: T, gustStrength: 0.3, rampDuration: 10, startTime: 0 } as EventSpec] }),
       flood: () => ({ doc: mk([car(0, 95, 1), car(10, 92, 2)], () => ({}), shore), events: [{ event: 'risingWater', boundary: 'S', level: 1.2, riseRate: 1, duration: T, startTime: 0 } as EventSpec] }),
-      earthquake: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2)], (i) => (i === 0 ? {} : { controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [{ event: 'earthquake', magnitude: 7, pga: 3, duration: 30, seed: 4, startTime: 5 } as unknown as EventSpec] }),
+      earthquake: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2)], (i) => (i === 0 ? {} : { controls: { gear: 'D', throttle: 0.2, steer: 0.5 } })), events: [{ event: 'earthquake', magnitude: 7, pga: 0.6, duration: 30, seed: 4, startTime: 5 } as unknown as EventSpec] }),
       crashDebris: () => ({ doc: mk([car(0, 0, 1), car(30, 0, 2, Math.PI)], () => ({ controls: { gear: 'D', throttle: 0.8 } })), events: [] }),
       combined: () => ({ doc: mk([car(0, 0, 1), car(10, 0, 2), person(5, 5, 3)], (i) => (i === 0 ? { controls: { gear: 'D', throttle: 0.2, steer: 0.5 } } : {})), events: [
         { event: 'wind', speed: 20, direction: 'E', duration: T, gustStrength: 0.3, rampDuration: 10, startTime: 0 } as EventSpec,
-        { event: 'earthquake', magnitude: 6.5, pga: 2, duration: 20, seed: 5, startTime: 60 } as unknown as EventSpec,
+        { event: 'earthquake', magnitude: 6.5, pga: 0.4, duration: 20, seed: 5, startTime: 60 } as unknown as EventSpec,
       ] }),
     };
     function mk(objs: DemoObject[], cfg: (i: number) => VehicleCar, height?: (x: number, z: number) => number): WorldDocument {

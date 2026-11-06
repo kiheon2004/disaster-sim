@@ -477,6 +477,8 @@ const EXPECT: Record<VehiclePresetId, (r: Run) => void> = {
   earthquake: (r) => {
     note('earthquake', { gm: [peak(r, 0, 'groundMotion'), peak(r, 1, 'groundMotion')], m: mass(r, 0), laneMax: Math.max(...r.samples.map((s) => Math.abs(s.cars[1].p[2] - 10))) });
     for (const k of [0, 1]) expect(peak(r, k, 'groundMotion')).toBeGreaterThan(0);
+    // The d'Alembert force is m |a_g|: on the scale of m g × PGA (0.35 g horizontal, vertical ½ of it) — the event's pga is in g.
+    for (const k of [0, 1]) expect(peak(r, k, 'groundMotion')).toBeLessThan(0.6 * mass(r, k) * g);
     for (const s of r.samples) {
       for (const cs of s.cars) expect(cs.roll).toBe('upright');
       expect(Math.abs(s.cars[1].p[2] - 10)).toBeLessThan(LANE_TOL);

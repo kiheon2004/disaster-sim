@@ -84,7 +84,7 @@ describe('vehicles and hazards', () => {
   });
 
   it('earthquake (§45): the ground-motion force reaches the car through its own source only; the parked car stays upright on its wheels at 0.3 g', async () => {
-    const c = await load(world([car(0, 0, 1)], {}, (ids) => ({ [ids[0]]: { controls: { gear: 'P', handbrake: true } } })), [{ event: 'earthquake', magnitude: 6.5, pga: 0.3 * g, duration: 10, seed: 3, startTime: 0 } as unknown as EventSpec]);
+    const c = await load(world([car(0, 0, 1)], {}, (ids) => ({ [ids[0]]: { controls: { gear: 'P', handbrake: true } } })), [{ event: 'earthquake', magnitude: 6.5, pga: 0.3, duration: 10, seed: 3, startTime: 0 } as unknown as EventSpec]);
     const e = of(c, 'car')[0];
     let gm = 0;
     for (let i = 0; i < 300; i++) { c.advance(1 / 60); gm = Math.max(gm, forcesAt(e, c.getStep() - 1).groundMotion); }
