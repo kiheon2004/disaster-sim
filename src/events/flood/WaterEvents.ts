@@ -17,13 +17,18 @@ import { DEFAULT_SOURCE_RADIUS, resolveRisingWater, type ResolvedRisingWater } f
 export class RainEvent implements SimulationEvent<RainEventSpec> {
   readonly id = createId('evt');
   readonly type = 'rain' as const;
-  readonly channel = 'rain';
+  /**
+   * Rain over the whole map is the weather: a new one replaces it (one channel). Phase 35.5: a rain cell over an area is an
+   * independent instance (its own channel) — several cells, and a cell under the map-wide rain, add their intensities.
+   */
+  readonly channel: string;
   readonly startTime: number;
   readonly duration: number;
 
   constructor(readonly spec: RainEventSpec, now: number) {
     this.startTime = spec.startTime ?? now;
     this.duration = spec.duration;
+    this.channel = spec.area ? `rain:${this.id}` : 'rain';
   }
 
   onStart({ env, time }: EventContext) {
@@ -37,6 +42,19 @@ export class RainEvent implements SimulationEvent<RainEventSpec> {
 
   onEnd({ env }: EventContext) {
     env.flood.forcing?.removeRain(this.id);
+  }
+
+  /** Phase 35.5 controls: the rain stops (water already on the ground stays) / pauses and resumes. */
+  stop(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  pause(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  resume(ctx: EventContext) {
+    this.onStart(ctx);
   }
 
   intensityAt(t: number): number {
@@ -90,6 +108,19 @@ export class RisingWaterEvent implements SimulationEvent<RisingWaterEventSpec> {
     env.flood.clearBoundary(this.spec.boundary, this.id);
   }
 
+  /** Phase 35.5 controls: stop = the edge reverts to its boundary condition; pause = the level holds where it is. */
+  stop(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  pause() {
+    // The scheduler stops calling update(): the edge keeps its current level.
+  }
+
+  resume() {
+    // update() continues from the paused local time (the scheduler shifts it).
+  }
+
   intensityAt(t: number): number {
     if (t < 0 || t > this.duration) return 0;
     const r = this.resolved;
@@ -126,6 +157,19 @@ export class WaterSourceEvent implements SimulationEvent<WaterSourceEventSpec> {
 
   onEnd({ env }: EventContext) {
     env.flood.forcing?.removeSource(this.id);
+  }
+
+  /** Phase 35.5 controls: the inflow stops / pauses and resumes. */
+  stop(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  pause(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  resume(ctx: EventContext) {
+    this.onStart(ctx);
   }
 
   intensityAt(t: number): number {

@@ -29,6 +29,7 @@ import { climate } from './climateDefinitions';
 import { atmosphere } from './atmosphereDefinitions';
 import { gravity } from './gravityDefinitions';
 import { celestial } from './celestialDefinitions';
+import { tornado } from './vortexDefinitions';
 
 /** Typed helper: keeps each definition's own spec type while registering it type-erased. */
 function implemented<S extends EventSpec>(d: ImplementedPhenomenon<S>): ImplementedPhenomenon<EventSpec> {
@@ -215,17 +216,14 @@ const terrainDeformation = implemented<TerrainDeformationSpec>({
   describe: (spec) => new TerrainDeformationEvent(spec, 0, 1).describe(),
 });
 
-export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate, gravity, celestial];
+export const IMPLEMENTED: ImplementedPhenomenon<EventSpec>[] = [wind, earthquake, rain, risingWater, waterSource, terrainDeformation, sinkhole, landslide, impact, blast, heatSource, fire, volcano, atmosphere, climate, gravity, celestial, tornado];
 
 // ── Planned (recognized, documented, NOT executed) ─────────────────────────
 
 const planned = (d: Omit<PlannedPhenomenon, 'status'>): PlannedPhenomenon => ({ ...d, status: 'planned' });
 
 export const PLANNED: PlannedPhenomenon[] = [
-  planned({
-    type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', channels: ['airflow', 'pressure', 'mechanicalForce'], models: [],
-    keywords: /토네이도|회오리|tornado|twister/, missing: ['missing.vortexWind', 'missing.pressureDrop'], reuses: ['reuse.windForce', 'reuse.windDamage', 'reuse.debris'],
-  }),
+  // Phase 35.5: the placed vortex wind is the implemented 'tornado' (vortexDefinitions.ts); its core pressure drop stays a limitation.
   // Phase 30: heatwaves / cold waves are the implemented 'climate' experiment (the planned 'extremeTemperature' entry was replaced).
   // Phase 29: removing / restoring air (with its composition) is the implemented 'atmosphere' experiment;
   // changing the O₂ FRACTION of the air and its effect on people (hypoxia, Phase 34) remain planned.

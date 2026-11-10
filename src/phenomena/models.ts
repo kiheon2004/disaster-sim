@@ -9,6 +9,11 @@ import type { ModelInfo } from './types';
 const m = (x: Omit<ModelInfo, 'validated'>): ModelInfo => ({ ...x, validated: false });
 
 export const MODELS: Record<string, ModelInfo> = {
+  vortexWind: m({
+    id: 'vortexWind', labelKey: 'model.vortexWind', level: 'empirical',
+    assumptions: ['model.as.hollandProfile', 'model.as.inflowAngle', 'model.as.powerLawProfile'],
+    units: ['m/s'], validRange: 'V_max 5–140 m/s, R 3–200 m', limitations: ['model.lim.noPressureDrop', 'model.lim.noCfd'], reference: 'docs/PHASE35_5_USER_EXPERIENCE.md §9',
+  }),
   windLoad: m({
     id: 'windLoad', labelKey: 'model.windLoad', level: 'physics',
     assumptions: ['model.as.quasiSteadyDrag', 'model.as.powerLawProfile'],

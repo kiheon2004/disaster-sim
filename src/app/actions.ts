@@ -345,8 +345,11 @@ const nextFrames = (n: number) => new Promise<void>((resolve) => {
   requestAnimationFrame(f);
 });
 
-/** Add events (now, or at their startTime) and play. Enters simulation mode if needed. */
-export async function runSimulation(specs: EventSpec[]) {
+/**
+ * Add events (now, or at their startTime) and play. Enters simulation mode if needed. `keys` (Phase 35.5) name the
+ * instances (experiment ids) — otherwise each spec becomes "<type>#<n>".
+ */
+export async function runSimulation(specs: EventSpec[], keys?: readonly string[]) {
   if (useEditorStore.getState().mode === 'editor') await enterSimulation();
   if (!simulationController.isLoaded()) return;
   // Ground-changing phenomena: build the runtime terrain meshes / shaders before the clock starts
@@ -355,7 +358,7 @@ export async function runSimulation(specs: EventSpec[]) {
     simulationController.prepareGround(specs.some((s) => FIELD_EVENTS.has(s.event)));
     await nextFrames(2);
   }
-  for (const s of specs) simulationController.addEvent(s);
+  specs.forEach((s, k) => simulationController.addEvent(s, { key: keys?.[k] }));
   simulationController.play();
 }
 
@@ -425,7 +428,7 @@ export async function runExperiment() {
     return;
   }
   applyVisualization(exp.instances);
-  await runSimulation(sched.items.map((r) => r.spec));
+  await runSimulation(sched.items.map((r) => r.spec), sched.items.map((r) => r.instance.id));
 }
 
 export interface ComparisonRun {

@@ -29,6 +29,13 @@ export class WindField {
   /** Ground the height profile is measured from (null = flat ground at y = 0). */
   terrain: TerrainSampler | null = null;
   terrainModifier: TerrainWindModifier | null = null;
+  /** Phase 35.5: placed vortices (tornado-scale) whose winds add to this global wind (written by their events). */
+  readonly vortices: import('@/vortex/model').VortexState[] = [];
+
+  /** Any wind at all: the global wind or a vortex. */
+  get blowing(): boolean {
+    return this.baseSpeed > 0.01 || this.vortices.length > 0;
+  }
 
   private flowBearing = NaN;
   private flowVec: Vec3 = [0, 0, 0];

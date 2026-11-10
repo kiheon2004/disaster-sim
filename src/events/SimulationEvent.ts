@@ -26,6 +26,14 @@ export interface SimulationEvent<TSpec extends EventSpec = EventSpec> {
   onStart?(ctx: EventContext): void;
   update(ctx: EventContext, localTime: number, dt: number): void;
   onEnd?(ctx: EventContext, reason: 'finished' | 'superseded'): void;
+  /**
+   * Phase 35.5 per-instance controls (optional — only sustained sources have them). `stop` ends the source early (what it
+   * already did to the world stays); `pause` switches it off and `resume` back on, `shift` = total seconds paused so far
+   * (the source continues from where it was). An instance released all at once (a blast wave, a meteor) has none.
+   */
+  stop?(ctx: EventContext): void;
+  pause?(ctx: EventContext): void;
+  resume?(ctx: EventContext, shift: number): void;
   /** Planned intensity 0–1 at a local time, for drawing on the timeline. */
   intensityAt(localTime: number): number;
   /** Optional planned signal (e.g. ground acceleration in g) sampled `n` times over the duration. */

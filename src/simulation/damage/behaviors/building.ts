@@ -253,7 +253,7 @@ export function updateBuilding(e: RuntimeEntity, ctx: SystemContext, dt: number)
   const wind = ctx.env.wind;
   const field = ctx.env.windField;
   const flow = wind.flow();
-  const calm = wind.baseSpeed <= 0.01;
+  const calm = !wind.blowing;
   const index = facadeOf(e);
   const breakable = index.breakable;
   const structure: RuntimeComponent | undefined = e.components[index.structure];

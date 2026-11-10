@@ -83,7 +83,7 @@ export async function runComparison(
     if (opts.initialWater) c.setInitialWaterState(opts.initialWater);
     const t0 = performance.now();
     await c.load(structuredClone(doc));
-    for (const r of sched.items) c.addEvent(r.spec);
+    for (const r of sched.items) c.addEvent(r.spec, { key: r.instance.id });
     let simTime = 0;
     while (simTime < total - 1e-9) {
       if (opts.cancelled?.()) break;

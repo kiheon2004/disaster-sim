@@ -32,6 +32,13 @@ export class HeatSourceEvent implements SimulationEvent<HeatSourceSpec> {
 
   update() {}
 
+  /** Phase 35.5 control: the source stops releasing heat now (heat already released stays in the world). */
+  stop({ env, time }: EventContext) {
+    const name = this.spec.name ?? this.id;
+    const rec = env.thermal.sources.find((r) => r.id === name);
+    if (rec) rec.stopAt = time;
+  }
+
   intensityAt(t: number): number {
     if (this.spec.profile === 'instant') return t < 0.5 ? 1 : 0;
     return shapeAt(this.spec, t);

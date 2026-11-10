@@ -8,7 +8,7 @@
  * those instances are NOT scheduled — nothing runs with a silently changed meaning.
  * The result is ordered by start time, ties by plan order (stable).
  */
-import type { EventSpec } from '@/events/specs';
+import { NAMED_EVENTS, type EventSpec } from '@/events/specs';
 import { phenomena } from './registry';
 import type { PhenomenonContext, PhenomenonInstance } from './types';
 
@@ -74,7 +74,7 @@ export function resolveSchedule(instances: readonly PhenomenonInstance[], ctx: P
     }
     if (!(start >= 0)) return fail('negativeStart', String(start));
     const duration = def.duration(spec, ctx);
-    const item: ResolvedInstance = { instance: inst, start, duration, end: start + duration, spec: { ...spec, startTime: timeBase + start, ...((spec.event === 'terrainDeformation' || spec.event === 'sinkhole' || spec.event === 'landslide' || spec.event === 'impact' || spec.event === 'blast' || spec.event === 'heatSource' || spec.event === 'volcano' || spec.event === 'atmosphere' || spec.event === 'climate' || spec.event === 'gravity' || spec.event === 'celestial') && !spec.name ? { name: inst.id } : {}) } as EventSpec };
+    const item: ResolvedInstance = { instance: inst, start, duration, end: start + duration, spec: { ...spec, startTime: timeBase + start, ...(NAMED_EVENTS.has(spec.event) && !(spec as { name?: string }).name ? { name: inst.id } : {}) } as EventSpec };
     done.set(inst.id, item);
     return item;
   };

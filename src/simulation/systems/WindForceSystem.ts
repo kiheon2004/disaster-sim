@@ -55,7 +55,7 @@ export class WindForceSystem implements SimulationSystem {
   private dirty = false;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.wind.baseSpeed > 0.01 || this.dirty || ctx.env.atmosphere.rt !== null;
+    return ctx.env.wind.blowing || this.dirty || ctx.env.atmosphere.rt !== null;
   }
 
   update({ env, runtime, physics, time, forces, interactions }: SystemContext) {
@@ -63,7 +63,7 @@ export class WindForceSystem implements SimulationSystem {
     const rho0 = env.airDensity || AIR_DENSITY;
     let rho = rho0;
     const atm = env.atmosphere.rt;
-    const calm = env.wind.baseSpeed <= 0.01 && !atm;
+    const calm = !env.wind.blowing && !atm;
     this.dirty = !calm;
 
     for (const e of runtime.entities.values()) {

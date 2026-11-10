@@ -8,7 +8,7 @@ import type { EntityId } from '@/core/types';
 import { FIXED_DT, type SimSpeed } from '@/core/units';
 import type { I18nMessage } from '@/i18n/i18n';
 import type { PhysicsEngine } from '@/physics/PhysicsEngine';
-import { EventScheduler } from '@/events/EventScheduler';
+import { controlsOf, EventScheduler, type EventControl, type EventControlOp, type EventStatus } from '@/events/EventScheduler';
 import { createEvent } from '@/events/eventRegistry';
 import type { EventSpec } from '@/events/specs';
 import type { SimulationEvent } from '@/events/SimulationEvent';
@@ -35,7 +35,7 @@ import { EarthquakeEvent } from '@/events/earthquake/EarthquakeEvent';
 import { GRAVITY } from '@/core/units';
 import { withGravity } from '@/thermal/gravityScope';
 import { BOUNDARY_SIDES, defaultWaterSettings } from '@/core/model';
-import { isWaterEvent } from '@/events/specs';
+import { isWaterEvent, NAMED_EVENTS } from '@/events/specs';
 import { RoadRuntime } from './roads/RoadRuntime';
 import { hydrologyPlan } from '@/landscape/hydrology';
 import { computeCanopy } from './vegetation/vegetation';
@@ -67,6 +67,13 @@ const STRUCTURAL_EVENTS = new Set<string>(['earthquake', 'impact', 'blast']);
  * Owns the simulation lifecycle: snapshot → runtime/physics → fixed-step loop → reset.
  * Lives outside React; the render loop only calls tick().
  */
+/** One scheduled instance of the run (Phase 35.5). */
+interface ScenarioEntry {
+  spec: EventSpec;
+  key: string;
+  controls: EventControl[];
+}
+
 export class SimulationController {
   private physics: PhysicsEngine | null = null;
   private runtime: SimulationRuntime | null = null;
@@ -75,8 +82,11 @@ export class SimulationController {
   private systems: SimulationSystem[] = [];
   /** Immutable copy of the world at simulation start (Reset target). */
   private snapshot: WorldDocument | null = null;
-  /** Every event spec with an absolute start time — replayed after a reset. */
-  private scenario: EventSpec[] = [];
+  /**
+   * Every event spec with an absolute start time, its instance key and the user's controls on it (Phase 35.5) — replayed
+   * after a reset, so a run with stops / pauses is reproduced exactly.
+   */
+  private scenario: ScenarioEntry[] = [];
   private time = 0;
   /** Fixed steps taken since the runtime was built (drives deterministic scheduling). */
   private stepIndex = 0;
@@ -191,7 +201,7 @@ export class SimulationController {
     this.endSeenRev = -1;
     this.ended = new Set();
     this.lastMilestones = -1;
-    for (const spec of this.scenario) this.schedule(createEvent(spec, 0, this.eventDefaults()));
+    for (const e of this.scenario) this.schedule(createEvent(e.spec, 0, this.eventDefaults()), e.key, e.controls);
     if (hydro) {
       for (const src of hydro.sources) this.scheduler.add(createEvent(src, 0, this.eventDefaults()));
       for (const issue of hydro.issues) this.log(null, 'warn', { key: `nature.hydro.${issue.code}`, params: { id: issue.feature, v: (issue.value ?? 0).toFixed(2) } });
@@ -274,24 +284,71 @@ export class SimulationController {
     if (field) this.env.groundFailure.ensure();
   }
 
-  /** Schedule an event. Without an explicit start time it begins now. */
-  addEvent(spec: EventSpec) {
-    const absolute: EventSpec = { ...spec, startTime: spec.startTime ?? this.time };
-    this.scenario.push(absolute);
-    this.schedule(createEvent(absolute, this.time, this.eventDefaults()));
+  /**
+   * Schedule an event. Without an explicit start time it begins now. Phase 35.5: every call is an independent instance with a
+   * stable key — `key` (an experiment instance id, e.g. "p3") or "<type>#<n>" (n-th of its type in this run). Phenomena that
+   * carry a name and have none get the key as their name, so their ledgers / results never share a source name.
+   * Returns the instance key.
+   */
+  addEvent(spec: EventSpec, opts: { key?: string } = {}): string {
+    const key = this.uniqueKey(opts.key ?? `${spec.event}#${this.scenario.filter((e) => e.spec.event === spec.event).length + 1}`);
+    const named = NAMED_EVENTS.has(spec.event) && !(spec as { name?: string }).name ? { name: key } : {};
+    const absolute = { ...spec, ...named, startTime: spec.startTime ?? this.time } as EventSpec;
+    const entry: ScenarioEntry = { spec: absolute, key, controls: [] };
+    this.scenario.push(entry);
+    this.schedule(createEvent(absolute, this.time, this.eventDefaults()), key);
     if (this.status === 'finished') this.status = 'paused';
     this.publish(true);
+    return key;
+  }
+
+  private uniqueKey(key: string): string {
+    if (!this.scenario.some((e) => e.key === key)) return key;
+    let n = 2;
+    while (this.scenario.some((e) => e.key === `${key}~${n}`)) n++;
+    return `${key}~${n}`;
+  }
+
+  /**
+   * Phase 35.5: control one instance now — 'cancel' (before its start), 'stop' (end early; what it did stays), 'pause' /
+   * 'resume' (sustained sources only). Recorded in the scenario with the current time, so a reset replays it. Returns false
+   * when the instance does not exist or does not support the control in its current state.
+   */
+  controlEvent(key: string, op: EventControlOp): boolean {
+    const item = this.scheduler.find(key);
+    const entry = this.scenario.find((e) => e.key === key);
+    if (!item || !entry || !this.runtime) return false;
+    const c = controlsOf(item.event);
+    const ok = op === 'cancel' ? item.status === 'pending'
+      : op === 'stop' ? item.status === 'pending' || ((item.status === 'active' || item.status === 'paused') && c.stop)
+      : op === 'pause' ? item.status === 'active' && c.pause
+      : item.status === 'paused';
+    if (!ok) return false;
+    entry.controls.push({ t: this.time, op });
+    this.scheduler.control(key, op, this.time);
+    this.scheduler.applyDue({ env: this.env, time: this.time });
+    this.publish(true);
+    return true;
+  }
+
+  /** Phase 35.5: the instance list of this run (key, spec, status, supported controls) — UI and tests. */
+  instances(): { key: string; spec: EventSpec; status: EventStatus; stop: boolean; pause: boolean; start: number; end: number | null }[] {
+    return this.scenario.map((e) => {
+      const item = this.scheduler.find(e.key);
+      const c = item ? controlsOf(item.event) : { stop: false, pause: false };
+      return { key: e.key, spec: e.spec, status: item?.status ?? 'pending', ...c, start: item?.event.startTime ?? e.spec.startTime ?? 0, end: item ? item.endedAt ?? null : null };
+    });
   }
 
   /**
    * Schedule an event, letting it precompute on the run's terrain first (outside the clock; Phase 24
    * residual 2.1). Skipped once the ground has changed — the event then computes at its start.
    */
-  private schedule(ev: SimulationEvent) {
+  private schedule(ev: SimulationEvent, key?: string, controls: readonly EventControl[] = []) {
     if (ev.prepare && (this.env.deformation.engine?.rev ?? 0) === 0) ev.prepare(this.env.terrain.data);
     if (STRUCTURAL_EVENTS.has(ev.type)) this.prepareStructures();
     if (ev.type === 'celestial') this.prepareCelestial(ev.spec as import('@/celestial/types').CelestialSpec);
-    this.scheduler.add(ev);
+    this.scheduler.add(ev, key, controls);
   }
 
   /**
@@ -395,7 +452,7 @@ export class SimulationController {
   /** End of the run from the plan alone (events + settling time). */
   private plannedEnd(): number {
     const planned = this.scheduler.plannedEnd();
-    const settle = this.scenario.some(isWaterEvent) ? SETTLE_TIME_WATER : SETTLE_TIME;
+    const settle = this.scenario.some((e) => isWaterEvent(e.spec)) ? SETTLE_TIME_WATER : SETTLE_TIME;
     return Math.max(MIN_TIMELINE, planned > 0 ? planned + settle : 0);
   }
 
@@ -563,7 +620,7 @@ export class SimulationController {
   private noteEnds() {
     this.endSeenRev = this.scheduler.rev;
     for (const i of this.scheduler.list()) {
-      if ((i.status === 'done' || i.status === 'superseded') && !this.ended.has(i.event.id)) {
+      if ((i.status === 'done' || i.status === 'superseded' || i.status === 'stopped') && !this.ended.has(i.event.id)) {
         this.ended.add(i.event.id);
         this.metrics.milestones.add({ time: i.endedAt ?? this.time, kind: 'end', subject: i.event.type, label: i.event.describe() });
       }
@@ -577,7 +634,7 @@ export class SimulationController {
   scheduledTime(type: string, anchor: 'start' | 'end'): number | null {
     let best: number | null = null;
     for (const i of this.scheduler.list()) {
-      if (i.event.type !== type || i.status === 'superseded') continue;
+      if (i.event.type !== type || i.status === 'superseded' || i.status === 'cancelled') continue;
       const t = anchor === 'start' ? i.event.startTime : i.endedAt ?? i.event.startTime + i.event.duration;
       if (best === null || t > best) best = t;
     }
@@ -655,6 +712,7 @@ export class SimulationController {
       this.lastEventsRev = this.scheduler.rev;
       patch.events = this.scheduler.list().map<TimelineEventView>((i) => ({
         id: i.event.id,
+        key: i.key,
         type: i.event.type,
         start: i.event.startTime,
         duration: i.event.duration,
@@ -662,6 +720,7 @@ export class SimulationController {
         label: i.event.describe(),
         profile: Array.from({ length: 48 }, (_, k) => i.event.intensityAt((k / 47) * i.event.duration)),
         waveform: i.event.waveform?.(240),
+        ...controlsOf(i.event),
       }));
     }
     patch.quake = this.quakeLive();
@@ -845,7 +904,7 @@ export class SimulationController {
       ambient: w.Tref,
       sources: ch.sources.map((r) => {
         const local = this.time - r.start, sp = r.spec;
-        const on = activeIn(sp, local, local + 1e-6) || (sp.profile !== 'instant' && local >= 0 && local < sp.duration);
+        const on = (r.stopAt === undefined || this.time < r.stopAt) && (activeIn(sp, local, local + 1e-6) || (sp.profile !== 'instant' && local >= 0 && local < sp.duration));
         return {
           id: r.id, name: r.name, kind: sp.kind, on, power: sp.kind === 'temperature' || sp.profile === 'instant' ? 0 : amplitude(sp) * shapeAt(sp, local),
           temperature: sp.kind === 'temperature' ? intervalTemperature(sp, local, local + 0.1, w.Tref) : null, added: L.bySource.get(r.id) ?? 0,

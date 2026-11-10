@@ -62,6 +62,17 @@ export function createWaveform(q: ResolvedEarthquake): SyntheticWaveform {
 
 const loc = { i: -1, f: 0 };
 
+/** One shaking earthquake (Phase 35.5: independent instances superpose). */
+interface QuakeSource {
+  id: string;
+  q: ResolvedEarthquake;
+  wave: SyntheticWaveform;
+  startTime: number;
+  h1: [number, number];
+  h2: [number, number];
+  refDist: number;
+}
+
 export class GroundMotionField {
   /** An earthquake is shaking (between its start and end). */
   private quakeOn = false;
@@ -91,35 +102,60 @@ export class GroundMotionField {
     }
     this.shockOn = on;
   }
+  /**
+   * Phase 35.5: several earthquakes may shake at once (independent instances). Their motions are superposed linearly
+   * (the ground is treated as a linear medium — an approximation, docs/PHASE35_5_USER_EXPERIENCE.md §9). With one
+   * earthquake the field is bit-identical to the single-source field it replaces.
+   */
+  private readonly quakes: QuakeSource[] = [];
+  /** The earthquake started last (HUD, recorder): its scenario, waveform and start. */
   scenario: ResolvedEarthquake | null = null;
   wave: SyntheticWaveform | null = null;
   startTime = 0;
-  /** Unit vectors (x, z) of the H1 and H2 axes. */
+  /** Unit vectors (x, z) of the H1 and H2 axes of the earthquake started last. */
   readonly h1: [number, number] = [1, 0];
   readonly h2: [number, number] = [0, 1];
   /** Point samples taken since the last reset (performance HUD / profiling). */
   samples = 0;
-  private refDist = 1; // m
   private weights = new Float64Array(SOIL_COUNT);
 
   constructor(public terrain: TerrainSampler) {}
 
-  start(q: ResolvedEarthquake, wave: SyntheticWaveform, startTime: number) {
+  /** Start an earthquake; `id` names the instance (a second start with the same id replaces it). */
+  start(q: ResolvedEarthquake, wave: SyntheticWaveform, startTime: number, id = 'quake') {
+    const b = (q.direction * Math.PI) / 180;
+    // Bearing θ (0 = N, 90 = E) → world (x = E, z = S): (sin θ, −cos θ).
+    const src: QuakeSource = {
+      id, q, wave, startTime,
+      h1: [Math.sin(b), -Math.cos(b)], h2: [Math.cos(b), Math.sin(b)],
+      refDist: Math.max(1, Math.hypot(q.epicenter[0], q.epicenter[1], q.depth * 1000)),
+    };
+    const k = this.quakes.findIndex((s) => s.id === id);
+    if (k >= 0) this.quakes[k] = src;
+    else this.quakes.push(src);
     this.scenario = q;
     this.wave = wave;
     this.startTime = startTime;
+    this.h1[0] = src.h1[0];
+    this.h1[1] = src.h1[1];
+    this.h2[0] = src.h2[0];
+    this.h2[1] = src.h2[1];
     this.quakeOn = true;
-    const b = (q.direction * Math.PI) / 180;
-    // Bearing θ (0 = N, 90 = E) → world (x = E, z = S): (sin θ, −cos θ).
-    this.h1[0] = Math.sin(b);
-    this.h1[1] = -Math.cos(b);
-    this.h2[0] = Math.cos(b);
-    this.h2[1] = Math.sin(b);
-    this.refDist = Math.max(1, Math.hypot(q.epicenter[0], q.epicenter[1], q.depth * 1000));
   }
 
-  stop() {
-    this.quakeOn = false;
+  /** Stop one earthquake (by id), or all of them. */
+  stop(id?: string) {
+    if (id === undefined) this.quakes.length = 0;
+    else {
+      const k = this.quakes.findIndex((s) => s.id === id);
+      if (k >= 0) this.quakes.splice(k, 1);
+    }
+    this.quakeOn = this.quakes.length > 0;
+  }
+
+  /** Earthquakes shaking now (ids, in start order). */
+  activeQuakes(): string[] {
+    return this.quakes.map((s) => s.id);
   }
 
   /** Event-local time at the map center. */
@@ -151,19 +187,25 @@ export class GroundMotionField {
   }
 
   private sampleQuake(x: number, z: number, time: number, out: GroundMotionSample, siteSoil: boolean) {
-    const d = out.d, v = out.v, a = out.a;
-    const q = this.scenario;
-    const wave = this.wave;
-    if (!this.quakeOn || !q || !wave) return out;
+    if (!this.quakeOn) return out;
     this.samples++;
+    const w = !siteSoil || this.terrain.uniformSoil ? null : this.terrain.sampleSoilWeights(x, z, this.weights);
+    let first = true;
+    for (const src of this.quakes) if (this.addQuake(src, x, z, time, out, w, first)) first = false;
+    return out;
+  }
+
+  /** One earthquake's motion at (x, z): written into `out` when `first`, otherwise added (superposition). */
+  private addQuake(src: QuakeSource, x: number, z: number, time: number, out: GroundMotionSample, w: Float64Array | null, first: boolean): boolean {
+    const d = out.d, v = out.v, a = out.a;
+    const q = src.q, wave = src.wave;
     const dx = x - q.epicenter[0];
     const dz = z - q.epicenter[1];
     const R = Math.max(1, Math.sqrt(dx * dx + dz * dz + q.depth * q.depth * 1e6));
-    const t = time - this.startTime - (R - this.refDist) / (VS_KMS * 1000);
+    const t = time - src.startTime - (R - src.refDist) / (VS_KMS * 1000);
     SyntheticWaveform.locate(t, wave.samples, loc);
-    if (loc.i < 0) return out;
-    const atten = this.refDist / R;
-    const w = !siteSoil || this.terrain.uniformSoil ? null : this.terrain.sampleSoilWeights(x, z, this.weights);
+    if (loc.i < 0) return false;
+    const atten = src.refDist / R;
     let dh1 = 0, dh2 = 0, dv = 0, vh1 = 0, vh2 = 0, vv = 0, ah1 = 0, ah2 = 0, av = 0;
     const i = loc.i;
     const f = loc.f;
@@ -184,18 +226,30 @@ export class GroundMotionField {
       ah2 += k * (A[AXIS_H2][i] * g + A[AXIS_H2][i + 1] * f);
       av += k * (A[AXIS_V][i] * g + A[AXIS_V][i + 1] * f);
     }
-    const [h1x, h1z] = this.h1;
-    const [h2x, h2z] = this.h2;
-    d[0] = dh1 * h1x + dh2 * h2x;
-    d[1] = dv;
-    d[2] = dh1 * h1z + dh2 * h2z;
-    v[0] = vh1 * h1x + vh2 * h2x;
-    v[1] = vv;
-    v[2] = vh1 * h1z + vh2 * h2z;
-    a[0] = ah1 * h1x + ah2 * h2x;
-    a[1] = av;
-    a[2] = ah1 * h1z + ah2 * h2z;
-    return out;
+    const [h1x, h1z] = src.h1;
+    const [h2x, h2z] = src.h2;
+    if (first) {
+      d[0] = dh1 * h1x + dh2 * h2x;
+      d[1] = dv;
+      d[2] = dh1 * h1z + dh2 * h2z;
+      v[0] = vh1 * h1x + vh2 * h2x;
+      v[1] = vv;
+      v[2] = vh1 * h1z + vh2 * h2z;
+      a[0] = ah1 * h1x + ah2 * h2x;
+      a[1] = av;
+      a[2] = ah1 * h1z + ah2 * h2z;
+    } else {
+      d[0] += dh1 * h1x + dh2 * h2x;
+      d[1] += dv;
+      d[2] += dh1 * h1z + dh2 * h2z;
+      v[0] += vh1 * h1x + vh2 * h2x;
+      v[1] += vv;
+      v[2] += vh1 * h1z + vh2 * h2z;
+      a[0] += ah1 * h1x + ah2 * h2x;
+      a[1] += av;
+      a[2] += ah1 * h1z + ah2 * h2z;
+    }
+    return true;
   }
 
   /** Motion at the map center on the reference soil (HUD, graphs). */

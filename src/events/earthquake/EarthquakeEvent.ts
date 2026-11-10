@@ -10,12 +10,13 @@ import { GRAVITY } from '@/core/units';
 /**
  * Earthquake: drives env.groundMotion with a synthetic waveform for `duration` seconds.
  * Like every event it only writes the environment — structures, people and objects react
- * through their own systems. A new earthquake supersedes a running one (channel).
+ * through their own systems. Phase 35.5: earthquakes are independent instances — each has its own channel and the
+ * ground motion field superposes the ones shaking at the same time (it no longer supersedes a running one).
  */
 export class EarthquakeEvent implements SimulationEvent<EarthquakeEventSpec> {
   readonly id = createId('evt');
   readonly type = 'earthquake' as const;
-  readonly channel = 'earthquake';
+  readonly channel: string;
   readonly startTime: number;
   readonly duration: number;
   readonly resolved: ResolvedEarthquake;
@@ -27,10 +28,11 @@ export class EarthquakeEvent implements SimulationEvent<EarthquakeEventSpec> {
     this.resolved = resolveEarthquake(spec, defaultSeed);
     this.duration = this.resolved.duration;
     this.wave = createWaveform(this.resolved);
+    this.channel = `earthquake:${this.id}`;
   }
 
   onStart({ env }: EventContext) {
-    env.groundMotion.start(this.resolved, this.wave, this.startTime);
+    env.groundMotion.start(this.resolved, this.wave, this.startTime, this.id);
   }
 
   update() {
@@ -38,7 +40,20 @@ export class EarthquakeEvent implements SimulationEvent<EarthquakeEventSpec> {
   }
 
   onEnd({ env }: EventContext) {
-    env.groundMotion.stop();
+    env.groundMotion.stop(this.id);
+  }
+
+  /** Phase 35.5 controls: the shaking stops / pauses and resumes where the waveform was (start shifted by the pause). */
+  stop(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  pause(ctx: EventContext) {
+    this.onEnd(ctx);
+  }
+
+  resume({ env }: EventContext, shift: number) {
+    env.groundMotion.start(this.resolved, this.wave, this.startTime + shift, this.id);
   }
 
   intensityAt(t: number): number {

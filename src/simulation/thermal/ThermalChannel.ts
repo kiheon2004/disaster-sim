@@ -13,6 +13,8 @@ export interface SourceRecord {
   spec: HeatSourceSpec;
   /** Absolute start time (s). */
   start: number;
+  /** Phase 35.5: stopped by the user at this absolute time (no heat after it). */
+  stopAt?: number;
 }
 
 /** Heat deposited by an impact (Phase 23 partition, `thermalShare`) into the crater's surface. */

@@ -18,6 +18,8 @@ export type SimStatus = 'idle' | 'loading' | 'running' | 'paused' | 'finished';
 
 export interface TimelineEventView {
   id: string;
+  /** Stable instance key (Phase 35.5): experiment id "p3" or "<type>#<n>". */
+  key: string;
   type: EventType;
   start: number;
   duration: number;
@@ -27,6 +29,9 @@ export interface TimelineEventView {
   profile: number[];
   /** Planned signal (earthquakes: principal ground acceleration in g) across the duration. */
   waveform?: number[];
+  /** Controls the instance supports while it runs (Phase 35.5). */
+  stop: boolean;
+  pause: boolean;
 }
 
 /** Live earthquake status for HUDs (null when no earthquake was scheduled). */

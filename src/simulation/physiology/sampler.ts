@@ -80,7 +80,7 @@ function directedFlux(ctx: SystemContext, p: Readonly<Vec3>, Tref: number): { q:
   for (const s of ctx.env.thermal.sources) {
     const spec = s.spec;
     const local = ctx.time - s.start;
-    if (local < 0 || local > spec.duration || spec.profile === 'instant') continue;
+    if (local < 0 || local > spec.duration || spec.profile === 'instant' || (s.stopAt !== undefined && ctx.time >= s.stopAt)) continue;
     const [sx, sz] = spec.position;
     const sy = ctx.env.terrain.sampleHeight(sx, sz) + spec.height;
     const r = Math.max(0.3, Math.hypot(p[0] - sx, p[1] - sy, p[2] - sz));

@@ -55,7 +55,7 @@ export class ExposureSystem implements SimulationSystem {
   readonly writes = ['exposure'] as const;
 
   isActive(ctx: SystemContext) {
-    return ctx.env.wind.baseSpeed > 0.01 || ctx.env.flood.field !== null || ctx.env.groundMotion.active;
+    return ctx.env.wind.blowing || ctx.env.flood.field !== null || ctx.env.groundMotion.active;
   }
 
   update(ctx: SystemContext, dt: number) {

@@ -25,6 +25,8 @@ import type { WindField } from '../environment/WindField';
 import { simProfiler } from '../profiling/SimProfiler';
 import { ObstacleIndex } from './ObstacleIndex';
 import type { WindObstacle } from './obstacles';
+import { addVortexWind } from '@/vortex/model';
+import { heightFactor } from '../damage/windLoad';
 
 export interface LocalWind {
   /** Wind velocity vector (m/s). */
@@ -296,6 +298,8 @@ export class SpatialWindField {
     if (global <= 0.01) {
       v[0] = 0; v[1] = 0; v[2] = 0;
       out.speed = 0; out.freeStream = 0; out.global = 0; out.shelter = 1; out.turbulence = 0; out.shadowSource = null; out.corner = false;
+      // Phase 35.5: only placed vortices blow (no global wind → no obstacle shelter map; see addVortices).
+      if (g.vortices.length) this.addVortices(p, v, out);
       return out;
     }
     const free = g.speedAt(p, t);
@@ -331,7 +335,24 @@ export class SpatialWindField {
     out.turbulence = T;
     out.shadowSource = fx.source;
     out.corner = fx.corner;
+    if (g.vortices.length) this.addVortices(p, v, out);
     return out;
+  }
+
+  /**
+   * Phase 35.5: add the placed vortices' winds (at the point's height above ground) to the sampled wind. The obstacle
+   * shelter map is built for ONE wind direction, so the vortex part is not sheltered by obstacles (approximation, docs §9).
+   */
+  private addVortices(p: Vec3, v: Vec3, out: LocalWind) {
+    const g = this.global;
+    const hag = g.terrain ? p[1] - g.terrain.sampleHeight(p[0], p[2]) : p[1];
+    const hf = heightFactor(hag);
+    const sx = v[0], sz = v[2];
+    for (const vx of g.vortices) addVortexWind(vx, p[0], p[2], hf, v);
+    const dvx = v[0] - sx, dvz = v[2] - sz;
+    out.speed = Math.hypot(v[0], v[1], v[2]);
+    // Undisturbed speed: the vortex part alone without a global wind, otherwise at least the combined speed.
+    out.freeStream = out.global === 0 ? Math.hypot(dvx, dvz) : Math.max(out.freeStream, out.speed);
   }
 
   /** Speed only. */

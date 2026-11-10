@@ -71,6 +71,11 @@ export class WindEvent implements SimulationEvent<WindEventSpec> {
     if (reason === 'finished') env.wind.baseSpeed = 0;
   }
 
+  /** Phase 35.5 control: the wind dies down now (the global wind is one weather state — no pause). */
+  stop(ctx: EventContext) {
+    this.onEnd(ctx, 'finished');
+  }
+
   intensityAt(t: number): number {
     if (t < 0 || t > this.duration) return 0;
     return this.speedAt(t, this.spec.rampFrom ?? 0) / 100;

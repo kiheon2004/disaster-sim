@@ -514,7 +514,7 @@ export class ThermalRuntime {
     const ordered = [...env.thermal.sources].sort((p, q) => p.start - q.start || canonical(p).localeCompare(canonical(q)));
     for (const s of ordered) {
       const a = this.upto.get(s.id) ?? 0;
-      const b = ctx.time + dt - s.start;
+      const b = Math.min(ctx.time + dt, s.stopAt ?? Infinity) - s.start;
       if (b <= a) continue;
       this.upto.set(s.id, b);
       if (s.spec.profile !== 'instant' && a >= s.spec.duration) continue;
@@ -1087,7 +1087,7 @@ export class ThermalRuntime {
       for (const s of ctx.env.thermal.sources) {
         const spec = s.spec;
         const local = ctx.time - s.start;
-        if (local < 0 || local > spec.duration) continue;
+        if (local < 0 || local > spec.duration || (s.stopAt !== undefined && ctx.time >= s.stopAt)) continue;
         const [sx, sz] = spec.position;
         const r = Math.max(0.3, Math.hypot(p[0] - sx, p[1] + 1 - (this.groundY(ctx, sx, sz) + spec.height), p[2] - sz));
         if (spec.kind === 'point') q += (radiativeFraction(spec) * amplitude(spec) * (spec.profile === 'instant' ? 0 : 1)) / (4 * Math.PI * r * r);

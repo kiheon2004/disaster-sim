@@ -26,6 +26,7 @@ export type EventType =
   | 'climate'
   | 'gravity'
   | 'celestial'
+  | 'tornado'
   | 'explosion';
 
 /** Event types that are recognized but not simulated yet. ('flood' alone maps to rising water.) */
@@ -141,8 +142,11 @@ export interface WaterSourceEventSpec {
 
 export type WaterEventSpec = RainEventSpec | RisingWaterEventSpec | WaterSourceEventSpec;
 
-export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec | import('@/fire/types').FireSpec | import('@/volcano/types').VolcanoSpec | import('@/atmosphere/types').AtmosphereSpec | import('@/climate/types').ClimateSpec | import('@/gravity/types').GravitySpec | import('@/celestial/types').CelestialSpec;
+export type EventSpec = WindEventSpec | EarthquakeEventSpec | WaterEventSpec | import('@/deformation/types').TerrainDeformationSpec | import('@/ground/types').SinkholeSpec | import('@/ground/types').LandslideSpec | import('@/impact/types').ImpactSpec | import('@/blast/types').BlastSpec | import('@/thermal/types').HeatSourceSpec | import('@/fire/types').FireSpec | import('@/volcano/types').VolcanoSpec | import('@/atmosphere/types').AtmosphereSpec | import('@/climate/types').ClimateSpec | import('@/gravity/types').GravitySpec | import('@/celestial/types').CelestialSpec | import('@/vortex/types').TornadoSpec;
 
 export function isWaterEvent(s: EventSpec): s is WaterEventSpec {
   return s.event === 'rain' || s.event === 'risingWater' || s.event === 'waterSource';
 }
+
+/** Phenomena whose spec carries a source name (ledgers, results, labels) — Phase 35.5: unnamed instances get their key. */
+export const NAMED_EVENTS: ReadonlySet<string> = new Set(['terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere', 'climate', 'gravity', 'celestial']);
