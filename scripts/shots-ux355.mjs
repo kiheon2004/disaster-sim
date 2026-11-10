@@ -38,6 +38,11 @@ const audit = () => ev(() => {
     for (let j = i + 1; j < btns.length; j++) {
       const [b, rb] = btns[j];
       if (a.contains(b) || b.contains(a)) continue;
+      // Real overlaps only: both visible at their centre (not scrolled away / clipped), neither a badge inside the other.
+      const inside = (p, q) => p.left >= q.left - 1 && p.right <= q.right + 1 && p.top >= q.top - 1 && p.bottom <= q.bottom + 1;
+      if (inside(ra, rb) || inside(rb, ra)) continue;
+      const hit = (el, r) => { const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t) || t.contains(el)); };
+      if (!hit(a, ra) || !hit(b, rb)) continue;
       const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left), h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (w > 4 && h > 4) { overlaps++; if (ex.length < 6) ex.push(`over:${(a.textContent ?? a.getAttribute('aria-label') ?? '').trim().slice(0, 16)}|${(b.textContent ?? '').trim().slice(0, 16)}`); }
     }
@@ -89,6 +94,26 @@ for (const lang of LANGS) {
     report.push({ tag, lang, size: `${w}x${h}`, view: 'building', ...(await audit()) });
     await ev(() => window.__ds.actions.leaveSimulation?.() ?? window.__ds.actions.exitSimulation?.());
     await wait(500);
+    // 5. Placement (new UI only): a library card armed, pointer over the map.
+    if (await ev(() => typeof window.__ds.ui?.getState().setRightTab === 'function')) {
+      await ev(() => window.__ds.ui.getState().setRightTab('phenomena'));
+      await wait(300);
+      await page.click('[data-testid="lib-blast"]');
+      const r = await ev(() => { const b = window.__r3f.get().gl.domElement.getBoundingClientRect(); return [b.left + b.width * 0.4, b.top + b.height * 0.6]; });
+      await page.mouse.move(r[0], r[1], { steps: 4 });
+      await wait(400);
+      await page.screenshot({ path: name('5-placement') });
+      report.push({ tag, lang, size: `${w}x${h}`, view: 'placement', ...(await audit()) });
+      await page.keyboard.press('Escape');
+      // 6. Right panel closed in a run.
+      await ev(() => window.__ds.ui.getState().setRightOpen(false));
+      await ev(() => window.__ds.actions.runSimulation([{ event: 'blast', position: [-40, 0], height: 1, energy: 5e7, model: 'weakShock', waveform: 'nWave' }]));
+      await wait(2000);
+      await page.screenshot({ path: name('6-panel-closed') });
+      report.push({ tag, lang, size: `${w}x${h}`, view: 'panelClosed', ...(await audit()) });
+      await ev(() => { window.__ds.actions.exitSimulation(); window.__ds.ui.getState().setRightOpen(true); });
+      await wait(500);
+    }
   }
 }
 fs.writeFileSync(path.join(out, `${tag}-layout.json`), JSON.stringify({ errors, report }, null, 2));

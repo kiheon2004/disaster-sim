@@ -1,0 +1,677 @@
+{
+  "errors": [],
+  "report": [
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "start",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:활엽수|▸도구 옵션 · 선택",
+        "over:침엽수|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "list(library)",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:활엽수|▸도구 옵션 · 선택",
+        "over:침엽수|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "placement",
+      "overlaps": 3,
+      "clipped": 0,
+      "small": 11,
+      "examples": [
+        "over:활엽수|▸도구 옵션 · 선택",
+        "over:침엽수|▸도구 옵션 · 선택",
+        "over:|▸재난 라이브러리"
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:표시 설정 ▾|패널 열기"
+      ],
+      "hscroll": false,
+      "viewport3d": "1684×963",
+      "viewportShare": 0.782
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "start",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:★|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "list(library)",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:★|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "placement",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 11,
+      "examples": [
+        "over:★|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:표시 설정 ▾|패널 열기"
+      ],
+      "hscroll": false,
+      "viewport3d": "1204×783",
+      "viewportShare": 0.727
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "list(library)",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "placement",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 11,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:표시 설정 ▾|패널 열기"
+      ],
+      "hscroll": false,
+      "viewport3d": "1150×651",
+      "viewportShare": 0.714
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "list(library)",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "placement",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 11,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:표시 설정 ▾|패널 열기"
+      ],
+      "hscroll": false,
+      "viewport3d": "1064×603",
+      "viewportShare": 0.696
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "start",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:High-rise tower |▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "list(library)",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:High-rise tower |▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "placement",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 13,
+      "examples": [
+        "over:High-rise tower |▸Tool options · ",
+        "over:|▸Disaster librar"
+      ],
+      "hscroll": false,
+      "viewport3d": "1364×963",
+      "viewportShare": 0.633
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:Display ▾|Open panel"
+      ],
+      "hscroll": false,
+      "viewport3d": "1684×963",
+      "viewportShare": 0.782
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "list(library)",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "placement",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 13,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "884×783",
+      "viewportShare": 0.534
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:Display ▾|Open panel"
+      ],
+      "hscroll": false,
+      "viewport3d": "1204×783",
+      "viewportShare": 0.727
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "start",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:House|▸Tool options · ",
+        "over:Small house (tim|▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "list(library)",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:House|▸Tool options · ",
+        "over:Small house (tim|▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 29,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "placement",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 13,
+      "examples": [
+        "over:House|▸Tool options · ",
+        "over:Small house (tim|▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "850×651",
+      "viewportShare": 0.527
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:Display ▾|Open panel"
+      ],
+      "hscroll": false,
+      "viewport3d": "1150×651",
+      "viewportShare": 0.714
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "list(library)",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "sim",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 31,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "building",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 31,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "placement",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 13,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "764×603",
+      "viewportShare": 0.5
+    },
+    {
+      "tag": "after",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "panelClosed",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 29,
+      "examples": [
+        "over:Display ▾|Open panel"
+      ],
+      "hscroll": false,
+      "viewport3d": "1064×603",
+      "viewportShare": 0.696
+    }
+  ]
+}

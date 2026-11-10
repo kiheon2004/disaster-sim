@@ -3,7 +3,7 @@
 .right { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .tabs { display: flex; align-items: stretch; gap: 0; height: 38px; flex-shrink: 0; border-bottom: 1px solid var(--line); padding: 0 4px; }
 .tab {
-  position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; min-width: 0;
+  position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; min-width: 0;
   background: none; border: none; border-radius: 0; color: var(--text-2); font-size: 12px; font-weight: 600; white-space: nowrap;
 }
 .tab:hover:not(:disabled) { background: none; border: none; color: var(--text-0); }
@@ -66,3 +66,5 @@
 .advanced > summary { cursor: pointer; font-size: 11px; color: var(--text-2); padding: 2px 0; }
 .advanced[open] { display: flex; flex-direction: column; gap: 5px; }
 .settingHint { margin-top: 6px; font-size: 11px; line-height: 1.45; color: var(--text-2); }
+.barPreview { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; min-height: 30px; padding: 4px 7px; border-radius: var(--radius-m); background: var(--bg-2); color: var(--text-1); }
+.barPreview b { color: var(--text-0); font-weight: 600; }

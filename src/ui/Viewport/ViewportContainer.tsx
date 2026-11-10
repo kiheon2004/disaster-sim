@@ -46,6 +46,7 @@ export function ViewportContainer() {
   const perf = useViewStore((s) => s.showPerfHud);
   const hudOpen = useUiStore((s) => s.hudOpen);
   const overlayOpen = useUiStore((s) => s.overlayOpen);
+  const rightOpen = useUiStore((s) => s.rightOpen);
 
   return (
     <div className={styles.wrap}>
@@ -65,6 +66,11 @@ export function ViewportContainer() {
         {perf && <PerfHud />}
       </div>
       <div className={`${styles.overlay} ${styles.topRight}`}>
+        {!rightOpen && (
+          <button className={styles.hudToggle} onClick={() => useUiStore.getState().setRightOpen(true)} title={t('panel.open')} data-testid="right-open">
+            ‹ {t('panel.open')}
+          </button>
+        )}
         <Compass />
         {!isEditor && (
           <button className={styles.hudToggle} aria-expanded={hudOpen} onClick={() => useUiStore.getState().setHudOpen(!hudOpen)} title={t(hudOpen ? 'hud.hide' : 'hud.show')} data-testid="hud-toggle">

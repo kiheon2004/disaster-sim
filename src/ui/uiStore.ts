@@ -12,6 +12,12 @@ function stored<T extends string>(key: string, ok: readonly T[], fallback: T): T
     return fallback;
   }
 }
+/** The 3D canvas follows its container on the next frame (opening / closing a side panel changes the viewport width). */
+function relayout() {
+  if (typeof window === 'undefined') return;
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+
 function put(key: string, v: string) {
   try {
     localStorage.setItem(key, v);
@@ -72,15 +78,18 @@ export const useUiStore = create<UiState>((set) => ({
   setRightOpen: (rightOpen) => {
     set({ rightOpen });
     put('ds.rightOpen', rightOpen ? '1' : '0');
+    relayout();
   },
   rightTab: initialRightTab(),
   setRightTab: (rightTab) => {
+    if (!useUiStore.getState().rightOpen) relayout();
     set({ rightTab, rightOpen: true });
     put('ds.rightTab', rightTab);
     put('ds.rightOpen', '1');
   },
   commandOpen: stored<'1' | '0'>('ds.commandOpen', ['1', '0'], '0') === '1',
   setCommandOpen: (commandOpen) => {
+    relayout();
     set({ commandOpen });
     put('ds.commandOpen', commandOpen ? '1' : '0');
   },

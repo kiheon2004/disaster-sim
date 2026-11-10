@@ -110,6 +110,7 @@ export function CommandPanel() {
             onKeyDown={onKeyDown}
             placeholder={t('cmd.placeholder')}
             aria-label={t('cmd.title')}
+            data-testid="command-input"
             spellCheck={false}
           />
           <button onClick={() => void submit()} disabled={!input.trim() || busy}>

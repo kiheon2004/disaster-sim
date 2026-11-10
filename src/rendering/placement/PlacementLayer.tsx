@@ -12,7 +12,6 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Vec3 } from '@/core/types';
 import { useWorldStore } from '@/world/worldStore';
@@ -34,10 +33,40 @@ const ground = () => samplerFor(currentDeformation()?.terrain ?? useWorldStore.g
 const PIN_H = 7;
 const COLORS: Record<string, string> = { weather: '#5aa9ff', geology: '#c08a4a', hydrology: '#3fc6d8', fireHeat: '#ff6a3d', impactBlast: '#ffb238', spaceGravity: '#b48cff', atmosphere: '#9fd36b' };
 
-const labelStyle: React.CSSProperties = {
-  pointerEvents: 'none', whiteSpace: 'nowrap', font: '600 11px/1.3 system-ui, sans-serif', color: '#fff', padding: '2px 7px',
-  borderRadius: 6, background: 'rgba(12,16,22,0.82)', border: '1px solid rgba(255,255,255,0.18)', transform: 'translateY(-4px)',
-};
+/**
+ * A text label drawn as a screen-sized sprite (canvas texture) — no extra React roots (drei <Html> roots unmounted during a
+ * scene switch log React warnings). Disposed with the component.
+ */
+function Label({ text, position, strong = false }: { text: string; position: [number, number, number]; strong?: boolean }) {
+  const sprite = useMemo(() => {
+    const px = 2, font = `600 ${12 * px}px system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif`;
+    const c = document.createElement('canvas');
+    const g = c.getContext('2d')!;
+    g.font = font;
+    const w = Math.ceil(g.measureText(text).width) + 16 * px, h = 22 * px;
+    c.width = w; c.height = h;
+    g.font = font;
+    g.fillStyle = strong ? 'rgba(12,16,22,0.92)' : 'rgba(12,16,22,0.8)';
+    g.beginPath(); g.roundRect(0, 0, w, h, 6 * px); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = px; g.stroke();
+    g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.fillText(text, 8 * px, h / 2 + px);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false });
+    const sp = new THREE.Sprite(mat);
+    const H = 0.034;
+    sp.scale.set((H * w) / h, H, 1);
+    sp.center.set(0.5, 0);
+    sp.renderOrder = 20;
+    sp.raycast = () => {};
+    return sp;
+  }, [text, strong]);
+  useEffect(() => () => {
+    sprite.material.map?.dispose();
+    sprite.material.dispose();
+  }, [sprite]);
+  return <primitive object={sprite} position={position} />;
+}
 
 function Ring({ x, z, fp, color }: { x: number; z: number; fp: Footprint; color: string }) {
   const pts = useMemo(() => circlePts(x, z, fp.radius, 96), [x, z, fp.radius]);
@@ -214,9 +243,7 @@ export function PlacementLayer() {
     const spec: EventSpec = c.placement.set(template, hover, mapHalf());
     const fp = c.placement.footprint(spec);
     const color = COLORS[c.category] ?? '#fff';
-    const def = phenomena.get(type);
     const y = ground().sampleHeight(hover[0], hover[1]);
-    const desc = def && def.status === 'implemented' ? def.describe(spec, { seed: 1, terrain: null }) : null;
     preview = (
       <group>
         {c.placement.kind === 'edge' ? <EdgeLine side={nearestEdge(hover, mapHalf())} color={color} /> : (
@@ -225,14 +252,7 @@ export function PlacementLayer() {
             {fp && <Ring x={hover[0]} z={hover[1]} fp={fp} color={color} />}
           </>
         )}
-        <Html position={[hover[0], y + PIN_H + 2.2, hover[1]]} center style={labelStyle} zIndexRange={[20, 10]}>
-          <div data-testid="placement-preview">
-            <b>{def ? t(def.labelKey) : type}</b> ({hover[0].toFixed(0)}, {hover[1].toFixed(0)})
-            {c.placement.kind === 'edge' && <> · {t('place.edge', { side: t(`place.side.${nearestEdge(hover, mapHalf())}` as never) })}</>}
-            {fp && <> · {t(fp.labelKey)} {fp.radius.toFixed(0)} m{fp.reference ? ` (${t('lib.reference')})` : ''}</>}
-            {desc && <div style={{ fontWeight: 400, opacity: 0.85 }}>{t(desc.key as never, desc.params as never)}</div>}
-          </div>
-        </Html>
+        <Label strong position={[hover[0], y + PIN_H + 1.6, hover[1]]} text={previewText(t, type, spec, hover, fp, c.placement.kind)} />
       </group>
     );
   }
@@ -251,12 +271,27 @@ export function PlacementLayer() {
           <group key={p.inst.id}>
             <Pin x={at[0]} z={at[1]} color={color} selected={sel} />
             {fp && (sel || type) && <Ring x={at[0]} z={at[1]} fp={fp} color={color} />}
-            <Html position={[at[0], y + PIN_H + 1.6, at[1]]} center style={{ ...labelStyle, opacity: sel ? 1 : 0.85 }} zIndexRange={[19, 10]}>
-              <span data-testid={`placed-${p.inst.id}`}>{p.label}{sel && fp ? ` · ${fp.radius.toFixed(0)} m${fp.reference ? ` (${t('lib.reference')})` : ''}` : ''}</span>
-            </Html>
+            <Label position={[at[0], y + PIN_H + 1.4, at[1]]} strong={sel} text={`${p.label}${sel && fp ? ` · ${fp.radius.toFixed(0)} m${fp.reference ? ` (${t('lib.reference')})` : ''}` : ''}`} />
           </group>
         );
       })}
     </group>
   );
+}
+
+/** One-line description of the armed phenomenon at a map point (the 3D label and the placement bar show the same text). */
+export function previewText(t: ReturnType<typeof useT>, type: string, _spec: EventSpec, p: [number, number], fp: Footprint | null, kind: string): string {
+  const def = phenomena.get(type);
+  let s = `${def ? t(def.labelKey) : type} (${p[0].toFixed(0)}, ${p[1].toFixed(0)})`;
+  if (kind === 'edge') s += ` · ${t('place.edge', { side: t(`place.side.${nearestEdge(p, mapHalf())}` as never) })}`;
+  if (fp) s += ` · ${t(fp.labelKey)} ${fp.radius.toFixed(0)} m${fp.reference ? ` (${t('lib.reference')})` : ''}`;
+  return s;
+}
+
+/** The armed phenomenon's own one-line description (intensity, size …) — shown under the preview in the placement bar. */
+export function previewDescription(t: ReturnType<typeof useT>, type: string, spec: EventSpec): string {
+  const def = phenomena.implemented(type);
+  if (!def) return '';
+  const m = def.describe(spec, { seed: 1, terrain: null });
+  return t(m.key as never, m.params as never);
 }

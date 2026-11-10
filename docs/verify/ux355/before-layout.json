@@ -1,0 +1,523 @@
+{
+  "errors": [],
+  "report": [
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "start",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:활엽수|▸도구 옵션 · 선택",
+        "over:침엽수|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "list(menu)",
+      "overlaps": 3,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:활엽수|▸도구 옵션 · 선택",
+        "over:침엽수|▸도구 옵션 · 선택",
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "sim",
+      "overlaps": 3,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산",
+        "over:규모 6.5의 지진을 발생시켜|0.1s압력파로 유리창 1장 ",
+        "over:규모 6.5의 지진을 발생시켜|0.1s압력파로 외장재 1개 "
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1920x1080",
+      "view": "building",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "start",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:★|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "list(menu)",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:★|▸도구 옵션 · 선택",
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "sim",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1440x900",
+      "view": "building",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "start",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:중층 아파트 (RC)|▸도구 옵션 · 선택",
+        "over:오피스 빌딩 (철골+코어)|▸도구 옵션 · 선택"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "list(menu)",
+      "overlaps": 3,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:중층 아파트 (RC)|▸도구 옵션 · 선택",
+        "over:오피스 빌딩 (철골+코어)|▸도구 옵션 · 선택",
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "sim",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1366x768",
+      "view": "building",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "760×411",
+      "viewportShare": 0.339
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "list(menu)",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "760×411",
+      "viewportShare": 0.339
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "sim",
+      "overlaps": 6,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:결과|1.4s사람 4: 파편/차량에",
+        "over:결과|0.6s압력파 blast#1:",
+        "over:현상 추가|화산",
+        "over:동쪽에서 서쪽 방향으로 풍속 |0.2s압력파로 유리창 40장",
+        "over:실행|0.2s압력파로 유리창 10장",
+        "over:실행|0.2s압력파로 유리창 1장 "
+      ],
+      "hscroll": false,
+      "viewport3d": "791×411",
+      "viewportShare": 0.353
+    },
+    {
+      "tag": "before",
+      "lang": "ko",
+      "size": "1280x720",
+      "view": "building",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:현상 추가|화산"
+      ],
+      "hscroll": false,
+      "viewport3d": "791×411",
+      "viewportShare": 0.353
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "start",
+      "overlaps": 1,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:High-rise tower |▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "list(menu)",
+      "overlaps": 5,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:High-rise tower |▸Tool options · ",
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Volcano|Run experiment",
+        "over:Volcano|Compare scenario"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "sim",
+      "overlaps": 4,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Volcano|Apply experiment",
+        "over:Volcano|Compare scenario"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1920x1080",
+      "view": "building",
+      "overlaps": 4,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Volcano|Apply experiment",
+        "over:Volcano|Compare scenario"
+      ],
+      "hscroll": false,
+      "viewport3d": "1380×771",
+      "viewportShare": 0.513
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "list(menu)",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "sim",
+      "overlaps": 4,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Increase wind to|0.2sToppled by t",
+        "over:Increase wind to|0.1s1 facade par"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1440x900",
+      "view": "building",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "900×591",
+      "viewportShare": 0.41
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "start",
+      "overlaps": 0,
+      "clipped": 0,
+      "small": 9,
+      "examples": [],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "list(menu)",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "sim",
+      "overlaps": 4,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Increase wind to|0.2s40 window(s)",
+        "over:Increase wind to|0.2sToppled by t"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1366x768",
+      "view": "building",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "826×459",
+      "viewportShare": 0.361
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "start",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:House|▸Tool options · ",
+        "over:Small house (tim|▸Tool options · "
+      ],
+      "hscroll": false,
+      "viewport3d": "760×411",
+      "viewportShare": 0.339
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "list(menu)",
+      "overlaps": 4,
+      "clipped": 0,
+      "small": 9,
+      "examples": [
+        "over:House|▸Tool options · ",
+        "over:Small house (tim|▸Tool options · ",
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "760×411",
+      "viewportShare": 0.339
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "sim",
+      "overlaps": 8,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Results|▸Event log60",
+        "over:Results|1.4sPerson 4: hi",
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano",
+        "over:Increase wind to|0.2sToppled by t",
+        "over:Increase wind to|0.2s1 facade par"
+      ],
+      "hscroll": false,
+      "viewport3d": "818×411",
+      "viewportShare": 0.365
+    },
+    {
+      "tag": "before",
+      "lang": "en",
+      "size": "1280x720",
+      "view": "building",
+      "overlaps": 2,
+      "clipped": 0,
+      "small": 22,
+      "examples": [
+        "over:Add phenomenon|Fire",
+        "over:Add phenomenon|Volcano"
+      ],
+      "hscroll": false,
+      "viewport3d": "818×411",
+      "viewportShare": 0.365
+    }
+  ]
+}

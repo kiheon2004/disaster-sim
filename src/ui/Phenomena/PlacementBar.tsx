@@ -6,7 +6,8 @@
 import { useT, type MessageKey } from '@/i18n/i18n';
 import { phenomena } from '@/phenomena/registry';
 import { catalogOf } from '@/phenomena/catalog';
-import { disarmPlacement, redoPlacement, undoPlacement } from '@/app/placementActions';
+import { disarmPlacement, mapHalf, redoPlacement, undoPlacement } from '@/app/placementActions';
+import { previewDescription, previewText } from '@/rendering/placement/PlacementLayer';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 import { Segmented } from '@/ui/common/Segmented';
 import { Toggle } from '@/ui/common/fields';
@@ -39,6 +40,7 @@ export function PlacementBar() {
         <button className={s.done} onClick={() => disarmPlacement()} data-testid="placement-done">{t('place.done')}</button>
       </div>
       <div className={s.barHint}>{t(`place.kind.${c.placement.kind}` as MessageKey)} · {t('place.hint')}</div>
+      <PreviewLine type={type} />
       <div className={s.barRow}>
         <Segmented size="small" value={runMode} onChange={(v) => usePlacementStore.getState().setRunMode(v)} ariaLabel={t('place.mode.plan')}
           options={[{ value: 'plan', label: t('place.mode.plan') }, { value: 'now', label: t('place.mode.now'), tone: 'sim' }]} />
@@ -51,6 +53,22 @@ export function PlacementBar() {
           <SpecFields def={def} spec={template} onChange={set} skip={basic} />
         </details>
       </div>
+    </div>
+  );
+}
+
+/** What a click would place where the pointer is (same text as the 3D label) — readable outside the 3D view. */
+function PreviewLine({ type }: { type: string }) {
+  const t = useT();
+  const hover = usePlacementStore((st) => st.hover);
+  const template = usePlacementStore((st) => st.template);
+  const c = catalogOf(type);
+  if (!hover || !template || !c) return <div className={s.barPreview} data-testid="placement-preview-empty">—</div>;
+  const spec = c.placement.set(template, hover, mapHalf());
+  return (
+    <div className={s.barPreview} data-testid="placement-preview">
+      <b>{previewText(t, type, spec, hover, c.placement.footprint(spec), c.placement.kind)}</b>
+      <span>{previewDescription(t, type, spec)}</span>
     </div>
   );
 }

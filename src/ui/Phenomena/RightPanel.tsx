@@ -62,7 +62,6 @@ export function RightPanel() {
       <div className={s.tabs} role="tablist">
         {TABS.map((x) => (
           <button key={x.id} role="tab" aria-selected={tab === x.id} className={s.tab} onClick={() => useUiStore.getState().setRightTab(x.id)} data-tab={x.id}>
-            <Icon name={x.icon} size={13} />
             <span>{t(`tab.${x.id}` as MessageKey)}</span>
             {badge(x.id)}
           </button>

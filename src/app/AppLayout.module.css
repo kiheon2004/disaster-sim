@@ -19,13 +19,10 @@
   grid-area: center;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  /* One column that never grows past the track (the timeline / command chips must not widen the 3D view). */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
   min-width: 0;
 }
-.viewport { position: relative; min-height: 0; background: #0d1218; }
-.bottom { border-top: 1px solid var(--line); background: var(--bg-1); }
-.reopen {
-  position: absolute; top: 50%; right: 0; z-index: 12; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl;
-  display: inline-flex; align-items: center; gap: 6px; padding: 10px 5px; font-size: 11.5px; font-weight: 600;
-  border-radius: 0 var(--radius-m) var(--radius-m) 0; background: var(--bg-1); border: 1px solid var(--line-strong); color: var(--text-1);
-}
+.viewport { position: relative; min-height: 0; min-width: 0; overflow: hidden; background: #0d1218; }
+.bottom { border-top: 1px solid var(--line); background: var(--bg-1); min-width: 0; overflow: hidden; }
