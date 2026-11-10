@@ -42,6 +42,9 @@ export interface RoadProfile {
   /** Storm-drain inlets along the curbs (spacing by level). */
   drainage: Drainage;
   markings: boolean;
+  /** Phase 35.5 cross-section (roads/crossSection.ts): paved shoulder per side and median (m). Absent = 0 (older roads). */
+  shoulderWidth?: number;
+  medianWidth?: number;
 }
 
 export interface RoadNode {
@@ -114,6 +117,9 @@ export function defaultProfile(): RoadProfile {
 /** Named profiles offered by the road tool (all fields stay editable). */
 export const PROFILE_PRESETS: Record<string, Partial<RoadProfile>> = {
   street: { width: 7, lanes: 2, sidewalk: 'both', sidewalkWidth: 2, material: 'asphalt', drainage: 'standard' },
+  // Phase 35.5 cross-section presets (roads/crossSection.ts): a narrow and a wide two-lane road (lanes 3.0 / 3.5 m + shoulders).
+  narrow: { width: 6, lanes: 2, sidewalk: 'both', sidewalkWidth: 1.5, material: 'asphalt', drainage: 'standard' },
+  wide: { width: 10, lanes: 2, shoulderWidth: 1.5, sidewalk: 'both', sidewalkWidth: 2.5, material: 'asphalt', drainage: 'standard' },
   avenue: { width: 14, lanes: 4, sidewalk: 'both', sidewalkWidth: 3, material: 'asphalt', drainage: 'enhanced' },
   lane: { width: 4.5, lanes: 1, sidewalk: 'none', material: 'concrete', drainage: 'none', markings: false },
   gravel: { width: 4, lanes: 1, sidewalk: 'none', material: 'gravel', drainage: 'none', markings: false, elevation: 'follow' },
@@ -125,6 +131,8 @@ export const PROFILE_LIMITS = {
   lanes: [1, 8],
   sidewalkWidth: [0.8, 6],
   curbHeight: [0, 0.3],
+  shoulderWidth: [0, 4],
+  medianWidth: [0, 10],
 } as const;
 
 /** Total half-width including sidewalks on a side (m). */

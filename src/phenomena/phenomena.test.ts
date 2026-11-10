@@ -53,7 +53,7 @@ function inst(id: string, type: string, start: PhenomenonInstance['start'], spec
 describe('registration', () => {
   it('every implemented phenomenon creates its event; planned ones are recognized but never executable', () => {
     const impl = phenomena.listImplemented().map((d) => d.type);
-    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere', 'climate', 'gravity', 'celestial']); // Phase 27: + fire, Phase 28: + volcano, Phase 29: + atmosphere, Phase 30: + climate, Phase 31: + gravity, Phase 32: + celestial
+    expect(impl).toEqual(['wind', 'earthquake', 'rain', 'risingWater', 'waterSource', 'terrainDeformation', 'sinkhole', 'landslide', 'impact', 'blast', 'heatSource', 'fire', 'volcano', 'atmosphere', 'climate', 'gravity', 'celestial', 'tornado']); // Phase 27: + fire, Phase 28: + volcano, Phase 29: + atmosphere, Phase 30: + climate, Phase 31: + gravity, Phase 32: + celestial, Phase 35.5: + tornado (placed vortex)
     for (const d of phenomena.listImplemented()) {
       const spec = d.defaults();
       expect(d.schema.safeParse(spec).success).toBe(true);
@@ -69,7 +69,9 @@ describe('registration', () => {
     // (black hole → implemented as the celestial experiment 'celestial' since Phase 32)
     expect(phenomena.get('blackHole')).toBeUndefined();
     expect(phenomena.get('celestial')?.status).toBe('implemented');
-    for (const type of ['tornado', 'atmosphereLoss']) {
+    // (tornado → implemented as the placed vortex wind since Phase 35.5)
+    expect(phenomena.get('tornado')?.status).toBe('implemented');
+    for (const type of ['tsunami', 'atmosphereLoss']) {
       const d = phenomena.get(type)!;
       expect(d.status).toBe('planned');
       expect(() => createEvent({ event: type } as unknown as EventSpec, 0, CTX)).toThrow(/Unsupported/);

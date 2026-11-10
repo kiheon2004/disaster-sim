@@ -453,8 +453,11 @@ export function parseCommands(input: string, defaults: ParseDefaults): ParseResu
 
     // 3) Ground phenomena (Phase 21–23) and air-pressure waves (Phase 24): the phenomenon with its default parameters — position,
     //    material and triggers are set in the experiment tab (the note says so).
-    const ground = (['impact', 'blast', 'sinkhole', 'landslide', 'terrainDeformation'] as const).map((t) => phenomena.implemented(t)!).find((d) => d.keywords.test(clause));
-    if (ground && !windish) {
+    // Phase 35.5: a placed vortex (tornado) is executable like the ground phenomena — default parameters at the map
+    // centre, placed / moved on the map from the disaster library (the note says so). Before the wind words ("회오리바람").
+    const vortex = phenomena.implemented('tornado')!;
+    const ground = vortex.keywords.test(clause) ? vortex : (['impact', 'blast', 'sinkhole', 'landslide', 'terrainDeformation'] as const).map((t) => phenomena.implemented(t)!).find((d) => d.keywords.test(clause));
+    if (ground && (!windish || ground === vortex)) {
       const check = simulationCommandSchema.safeParse({ kind: 'event', spec: ground.defaults() });
       if (!check.success) result.errors.push({ key: 'parse.invalid', params: { detail: check.error.issues[0]?.message ?? '' } });
       else result.commands.push({ command: check.data, source: clause, notes: [...notes, { key: 'parse.note.groundDefaults' }], delay: tokens.find((t) => t.kind === 'time' && isDelay(t))?.si ?? 0 } satisfies ParsedCommand);

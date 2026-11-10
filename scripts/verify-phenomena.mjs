@@ -33,7 +33,7 @@ const clickText = (re) => page.evaluate((src) => {
   return false;
 }, re.source);
 await page.evaluate((l) => window.__ds.locale.getState().setLocale(l), lang);
-await page.evaluate(() => window.__ds.actions.loadSampleTown());
+await page.evaluate(() => window.__ds.actions.loadClassicSampleTown());
 await wait(500);
 
 // Experiment: typhoon at 0, earthquake 10 s after it starts, heavy rain via the real "Add" menu.

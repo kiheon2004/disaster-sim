@@ -11,6 +11,7 @@
  * object, one design-table entry in the file).
  */
 import type { CreateObjectInput } from '@/world/WorldDocument';
+import { laneCenter } from './crossSection';
 import type { ObjectParams, WorldObject } from '@/core/model';
 import type { ObjectType } from '@/core/types';
 import { Rng } from '@/core/random';
@@ -436,15 +437,17 @@ export function vehiclesAlong(ctx: CityContext, segIds: readonly string[], o: Ve
     const p = seg.profile;
     const s0 = (ints.get(seg.a)?.trim.get(id) ?? 0) + 4;
     const s1 = line.length - (ints.get(seg.b)?.trim.get(id) ?? 0) - 4;
-    const laneW = p.width / p.lanes;
-    // Lane centers (lateral) with their travel direction (+1 = a→b).
+    // Lane centers (lateral) with their travel direction (+1 = a→b) — from the cross-section (Phase 35.5: lanes between
+    // the shoulders and around the median; a road without them gives exactly the former width / lanes split).
     const lanes: { lateral: number; dir: 1 | -1 }[] = [];
     if (o.mode === 'parked') {
-      lanes.push({ lateral: p.width / 2 - 1.1, dir: 1 });
-      if (!p.oneWay) lanes.push({ lateral: -(p.width / 2 - 1.1), dir: -1 });
+      // On the shoulder when there is one, otherwise at the curb.
+      const curb = (p.shoulderWidth ?? 0) > 1.6 ? p.width / 2 - (p.shoulderWidth ?? 0) / 2 : p.width / 2 - 1.1;
+      lanes.push({ lateral: curb, dir: 1 });
+      if (!p.oneWay) lanes.push({ lateral: -curb, dir: -1 });
     } else {
       for (let i = 0; i < p.lanes; i++) {
-        const lateral = -p.width / 2 + laneW * (i + 0.5);
+        const lateral = laneCenter(p, i);
         lanes.push({ lateral, dir: p.oneWay ? 1 : lateral >= 0 ? 1 : -1 });
       }
     }

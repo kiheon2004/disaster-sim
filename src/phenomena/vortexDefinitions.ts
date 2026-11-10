@@ -18,7 +18,7 @@ const put = (s: EventSpec, patch: Partial<TornadoSpec>) => ({ ...T(s), ...patch 
 const L = TORNADO_LIMITS;
 
 export const tornado = implemented<TornadoSpec>({
-  type: 'tornado', labelKey: 'phen.tornado', icon: 'wind', status: 'implemented',
+  type: 'tornado', labelKey: 'phen.tornado', icon: 'tornado', status: 'implemented',
   channels: ['airflow', 'mechanicalForce'],
   models: ['vortexWind', 'windLoad'],
   keywords: /토네이도|회오리|소용돌이\s*바람|tornado|twister|whirlwind|vortex/,

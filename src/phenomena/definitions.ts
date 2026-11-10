@@ -118,7 +118,7 @@ const rain = implemented<RainEventSpec>({
 const SIDE_OPTIONS = (['N', 'E', 'S', 'W'] as BoundarySide[]).map((s) => ({ value: s, labelKey: `side.${s}` as const }));
 
 const risingWater = implemented<RisingWaterEventSpec>({
-  type: 'risingWater', labelKey: 'phen.risingWater', icon: 'water', status: 'implemented',
+  type: 'risingWater', labelKey: 'phen.risingWater', icon: 'flood', status: 'implemented',
   channels: ['water'],
   models: ['water'],
   keywords: /수위|범람|홍수|침수|water\s*level|rising\s*water|flood|inundat/,
@@ -140,7 +140,7 @@ const risingWater = implemented<RisingWaterEventSpec>({
 });
 
 const waterSource = implemented<WaterSourceEventSpec>({
-  type: 'waterSource', labelKey: 'phen.waterSource', icon: 'water', status: 'implemented',
+  type: 'waterSource', labelKey: 'phen.waterSource', icon: 'inflow', status: 'implemented',
   channels: ['water'],
   models: ['water'],
   keywords: /물\s*공급|유입|수도관|water\s*source|inflow|pump/,

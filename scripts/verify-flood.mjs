@@ -43,7 +43,7 @@ const sample = () => page.evaluate(() => {
 });
 
 await page.evaluate((l) => window.__ds.locale.getState().setLocale(l), lang);
-await page.evaluate(() => window.__ds.actions.loadSampleTown());
+await page.evaluate(() => window.__ds.actions.loadClassicSampleTown());
 
 // ── Scenario A: sample town (flat) — heavy rain + rising water from the south edge ──
 await page.evaluate(() => {

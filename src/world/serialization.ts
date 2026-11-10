@@ -162,6 +162,8 @@ const documentSchema = z.object({
         physiology: physiologySchema.optional().catch(undefined),
         // Phase 35: vehicle dynamics (absent = legacy cars; invalid values are dropped, not fixed).
         vehicles: vehicleSchema.optional().catch(undefined),
+        // Phase 35.5: structural behaviour v2 (absent = Phase 25 behaviour).
+        structure: z.object({ model: z.literal('v2') }).optional().catch(undefined),
       })
       .partial()
       .optional(),
@@ -368,6 +370,7 @@ export function parseDocument(json: string): LoadResult {
       ...(sim?.humans ? { humans: { model: 'extended' as const, ...(sim.humans.riskScale !== undefined ? { riskScale: sim.humans.riskScale } : {}) } } : {}),
       ...(sim?.humans && sim?.physiology ? { physiology: normalizePhysiology(sim.physiology) } : {}),
       ...(sim?.vehicles ? { vehicles: normalizeVehicles(sim.vehicles) } : {}),
+      ...(sim?.structure?.model === 'v2' ? { structure: { model: 'v2' as const } } : {}),
     },
   };
   const rawFlood = res.data.scenario?.flood;

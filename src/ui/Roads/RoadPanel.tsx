@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { crossSectionOf } from '@/roads/crossSection';
 import { useT } from '@/i18n/i18n';
 import { randomSeed } from '@/core/random';
 import { useEditorStore } from '@/editor/editorStore';
@@ -89,6 +90,9 @@ export function ProfileFields({ value, onChange, disabled }: { value: RoadProfil
     <>
       <NumberField label={t('road.width')} value={value.width} min={PROFILE_LIMITS.width[0]} max={PROFILE_LIMITS.width[1]} step={0.5} precision={1} unit="m" disabled={disabled} onChange={(v, live) => !live && onChange({ width: v })} />
       <NumberField label={t('road.lanes')} value={value.lanes} min={PROFILE_LIMITS.lanes[0]} max={PROFILE_LIMITS.lanes[1]} step={1} precision={0} disabled={disabled} onChange={(v, live) => !live && onChange({ lanes: Math.round(v) })} />
+      <NumberField label={t('road.f.shoulder')} value={value.shoulderWidth ?? 0} min={PROFILE_LIMITS.shoulderWidth[0]} max={PROFILE_LIMITS.shoulderWidth[1]} step={0.25} precision={2} unit="m" disabled={disabled} onChange={(v, live) => !live && onChange({ shoulderWidth: v })} />
+      <NumberField label={t('road.f.median')} value={value.medianWidth ?? 0} min={PROFILE_LIMITS.medianWidth[0]} max={PROFILE_LIMITS.medianWidth[1]} step={0.5} precision={1} unit="m" disabled={disabled} onChange={(v, live) => !live && onChange({ medianWidth: v })} />
+      <CrossSectionLine p={value} />
       <ToggleField label={t('road.oneWay')} checked={value.oneWay} disabled={disabled} onChange={(v) => onChange({ oneWay: v })} />
       <SelectField label={t('road.material')} value={value.material} disabled={disabled} onChange={(v) => onChange({ material: v })}
         options={ROAD_MATERIALS.map((m) => ({ value: m, label: t(`road.material.${m}`) }))} />
@@ -106,6 +110,17 @@ export function ProfileFields({ value, onChange, disabled }: { value: RoadProfil
         options={DRAINAGE_LEVELS.map((m) => ({ value: m, label: t(`road.drainage.${m}`) }))} />
       <ToggleField label={t('road.markings')} checked={value.markings} disabled={disabled} onChange={(v) => onChange({ markings: v })} />
     </>
+  );
+}
+
+/** Phase 35.5: the derived cross-section (lane width, total width incl. sidewalks). */
+function CrossSectionLine({ p }: { p: RoadProfile }) {
+  const t = useT();
+  const c = crossSectionOf(p);
+  return (
+    <div className={styles.note} data-testid="road-cross-section">
+      {t('road.f.laneWidth')} {c.laneWidth.toFixed(2)} m × {c.laneCount} · {t('road.f.total')} {c.totalWidth.toFixed(1)} m
+    </div>
   );
 }
 

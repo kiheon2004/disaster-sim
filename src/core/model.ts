@@ -215,6 +215,12 @@ export interface SimulationSettings {
    * powertrain, brakes, steering, aerodynamics, collisions, damage, occupants). Absent = the legacy cars (bit-identical).
    */
   vehicles?: import('@/vehicle/settings').VehicleSettings;
+  /**
+   * Structural behaviour (Phase 35.5): 'v2' = member law by structural type (yield, plastic, softening, fracture), parts that
+   * lose support on one side lean and topple about the remaining supports, flood / meteor loads on the exposed members,
+   * earthquake failures member-first with a torsion term. Absent = the Phase 25 behaviour (bit-identical).
+   */
+  structure?: { model: 'v2' };
 }
 
 export interface HumanSettings {

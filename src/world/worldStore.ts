@@ -150,7 +150,7 @@ export interface WorldState {
   remove: (ids: EntityId[]) => void;
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
-  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null; vehicles?: NonNullable<WorldDocument['settings']['simulation']['vehicles']> | null }) => void;
+  updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null; vehicles?: NonNullable<WorldDocument['settings']['simulation']['vehicles']> | null; structure?: NonNullable<WorldDocument['settings']['simulation']['structure']> | null }) => void;
   /** The experiment plan (Phase 15). Not an undo step (like settings). */
   setExperiment: (patch: Partial<ExperimentSettings>) => void;
   /** Structural / foundation properties of an object (earthquake). */
@@ -597,6 +597,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
               ...((patch.humans !== undefined ? patch.humans : cur.humans) ? (patch.physiology !== undefined ? (patch.physiology ? { physiology: patch.physiology } : {}) : cur.physiology ? { physiology: cur.physiology } : {}) : {}),
               // Phase 35: vehicle dynamics (null switches it off).
               ...(patch.vehicles !== undefined ? (patch.vehicles ? { vehicles: patch.vehicles } : {}) : cur.vehicles ? { vehicles: cur.vehicles } : {}),
+              // Phase 35.5: structural behaviour v2 (null switches back to the Phase 25 behaviour).
+              ...(patch.structure !== undefined ? (patch.structure ? { structure: patch.structure } : {}) : cur.structure ? { structure: cur.structure } : {}),
             },
           },
           meta: { ...doc.meta, updatedAt: new Date().toISOString() },

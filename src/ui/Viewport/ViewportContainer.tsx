@@ -27,6 +27,7 @@ import { ClimateHud } from './ClimateHud';
 import { GravityHud } from './GravityHud';
 import { CelestialHud } from './CelestialHud';
 import { OverlayToggles } from './OverlayToggles';
+import { useUiStore } from '@/ui/uiStore';
 import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
 import { useViewStore } from '@/rendering/viewStore';
@@ -43,6 +44,8 @@ export function ViewportContainer() {
   const terrainTool = useEditorStore((s) => s.terrainTool);
   const isEditor = mode === 'editor';
   const perf = useViewStore((s) => s.showPerfHud);
+  const hudOpen = useUiStore((s) => s.hudOpen);
+  const overlayOpen = useUiStore((s) => s.overlayOpen);
 
   return (
     <div className={styles.wrap}>
@@ -63,21 +66,12 @@ export function ViewportContainer() {
       </div>
       <div className={`${styles.overlay} ${styles.topRight}`}>
         <Compass />
-        {!isEditor && <WindHud />}
-        {!isEditor && <QuakeHud />}
-        {!isEditor && <FloodHud />}
-        {!isEditor && <DeformHud />}
-        {!isEditor && <GroundHud />}
-        {!isEditor && <ImpactHud />}
-        {!isEditor && <BlastHud />}
-        {!isEditor && <VolcanoHud />}
-        {!isEditor && <AtmosphereHud />}
-        {!isEditor && <GravityHud />}
-        {!isEditor && <CelestialHud />}
-        {!isEditor && <ClimateHud />}
-        {!isEditor && <FireHud />}
-        {!isEditor && <ThermalHud />}
-        {!isEditor && <StructureHud />}
+        {!isEditor && (
+          <button className={styles.hudToggle} aria-expanded={hudOpen} onClick={() => useUiStore.getState().setHudOpen(!hudOpen)} title={t(hudOpen ? 'hud.hide' : 'hud.show')} data-testid="hud-toggle">
+            {t(hudOpen ? 'hud.hide' : 'hud.show')}
+          </button>
+        )}
+        {!isEditor && hudOpen && <Huds />}
       </div>
       <div className={`${styles.overlay} ${styles.bottomLeft}`}>
         <span className={styles.hint} data-testid="viewport-hint">
@@ -104,7 +98,14 @@ export function ViewportContainer() {
       )}
       {!isEditor && (
         <div className={`${styles.overlay} ${styles.bottomRight}`}>
-          <OverlayToggles />
+          {overlayOpen ? (
+            <div className={styles.overlayBox}>
+              <button className={styles.hudToggle} aria-expanded onClick={() => useUiStore.getState().setOverlayOpen(false)} data-testid="overlay-toggle">{t('overlay.title')} ▾</button>
+              <OverlayToggles />
+            </div>
+          ) : (
+            <button className={styles.hudToggle} aria-expanded={false} onClick={() => useUiStore.getState().setOverlayOpen(true)} data-testid="overlay-toggle">{t('overlay.title')} ▸</button>
+          )}
         </div>
       )}
       {loading && <div className={styles.loading}>{t('app.loadingPhysics')}</div>}
@@ -118,4 +119,27 @@ function BlueprintHint() {
   const mode = useBlueprintStore((s) => s.mode);
   const kind = useBlueprintStore((s) => s.capture.kind);
   return <>{mode === 'place' ? t('bp.place.hint') : t(`bp.capture.hint.${kind}`)}</>;
+}
+
+/** Live information panels of the running phenomena (Phase 35.5: folded together with one button). */
+function Huds() {
+  return (
+    <>
+      <WindHud />
+      <QuakeHud />
+      <FloodHud />
+      <DeformHud />
+      <GroundHud />
+      <ImpactHud />
+      <BlastHud />
+      <VolcanoHud />
+      <AtmosphereHud />
+      <GravityHud />
+      <CelestialHud />
+      <ClimateHud />
+      <FireHud />
+      <ThermalHud />
+      <StructureHud />
+    </>
+  );
 }

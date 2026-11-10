@@ -94,7 +94,16 @@ export function findSegment(n: RoadNetwork, x: number, z: number, radius = SNAP_
 
 function sanitizeProfile(p: RoadProfile): RoadProfile {
   const c = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
-  return { ...p, width: c(p.width, PROFILE_LIMITS.width), lanes: Math.round(c(p.lanes, PROFILE_LIMITS.lanes)), sidewalkWidth: c(p.sidewalkWidth, PROFILE_LIMITS.sidewalkWidth), curbHeight: c(p.curbHeight, PROFILE_LIMITS.curbHeight) };
+  const out = { ...p, width: c(p.width, PROFILE_LIMITS.width), lanes: Math.round(c(p.lanes, PROFILE_LIMITS.lanes)), sidewalkWidth: c(p.sidewalkWidth, PROFILE_LIMITS.sidewalkWidth), curbHeight: c(p.curbHeight, PROFILE_LIMITS.curbHeight) };
+  // Phase 35.5: shoulders + median never leave a lane narrower than 2 m.
+  if (p.shoulderWidth !== undefined || p.medianWidth !== undefined) {
+    const sh = c(p.shoulderWidth ?? 0, PROFILE_LIMITS.shoulderWidth), md = c(p.medianWidth ?? 0, PROFILE_LIMITS.medianWidth);
+    const room = out.width - 2 * out.lanes;
+    const k = sh * 2 + md > room ? Math.max(0, room) / (sh * 2 + md) : 1;
+    if (p.shoulderWidth !== undefined) out.shoulderWidth = sh * k;
+    if (p.medianWidth !== undefined) out.medianWidth = md * k;
+  }
+  return out;
 }
 
 /** Get or create the node at (x, z): existing node within MERGE_DIST, else a new one. */

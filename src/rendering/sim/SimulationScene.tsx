@@ -34,6 +34,7 @@ import { HumanLayer } from '../human/HumanLayer';
 import { PhysiologyLayer } from '../physiology/PhysiologyLayer';
 import { VehicleLayer } from '../vehicle/VehicleLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
+import { PlacementLayer } from '@/rendering/placement/PlacementLayer';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
 
@@ -112,6 +113,7 @@ export function SimulationScene() {
       <DeformationPicker />
       <GroundPreview />
       <GroundPicker />
+      <PlacementLayer />
       <GroundMotionLayer />
       <EpicenterMarker />
       <CameraShake />

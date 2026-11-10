@@ -61,7 +61,7 @@ export function sinkholeOutlook(spec: SinkholeSpec, ctx: PhenomenonContext) {
 }
 
 export const sinkhole = implemented<SinkholeSpec>({
-  type: 'sinkhole', labelKey: 'phen.sinkhole', icon: 'warning', status: 'implemented',
+  type: 'sinkhole', labelKey: 'phen.sinkhole', icon: 'sinkhole', status: 'implemented',
   channels: ['groundSupport', 'terrainDeformation', 'sediment', 'mechanicalForce'],
   models: ['sinkholePlug', 'cutStability', 'granularRunout', 'bedDisplacement', 'foundationSettlement', 'roadDeformation', 'sedimentLoads'],
   keywords: /싱크홀|땅\s*꺼짐|지반\s*함몰|sinkhole/,
@@ -132,7 +132,7 @@ const circleField = (k: 'x' | 'z' | 'r'): Partial<ParamField> => ({
 });
 
 export const landslide = implemented<LandslideSpec>({
-  type: 'landslide', labelKey: 'phen.landslide', icon: 'warning', status: 'implemented',
+  type: 'landslide', labelKey: 'phen.landslide', icon: 'landslide', status: 'implemented',
   channels: ['groundSupport', 'sediment', 'terrainDeformation', 'mechanicalForce'],
   models: ['infiniteSlope', 'newmark', 'granularRunout', 'sedimentLoads', 'bedDisplacement', 'foundationSettlement', 'roadDeformation'],
   keywords: /산사태|토석류|사면\s*붕괴|landslide|mudslide|debris\s*flow/,

@@ -32,8 +32,21 @@ import { RoadSimSection } from '@/ui/Roads/RoadSimSection';
 import styles from './Inspector.module.css';
 
 export function InspectorPanel() {
-  countRender('InspectorPanel');
   const t = useT();
+  return (
+    <Panel title={t('panel.inspector')}>
+      <InspectorContent />
+    </Panel>
+  );
+}
+
+/**
+ * Phase 35.5: the selection tab of the right context panel — what is selected (terrain / building / road tools, several
+ * objects, one object with its live sections in the simulation) or, with nothing selected, the world overview. The
+ * simulation-wide probes and the summary moved to the analysis tab, the settings to the settings tab.
+ */
+export function InspectorContent() {
+  countRender('InspectorPanel');
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const mode = useEditorStore((s) => s.mode);
@@ -44,7 +57,7 @@ export function InspectorPanel() {
   const roadMode = useEditorStore((s) => s.tool === 'road');
 
   return (
-    <Panel title={t('panel.inspector')}>
+    <>
       {terrainMode && !inSim ? (
         <TerrainInspector />
       ) : buildingMode && !inSim ? (
@@ -75,25 +88,43 @@ export function InspectorPanel() {
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>
-      ) : inSim ? (
-        <>
-          <VolcanoProbeSection />
-          <AtmosphereProbeSection />
-          <ClimateProbeSection />
-          <GravityProbeSection />
-          <CelestialProbeSection />
-          <GroundProbeSection />
-          <BlastProbeSection />
-          <ThermalProbeSection />
-          <DeformationProbeSection />
-          <FloodProbeSection />
-          <SimSummary />
-          <RoadSimSection />
-        </>
       ) : (
         <NoSelection />
       )}
-    </Panel>
+    </>
+  );
+}
+
+/** Phase 35.5: the analysis tab — simulation-wide probes, the damage summary and log, roads (simulation only). */
+export function AnalysisContent() {
+  return (
+    <>
+      <SimSummary />
+      <VolcanoProbeSection />
+      <AtmosphereProbeSection />
+      <ClimateProbeSection />
+      <GravityProbeSection />
+      <CelestialProbeSection />
+      <GroundProbeSection />
+      <BlastProbeSection />
+      <ThermalProbeSection />
+      <DeformationProbeSection />
+      <FloodProbeSection />
+      <RoadSimSection />
+    </>
+  );
+}
+
+/** Phase 35.5: the settings tab — simulation settings and the shortcut list (editable in the editor only). */
+export function SettingsContent({ readOnly }: { readOnly: boolean }) {
+  const t = useT();
+  return (
+    <>
+      <SimulationSettingsSection readOnly={readOnly} />
+      <Section title={t('inspector.shortcuts')} defaultOpen={false}>
+        <Shortcuts />
+      </Section>
+    </>
   );
 }
 
@@ -106,6 +137,27 @@ function NoSelection() {
     return c;
   }, [objects]);
 
+
+  return (
+    <>
+      <div className={styles.empty}>
+        <div className={styles.emptyTitle}>{t('inspector.noSelection')}</div>
+        {t('overview.hint')}
+      </div>
+      <Section title={t('inspector.sceneSummary')}>
+        <div className={styles.stats}>
+          {allDefinitions().map((d) => (
+            <FragmentRow key={d.type} label={t(d.labelKey)} value={counts[d.type] ?? 0} />
+          ))}
+          <FragmentRow label={t('inspector.total')} value={Object.keys(objects).length} />
+        </div>
+      </Section>
+    </>
+  );
+}
+
+function Shortcuts() {
+  const t = useT();
   const shortcuts: [string, Parameters<typeof t>[0]][] = [
     ['V / P / B / L / A', 'shortcut.tools'],
     ['Shift + click / drag', 'shortcut.multiSelect'],
@@ -122,30 +174,12 @@ function NoSelection() {
     ['Esc', 'shortcut.escape'],
     ['W A S D / ↑ ← ↓ →, X, 1–4', 'vehicleUi.shortcut.drive'],
   ];
-
   return (
-    <>
-      <div className={styles.empty}>
-        <div className={styles.emptyTitle}>{t('inspector.noSelection')}</div>
-        {t('inspector.noSelection.hint')}
-      </div>
-      <Section title={t('inspector.sceneSummary')}>
-        <div className={styles.stats}>
-          {allDefinitions().map((d) => (
-            <FragmentRow key={d.type} label={t(d.labelKey)} value={counts[d.type] ?? 0} />
-          ))}
-          <FragmentRow label={t('inspector.total')} value={Object.keys(objects).length} />
-        </div>
-      </Section>
-      <SimulationSettingsSection readOnly={false} />
-      <Section title={t('inspector.shortcuts')} defaultOpen={false}>
-        <div className={styles.shortcuts}>
-          {shortcuts.map(([k, key]) => (
-            <FragmentRow key={k} label={<span className={styles.kbd}>{k}</span>} value={t(key)} />
-          ))}
-        </div>
-      </Section>
-    </>
+    <div className={styles.shortcuts}>
+      {shortcuts.map(([k, key]) => (
+        <FragmentRow key={k} label={<span className={styles.kbd}>{k}</span>} value={t(key)} />
+      ))}
+    </div>
   );
 }
 

@@ -18,6 +18,7 @@ import { collisionFootprint, FootprintIndex } from '../build/footprint';
 import { checkPlacement, type PlacementWarning } from '../build/placementCheck';
 import { GroundCatcher } from './shared';
 import { itemDesign } from '../build/itemDesign';
+import { placeRoadPiece } from '@/app/roadActions';
 
 /** Warnings of the place ghost, for the viewport hint (render-only state). */
 export const useGhostWarnings = (() => {
@@ -111,6 +112,13 @@ export function PlaceTool() {
     const at = groundHit(e);
     if (!at || !isInsideWorld(at, preview.dims, yaw)) return;
     e.stopPropagation();
+    // Phase 35.5: palette roads are network roads with the item's cross-section preset (same section as the road tool and
+    // the default world; ends join existing roads). Older files keep their road objects.
+    if (item.type === 'road') {
+      const params = preview.obj.params as { length?: number; lanes?: number };
+      if (placeRoadPiece((params.lanes ?? 2) >= 4 ? 'avenue' : 'street', [at[0], at[2]], yaw, params.length ?? 20)) useBuildStore.getState().pushRecent(item.id);
+      return;
+    }
     useWorldStore.getState().addObject({
       type: item.type,
       params: preview.obj.params,

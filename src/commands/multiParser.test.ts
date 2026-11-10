@@ -57,15 +57,15 @@ describe('multi-phenomenon commands (Phase 15)', () => {
     expect(got.every((g) => g.delay === 0)).toBe(true);
   });
 
-  it('ground failure phenomena are executable since Phase 22 (default parameters)', async () => {
-    for (const [text, type] of [['싱크홀을 만들어줘', 'sinkhole'], ['Trigger a landslide', 'landslide'], ['운석을 떨어뜨려', 'impact'], ['Drop an asteroid', 'impact']] as const) {
+  it('ground failure phenomena are executable since Phase 22 (default parameters); the placed vortex since Phase 35.5', async () => {
+    for (const [text, type] of [['싱크홀을 만들어줘', 'sinkhole'], ['Trigger a landslide', 'landslide'], ['운석을 떨어뜨려', 'impact'], ['Drop an asteroid', 'impact'], ['토네이도 발생', 'tornado'], ['회오리바람을 일으켜', 'tornado'], ['Spawn a tornado', 'tornado']] as const) {
       const { got } = await run(text);
       expect(got.map((g) => g.spec.event)).toEqual([type]);
     }
   });
 
-  it('planned phenomena (tornado, O₂ fraction …) are recognized but never executed (meteor: implemented since Phase 23)', async () => {
-    for (const [text, type] of [['산소 농도를 낮춰', 'atmosphereLoss'], ['토네이도 발생', 'tornado']]) {
+  it('planned phenomena (tsunami, O₂ fraction …) are recognized but never executed (meteor: implemented since Phase 23, tornado since Phase 35.5)', async () => {
+    for (const [text, type] of [['산소 농도를 낮춰', 'atmosphereLoss'], ['쓰나미 발생', 'tsunami']]) {
       const { r, got } = await run(text);
       expect(got).toHaveLength(0);
       expect(r.unsupported[0]?.event).toBe(type);

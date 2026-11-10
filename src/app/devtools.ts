@@ -104,6 +104,9 @@ import { qRotate } from '@/core/math';
 import type { HeatSourceSpec } from '@/thermal/types';
 import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 
+import * as placementActions from './placementActions';
+import { usePlacementStore } from '@/ui/placement/placementStore';
+
 export function installDevtools() {
   (window as unknown as Record<string, unknown>).__ds = {
     world: useWorldStore,
@@ -135,6 +138,9 @@ export function installDevtools() {
     /** Translate a key in the current locale (browser verification finds buttons by label). */
     tr: (key: MessageKey) => translate(useLocaleStore.getState().locale, key),
     actions,
+    /** Phase 35.5 placement / multi-instance UI (browser verification). */
+    placement: placementActions,
+    placementStore: usePlacementStore,
     view: useViewStore,
     sim: simulationController,
     simStore: useSimStore,

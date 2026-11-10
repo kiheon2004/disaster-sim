@@ -29,3 +29,10 @@
 .applyBar button { padding: 4px 10px; }
 .applyBar .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .orig { padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: #a9e2b4; background: rgba(11,15,20,0.72); border: 1px solid rgba(127,211,160,0.45); cursor: help; }
+
+/* Phase 35.5: foldable live panels and display options */
+.hudToggle {
+  align-self: flex-end; height: 24px; padding: 0 9px; font-size: 11px; font-weight: 600; border-radius: 12px;
+  background: rgba(11, 15, 20, 0.78); border: 1px solid rgba(255, 255, 255, 0.14); color: var(--text-1); backdrop-filter: blur(4px);
+}
+.overlayBox { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }

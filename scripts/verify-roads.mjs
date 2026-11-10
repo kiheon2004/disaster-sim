@@ -297,7 +297,7 @@ const lamp15b = await ev((id) => window.__ds.world.getState().doc.objects[id], l
 check('15 linked objects follow the edited road (policy follow)', lamp15b && Math.abs(lamp15b.transform.position[2] - lamp15.transform.position[2]) > 0.5, { before: lamp15.transform.position, after: lamp15b?.transform.position });
 
 // ── 16. Legacy road objects → network (safe conversion, one undo step) ─────────────
-await ev(() => window.__ds.actions.loadSampleTown());
+await ev(() => window.__ds.actions.loadClassicSampleTown());
 await wait(500);
 await page.click('[data-testid="tab-roads"]');
 await wait(300);

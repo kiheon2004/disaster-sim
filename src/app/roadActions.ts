@@ -21,7 +21,7 @@ import {
   buildingsAlong, fillBlock, infrastructureAlong, neighborhood, vehiclesAlong, DEFAULT_FILL, INFRA_SPACING, ZONE_BUILDINGS,
   type CityContext, type CityPlan, type FrontSide, type InfraKind, type NeighborhoodKind,
 } from '@/roads/city';
-import { defaultProfile, type LinkPolicy, type RoadNetwork, type RoadProfile, type ZoneType } from '@/roads/types';
+import { defaultProfile, PROFILE_PRESETS, type LinkPolicy, type RoadNetwork, type RoadProfile, type ZoneType } from '@/roads/types';
 
 const W = () => useWorldStore.getState();
 const R = () => useRoadStore.getState();
@@ -65,6 +65,25 @@ export function finishDraft(): boolean {
     toast('warn', { key: 'road.error.tooShort' }, (e as Error).message);
   }
   return false;
+}
+
+/**
+ * Phase 35.5: a road from the object palette is a NETWORK road with the palette item's cross-section preset (2-lane =
+ * 'street' = normal2, 4-lane = 'avenue'): a straight piece of `length` through `center` along `yaw`. Its ends snap to
+ * existing roads (T / cross junctions), so it joins the default world's and the road tool's roads seamlessly — same
+ * width, surface, curbs, markings and terrain bake. Returns the new segment ids.
+ */
+export function placeRoadPiece(preset: string, center: [number, number], yaw: number, length: number): string[] | null {
+  if (locked()) return null;
+  const profile: RoadProfile = { ...defaultProfile(), ...(PROFILE_PRESETS[preset] ?? {}) };
+  const dx = Math.cos(yaw) * length / 2, dz = -Math.sin(yaw) * length / 2;
+  try {
+    const res = drawRoad(W().doc.roads, [[center[0] - dx, center[1] - dz], [center[0] + dx, center[1] + dz]], { curved: false, profile });
+    if (commit({ roads: res.network })) return res.segments;
+  } catch (e) {
+    toast('warn', { key: 'road.error.tooShort' }, (e as Error).message);
+  }
+  return null;
 }
 
 export function deleteRoadSegments(ids: string[]) {

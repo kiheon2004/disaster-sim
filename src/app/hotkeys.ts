@@ -1,4 +1,7 @@
 import { useEffect } from 'react';
+import { useUiStore } from '@/ui/uiStore';
+import { usePlacementStore } from '@/ui/placement/placementStore';
+import { deleteInstance, disarmPlacement, redoPlacement, undoPlacement } from './placementActions';
 import { useWorldStore } from '@/world/worldStore';
 import { focusObject, togglePlay } from '@/app/actions';
 import { clearSelection, copySelection, deleteSelection, duplicateSelection, groupSelection, selectAll, startPaste, ungroupSelection } from '@/app/buildActions';
@@ -186,6 +189,37 @@ function blueprintKeys(e: KeyboardEvent, key: string): boolean {
   return false;
 }
 
+/**
+ * Disaster placement keys (Phase 35.5), before every other shortcut:
+ *  - Esc: leave placement mode, otherwise deselect the selected disaster pin;
+ *  - Delete / Backspace: remove the selected disaster (cancel / stop it when it is in the run);
+ *  - Ctrl/⌘+Z, Ctrl/⌘+Shift+Z: undo / redo PLACEMENTS — while placing, or on the disasters tab with placement history;
+ *    otherwise the world's undo as before (placements and world edits keep separate histories).
+ */
+function placementKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
+  const st = usePlacementStore.getState();
+  if (key === 'escape') {
+    if (st.type) { e.preventDefault(); disarmPlacement(); return true; }
+    if (st.selected) { st.select(null); return true; }
+    return false;
+  }
+  if ((key === 'delete' || key === 'backspace') && !mod && st.selected && !st.type) {
+    e.preventDefault();
+    deleteInstance(st.selected);
+    return true;
+  }
+  if (mod && key === 'z') {
+    const focus = st.type !== null || useUiStore.getState().rightTab === 'phenomena';
+    if (!focus) return false;
+    if (e.shiftKey ? st.redo.length === 0 : st.undo.length === 0) return false;
+    e.preventDefault();
+    if (e.shiftKey) redoPlacement();
+    else undoPlacement();
+    return true;
+  }
+  return false;
+}
+
 /** Tool keys (Phase 16). Chosen not to collide with W/E/R/F/G/T, Space, [ ], Shift+P. */
 const TOOL_KEYS: Record<string, 'select' | 'place' | 'brush' | 'line' | 'area'> = { v: 'select', p: 'place', b: 'brush', l: 'line', a: 'area' };
 
@@ -204,6 +238,9 @@ export function useEditorHotkeys() {
       const build = useBuildStore.getState();
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+
+      // Phase 35.5: disaster placement keys come first, in both modes.
+      if (placementKeys(e, key, mod)) return;
 
       // Developer performance HUD (every mode).
       if (key === 'p' && e.shiftKey && !mod) {

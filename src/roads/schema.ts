@@ -24,6 +24,8 @@ export const profileSchema = z.object({
   elevation: z.enum(ELEVATION_POLICIES as [string, ...string[]]).catch(d.elevation),
   drainage: z.enum(DRAINAGE_LEVELS as [string, ...string[]]).catch(d.drainage),
   markings: z.boolean().catch(d.markings),
+  shoulderWidth: clampTo(PROFILE_LIMITS.shoulderWidth).optional().catch(undefined),
+  medianWidth: clampTo(PROFILE_LIMITS.medianWidth).optional().catch(undefined),
 }).partial();
 
 const idSchema = z.string().regex(/^[ns]\d{1,9}$/);

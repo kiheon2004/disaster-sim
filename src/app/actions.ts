@@ -15,6 +15,7 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { downloadDocument, parseDocument, pickDocumentFile, storage, type LoadResult } from '@/world/serialization';
 import { sampleTown } from '@/world/sampleScene';
+import { defaultTownObjects, defaultTownRoads } from '@/world/defaultTown';
 import { stressScene } from '@/world/stressScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
@@ -133,6 +134,9 @@ export function newProject() {
   if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('confirm.new'))) return;
   useEditorStore.getState().select(null);
   useWorldStore.getState().newDocument();
+  // Phase 35.5: new projects use the structural behaviour v2 (old files keep what they were saved with).
+  useWorldStore.getState().updateSimulationSettings({ structure: { model: 'v2' } });
+  useWorldStore.setState({ past: [], future: [] });
 }
 
 /** Performance test scene with `count` objects (dev / benchmarking). */
@@ -277,8 +281,21 @@ export function loadSampleTown() {
   const doc = createEmptyDocument(t('sample.name'));
   useEditorStore.getState().select(null);
   useWorldStore.getState().replaceDocument(doc);
-  useWorldStore.getState().addObjects(sampleTown());
+  // Phase 35.5: the default world uses network roads from the cross-section presets (same section as the road tool and
+  // the palette) and member-modelled buildings of several structural systems. sampleTown() stays for the tests.
+  useWorldStore.getState().applyEdit({ roads: defaultTownRoads() });
+  useWorldStore.getState().addObjects(defaultTownObjects());
+  useWorldStore.getState().updateSimulationSettings({ structure: { model: 'v2' } });
   // The sample itself should not be an undo step.
+  useWorldStore.setState({ past: [], future: [] });
+}
+
+/** The previous default world (road objects, single-box buildings) — kept for comparisons and the tests. */
+export function loadClassicSampleTown() {
+  const doc = createEmptyDocument(t('sample.name'));
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  useWorldStore.getState().addObjects(sampleTown());
   useWorldStore.setState({ past: [], future: [] });
 }
 
@@ -384,12 +401,12 @@ export function phenomenonContext(): PhenomenonContext {
 }
 
 /** Add a phenomenon (default parameters, or a spec from one of the detailed hazard forms). */
-export function addPhenomenon(type: string, spec?: EventSpec): string | null {
+export function addPhenomenon(type: string, spec?: EventSpec, opts: { quiet?: boolean } = {}): string | null {
   const cur = experiment().instances;
   if (!phenomena.implemented(type)) return null;
   const inst = createInstance(type, cur, spec);
   useWorldStore.getState().setExperiment({ instances: [...cur, inst] });
-  toast('success', { key: 'exp.toast.added', params: { name: t(phenomena.get(type)!.labelKey) } });
+  if (!opts.quiet) toast('success', { key: 'exp.toast.added', params: { name: t(phenomena.get(type)!.labelKey) } });
   return inst.id;
 }
 
@@ -423,6 +440,11 @@ export async function runExperiment() {
   const base = inSim ? simulationController.getTime() : 0;
   const sched = resolveSchedule(exp.instances, phenomenonContext(), base);
   for (const issue of sched.issues) toast('warn', { key: `exp.issue.${issue.problem}`, params: { id: issue.id } });
+  // Phase 35.5: during a run, instances already in it (started or scheduled) are not added a second time.
+  if (inSim) {
+    const running = new Set(simulationController.instances().map((i) => i.key));
+    sched.items = sched.items.filter((r) => !running.has(r.instance.id));
+  }
   if (!sched.items.length) {
     toast('warn', { key: 'exp.toast.nothing' });
     return;

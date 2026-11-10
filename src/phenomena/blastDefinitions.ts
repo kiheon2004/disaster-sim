@@ -36,7 +36,7 @@ export function blastOutlook(spec: BlastSpec, ctx: PhenomenonContext): BlastPlan
 export const energyText = (E: number) => (E >= 1e12 ? `${(E / 1e12).toFixed(2)} TJ` : E >= 1e9 ? `${(E / 1e9).toFixed(2)} GJ` : E >= 1e6 ? `${(E / 1e6).toFixed(2)} MJ` : `${(E / 1e3).toFixed(1)} kJ`);
 
 export const blast = implemented<BlastSpec>({
-  type: 'blast', labelKey: 'phen.blast', icon: 'warning', status: 'implemented',
+  type: 'blast', labelKey: 'phen.blast', icon: 'blast', status: 'implemented',
   channels: ['pressure', 'mechanicalForce'],
   models: ['blastWave', 'blastLoading', 'blastShielding', 'structural'],
   keywords: /폭발|압력파|폭풍파|폭풍압|충격파|explosion|explode|blast|pressure\s*wave|shock\s*wave/,

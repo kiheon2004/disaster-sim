@@ -37,7 +37,7 @@ export function impactOutlook(spec: ImpactSpec, ctx: PhenomenonContext, withEjec
 const fmtE = (E: number) => (E >= 1e12 ? `${(E / 1e12).toFixed(2)} TJ` : E >= 1e9 ? `${(E / 1e9).toFixed(2)} GJ` : `${(E / 1e6).toFixed(2)} MJ`);
 
 export const impact = implemented<ImpactSpec>({
-  type: 'impact', labelKey: 'phen.meteor', icon: 'warning', status: 'implemented',
+  type: 'impact', labelKey: 'phen.meteor', icon: 'meteor', status: 'implemented',
   channels: ['groundMotion', 'terrainDeformation', 'sediment', 'mechanicalForce'],
   models: ['impactEntry', 'craterScaling', 'ejectaBallistics', 'groundShock', 'granularRunout', 'bedDisplacement', 'foundationSettlement', 'roadDeformation'],
   keywords: /운석|소행성|유성체|meteor|asteroid|meteoroid|impactor/,

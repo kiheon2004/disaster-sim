@@ -35,7 +35,7 @@ const setCam = (p, t) => page.evaluate((p, t) => {
 
 const lang = process.env.LANG_UI ?? 'ko';
 await page.evaluate((l) => window.__ds.locale.getState().setLocale(l), lang);
-await page.evaluate(() => window.__ds.actions.loadSampleTown());
+await page.evaluate(() => window.__ds.actions.loadClassicSampleTown());
 await page.evaluate(() => window.__ds.world.getState().setEarthquakeScenario({ event: 'earthquake', magnitude: 7.0, pga: Number(new URLSearchParams(location.search).get('pga') ?? 0.7), duration: 25, epicenter: [60, -40], depth: 8, seed: 3 }));
 await wait(800);
 await shot(`01-editor-${lang}`);

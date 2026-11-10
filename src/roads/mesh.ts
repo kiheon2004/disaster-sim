@@ -153,12 +153,12 @@ export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
       out.walk.quad([inner[i].x, yIn[i], inner[i].z], [inner[i + 1].x, yIn[i + 1], inner[i + 1].z], top(i + 1, inner[i + 1]), top(i, inner[i]), CURB);
     }
   }
-  if (p.markings && ROAD_MATERIAL_PROPS[p.material].marked) markings(out.marking, S, yC, yL, yR, p.lanes, w, p.oneWay);
+  if (p.markings && ROAD_MATERIAL_PROPS[p.material].marked) markings(out.marking, S, yC, yL, yR, p.lanes, w, p.oneWay, p.shoulderWidth ?? 0, p.medianWidth ?? 0);
   return out;
 }
 
 /** Lane / center / edge lines as thin strips following the cross-sections. */
-function markings(m: MeshData, S: ReturnType<typeof frame>[], yC: number[], yL: number[], yR: number[], lanes: number, w: number, oneWay: boolean) {
+function markings(m: MeshData, S: ReturnType<typeof frame>[], yC: number[], yL: number[], yR: number[], lanes: number, w: number, oneWay: boolean, shoulder = 0, median = 0) {
   const yAt = (i: number, o: number) => {
     const f = Math.abs(o) / Math.max(1e-6, w);
     return (o < 0 ? yC[i] + (yL[i] - yC[i]) * f : yC[i] + (yR[i] - yC[i]) * f) + MARK_LIFT;
@@ -171,6 +171,21 @@ function markings(m: MeshData, S: ReturnType<typeof frame>[], yC: number[], yL: 
       m.quad(p(a, i, -width / 2), p(a, i, width / 2), p(b, i + 1, width / 2), p(b, i + 1, -width / 2), color);
     }
   };
+  if (shoulder > 0 || median > 0) {
+    // Phase 35.5 cross-section: lanes between the shoulders (edge lines at the lane edge) and around the median.
+    const tw = w - shoulder;
+    const lw = (2 * tw - median) / lanes;
+    if (oneWay) for (let k = 1; k < lanes; k++) strip(-tw + lw * k, 0.12, WHITE, true);
+    else {
+      if (median > 0) { strip(-median / 2, 0.12, YELLOW, false); strip(median / 2, 0.12, YELLOW, false); }
+      else if (lanes >= 2) { strip(-0.11, 0.1, YELLOW, false); strip(0.11, 0.1, YELLOW, false); }
+      const perDir = Math.floor(lanes / 2);
+      for (let k = 1; k < perDir; k++) { strip(median / 2 + lw * k, 0.12, WHITE, true); strip(-median / 2 - lw * k, 0.12, WHITE, true); }
+    }
+    strip(-tw, 0.15, WHITE, false);
+    strip(tw, 0.15, WHITE, false);
+    return;
+  }
   const laneW = (2 * w) / lanes;
   if (oneWay) {
     for (let k = 1; k < lanes; k++) strip(-w + laneW * k, 0.12, WHITE, true);
