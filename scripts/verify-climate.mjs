@@ -362,14 +362,17 @@ check('28 heatwave and fire: the fire model starts from the dried crowns (same w
 await exitSim();
 
 // ══ 29–30: snow-loaded building ═════════════════════════════════════════════════════════════════
-await presetRun('snowLoadedBuilding', 900);
+// Since Phase 31 (R1) this roof fails under the snow: the load on the roof is read while the snow is still on it (1 s), the rest at 900 s as before.
+await presetRun('snowLoadedBuilding', 1);
+const kPa29 = await ev(() => { const es = [...window.__ds.sim.getRuntime().entities.values()]; const e = es.find((x) => x.source.type === 'building' && x.dims[0] > 20) ?? es.find((x) => x.source.type === 'building'); return e.climate?.loadKPa ?? 0; });
+await atTime(900);
 C = await cl();
 const b29 = await ev(() => { const e = [...window.__ds.sim.getRuntime().entities.values()].find((x) => x.source.type === 'building' && x.dims[0] > 20) ?? [...window.__ds.sim.getRuntime().entities.values()].find((x) => x.source.type === 'building'); const m = e.modular?.structure?.model; return { kPa: e.climate?.loadKPa, applied: e.climate?.applied, failed: m ? m.records.length : 0, hazards: m ? [...new Set(m.records.map((r) => r.hazard))] : [], collapsed: Number.isFinite(e.modular?.collapsedFrom) }; });
 await ev(() => window.__ds.view.getState().setClimateViz({ overlay: 'roofLoad' }));
 await view(0, 0, 40, 50);
 await wait(900);
 await shot('29-roof-load');
-check('29 roof snow load: snow mass × g on the roof members of the structural model (≥ 0.4 kPa applied)', b29.kPa > 0.4 && b29.applied, b29);
+check('29 roof snow load: snow mass × g on the roof members of the structural model (≥ 0.4 kPa applied)', kPa29 > 0.4 && b29.applied, { ...b29, kPaAt1s: kPa29 });
 check('30 structural response through the existing engine: failures (if any) recorded with hazard climate, the roof snow kept (water ledger closed)', (b29.failed === 0 || b29.hazards.includes('climate')) && C.stats.waterResidual < 1e-8, { b29, res: C.stats.waterResidual });
 await exitSim();
 

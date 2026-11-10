@@ -1,0 +1,24 @@
+PASS 1 add sinkhole; parameters follow the initiation mode {"f1a":["cavityRadius","cover","initiation","x","z","cavityHeight","material","growthRate","duration","variability"],"f1b":["cavityRadius","cover","initiation","x","z","cavityHeight","material","supportLoss","duration","variability"]}
+PASS 2 sinkhole centre picked by a world click {"center":[6,2]}
+PASS 3 sinkhole parameters edited; predicted critical radius, FS and pit shown {"sum3":"critical radius a_c 1.7 m · roof FS 0.43 → 0.04expected drop 7.25 m · expected pit radius ≈ 13.3 mPrediction: failure starts when run","spec":{"supportLoss":0.9,"event":"sinkhole","center":[6,2],"cavityRadius":4,"cavityHeight":8,"cover":5,"initiation":"supportLoss","growthRate":0.2,"duration":1}}
+PASS 4 sinkhole preview drawn (cavity / critical / pit); world unchanged {"prev4":1}
+PASS 5 sinkhole collapses on the runtime ground; document untouched; HUD shows its phase {"phase":"collapsed","h5":-5.418929576873779}
+PASS 6 rendered terrain mesh matches the runtime heights {"worst":0,"n":40401}
+PASS 7 ground overlay modes shown; dust labelled as a visual effect only {"stability":true,"sediment":true,"deposit":true,"change":true}
+PASS 8 building near the pit: ground response in the inspector Mean settlement (+ up)−0.004 mTilt0.10° (1/595)Angular distortion β1/22 (peak 1/22)Differential settlement classFailure level (> 1/50, extrapolated)Foundation c
+PASS 9 ground probe: material, slope, water, FS, height change, source Position4.4, 6.1Ground materialDense granular soil (c′ 0 kPa, φ′ 38°)Slope0.0°Soil thickness5.00 mWater-table ratio m0 %Factor of safety∞Moving sediment–Deposit–Height change+0.000 mDeformation sourcep1 · Sinkhole
+PASS 10 sinkhole milestones on the timeline; log translated {"ms10":["start","sinkholeInit","supportLoss","firstDamage","collapse","memberFailure","loadRedistribution","globalCollapse","foundationFailure","end","sinkholeExpansion","sinkholeExpansion","peakSediment"]}
+PASS 11 save during a run: original world saved, mid-run state explicitly not saved {"manifest11":[["clock","state",true],["document","document",true],["events","derived",true],["entities","state",true],["debris","state",true],["bodies","external",true],["roads","state",false],["water","state",false],["deformation","derived",true],["groundFailure","state",true],["blastWaves","derived",false],["blastObjects","state",false],["structuralGraph","derived",true],["collapse","state",true],["fragments","external",false],["rubble","state",true],["thermalGround","state",false],["thermalWater","state",false],["thermalAir","state",false],["thermalBodies","state",false],["thermalSources","state",false],["thermalLedger","state",false],["volcanoLava","state",false],["volcanoAir","state",false],["volcanoLedger","state",false],["atmosphereColumns","state",false],["atmosphereLayerCoupling","state",false],["atmosphereLedger","state",false],["climateCovers","state",false],["climateSoilAir","state",false],["climateLedger","state",false],["gravityField","state",false],["gravityLedger","state",false],["metrics","state",true]]}
+PASS 12 reset restores the original ground; fingerprint unchanged on exit {"field":false,"flat":true}
+PASS 13 landslide source area drawn as a polygon (4 corners, Enter) {"kind":"polygon","points":[[-42,-12],[-18,-12],[-18,12],[-42,12]]}
+PASS 14 FS map preview of the area with min FS and unstable share; ramp edited min FS 0.67 · unstable 576/576 vertices · expected failed volume ≈ 1,152 m³Prediction: failure starts when run
+PASS 15 slope fails when saturated; sediment moves (flow arrows), budget closes {"released":1324.7999999999859,"arrows15":270,"residual":0.00004695796519627038}
+PASS 16 sediment comes to rest as a deposit at the toe; original world kept {"mobile":2.34269419813063,"released":1324.7999999999859,"toe16":584.1848161891103}
+PASS 17 road at the toe blocked by the deposit; network unchanged; no wind attribution {"blocked":1,"hazards17":[]}
+PASS 18 landslide into a lake: sediment enters the water, water mass exact {"v18a":12757.741445699234,"v":12757.741445698344,"err":6.972126078270528e-14,"sub":474.89764535985887}
+PASS 19 earthquake: Newmark displacement accumulates on the slope (HUD) {"newmark":0.05365389212965965,"failed":708}
+PASS 20 all hazards: ground damage reported separately; nothing attributed to wind (calm) {"hazards":["ground","flood"]}
+PASS 21 sinkholes and polygon landslides saved and reloaded (schema 7) {"version":7,"ok":true,"inst":[["rain",null],["earthquake",null],["sinkhole","supportLoss"],["landslide","polygon"]]}
+PASS 22 disabled sinkhole / landslide do nothing (no ground field, no HUD) {"active":false,"hud":false}
+
+22/22 passed; 0 page errors

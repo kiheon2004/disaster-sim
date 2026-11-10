@@ -1,0 +1,24 @@
+PASS 1 add deformation; only applicable parameters shown {"f0":["kind","radius","amount","x","z","profile","duration","falloff","supportLoss"],"f1":["kind","radius","amount","x","z","profile","duration","falloff","stages","supportLoss"],"f2":["kind","radius","amount","x","z","profile","duration","stages","length","bearing","supportLoss"]}
+PASS 2 centre picked by a world click {"center":[-15,10],"sel2":[]}
+PASS 3 parameters edited in the GUI; predicted numbers shown {"spec":{"event":"terrainDeformation","kind":"subsidence","center":[-15,10],"radius":22,"amount":1.6,"duration":4,"profile":"smooth","falloff":"smooth"},"summary3":"Predicted max |w| 1.60 m · steepest slope 6° · net volume -723 m³"}
+PASS 4 preview drawn; nothing in the world changed {"preview":1}
+PASS 5 validation: steep-slope warning with its reason; invalid radius flagged {"invalid5":true}
+PASS 6 run: runtime ground lowered by the prescribed amount, document untouched {"maxAbs":1.600000023841858,"h6":-1.600000023841858}
+PASS 7 rendered terrain mesh matches the runtime heights {"worst":0,"n":40401}
+PASS 8 overlay modes; exaggeration applies to arrows only and is labelled {"arrows8":80}
+PASS 9 car followed the ground down by contact {"y":-1.2508525848388672,"g":-1.2896650214713645,"y0":0}
+PASS 10 building ground response in the inspector (settlement, tilt, β, contact, class) Mean settlement (+ up)−0.599 mTilt1.83° (1/31)Angular distortion β1/47 (peak 1/47)Differential settlement classFailure level (> 1/50, extrapolated)Foundation co
+PASS 11 foundation contact rings drawn for buildings on moving ground {"rings11":1}
+PASS 12 ground probe shows original / current elevation, displacement and its source Position-15.0, 10.0Original elevation0.000 mCurrent elevation-1.600 mDisplacement (+ up)−1.600 mGround supportunchangedDeformation sourcep1 · Subsidence −1.60 m (prescribed input)Nearby building · 5 m
+PASS 13 deformation milestones on the timeline; log entries translated {"ms13":["start","firstDamage","collapse","memberFailure","loadRedistribution","globalCollapse","deformPeak","end"]}
+PASS 14 reset restores the original ground exactly; fingerprint unchanged on exit {"engine":false,"flat":true,"mesh":true}
+PASS 15 staged uplift steps (0.25 m increments) and a cyclic ridge {"steps15":[0,0.25,0.5,1]}
+PASS 16 road cut by a step (impassable), shown in the road panel; network unchanged {"cut":1}
+PASS 17 lake over subsiding ground: water moves with the bed, mass budget closes, designs unchanged {"bed":302.88656051953416,"err":3.7525953419393346e-14}
+PASS 18 flood + deformation: rain collects in the subsided bowl {"c":0.006827200808804168,"o":0.0011437927406164439}
+PASS 19 multi-hazard: ground damage reported separately from the earthquake {"hazards":["ground","earthquake"]}
+PASS 20 experiment saved and reloaded (schema unchanged); mid-run water over deformed ground refused with a reason {"version":7,"ok":true,"inst":[["earthquake",null],["terrainDeformation","subsidence"]]}
+PASS 21 a disabled deformation does nothing (no engine, no HUD) {"engine":false,"hud":false}
+PASS residual B: left-panel tabs fully visible [{"text":"Objects","clipped":false},{"text":"Building","clipped":false},{"text":"Terrain","clipped":false},{"text":"Roads","clipped":false},{"text":"Blueprints","clipped":false},{"text":"Scene (0)","clipped":false},{"text":"Selection","clipped":false},{"text":"Disasters","clipped":false},{"text":"Analysis","clipped":false},{"text":"Settings","clipped":false},{"text":"All","clipped":false},{"text":"★ Favourites","clipped":false},{"text":"Recent","clipped":false},{"text":"Weather","clipped":false},{"text":"Geology","clipped":false},{"text":"Hydrology","clipped":false},{"text":"Fire & heat","clipped":false},{"text":"Impact & blast","clipped":false},{"text":"Space & gravity","clipped":false},{"text":"Air & environment","clipped":false}]
+
+22/22 passed; 0 page errors

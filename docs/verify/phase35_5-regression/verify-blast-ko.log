@@ -1,0 +1,25 @@
+PASS 1 pressure-wave phenomenon added from the menu; its fields are shown {"fields":["height","energy","x","z","model","waveform","ambientPressure","ambientDensity"]}
+PASS 2 source position set by a world click (no selection, no world edit) {"position":[-4,2]}
+PASS 3 energy set in MJ, stored in J; no explosive type / composition / mass / TNT field or number offered {"energy":1000000000,"opts3":["약충격파 (비선형, 소산 포함)","선형 음향 (상한)","N파 (정압 + 부압)","정압 단계만","실험 시작 기준 시각"]}
+PASS 4 ambient pressure changes the sound speed and the Sachs length (auto restores the standard atmosphere) {"p":90000,"c":320.71349029490926,"R0":28.115593635387558,"R0std":27.02646367250301}
+PASS 5 preview drawn (field, contours, validity radii); the world is unchanged {"n":1,"mesh":1}
+PASS 6 arrival grows with distance at the computed shock speed (far field ≈ c); symmetric on flat ground {"t30":0.05319675803184509,"t60":0.13530468940734863,"t90":0.22027800977230072,"c":340.29399054347107,"mono":true,"sym":0}
+PASS 7 single wave: no blast force before the computed arrival; the car is pushed away from the source after it; HUD shows the wave {"first7":{"stepStart":1.016666666666668,"ta":1.0181952291499798,"movedBefore":0.030713637139228592},"after":[-14.132885932922363,12.481947898864746],"hud7":["passed"]}
+PASS 8 building exterior: windows break / panels detach under the computed face pressure (cause overpressure, hazard blast) {"n":58,"kinds":["exterior","sign","window","cladding","door","roof"]}
+PASS 9 building structure: walls out of plane / drift / collapse recorded separately from the exterior, attributed to the blast {"kinds":["CRACKED:drift:null","COLLAPSED:blast:null","FAILED:overpressure:wall","FAILED:drift:wall","COLLAPSED:drift:null","FAILED:gravity:slab","FAILED:gravity:wall"]}
+PASS 10 vehicle: moved by the wave, recorded as blast {"d":0.4999324438249536,"moved":[]}
+PASS 11 people: the person near the source falls (blast), the one far away stands {"near":{"peak":237091.2209677698,"arrival":1.00800204557434,"exposure":"direct","J":871.3909258063214,"broken":0},"far":{"peak":4767.699252340552,"arrival":1.3069052770963971,"exposure":"direct","J":14.424451084125092,"broken":0}}
+PASS 12 street light, sign, wall: topple / collapse near the source (blast) [["streetLight",true,263719],["sign",true,298497],["wall",true,411674],["tree",true,28627]]
+PASS 13 every damage record of the run is the blast's (no wind) {"hazards":["blast"]}
+PASS 14 ridge shielding: exposure "terrain", lower and later peak, never zero [{"peak":1757.1153083686,"arrival":0.15243447970043406,"exposure":"terrain","J":146.85455511785025,"broken":0},{"peak":7400.309358230712,"arrival":0.1325017415477049,"exposure":"direct","J":605.6852984516582,"broken":0}]
+PASS 15 pressure map (current / peak / arrival / impulse) and the probe: ambient, relative pressure, arrival, impulse, source, exposure, zone {"layer15":{"mesh":7,"vis":6},"probe":"위치-40.0, -39.9 (지면 위 1.5 m)현재 상대 압력+0.000 kPa원천 현상p1 · blast:p1대기압101.33 kPa도달 시간137 ms (절대 시각 0.137 s)최대 과압7.159 kPa (0.071 p₀)정압 충격량 · 지속90.8 Pa·s · T₊ 23.3 ms노출 분류직접 노출 · 지면 반사파 포함모델 유효 구역약충격 (유효)원"}
+PASS 16 multiple waves: two sources, objects loaded by both; timeline: release, first arrival, peak, impulse, damage (no unfilled labels) {"ms16":["start","blastSource","blastArrival","firstDamage","firstFall","memberFailure","start","blastSource","blastArrival","blastPeak","blastImpulse"]}
+PASS 17 impact: one pressure wave with exactly the air-coupled share (no overlap with seismic / ejecta); ground shock and blast recorded as separate hazards {"W17":[{"id":"evt_a39266753w:air","t":0.19409037197393703,"E":1106349127.9584801,"kind":"surface","src":"impact:p1","exit":0.7467279591186009,"peak":0}],"plan17":{"blast":1106349127.9584801,"impact":55317456397.924,"seismic":5531745.6397924,"ej":1898298030.0412161,"un":52307277494.284515},"hazards":["blast","impact"]}
+PASS 18 pressure wave + water: the water mass is unchanged (momentum only) {"v18a":17314.741370479347,"v18b":17314.74137047736}
+PASS 19 earthquake + pressure wave: both act on one clock, damage attributed per governing load, no duplicated force {"hazards":["blast"],"dup19":0}
+PASS 20 pressure-wave experiment saved and reloaded (schema 7, timing kept) {"ok":true,"version":7,"inst":[["earthquake",null,{"at":0}],["blast",300000000,{"at":3}]]}
+PASS 21 reset restores the original world (positions, no wave / response state); the document is unchanged {"waves":0,"blast":0,"events":0}
+PASS 22 the same conditions reproduce the same damage records and positions at the same step {"t":[3.9999999999999907,3.9999999999999907],"n":112}
+{"heap0":37.5,"heap1":55.7,"geo0":21,"geo1":9,"crashed":false}
+
+22/22 passed; 0 page errors; heap 37.5 → 55.7 MB; geometries 21 → 9; crashed false

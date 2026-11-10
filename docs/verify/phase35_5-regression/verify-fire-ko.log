@@ -1,0 +1,33 @@
+PASS 1 fire scenario added from the Experiment tab (ignition point, height, radius, watch time) {"event":"fire","position":[0,0],"height":1,"radius":1,"duration":600}
+PASS 1b only scenario fields — no fuel recipe, device or intensity field ["radius","duration","x","z","height"]
+PASS 2 radius limited in the field (30 → 10 m); an impossible radius from a file is rejected with its reason {"clamped2":10,"invalid2":"⚠ 점화 반경은 0.2–10 m입니다"}
+PASS 3 ignition point picked on the map with a click [10,0.5]
+PASS 4 target object: the objects the ignition sphere reaches are offered (the tree) ["","tree_6a359e3330"]
+PASS 5 preview: ignition sphere and fuel marks drawn; a live (150 %) crown is reported as too wet 점화 (10.0, 0.5) 높이 7.0 m · 반경 2.0 m점화될 연료 0개 · 0 kg · 0.0 J⚠ 수관이 소염 함수율 30%보다 젖어 있어 불이 붙지 않습니다 (함수율 설정 확인)편집기 예상: 무엇이 연료인지와 기준 노출 — 확산 예측이 아님
+PASS 6 preview in a room: story, floor, contents, window area, fuel / ventilation peaks, reference exposure distances {"room":{"building":"building_6cf063db2z","story":0,"floor":56,"contentsKg":2496,"windows":13.461999999999998,"open":false,"fuelPeak":14000000,"ventPeak":33745.6},"r12":5.585191925620058,"r5":8.83096382707056}
+PASS 7 world fire conditions set (crown moisture, openings, heat ignition) and shown {"foliageMoisture":0.25,"openings":"windowsOpen","heatIgnition":false}
+PASS 8 room fire grows as the EN 1991-1-2 t² curve (≈ 0.64 MW at 240 s) {"hrr":639999.9999999502}
+PASS 9 window glass breaks from heat and the room flashes over (milestones) ["ignition","heatRelease","peakTemperature","strengthReduction","strengthReduction","windowBreak","thermalFailure","peakTemperature","flashover","heatRelease","peakTemperature","oxygenLimited"]
+PASS 10 flames, smoke and embers drawn from the computed fire (external flames at the openings) {"instances":284,"external":1626327759.9928944}
+PASS 11 fire HUD: heat release, objects, rooms, consumed fuel, smoke, ledger residual  화재25.73 MW최대25.73 MW · 900 s객체연소 1 · 착화 1 · 전소 0방연소 1 · 플래시오버 1 · 산소 제한 1최고 실내 온도580 °C소비 연료331 kg · 4.55 GJ연기14.6 kg ·
+PASS 12 oxygen-limited room burning: the excess burns outside (milestone, ledger) {"vl":1}
+PASS 13 overlays with legends: fire state, fuel left, heat release, smoke visibility, room state {"state":"가열 전가열 중열분해착화연소감쇠소염전소","fuel":"0 %50 %100 %남은 연료 비율 (처음 대비)","hrr":"10 kW1 MW100 MW열방출률 막대 (로그 10 kW – 100 M","smoke":"≤ 1 m5 m≥ 30 m공기층 칸의 연기 가시거리 (S = 3/K)","rooms":"정상가열연소플래시오버산소 제한붕괴(개방)"}
+PASS 14–15 member fire colors; inspector: fuel items, heat release, rooms (gas, O₂, smoke, openings, flashover) ["연료 항목41개 · 연소 중 17연료22769 / 23100 kg (99 %)열방출률25.73 MW방출 에너지4.55 GJ탄화 부재17개 · 최","1층 방580 °CO₂14.0 % (질량) · 산소 제한연기 (그을음)3.57 g/m³ · 가시 0.1 m · ε 1.00개구부 · 유입13.5"]
+PASS 16 spread by computed heat to the dry tree beside the house (fireSpread); crown burned, inspector shows its fuel item {"tree16":{"burned":0.9990061739688694,"state":3},"insp16":"연료 재료잎·잔가지상태전소연료0.0 / 36.8 kg표면 온도 (추정)297 °C노드 온도297 °C입사 열유속37.5 kW/m² · 파일럿 화염 있음함수율0 %열방출률0.0 W착"}
+PASS 17 fire-weakened timber members fail through the structural engine (hazard fire; charred sections) {"st17":{"fire":2,"causes":["facade","axial","support"]},"charred":39}
+PASS 18 results: ignited / burned-out objects, consumed fuel, released energy, peak HRR, room temperature, smoke, structure; CSV {"res":"화재 결과 화재 CSV착화된 객체3연소 중 3 · 전소 0소비된 연료7068kg등록 연료의 29.6 %방출 에너지93.59 GJ실내 28.83 GJ · 실외 19.01 GJ · 외부 화염 45.76 GJ최대 열방출률","clip18":[]}
+PASS 19 ledgers: chemical energy = released + remaining, fuel and smoke residuals at round-off; combustion heat = thermal combustion account {"fuelRegistered":23872.312005916217,"fuelRemaining":16804.242408953767,"fuelConsumed":7068.069596956528,"fuelLeft":0,"chemRegistered":305709729620.94293,"chemRemaining":212116240258.9364,"released":93593489361.98643,"chemLeft":0,"releasedRooms":28825544011.235287,"releasedOutdoor":19005114182.359158,"releasedExternal":45762831168.3971,"unresolved":6963886253.667616,"oxygenConsumed":7144.541172670937,"smokeProduced":231.17720339903627,"smokeRooms":1.2505127976965582,"smokeAir":0.24383075233103604,"smokeVented":229.68285984911384,"smokeAdvected":0,"waterEvaporated":9.20277207991571,"latentHeat":20770656.58436975,"fuelResidual":5.922629497945309e-9,"chemResidual":0.0200958251953125,"smokeResidual":-1.0516032489249483e-10}
+PASS 20 timeline milestones: ignition, spread, heat release, O₂-limited, flashover, glass, member failure ["ignition","heatRelease","peakTemperature","strengthReduction","strengthReduction","windowBreak","thermalFailure","peakTemperature","flashover","heatRelease","peakTemperature","oxygenLimited","fireSpread","firstDamage","peakTemperature","memberFailure","fireFailure","secondaryIgnition"]
+PASS 21 HUD and overlay panel text not cut []
+PASS 22 reset restores the original world; the same ignition / spread / collapse order follows {"r22":{"fire":true,"t":0},"h22a":"44|1.105922875052e+5|9.359348936199e+10","h22b":"44|1.105922875052e+5|9.359348936199e+10"}
+PASS 23 leaving the simulation leaves the document untouched (fingerprint) 
+PASS 24 ignition with no fuel (a car): warned in the preview, rejected in the run with the reason [{"id":"p1","name":"p1","start":0,"done":true,"lit":0,"reason":"fire.reject.noFuel"}]
+PASS 25 preset with its assumptions loads a vegetation scene; dry crowns burn one after another {"n25":12,"ignited":12}
+PASS 26 wind preset: crowns 7 m apart (a gap fire does not cross in calm air) burn downwind {"ignited":18,"peak":266080586.40714017}
+PASS 27 water cooling: rain wets burning crowns above the moisture of extinction, they go out (evaporation booked); far less fuel burns than without rain {"ext":6,"evap":23.561273083479055,"share25":0.018374745465702814,"share27":0.006268751075410361}
+PASS 28 heat sources ignite fuel only with heat ignition on (off: no combustion model, Phase 26 behaviour) {"off":false,"on":1}
+PASS 29 fire scenario and fire settings saved and reloaded (schema 7) {"ok":true,"version":7,"fire":{"foliageMoisture":0.4,"openings":"closed","heatIgnition":true},"spec":{"event":"fire","position":[3,4],"height":2,"radius":1.5,"duration":900}}
+PASS 30 fire tools panel text not cut in this language []
+{"heap0":37.4,"heap1":67.2,"geo0":21,"geo1":8,"crashed":false}
+
+30/30 passed; 0 page errors; heap 37.4 → 67.2 MB; geometries 21 → 8; crashed false
