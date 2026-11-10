@@ -168,6 +168,13 @@ export function PlacementLayer() {
     let consumed = false;
     let dragStart: [number, number] | null = null;
     const orbit = controls as unknown as { enabled: boolean } | null;
+    // Only the lock this layer took is released (other tools lock the camera too — e.g. the blueprint capture drag).
+    let locked = false;
+    const lock = (on: boolean) => {
+      if (!orbit) return;
+      if (on && orbit.enabled) { orbit.enabled = false; locked = true; }
+      else if (!on && locked) { orbit.enabled = true; locked = false; }
+    };
     const onMove = (ev: PointerEvent) => {
       const st = usePlacementStore.getState();
       if (st.drag) {
@@ -200,14 +207,14 @@ export function PlacementLayer() {
       if (running.has(pin.inst.id)) return;
       dragStart = pin.at;
       st.setDrag({ id: pin.inst.id, p: pin.at });
-      if (orbit) orbit.enabled = false;
+      lock(true);
     };
     const onUp = (ev: PointerEvent) => {
       const st = usePlacementStore.getState();
       if (st.drag) {
         const { id, p } = st.drag;
         st.setDrag(null);
-        if (orbit) orbit.enabled = true;
+        lock(false);
         if (dragStart && Math.hypot(p[0] - dragStart[0], p[1] - dragStart[1]) > 0.2) moveInstance(id, p);
         dragStart = null;
       }
@@ -227,7 +234,7 @@ export function PlacementLayer() {
       window.removeEventListener('pointerup', onUp, true);
       window.removeEventListener('click', swallow, true);
       window.removeEventListener('dblclick', swallow, true);
-      if (orbit) orbit.enabled = true;
+      lock(false);
     };
   }, [gl, camera, controls, running]);
 
