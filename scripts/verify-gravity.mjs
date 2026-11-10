@@ -27,7 +27,7 @@ const page = await browser.newPage();
 // is used, the tab (or drawer) that holds it is shown. (The checks themselves are unchanged.)
 {
   const _ev = page.evaluate.bind(page);
-  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]|road-sim/.test(s) ? 'analysis' : /홍수 시뮬레이션 실행|Run flood|flood-form/.test(s) ? 'legacy:flood' : /지진 실행|Run earthquake|eq-form/.test(s) ? 'legacy:earthquake' : /"시뮬레이션 실행"|"Run simulation"|wind-form/.test(s) ? 'legacy:wind' : /-inspector"|-inspector\]/.test(s) ? 'selection' : /실험 실행|Run experiment|실험 적용|Apply now|현상 추가|Add phenomenon|시나리오 비교|Compare/.test(s) ? 'phenomena' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
+  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]|road-sim/.test(s) ? 'analysis' : /홍수 시뮬레이션 실행|Run flood|flood-form/.test(s) ? 'legacy:flood' : /지진 실행|Run earthquake|eq-form/.test(s) ? 'legacy:earthquake' : /"시뮬레이션 실행"|"run simulation"|wind-form/i.test(s) ? 'legacy:wind' : /-inspector"|-inspector\]/.test(s) ? 'selection' : /실험 실행|Run experiment|실험 적용|Apply now|현상 추가|Add phenomenon|시나리오 비교|Compare/.test(s) ? 'phenomena' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
   const show = async (src) => {
     const t = where(String(src));
     if (!t) return;
@@ -204,14 +204,14 @@ const fallRun = async (spec, T) => {
   await add('gravity', spec);
   await wait(400);
   await enterRun();
-  await atTime(T);
+  return atTime(T); // the sim time actually reached: it runs in real time until the pause, so it can be past T on a slow machine
 };
-await fallRun(G({ magnitude: 1.62, startTime: 0 }), 2);
+const t14m = await fallRun(G({ magnitude: 1.62, startTime: 0 }), 2);
 const y14 = (await ent('car', 0)).p[1];
 await exitSim();
-await fallRun(G({ magnitude: 9.81, startTime: 0 }), 2);
+const t14e = await fallRun(G({ magnitude: 9.81, startTime: 0 }), 2);
 const y14e = (await ent('car', 0)).p[1];
-check('14 free fall: from 30 m the car falls ≈ ½gt² — 2 s at Earth g ≈ 19.6 m, at Moon-like g ≈ 3.2 m', Math.abs(30 - y14e - 19.6) < 1.5 && Math.abs(30 - y14 - 3.24) < 0.4, { earth: 30 - y14e, moon: 30 - y14 });
+check('14 free fall: from 30 m the car falls ≈ ½gt² — 2 s at Earth g ≈ 19.6 m, at Moon-like g ≈ 3.2 m', Math.abs(30 - y14e - 0.5 * 9.81 * t14e * t14e) < 1.5 && Math.abs(30 - y14 - 0.5 * 1.62 * t14m * t14m) < 0.4, { tEarth: t14e, tMoon: t14m, earth: 30 - y14e, moon: 30 - y14 });
 let L = await gl();
 await ev(() => window.__ds.view.getState().setGravityViz({ overlay: 'magnitude' }));
 await wait(1200);

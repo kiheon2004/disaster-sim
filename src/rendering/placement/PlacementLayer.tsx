@@ -199,12 +199,13 @@ export function PlacementLayer() {
       }
       const pin = pinAt(ev);
       if (!pin) return;
+      st.select(pin.inst.id);
+      useUiStore.getState().setRightTab('phenomena');
+      // A running instance cannot be dragged: its pin only selects, and the click goes on to the world (ground probe, objects, camera).
+      if (running.has(pin.inst.id)) return;
       consumed = true;
       ev.stopImmediatePropagation();
       ev.preventDefault();
-      st.select(pin.inst.id);
-      useUiStore.getState().setRightTab('phenomena');
-      if (running.has(pin.inst.id)) return;
       dragStart = pin.at;
       st.setDrag({ id: pin.inst.id, p: pin.at });
       lock(true);

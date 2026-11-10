@@ -30,8 +30,8 @@ const page = await browser.newPage();
 // is used, the tab (or drawer) that holds it is shown. (The checks themselves are unchanged.)
 {
   const _ev = page.evaluate.bind(page);
-  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]|road-sim/.test(s) ? 'analysis' : /홍수 시뮬레이션 실행|Run flood|flood-form/.test(s) ? 'legacy:flood' : /지진 실행|Run earthquake|eq-form/.test(s) ? 'legacy:earthquake' : /"시뮬레이션 실행"|"Run simulation"|wind-form/.test(s) ? 'legacy:wind' : /-inspector"|-inspector\]/.test(s) ? 'selection' : /실험 실행|Run experiment|실험 적용|Apply now|현상 추가|Add phenomenon|시나리오 비교|Compare/.test(s) ? 'phenomena' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
-  const show = async (src) => {
+  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]|road-sim/.test(s) ? 'analysis' : /홍수 시뮬레이션 실행|Run flood|flood-form/.test(s) ? 'legacy:flood' : /지진 실행|Run earthquake|eq-form/.test(s) ? 'legacy:earthquake' : /"시뮬레이션 실행"|"run simulation"|wind-form/i.test(s) ? 'legacy:wind' : /-inspector"|-inspector\]/.test(s) ? 'selection' : /실험 실행|Run experiment|실험 적용|Apply now|현상 추가|Add phenomenon|시나리오 비교|Compare/.test(s) ? 'phenomena' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
+  const show = page.__show = async (src) => {
     const t = where(String(src));
     if (!t) return;
     const done = await _ev((t) => { const u = window.__ds?.ui?.getState(); if (!u) return true; if (t === 'command') { if (u.commandOpen) return true; u.setCommandOpen(true); return false; } if (t.startsWith('legacy:')) { const k = t.slice(7); const tabs = { wind: /바람|Wind/, earthquake: /지진|Earthquake/, flood: /홍수|Flood/ }; if (u.rightTab !== 'phenomena' || !u.rightOpen) { u.setRightTab('phenomena'); return false; } const head = [...document.querySelectorAll('button')].find((b) => /상세 설정 폼|Detailed forms/.test(b.textContent ?? '')); if (!head) return true; if (head.getAttribute('aria-expanded') !== 'true') { head.click(); return false; } const box = head.parentElement; const tab = [...(box?.querySelectorAll('[role="tab"]') ?? [])].find((b) => tabs[k].test(b.textContent ?? '')); if (tab && tab.getAttribute('aria-selected') !== 'true') { tab.click(); return false; } return true; } if (u.rightTab === t && u.rightOpen) return true; u.setRightTab(t); return false; }, t).catch(() => true);
@@ -60,9 +60,13 @@ const fingerprint = () => ds(() => {
 const key = async (k, mods = []) => { for (const m of mods) await page.keyboard.down(m); await page.keyboard.press(k); for (const m of mods.reverse()) await page.keyboard.up(m); await wait(300); };
 
 /** Click the first button whose text contains `label` (inside `scope`). */
+/** Phase 35.5: open the right panel's detailed form of one hazard (the old bottom tab). */
+const showForm = async (src) => { for (let i = 0; i < 5; i++) await page.__show(src); };
 async function clickButton(label, scope = 'body') {
   const ok = await page.evaluate((label, scope) => {
-    const b = [...document.querySelectorAll(`${scope} button`)].find((x) => x.textContent.trim().includes(label) && !x.disabled);
+    // Phase 35.5: the hazard forms and the experiment moved from the bottom section to the right panel.
+    const sel = scope === 'section' ? ['aside:last-of-type button', 'section button'] : [`${scope} button`];
+    const b = sel.flatMap((q) => [...document.querySelectorAll(q)]).find((x) => x.textContent.trim().includes(label) && !x.disabled);
     if (!b) return false;
     b.click();
     return true;
@@ -274,11 +278,11 @@ check('8 save → change → load restores the saved world exactly', fpLoaded ==
 // ── 9. Typhoon ──────────────────────────────────────────────────────────
 await camera([40, 60, 90], [0, 5, 0]);
 const fpOriginal = await fingerprint();
-await clickButton(await tr('hazard.tab.wind'), 'section');
+await showForm('"시뮬레이션 실행"');
 // Wind form: 55 m/s (its speed slider), then its Run button.
 await page.evaluate(() => {
   // The wind form keeps its state in a persisted store; set the speed through its slider input.
-  const r = [...document.querySelectorAll('section input[type=range]')][0];
+  const r = [...document.querySelectorAll('aside:last-of-type input[type=range]')][0];
   if (r) { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(r, '55'); r.dispatchEvent(new Event('input', { bubbles: true })); r.dispatchEvent(new Event('change', { bubbles: true })); }
 });
 await wait(300);
@@ -292,7 +296,7 @@ await shot('09-typhoon');
 await exitSim();
 
 // ── 10. Earthquake + 13. damage state ──────────────────────────────────
-await clickButton(await tr('hazard.tab.earthquake'), 'section');
+await showForm('지진 실행');
 await ds(() => window.__ds.world.getState().setEarthquakeScenario({ event: 'earthquake', magnitude: 7, pga: 0.75, epicenter: [0, 0], depth: 10, duration: 20 }));
 await wait(300);
 await clickButton(await tr('eq.form.run'), 'section');
@@ -312,7 +316,7 @@ await shot('10-earthquake');
 await exitSim();
 
 // ── 11. Flood ───────────────────────────────────────────────────────────
-await clickButton(await tr('hazard.tab.flood'), 'section');
+await showForm('홍수 시뮬레이션 실행');
 const level = await ds(() => {
   const s = window.__ds.buildLib.samplerFor(window.__ds.world.getState().doc.terrain);
   let lo = Infinity;
@@ -330,11 +334,11 @@ await shot('11-flood');
 await exitSim();
 
 // ── 12. Combined hazards (experiment: wind + earthquake + flood) ────────
-await clickButton(await tr('hazard.tab.wind'), 'section');
+await showForm('"시뮬레이션 실행"');
 await clickButton(await tr('exp.addFromForm'), 'section');
-await clickButton(await tr('hazard.tab.earthquake'), 'section');
+await showForm('지진 실행');
 await clickButton(await tr('exp.addFromForm'), 'section');
-await clickButton(await tr('hazard.tab.flood'), 'section');
+await showForm('홍수 시뮬레이션 실행');
 await clickButton(await tr('exp.addFromForm'), 'section');
 await clickButton(await tr('hazard.tab.experiment'), 'section');
 const planned = await ds(() => window.__ds.world.getState().doc.scenario.experiment.instances.length);
