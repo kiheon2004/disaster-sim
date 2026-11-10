@@ -34,6 +34,7 @@ import { activate, kinematics, structureOf, type StructureState } from '../struc
 import { analysisOf } from '@/buildings/design';
 import { MATERIALS, material } from '@/buildings/materials';
 import { lumpStories, type ModularUnit } from '@/buildings/structuralAdapter';
+import { torsionDemand } from './structureV2';
 import { isLateralRole, type BuildingDesign } from '@/buildings/types';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { RuntimeEntity } from '../SimulationRuntime';
@@ -125,6 +126,8 @@ export interface ModularRuntime {
   structure?: StructureState;
   /** Member index of each facade component (−1: none). */
   memberOfComp: Int32Array;
+  /** Phase 35.5 (structure v2): staged failure per hazard (face stages, storey backstop stages) and the last stage time. */
+  v2Stage?: Record<string, number>;
 }
 
 const scatterOf = (seed: number, id: string) => 1 + (seededRandom((seed ^ hashString(`member:${id}`)) >>> 0)() * 2 - 1) * SCATTER;
@@ -242,7 +245,7 @@ export function raiseDamage(mr: ModularRuntime, i: number, d: number, hazard: st
 }
 
 /** Members whose story peak drift grew since the last evaluation; returns the newly failed. */
-function evaluateDrift(mr: ModularRuntime, hazard: Hazard = 'earthquake'): number[] {
+function evaluateDrift(mr: ModularRuntime, hazard: Hazard = 'earthquake', v2 = false): number[] {
   const out: number[] = [];
   for (let s = 0; s < mr.floors; s++) {
     if (s >= mr.collapsedFrom) break;
@@ -251,7 +254,8 @@ function evaluateDrift(mr: ModularRuntime, hazard: Hazard = 'earthquake'): numbe
     mr.evalPeak[s] = peak;
     for (const i of mr.storyMembers[s]) {
       if (mr.failed[i]) continue;
-      const d = memberDemand(mr, i) / mr.capacity[i];
+      // Phase 35.5 (v2): torsion-amplified demand — perimeter / corner members first.
+      const d = (v2 ? torsionDemand(mr, i) : memberDemand(mr, i)) / mr.capacity[i];
       if (d > mr.damage[i] && d < 1) raiseDamage(mr, i, d, hazard);
       if (d >= 1) out.push(i);
     }
@@ -598,7 +602,8 @@ export function updateModularQuake(e: RuntimeEntity, ctx: SystemContext, model: 
     return [dx, 0, dz];
   };
   // Member failures (drift capacity) → load path → partial / total collapse.
-  const failedNow = evaluateDrift(mr, governingHazard(e, 'earthquake', ctx));
+  const v2 = ctx.runtime.structureV2 === true;
+  const failedNow = evaluateDrift(mr, governingHazard(e, 'earthquake', ctx), v2);
   if (failedNow.length) failMembers(e, ctx, failedNow, { hazard: 'earthquake', cause: 'drift', response: maxPeak, dir: dir() });
   if (e.flags.collapsed) return;
   // Backstop: the lumped model's damage index (drift + cumulative plastic drift) at a dof, or

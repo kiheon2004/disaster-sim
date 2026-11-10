@@ -27,6 +27,8 @@
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
 import { applyFatigue } from '../fatigue';
+import { exposedFace, faceStage, setFaceStage } from '../../buildings/structureV2';
+import { failMembers } from '../../buildings/modular';
 import type { SystemContext } from '../../systems/SimulationSystem';
 import type { RuntimeEntity } from '../../SimulationRuntime';
 import type { WaterField } from '../../water/WaterField';
@@ -186,6 +188,18 @@ export function updateBuildingFlood(e: RuntimeEntity, ctx: SystemContext, field:
   recordLevels(e, ctx, st, LEVELS.building);
 
   const cause: DamageCause = fh >= fd ? 'hydrostatic' : 'hydrodynamic';
+  // Phase 35.5 (structure v2): the water load acts on the members facing the flow — first the face's walls and openings
+  // fail (water breaks in: the pressure inside equalizes), then its frame columns; the collapse engine does the rest.
+  // Only a third overload collapses the whole building (the Phase 25 path below).
+  if (st.damage >= 1 && e.modular && ctx.runtime.structureV2 && faceStage(e.modular, 'flood') < 2) {
+    const stage = faceStage(e.modular, 'flood') + 1;
+    setFaceStage(e.modular, 'flood', stage);
+    const dir = flowDir(st);
+    const list = exposedFace(e, dir, stage === 1 ? 'envelope' : 'frame');
+    if (list.length) failMembers(e, ctx, list, { hazard: 'flood', cause, response: st.loadRatio, dir });
+    if (stage === 1) st.inside = Math.max(st.inside, 0.9 * d);
+    st.damage = 0.5;
+  }
   if (st.damage >= 1) {
     st.health = 0.001;
     const dir = flowDir(st);

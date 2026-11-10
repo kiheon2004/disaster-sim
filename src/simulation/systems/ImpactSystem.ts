@@ -17,8 +17,10 @@
  *  - turns model events into the log and timeline milestones (only events that happened).
  * Inactive (and free) without an impact.
  */
+import { exposedFace, faceStage, setFaceStage } from '../buildings/structureV2';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
-import { collapseFrom } from '../buildings/modular';
+import { collapseFrom, failMembers } from '../buildings/modular';
+import type { Vec3 } from '@/core/types';
 import { DEFORM_INTERVAL } from './DeformationSystem';
 import { GRAVITY } from '@/core/units';
 import { gravityDown } from '@/thermal/gravityScope';
@@ -222,7 +224,16 @@ export class ImpactSystem implements SimulationSystem {
     }
     // Phase 25: a modular building whose ground story's lateral capacity the ejecta curtain exhausted
     // collapses through the structural engine (legacy buildings keep the Phase 23 damage state).
-    if (st.damage >= 1 && e.modular && !e.flags.collapsed) {
+    // Phase 35.5 (structure v2): the ejecta curtain first breaks the facing walls / openings, then the facing columns;
+    // only a third exhaustion collapses the ground storey (the Phase 25 path).
+    if (st.damage >= 1 && e.modular && !e.flags.collapsed && ctx.runtime.structureV2 && faceStage(e.modular, 'impact') < 2) {
+      const stage = faceStage(e.modular, 'impact') + 1;
+      setFaceStage(e.modular, 'impact', stage);
+      const dir: Vec3 = [l.dirX, 0, l.dirZ];
+      const list = exposedFace(e, dir, stage === 1 ? 'envelope' : 'frame');
+      if (list.length) failMembers(e, ctx, list, { hazard: 'impact', cause: 'ejecta', response: r, dir });
+      st.damage = 0.5;
+    } else if (st.damage >= 1 && e.modular && !e.flags.collapsed) {
       collapseFrom(e, ctx, 0, { hazard: 'impact', cause: 'ejecta', response: r, dir: [l.dirX, 0, l.dirZ] });
     }
   }
