@@ -242,5 +242,5 @@ export function buildRuntime(doc: Readonly<WorldDocument>, physics: PhysicsEngin
       }
     }
   }
-  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}), ...(physio ? { physiology: physio } : {}), ...(veh ? { vehicles: veh } : {}) };
+  return { entities, debris: [], particles: [], particlesTime: 0, debrisRev: 0, debrisCounter: 0, log: [], ...(modular ? { hasModular: true } : {}), ...(physio ? { physiology: physio } : {}), ...(veh ? { vehicles: veh } : {}), ...(doc.settings.simulation.structure?.model === 'v2' ? { structureV2: true } : {}) };
 }

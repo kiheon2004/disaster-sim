@@ -66,15 +66,19 @@ export interface MemberOffset {
   /** Tilt about a horizontal axis (rad), visual only (broken pieces). */
   tilt: number;
   tiltAxis: 0 | 1;
+  /** Phase 35.5: physical orientation from the collapse model (rotation about a hinge, building-local quaternion), or null. */
+  q?: readonly [number, number, number, number] | Float32Array | null;
 }
 
 const qT = new THREE.Quaternion();
+const qP = new THREE.Quaternion();
 const vX = new THREE.Vector3(1, 0, 0);
 const vZ = new THREE.Vector3(0, 0, 1);
 
 /** Local matrix of a displaced / compacted member. */
 export function displacedMatrix(m: BuildingMember, o: MemberOffset, out: THREE.Matrix4): THREE.Matrix4 {
   qR.setFromEuler(eR.set(m.rotation[0], m.rotation[1], m.rotation[2]));
+  if (o.q) qR.premultiply(qP.set(o.q[0], o.q[1], o.q[2], o.q[3]));
   if (o.tilt !== 0) qR.premultiply(qT.setFromAxisAngle(o.tiltAxis ? vZ : vX, o.tilt));
   return out.compose(vP.set(m.position[0] + o.dx, m.position[1] + o.dy, m.position[2] + o.dz), qR, vS.set(m.size[0], m.size[1] * o.sy, m.size[2]));
 }

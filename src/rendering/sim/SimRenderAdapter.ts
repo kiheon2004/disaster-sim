@@ -520,7 +520,7 @@ export class SimRenderAdapter {
       || (far && (ms[i].type === 'window' || ms[i].type === 'door'));
   }
 
-  private offsetOut: MemberOffset = { dx: 0, dy: 0, dz: 0, sy: 1, tilt: 0, tiltAxis: 0 };
+  private offsetOut: MemberOffset = { dx: 0, dy: 0, dz: 0, sy: 1, tilt: 0, tiltAxis: 0, q: null };
 
   /** Displacement of fallen members from the collapse model (unscaled local frame); tilt visual only. */
   private memberOffset(v: EntityView): ((i: number) => MemberOffset | null) | undefined {
@@ -534,8 +534,12 @@ export class SimRenderAdapter {
       o.dy = model.dy[i] / k.y;
       o.dz = model.dz[i] / k.z;
       o.sy = model.sy[i];
+      // Phase 35.5 (structure v2): the physical rotation of a part that leaned / toppled about a hinge.
+      const rot = model.rot;
+      o.q = rot && rot[4 * i + 3] !== 1 ? rot.subarray(4 * i, 4 * i + 4) : null;
       // Broken pieces at rest are drawn slightly askew (deterministic per member; visual only).
-      if (st === MS.RESTING || st === MS.SETTLED) {
+      if (o.q) o.tilt = 0;
+      else if (st === MS.RESTING || st === MS.SETTLED) {
         const h = hashString(`${v.e.id}/${i}`) >>> 0;
         o.tilt = (((h & 1023) / 1023) - 0.5) * 0.5;
         o.tiltAxis = (h >> 10) & 1 ? 1 : 0;

@@ -184,6 +184,8 @@ export interface SimulationRuntime {
   physiology?: import('./physiology/state').PhysiologyRuntime;
   /** Phase 35: vehicle dynamics of the run (settings, cars in id order). */
   vehicles?: import('./vehicle/state').VehicleRuntime;
+  /** Phase 35.5: structural behaviour v2 (settings.simulation.structure). Absent = Phase 25 behaviour. */
+  structureV2?: true;
   debris: DebrisPiece[];
   particles: Particle[];
   /** Simulation time the particle positions correspond to (they update at a lower rate). */

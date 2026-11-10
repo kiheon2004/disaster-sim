@@ -100,6 +100,11 @@ export class StructuralSolver {
   readonly capFactor: Float64Array;
   /** Utilizations (static, last evaluation): governing, axial, bending, shear; connections. */
   readonly util: Float32Array;
+  /**
+   * Phase 35.5 (structure v2): failure utilization per member (the member law's fracture point at its current softened
+   * capacity, collapse.ts). Absent = OVERLOAD for every member (Phase 25).
+   */
+  limit?: Float64Array;
   readonly uN: Float32Array;
   readonly uM: Float32Array;
   readonly uV: Float32Array;
@@ -264,6 +269,8 @@ export class StructuralSolver {
   /** Residual capacity factor (0–1] of a member (damage from any hazard). */
   setCapFactor(i: number, f: number) {
     if (f === this.capFactor[i]) return;
+    // Phase 35.5 (v2): a capacity change is gradual — the utilization it causes is not amplified as a sudden load.
+    if (this.limit && this.capFactor[i] > 0 && f > 0) this.util[i] *= this.capFactor[i] / f;
     this.capFactor[i] = f;
     if (this.alive[i]) this.queueCheck(i);
   }
@@ -326,7 +333,7 @@ export class StructuralSolver {
       const om = dynamic ? dynamicFactor(memberMaterial(g, i)) : 1;
       const uDyn = u + (om - 1) * Math.max(0, u - uOld);
       const soil = g.type[i] === MT_FOUNDATION || g.ground[i] === 1;
-      const limit = soil ? 1 : OVERLOAD;
+      const limit = soil ? 1 : this.limit ? this.limit[i] : OVERLOAD;
       if (uDyn >= limit && (g.structural[i] || soil || (this.roofCheck && g.roofCap[i] > 0))) {
         res.failed.push({ i, cause: this.governing(i), u: uDyn, trigger: this.originStamp[i] === this.stamp ? this.origin[i] : -1 });
       }

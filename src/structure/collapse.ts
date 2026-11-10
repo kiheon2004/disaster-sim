@@ -31,6 +31,7 @@ import { MassLedger } from './ledger';
 import { bulkVolume, settlePile, type RubblePile } from './rubble';
 import { canTransition, DAMAGED_AT, MS, SEVERE_AT, FAIL_CAUSES, type FailCause } from './types';
 import { STRENGTH_LOSS } from './policy';
+import { memberLaw, STRUCTURAL_TYPES, typeOfMaterial, type StructuralTypeProfile } from '@/buildings/structuralType';
 
 export interface CollapseRecord {
   seq: number;
@@ -58,9 +59,34 @@ export type CollapseEvent =
   | { kind: 'block'; group: number; time: number; members: number; mass: number; root: number; hazard: string }
   | { kind: 'impact'; group: number; time: number; arrested: boolean; receivers: number[]; outcome: ImpactOutcome; mass: number; hazard: string; governing: number }
   | { kind: 'ground'; group: number; time: number; mass: number; energy: number; pile: number; members: number[]; hazard: string }
+  | { kind: 'hinge'; group: number; time: number; axis: Vec3; point: Vec3; lever: number; release: number; hazard: string }
+  | { kind: 'release'; group: number; time: number; theta: number; omega: number; ground: boolean; hazard: string }
   | { kind: 'exit'; i: number; time: number; velocity: Vec3; hazard: string; root: number; impulse: boolean }
   | { kind: 'resume'; group: number; time: number; members: number }
   | { kind: 'crush'; i: number; time: number; hazard: string };
+
+/**
+ * Phase 35.5 (structure v2): a detached part still held on one side by standing members rotates about that hinge line
+ * (one rotational degree of freedom, gravity torque M·g·lever, inertia of the member boxes) until its connections tear
+ * at the structural type's release rotation or it touches the ground — then it falls free with the velocity of its centre
+ * of mass, keeping its tilt.
+ */
+export interface Hinge {
+  /** Point on the hinge line (building-local), horizontal unit axis a and unit normal n toward the centre of mass. */
+  hx: number; hy: number; hz: number;
+  ax: number; az: number;
+  nx: number; nz: number;
+  theta: number;
+  omega: number;
+  /** Moment of inertia about the hinge (kg·m²), mass, lever arm (horizontal) and height of the centre of mass above it. */
+  I: number;
+  M: number;
+  r: number;
+  dy0: number;
+  release: number;
+  /** Member centres at the start of the rotation (x, y, z per member, block order). */
+  c0: Float64Array;
+}
 
 export interface FallingBlock {
   id: number;
@@ -93,6 +119,10 @@ export interface FallingBlock {
   bx0: number; bz0: number; bx1: number; bz1: number; byMax: number;
   /** Position in the structural change log already accounted for. */
   seen: number;
+  /** Phase 35.5 (v2): the block rotates about a hinge line of surviving connections before it falls free. */
+  hinge?: Hinge;
+  /** v2: horizontal kinetic energy the block got from its rotation (released potential energy) — dissipated where it lands. */
+  hKE?: number;
   kOf?: Map<number, number>;
   bottomSet?: Set<number>;
 }
@@ -266,7 +296,55 @@ export class CollapseModel {
     if (st > MS.SEVERE) return;
     const want = d >= SEVERE_AT ? MS.SEVERE : d >= DAMAGED_AT ? MS.DAMAGED : MS.INTACT;
     if (want > st) this.set(i, want);
+    const v2 = this.v2;
+    if (v2) {
+      // Phase 35.5: residual capacity = the lower of the external-damage law (1 − 0.3·D of drift, blast, debris …) and the
+      // member law's softened capacity — the two describe the same section, they do not multiply.
+      const ext = 1 - STRENGTH_LOSS * Math.min(1, v2.extD[i]);
+      const f = Math.min(ext, v2.cap[i]);
+      this.s.limit![i] = v2.prof[i].uFracture * (ext / Math.max(1e-6, f));
+      this.s.setCapFactor(i, f * (this.material?.[i] ?? 1));
+      return;
+    }
     this.s.setCapFactor(i, (1 - STRENGTH_LOSS * Math.min(1, d)) * (this.material?.[i] ?? 1));
+  }
+
+  /**
+   * Phase 35.5 structure v2: member law by structural type (buildings/structuralType.ts) — members past their capacity
+   * yield (damage grows, capacity held), soften (capacity drops toward a residual) and fracture at the type's limit, instead
+   * of failing at u = 1.25 directly. Enabled once, before the first step; absent = Phase 25 behaviour.
+   */
+  v2?: { prof: StructuralTypeProfile[]; cap: Float64Array; extD: Float64Array };
+  enableV2() {
+    const G = this.g, n = this.n;
+    const prof: StructuralTypeProfile[] = new Array(n);
+    const limit = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      prof[i] = STRUCTURAL_TYPES[typeOfMaterial(memberMaterial(G, i).id)];
+      limit[i] = prof[i].uFracture;
+    }
+    this.v2 = { prof, cap: new Float64Array(n).fill(1), extD: Float64Array.from(this.damage) };
+    this.s.limit = limit;
+    for (let i = 0; i < n; i++) if (this.damage[i] > 0) this.applyDamageState(i);
+  }
+
+  /** v2: after a round, members past their capacity (and not fractured) yield / soften — the member law. */
+  private memberLaw(changed: readonly number[]) {
+    const v2 = this.v2!;
+    const G = this.g;
+    for (const i of changed) {
+      if (!this.alive(i) || !G.structural[i]) continue;
+      const u = this.s.util[i];
+      if (!(u > 1)) continue;
+      const ext = 1 - STRENGTH_LOSS * Math.min(1, v2.extD[i]);
+      // Utilization against the section without the member law's own softening (the law is a fixed point, not a loop).
+      const u0 = u * (Math.min(ext, v2.cap[i]) / ext);
+      const law = memberLaw(v2.prof[i], u0);
+      if (law.stage === 'fracture' || law.cap >= v2.cap[i] - 1e-9 && law.D <= this.damage[i]) continue;
+      v2.cap[i] = Math.min(v2.cap[i], law.cap);
+      if (law.D > this.damage[i]) this.damage[i] = Math.min(0.999, law.D);
+      this.applyDamageState(i);
+    }
   }
 
   /**
@@ -289,9 +367,13 @@ export class CollapseModel {
 
   /** Raise a member's damage index (any hazard); gravity capacity follows. Returns true when it changed. */
   setDamage(i: number, d: number, hazard?: string): boolean {
-    if (!this.alive(i) || d <= this.damage[i]) return false;
+    if (!this.alive(i)) return false;
+    // v2: the external damage index is tracked apart from the member law's (both lower the capacity, see applyDamageState).
+    const ext = this.v2 !== undefined && d > this.v2.extD[i];
+    if (ext) this.v2!.extD[i] = Math.min(1, d);
+    if (d <= this.damage[i] && !ext) return false;
     if (hazard) this.causeHazard[i] = this.hz(hazard);
-    this.damage[i] = Math.min(1, d);
+    if (d > this.damage[i]) this.damage[i] = Math.min(1, d);
     this.applyDamageState(i);
     return true;
   }
@@ -460,7 +542,7 @@ export class CollapseModel {
     if (this.dead.length) this.formBlocks(time, kin, g);
     this.gravityQueued = false;
     if (this.activeBlocks) {
-      for (const b of this.blocks) if (b.active) this.advance(b, dt, time, g);
+      for (const b of this.blocks) if (b.active) { if (b.hinge) this.rotate(b, dt, time, g); else this.advance(b, dt, time, g); }
       this.ledger.energy.kinetic = this.kineticOfBlocks();
     } else this.ledger.energy.kinetic = 0;
   }
@@ -469,6 +551,7 @@ export class CollapseModel {
     this.round++;
     const r: RoundResult = this.s.propagate(this.dynamicNext);
     this.dynamicNext = true;
+    if (this.v2) this.memberLaw(r.changed);
     let failed = 0;
     for (const l of r.lost) {
       if (!this.alive(l.i)) continue;
@@ -608,6 +691,7 @@ export class CollapseModel {
       };
       this.layer(blk);
       this.sweepList(blk);
+      if (this.v2) this.hingeOf(blk, kin);
       // Members that had already moved (rubble resting on a floor) keep their offsets.
       for (let k = 0; k < members.length; k++) blk.join[k] = 0;
       for (const i of members) this.blockOf[i] = blk.id;
@@ -863,8 +947,139 @@ export class CollapseModel {
 
   private kineticOfBlocks() {
     let k = 0;
-    for (const b of this.blocks) if (b.active) k += 0.5 * b.mass * b.v * b.v;
+    for (const b of this.blocks) if (b.active) k += b.hinge ? 0.5 * b.hinge.I * b.hinge.omega * b.hinge.omega : 0.5 * b.mass * b.v * b.v + (b.hKE ?? 0);
     return k;
+  }
+
+  /**
+   * Physical orientation of fallen members (quaternion x, y, z, w per member; v2 rotation about hinges). Allocated with the
+   * first rotating block; identity = upright.
+   */
+  rot?: Float32Array;
+
+  /** v2: does the new block hang on surviving connections on one side? Then it rotates about them first. */
+  private hingeOf(b: FallingBlock, kin: Kinematics | undefined) {
+    if (kin && b.members.some((i) => (kin(i, this.kin), Math.hypot(this.kin[0], this.kin[2]) > 0.5))) return; // thrown sideways: no hinge
+    const G = this.g;
+    const inBlock = (j: number) => this.blockOf[j] === b.id;
+    // Connection points: overlap centres of block members with their standing structural SUPPORTS (what rests on the block
+    // loses its support with it — it is not a hinge).
+    const px: number[] = [], py: number[] = [], pz: number[] = [];
+    let rel = Infinity;
+    const add = (i: number, j: number) => {
+      if (inBlock(j) || !this.alive(j) || !G.structural[j] || this.external[j]) return;
+      const a = 6 * i, c = 6 * j;
+      const x0 = Math.max(G.box[a] + this.dx[i], G.box[c] + this.dx[j]), x1 = Math.min(G.box[a + 3] + this.dx[i], G.box[c + 3] + this.dx[j]);
+      const z0 = Math.max(G.box[a + 2] + this.dz[i], G.box[c + 2] + this.dz[j]), z1 = Math.min(G.box[a + 5] + this.dz[i], G.box[c + 5] + this.dz[j]);
+      const y0 = Math.max(G.box[a + 1] + this.dy[i], G.box[c + 1] + this.dy[j]), y1 = Math.min(G.box[a + 4] + this.dy[i], G.box[c + 4] + this.dy[j]);
+      if (x1 < x0 - 0.3 || z1 < z0 - 0.3 || y1 < y0 - 0.3) return;
+      px.push((x0 + x1) / 2); py.push((y0 + y1) / 2); pz.push((z0 + z1) / 2);
+      rel = Math.min(rel, this.v2!.prof[j].hingeRelease, this.v2!.prof[i].hingeRelease);
+    };
+    for (const i of b.members) for (let e = G.eStart[i]; e < G.eStart[i + 1]; e++) add(i, G.eTo[e]);
+    if (!px.length) return;
+    // Centre of mass of the block.
+    let M = 0, cx = 0, cy = 0, cz = 0;
+    for (const i of b.members) {
+      const o = 6 * i, m = G.mass[i] + this.carried[i];
+      M += m; cx += m * ((G.box[o] + G.box[o + 3]) / 2 + this.dx[i]); cy += m * this.centre(i); cz += m * ((G.box[o + 2] + G.box[o + 5]) / 2 + this.dz[i]);
+    }
+    if (!(M > 0)) return;
+    cx /= M; cy /= M; cz /= M;
+    const n = px.length;
+    let hx = 0, hy = 0, hz = 0;
+    for (let k = 0; k < n; k++) { hx += px[k]; hy += py[k]; hz += pz[k]; }
+    hx /= n; hy /= n; hz /= n;
+    // Hinge axis: principal direction of the connection points; one point / a compact cluster → perpendicular to the lever.
+    let sxx = 0, szz = 0, sxz = 0;
+    for (let k = 0; k < n; k++) { const ux = px[k] - hx, uz = pz[k] - hz; sxx += ux * ux; szz += uz * uz; sxz += ux * uz; }
+    let ax: number, az: number;
+    if (sxx + szz > 0.5 * n) {
+      const ang = 0.5 * Math.atan2(2 * sxz, sxx - szz);
+      ax = Math.cos(ang); az = Math.sin(ang);
+    } else {
+      const lx = cx - hx, lz = cz - hz, l = Math.hypot(lx, lz);
+      if (l < 1e-6) return;
+      ax = -lz / l; az = lx / l;
+    }
+    // Normal toward the centre of mass and the lever arm; a block balanced over its hinge falls straight.
+    let nx = az, nz = -ax;
+    let r = (cx - hx) * nx + (cz - hz) * nz;
+    if (r < 0) { nx = -nx; nz = -nz; r = -r; }
+    if (r < 0.3) return;
+    ax = nz; az = -nx;
+    // Inertia about the hinge line: point masses at the member centres + the boxes' own (≈ (L² + H² + W²)/18 · m).
+    let I = 0;
+    const c0 = new Float64Array(3 * b.members.length);
+    b.members.forEach((i, k) => {
+      const o = 6 * i, m = G.mass[i] + this.carried[i];
+      const x = (G.box[o] + G.box[o + 3]) / 2 + this.dx[i], y = this.centre(i), z = (G.box[o + 2] + G.box[o + 5]) / 2 + this.dz[i];
+      c0[3 * k] = x; c0[3 * k + 1] = y; c0[3 * k + 2] = z;
+      const vx = x - hx, vy = y - hy, vz = z - hz;
+      const along = vx * ax + vz * az;
+      const L = G.box[o + 3] - G.box[o], H = G.box[o + 4] - G.box[o + 1], W = G.box[o + 5] - G.box[o + 2];
+      I += m * (vx * vx + vy * vy + vz * vz - along * along) + (m * (L * L + H * H + W * W)) / 18;
+    });
+    b.hinge = { hx, hy, hz, ax, az, nx, nz, theta: 0, omega: 0, I, M, r, dy0: cy - hy, release: Math.min(rel, Math.PI / 2), c0 };
+    this.rot ??= (() => { const q = new Float32Array(4 * this.n); for (let i = 0; i < this.n; i++) q[4 * i + 3] = 1; return q; })();
+    this.events.push({ kind: 'hinge', group: b.id, time: b.t0, axis: [ax, 0, az], point: [hx, hy, hz], lever: r, release: b.hinge.release, hazard: b.hazard });
+  }
+
+  /** v2: one step of a hinged block (semi-implicit Euler, 4 sub-steps). Releases into free fall at the tear rotation / ground. */
+  private rotate(b: FallingBlock, dt: number, time: number, g: number) {
+    const h = b.hinge!;
+    const G = this.g;
+    const yCom = (th: number) => -h.r * Math.sin(th) + h.dy0 * Math.cos(th);
+    const y0 = yCom(h.theta);
+    const sub = 4, hs = dt / sub;
+    let released = false;
+    for (let s = 0; s < sub; s++) {
+      // θ advances with the torque; ω then follows exactly from the energy integral of a frictionless hinge,
+      // ½·I·ω² = M·g·Δh(θ) — the rotation conserves energy whatever the step (the ledger books the same Δh).
+      const lever = h.r * Math.cos(h.theta) + h.dy0 * Math.sin(h.theta);
+      h.theta += (h.omega + ((h.M * g * lever) / h.I) * hs) * hs;
+      if (h.theta >= h.release) { h.theta = h.release; released = true; }
+      h.omega = Math.sqrt(Math.max(0, (2 * h.M * g * (h.dy0 - yCom(h.theta))) / h.I));
+      if (released) break;
+    }
+    // Member centres and orientation on the rotated block (Rodrigues about the hinge axis).
+    const c = Math.cos(h.theta), sn = Math.sin(h.theta), half = h.theta / 2;
+    const qs = Math.sin(half), qw = Math.cos(half);
+    let touch = false;
+    b.members.forEach((i, k) => {
+      const vx = h.c0[3 * k] - h.hx, vy = h.c0[3 * k + 1] - h.hy, vz = h.c0[3 * k + 2] - h.hz;
+      const dot = vx * h.ax + vz * h.az;
+      // a × v with a = (ax, 0, az)
+      const cxv = -h.az * vy, cyv = h.az * vx - h.ax * vz, czv = h.ax * vy;
+      const rx = vx * c + cxv * sn + h.ax * dot * (1 - c);
+      const ry = vy * c + cyv * sn;
+      const rz = vz * c + czv * sn + h.az * dot * (1 - c);
+      const o = 6 * i;
+      this.dx[i] = h.hx + rx - (G.box[o] + G.box[o + 3]) / 2;
+      this.dy[i] = h.hy + ry - (G.box[o + 1] + G.box[o + 4]) / 2;
+      this.dz[i] = h.hz + rz - (G.box[o + 2] + G.box[o + 5]) / 2;
+      const q = this.rot!;
+      q[4 * i] = h.ax * qs; q[4 * i + 1] = 0; q[4 * i + 2] = h.az * qs; q[4 * i + 3] = qw;
+      if (this.bottom(i) <= 0.02) touch = true;
+    });
+    const drop = y0 - yCom(h.theta);
+    this.ledger.energy.released += h.M * g * drop;
+    b.D += drop;
+    this.rev++;
+    if (!released && !touch) return;
+    // Tear: the block falls free with the velocity of its centre of mass; its spin energy is dissipated at the tear (reduced model).
+    const vn = h.omega * (-h.r * sn + h.dy0 * c), vy = h.omega * (-h.r * c - h.dy0 * sn);
+    b.v = -vy;
+    b.vx = vn * h.nx;
+    b.vz = vn * h.nz;
+    const spin = Math.max(0, 0.5 * h.I * h.omega * h.omega - 0.5 * h.M * (vn * vn + vy * vy));
+    this.ledger.energy.collision += spin;
+    b.hKE = 0.5 * h.M * vn * vn;
+    this.events.push({ kind: 'release', group: b.id, time, theta: h.theta, omega: h.omega, ground: touch, hazard: b.hazard });
+    b.hinge = undefined;
+    b.surfRev = -1;
+    this.layer(b);
+    this.sweepList(b);
   }
 
   private move(b: FallingBlock, d: number, dt: number) {
@@ -914,7 +1129,8 @@ export class CollapseModel {
     // than the collision with its members (rotation of the block is not modelled).
     const P = ground > 0 ? Infinity : res.P;
     const out = impactOutcome({ M: b.mass, v: b.v, mR, P, deltaU: res.deltaU, g });
-    this.ledger.energy.collision += out.collisionLoss;
+    this.ledger.energy.collision += out.collisionLoss + (b.hKE ?? 0);
+    if (b.hKE) b.hKE = 0;
     if (ground > 0) this.ledger.energy.ground += out.absorbed;
     else this.ledger.energy.absorbed += out.absorbed;
     this.ledger.energy.released += (b.mass + mR) * g * out.distance;
@@ -1022,7 +1238,8 @@ export class CollapseModel {
     b.active = false;
     this.activeBlocks--;
     const K = 0.5 * b.mass * b.v * b.v;
-    this.ledger.energy.ground += K;
+    this.ledger.energy.ground += K + (b.hKE ?? 0);
+    if (b.hKE) b.hKE = 0;
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, solid = 0, base = Infinity, ms = 0, carried = 0;
     for (const i of b.members) {
       ms += G.mass[i];

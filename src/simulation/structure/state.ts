@@ -90,6 +90,8 @@ export function structureOf(e: RuntimeEntity, ctx: SystemContext): StructureStat
   const tProf = simProfiler.now();
   const g = graphOf(mr.design, mr.scale);
   const model = new CollapseModel(g, mr.damage);
+  // Phase 35.5: structure v2 (member law by structural type, toppling, member-level flood / meteor loads).
+  if (ctx.runtime.structureV2) model.enableV2();
   const tb = simProfiler.now();
   const b0 = bearing0(e, ctx);
   simProfiler.add('struct.create.bearing', tb);
