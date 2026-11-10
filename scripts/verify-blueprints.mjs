@@ -22,6 +22,23 @@ const browser = await puppeteer.launch({
 const errors = [];
 const results = [];
 const page = await browser.newPage();
+// Phase 35.5 compatibility: the right panel has tabs and the command console is a drawer — before an old selector / page function
+// is used, the tab (or drawer) that holds it is shown. (The checks themselves are unchanged.)
+{
+  const _ev = page.evaluate.bind(page);
+  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]/.test(s) ? 'analysis' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
+  const show = async (src) => {
+    const t = where(String(src));
+    if (!t) return;
+    const done = await _ev((t) => { const u = window.__ds?.ui?.getState(); if (!u) return true; if (t === 'command') { if (u.commandOpen) return true; u.setCommandOpen(true); return false; } if (u.rightTab === t && u.rightOpen) return true; u.setRightTab(t); return false; }, t).catch(() => true);
+    if (!done) await new Promise((r) => setTimeout(r, 150));
+  };
+  for (const m of ['click', '$', '$$', 'type', 'focus', 'select', 'waitForSelector', '$eval', '$$eval']) {
+    const o = page[m].bind(page);
+    page[m] = async (sel, ...rest) => { await show(sel); return o(sel, ...rest); };
+  }
+  page.evaluate = async (fn, ...rest) => { await show(fn); return _ev(fn, ...rest); };
+}
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
 page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Renamed by test' : undefined));
@@ -62,7 +79,11 @@ async function moveWorld(x, z) {
   await wait(120);
 }
 async function dragWorld([x0, z0], [x1, z1]) {
-  const a = await screenOf(x0, z0), b = await screenOf(x1, z1);
+  let a = await screenOf(x0, z0), b = await screenOf(x1, z1);
+  // Phase 35.5: the 3D view is taller — a corner may now lie under a viewport overlay (toolbar); the same rectangle is
+  // then dragged from the opposite corner.
+  const onCanvas = (p) => ev(([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS', p);
+  if (!(await onCanvas(a)) && (await onCanvas(b))) [a, b] = [b, a];
   await page.mouse.move(a[0], a[1]);
   await page.mouse.down();
   for (let k = 1; k <= 10; k++) { await page.mouse.move(a[0] + ((b[0] - a[0]) * k) / 10, a[1] + ((b[1] - a[1]) * k) / 10); await wait(25); }

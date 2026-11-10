@@ -24,6 +24,23 @@ const browser = await puppeteer.launch({
 const errors = [];
 const results = [];
 const page = await browser.newPage();
+// Phase 35.5 compatibility: the right panel has tabs and the command console is a drawer — before an old selector / page function
+// is used, the tab (or drawer) that holds it is shown. (The checks themselves are unchanged.)
+{
+  const _ev = page.evaluate.bind(page);
+  const where = (s) => (/-settings"|-settings\]/.test(s) ? 'settings' : /-probe"|-probe\]/.test(s) ? 'analysis' : /data-instance|exp-edit|experiment-panel|exp-issue|exp-invalid|exp-advanced|atmos-preview|-preview"/.test(s) ? 'phenomena' : /placeholder\*="Enter"|cmd-|command-input/.test(s) ? 'command' : null);
+  const show = async (src) => {
+    const t = where(String(src));
+    if (!t) return;
+    const done = await _ev((t) => { const u = window.__ds?.ui?.getState(); if (!u) return true; if (t === 'command') { if (u.commandOpen) return true; u.setCommandOpen(true); return false; } if (u.rightTab === t && u.rightOpen) return true; u.setRightTab(t); return false; }, t).catch(() => true);
+    if (!done) await new Promise((r) => setTimeout(r, 150));
+  };
+  for (const m of ['click', '$', '$$', 'type', 'focus', 'select', 'waitForSelector', '$eval', '$$eval']) {
+    const o = page[m].bind(page);
+    page[m] = async (sel, ...rest) => { await show(sel); return o(sel, ...rest); };
+  }
+  page.evaluate = async (fn, ...rest) => { await show(fn); return _ev(fn, ...rest); };
+}
 let crashed = false;
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
@@ -45,7 +62,7 @@ const check = (name, ok, detail = '') => {
 };
 const clickText = (re, root = 'body') => ev(([src, root]) => {
   const r = new RegExp(src);
-  for (const b of document.querySelector(root).querySelectorAll('button, [role="menuitem"]')) if (r.test(b.textContent ?? '') && !b.disabled) { b.click(); return true; }
+  for (const b of [...(document.querySelector(root).querySelectorAll('button, [role="menuitem"]'))].filter((b) => !b.closest('[data-testid=\"disaster-library\"], [data-testid=\"placement-bar\"]'))) if (r.test(b.textContent ?? '') && !b.disabled) { b.click(); return true; }
   return false;
 }, [re.source, root]);
 const tr = (k) => ev((k) => window.__ds.tr(k), k);

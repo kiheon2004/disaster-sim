@@ -88,6 +88,9 @@ export function InspectorContent() {
           {inSim && <PhenomenaLiveSection id={obj.id} />}
           <ObjectInspector obj={obj} readOnly={inSim} />
         </>
+      ) : inSim ? (
+        // Nothing selected during a run: the world overview is the live one (probes, summary, log).
+        <AnalysisContent />
       ) : (
         <NoSelection />
       )}

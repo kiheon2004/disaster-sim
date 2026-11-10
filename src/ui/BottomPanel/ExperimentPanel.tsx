@@ -202,7 +202,7 @@ function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: 
       <div className={x.params}>
         <SpecFields def={def} spec={inst.spec} onChange={set} only={basic} />
         {advanced.length > 0 && (
-          <details className={x.advanced} data-testid="exp-advanced">
+          <details className={x.advanced} data-testid="exp-advanced" open={advancedOpen()} onToggle={(e) => rememberAdvanced((e.target as HTMLDetailsElement).open)}>
             <summary>{t('place.advanced')} ({advanced.length})</summary>
             <SpecFields def={def} spec={inst.spec} onChange={set} skip={basic} />
           </details>
@@ -303,4 +303,26 @@ export function SpecFields({ def, spec, onChange, only, skip }: { def: Implement
 export function basicKeys(def: ImplementedPhenomenon<EventSpec>): ReadonlySet<string> {
   const listed = catalogOf(def.type)?.basic.filter((k) => def.fields.some((f) => f.key === k)) ?? [];
   return new Set(listed.length ? listed : def.fields.filter((f) => !['x', 'z', 'endX', 'endZ'].includes(f.key)).slice(0, 3).map((f) => f.key));
+}
+
+/**
+ * Advanced fields of the instance editor: folded for a new user; the choice is remembered. Users of the earlier
+ * single-panel editor (the legacy hazard tab preference exists) find them unfolded, as before.
+ */
+function advancedOpen(): boolean {
+  try {
+    const v = localStorage.getItem('ds.advancedOpen');
+    if (v === '1' || v === '0') return v === '1';
+    return localStorage.getItem('ds.hazardTab') !== null;
+  } catch {
+    return false;
+  }
+}
+
+function rememberAdvanced(open: boolean) {
+  try {
+    localStorage.setItem('ds.advancedOpen', open ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
 }
