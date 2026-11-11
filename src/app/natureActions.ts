@@ -14,6 +14,7 @@ import { toast } from '@/ui/common/toast';
 import { t } from '@/i18n/i18n';
 import { buildEnvironment, type EnvironmentPreset } from '@/landscape/presets';
 import { Rng } from '@/core/random';
+import { hashString } from '@/core/math';
 import { foundationContact } from '@/buildings/foundation';
 import { featureBounds, landformDelta, polygonDistance, riverProfile } from '@/landscape/features';
 import { landformSampler } from '@/landscape/compose';
@@ -221,12 +222,22 @@ export const landformPeak = (f: Feature) => (f.kind === 'mountain' || f.kind ===
 
 /** Persistent scatter of the current forest stroke (Phase 16 brush distribution). */
 let scatter: BrushScatter | null = null;
-let strokeIndex = 0;
+/** Seed key of the current stroke (Phase 36: derived from where it starts, not from a session counter). */
+let strokeKey = 0;
 
-export function beginForestStroke() {
+/**
+ * Seed key of a forest stroke: derived from its start point (cm), never 0 (= the key of programmatic plans). With the
+ * forest seed it fixes the scatter and every tree's species / variation, so the same stroke with the same seed gives
+ * the same trees in every session — before, a module-level counter of the strokes so far took part in the seeds.
+ */
+export function forestStrokeKey(x: number, z: number): number {
+  return (hashString(`${Math.round(x * 100)},${Math.round(z * 100)}`) % 999_983) + 1;
+}
+
+export function beginForestStroke(x: number, z: number) {
   const f = N().forest;
-  scatter = new BrushScatter({ radius: f.radius, density: f.density, spacing: f.spacing, seed: f.seed });
-  strokeIndex++;
+  strokeKey = forestStrokeKey(x, z);
+  scatter = new BrushScatter({ radius: f.radius, density: f.density, spacing: f.spacing, seed: subSeed(f.seed, 'stroke', strokeKey) });
 }
 
 /** New tree positions of a dab (min spacing to the earlier ones of the stroke). */
@@ -234,10 +245,6 @@ export function forestDab(x: number, z: number): P2[] {
   return scatter ? (scatter.extend([x, z]) as P2[]) : [];
 }
 
-/**
- * Plan trees at the stroke's points: species by share (seeded), elevation band, slope limit,
- * no trees in standing water, on roads or on other objects. Returns the accepted inputs.
- */
 export interface ForestContext {
   terrain: TerrainData;
   roads: RoadNetwork;
@@ -245,37 +252,56 @@ export interface ForestContext {
   objects: Record<string, WorldObject>;
 }
 
-export function planForest(points: readonly P2[], f: ForestSettings = N().forest, ctx?: ForestContext): { inputs: CreateObjectInput[]; rejected: number } {
+/** Why a spot got no tree (counted per reason). */
+export type ForestReject = 'elevation' | 'water' | 'ground' | 'soil' | 'road' | 'placement';
+
+/**
+ * Plan trees at the stroke's points: species by share (seeded), elevation band, slope limit, and (Phase 36 site
+ * conditions, ForestSettings) surface / soil exclusions, a clearance from water (lakes, rivers, sea) and from road
+ * footprints. Physically impossible spots never get a tree: standing water, roads, too steep, excluded ground. Returns
+ * the accepted inputs. `stroke` = the stroke's seed key (0 for programmatic plans: presets, templates, blueprints —
+ * exactly the seeds they always got).
+ */
+export function planForest(points: readonly P2[], f: ForestSettings = N().forest, ctx?: ForestContext, stroke = 0): { inputs: CreateObjectInput[]; rejected: number; reasons: Record<ForestReject, number> } {
   const doc: ForestContext = ctx ?? { terrain: W().doc.terrain, roads: W().doc.roads, features: W().doc.landscape.features, objects: W().doc.objects };
   const sampler = samplerFor(doc.terrain);
   const existing = new FootprintIndex();
   for (const o of Object.values(doc.objects).sort((a, b) => (a.id < b.id ? -1 : 1))) { const fp = footprintOf(o); if (fp) existing.add(fp, o.id); }
   const own = new FootprintIndex();
   const inputs: CreateObjectInput[] = [];
-  let rejected = 0;
+  const reasons: Record<ForestReject, number> = { elevation: 0, water: 0, ground: 0, soil: 0, road: 0, placement: 0 };
   const lakes = doc.features.filter((g) => g.kind === 'lake');
   const inWater = waterFeatureAvoid(doc.features.filter((g) => g.kind === 'river'));
+  const sea = doc.terrain.settings.waterLevel;
+  const clear = f.waterClearance ?? 0;
+  // Clearance from rivers and lakes (channel + banks, shoreline polygon) and from the sea (ground below sea level on a
+  // ring of that radius around the spot, 8 directions).
+  const nearWater = f.waterClearance !== undefined ? waterFeatureAvoid(doc.features) : null;
+  const seaNear = (x: number, z: number) => sea !== null && clear > 0 && [0, 1, 2, 3, 4, 5, 6, 7].some((k) => sampler.sampleHeight(x + Math.cos((k * Math.PI) / 4) * clear, z + Math.sin((k * Math.PI) / 4) * clear) < sea - 0.05);
+  const excludeGround = new Set(f.excludeGround ?? []), excludeSoil = new Set(f.excludeSoil ?? []);
   points.forEach(([x, z], i) => {
-    const rng = new Rng(subSeed(f.seed, `forest${strokeIndex}`, i));
+    const rng = new Rng(subSeed(f.seed, `forest${stroke}`, i));
     const conifer = rng.next() < f.coniferShare;
     const h = sampler.sampleHeight(x, z);
     const inLake = lakes.some((l) => l.kind === 'lake' && l.filled && h < l.surface && polygonDistance(l.points, x, z).inside);
-    const sea = doc.terrain.settings.waterLevel;
-    if (h < f.minElevation || h > f.maxElevation || inLake || inWater(x, z, 0.5) || (sea !== null && h < sea - 0.05)) { rejected++; return; }
+    if (h < f.minElevation || h > f.maxElevation) { reasons.elevation++; return; }
+    if (inLake || inWater(x, z, 0.5) || (sea !== null && h < sea - 0.05) || nearWater?.(x, z, Math.max(0.5, clear)) || seaNear(x, z)) { reasons.water++; return; }
+    if (excludeGround.size && excludeGround.has(sampler.sampleGroundType(x, z))) { reasons.ground++; return; }
+    if (excludeSoil.size && excludeSoil.has(sampler.sampleSoilType(x, z))) { reasons.soil++; return; }
     const params = conifer ? { species: 'conifer', height: 11, canopyRadius: 2.2, trunkRadius: 0.32 } : { species: 'broadleaf', height: 8, canopyRadius: 3, trunkRadius: 0.28 };
-    const plan = planPlacement({ type: 'tree', params, randomize: f.variation }, [{ x, z }], { ...DEFAULT_PLACEMENT, seed: subSeed(f.seed, 'tree', i + strokeIndex * 100000), slopeLimit: f.slopeLimit, variation: f.variation }, { terrain: sampler, existing }, 0, own)[0];
-    if (!plan.ok) { rejected++; return; }
+    const plan = planPlacement({ type: 'tree', params, randomize: f.variation }, [{ x, z }], { ...DEFAULT_PLACEMENT, seed: subSeed(f.seed, 'tree', i + stroke * 100000), slopeLimit: f.slopeLimit, variation: f.variation }, { terrain: sampler, existing }, 0, own)[0];
+    if (!plan.ok) { reasons.placement++; return; }
     const fp = footprintOf({ type: 'tree', params: plan.input.params ?? params, transform: plan.input.transform } as WorldObject);
-    if (fp && footprintOnRoad(doc.roads, fp, 0.2)) { rejected++; return; }
+    if (fp && footprintOnRoad(doc.roads, fp, f.roadMargin ?? 0.2)) { reasons.road++; return; }
     inputs.push(plan.input);
   });
-  return { inputs, rejected };
+  return { inputs, rejected: Object.values(reasons).reduce((a, b) => a + b, 0), reasons };
 }
 
 export function commitForest(points: readonly P2[]) {
   scatter = null;
   if (!points.length || locked()) return;
-  const { inputs, rejected } = planForest(points);
+  const { inputs, rejected } = planForest(points, N().forest, undefined, strokeKey);
   if (inputs.length) W().applyEdit({ add: inputs });
   toast(inputs.length ? 'success' : 'warn', { key: 'nature.forest.placed', params: { n: inputs.length, skipped: rejected } });
 }

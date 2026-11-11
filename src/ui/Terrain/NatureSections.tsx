@@ -248,6 +248,35 @@ function ForestSection({ editing }: { editing: boolean }) {
       <NumberField label={t('nature.heightMin')} value={f.minElevation} min={-40} max={80} step={0.5} precision={1} unit="m" disabled={!editing} onChange={(v) => set({ minElevation: v })} />
       <NumberField label={t('nature.heightMax')} value={f.maxElevation} min={-40} max={80} step={0.5} precision={1} unit="m" disabled={!editing} onChange={(v) => set({ maxElevation: v })} />
       <ToggleField label={t('nature.forest.variation')} checked={f.variation} disabled={!editing} onChange={(b) => set({ variation: b })} />
+      {/* Phase 36 (§18) site conditions: where trees never grow. */}
+      <NumberField label={t('nature.forest.water')} value={f.waterClearance ?? 0} min={0} max={30} step={0.5} precision={1} unit="m" disabled={!editing} onChange={(v) => set({ waterClearance: v })} />
+      <NumberField label={t('nature.forest.roadMargin')} value={f.roadMargin ?? 0.2} min={0} max={10} step={0.1} precision={1} unit="m" disabled={!editing} onChange={(v) => set({ roadMargin: v })} />
+      <div className={styles.sub}>{t('nature.forest.noGround')}</div>
+      <div className={styles.swatches}>
+        {GROUND_MATERIALS.map((g) => {
+          const off = (f.excludeGround ?? []).includes(g.id);
+          return (
+            <button key={g.id} className={`${styles.swatch} ${off ? styles.active : ''}`} disabled={!editing} aria-pressed={off}
+              onClick={() => set({ excludeGround: off ? (f.excludeGround ?? []).filter((x) => x !== g.id) : [...(f.excludeGround ?? []), g.id] })}>
+              <span className={styles.chip} style={{ background: g.color }} />
+              {t(g.labelKey)}
+            </button>
+          );
+        })}
+      </div>
+      <div className={styles.sub}>{t('nature.forest.noSoil')}</div>
+      <div className={styles.swatches}>
+        {SOIL_PROFILES.map((g) => {
+          const off = (f.excludeSoil ?? []).includes(g.id);
+          return (
+            <button key={g.id} className={`${styles.swatch} ${off ? styles.active : ''}`} disabled={!editing} aria-pressed={off}
+              onClick={() => set({ excludeSoil: off ? (f.excludeSoil ?? []).filter((x) => x !== g.id) : [...(f.excludeSoil ?? []), g.id] })}>
+              <span className={styles.chip} style={{ background: g.color }} />
+              {t(g.labelKey)}
+            </button>
+          );
+        })}
+      </div>
       <div className={styles.row}>
         <NumberField label={t('terrain.seed')} value={f.seed} min={0} max={999999} step={1} precision={0} disabled={!editing} onChange={(v) => set({ seed: Math.round(v) })} />
         <button className={styles.linkBtn} onClick={() => set({ seed: randomSeed() })}><Icon name="dice" size={13} /></button>

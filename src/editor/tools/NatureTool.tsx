@@ -136,7 +136,8 @@ export function NatureTool() {
     if (!p) return;
     e.stopPropagation();
     painting.current = true;
-    beginForestStroke();
+    // Phase 36: the stroke's seeds come from where it starts (reproducible across sessions).
+    beginForestStroke(p[0], p[1]);
     startPaint();
     forestRef.current = forestDab(p[0], p[1]);
     setForestPts(forestRef.current);

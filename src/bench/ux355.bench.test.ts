@@ -11,11 +11,15 @@
  *
  * Long runs (LONG = simulated seconds, LONG_SCENES = names, LONG_BUDGET_S = wall budget per scene, default 900 — a scene over
  * budget stops and reports the simulated time it reached): 1 s steps; every 60 s NaN, speed / spin, out of world, events, heap.
+ * Phase 36 (§63): LONG_TOP=5 runs every second as 60 × advance(1/60) with the profiler on and adds `top` to each scene's
+ * row — the 5 slowest steps with sim time, step index, section breakdown, counts, active instances, blast waves, collapse
+ * events, heap, major page faults and GC pauses (e.g. LONG=600 LONG_TOP=5 LONG_SCENES=mix).
  *
  *   BENCH=1 LONG=3600 NODE_OPTIONS=--expose-gc BENCH_OUT=docs/bench-phase35_5-long.json npx vitest run src/bench/ux355.bench --silent=false -t long
  */
 import fs from 'node:fs';
 import os from 'node:os';
+import { PerformanceObserver } from 'node:perf_hooks';
 import { describe, it } from 'vitest';
 import type { Vec3 } from '@/core/types';
 import type { WorldDocument } from '@/core/model';
@@ -151,11 +155,72 @@ function withCars(d: WorldDocument): WorldDocument {
 }
 
 type Op = { t: number; key: string; op: 'pause' | 'resume' | 'stop' | 'cancel' };
+
+/**
+ * Phase 36 (§63) worst steps of a long run (LONG_TOP = n): each simulated second runs as 60 steps of 1/60 s with the
+ * profiler on; the n slowest steps are kept with their simulated time, step index, profiler section deltas (ms),
+ * entity / body / fragment / debris counts, active instances, blast waves, collapse events, heap, major page faults and
+ * the GC pauses that fell inside them (PerformanceObserver 'gc', matched by time after the run). Measuring a step only
+ * reads counters; the details are gathered only for a step slower than the current n-th.
+ */
+class TopSteps {
+  private top: Any[] = [];
+  private gcs: { start: number; dur: number; kind: unknown }[] = [];
+  private obs: PerformanceObserver | null = null;
+  private step = 0;
+  constructor(readonly n: number) {
+    if (!n) return;
+    this.obs = new PerformanceObserver((list) => { for (const e of list.getEntries()) this.gcs.push({ start: e.startTime, dur: e.duration, kind: (e as unknown as { detail?: { kind?: unknown } }).detail?.kind }); });
+    this.obs.observe({ entryTypes: ['gc'] });
+    simProfiler.enabled = true;
+  }
+  /** One simulated second as 60 measured steps; returns the slowest step (ms). */
+  second(c: SimulationController, t: number): number {
+    const sections = () => ({ ...(simProfiler as unknown as { sections: Record<string, number> }).sections });
+    let worst = 0;
+    for (let k = 0; k < 60; k++) {
+      const s0 = sections();
+      const pf0 = process.resourceUsage().majorPageFault;
+      const a = performance.now();
+      c.advance(1 / 60);
+      const b = performance.now(), ms = b - a;
+      this.step++;
+      worst = Math.max(worst, ms);
+      if (this.top.length >= this.n && ms <= this.top[this.top.length - 1].ms) continue;
+      const s1 = sections(), delta: Record<string, number> = {};
+      for (const key of Object.keys(s1)) { const d = s1[key] - (s0[key] ?? 0); if (d > 0.01) delta[key] = +d.toFixed(2); }
+      const rt = c.getRuntime()!, P = c.getPhysics()!;
+      let bodies = 0;
+      for (const e of rt.entities.values()) if (e.body != null && P.hasBody(e.body)) bodies++;
+      const inst = c.instances();
+      this.top.push({
+        ms: +ms.toFixed(2), start: a, end: b, step: this.step, second: t, simTime: +c.getTime().toFixed(3), sections: delta,
+        entities: rt.entities.size, bodies, fragments: rt.structures?.fragments.length ?? 0, debris: rt.debris.length,
+        active: inst.filter((i) => i.status === 'active').map((i) => i.key), blastWaves: c.getEnvironment().blast.waves.length,
+        collapseEvents: c.getDamageEvents().filter((e) => e.eventType === 'COLLAPSED').length,
+        heapMB: +(process.memoryUsage().heapUsed / 1048576).toFixed(1), majorPageFaults: process.resourceUsage().majorPageFault - pf0,
+      });
+      this.top.sort((x, y) => y.ms - x.ms);
+      this.top.length = Math.min(this.top.length, this.n);
+    }
+    return worst;
+  }
+  /** The kept steps with their GC pauses; stops observing. */
+  finish(): Any[] {
+    this.obs?.disconnect();
+    if (this.n) simProfiler.enabled = false;
+    return this.top.map(({ start, end, ...rest }) => {
+      const inside = this.gcs.filter((g) => g.start < end && g.start + g.dur > start);
+      return { ...rest, gcPauses: inside.length, gcMs: +inside.reduce((a, g) => a + g.dur, 0).toFixed(2), gcKinds: [...new Set(inside.map((g) => g.kind))] };
+    });
+  }
+}
 type Scene = { doc: () => WorldDocument; events: EventSpec[]; ops?: Op[] };
 
 describe.skipIf(!process.env.BENCH || !process.env.LONG)('Phase 35.5 long runs', () => {
   it('long', { timeout: 28_800_000 }, async () => {
     const SIM = +process.env.LONG!;
+    const TOP = +(process.env.LONG_TOP ?? 0);
     const BUDGET = +(process.env.LONG_BUDGET_S ?? 900);
     const quake = (pga: number, startTime: number, seed: number, duration = 20) => ({ event: 'earthquake', magnitude: 6.2, pga, duration, seed, startTime }) as EventSpec;
     const vortex = (position: [number, number], extra: Any = {}) => ({ event: 'tornado', position, maxSpeed: 50, coreRadius: 15, outerRadius: 80, duration: SIM, rampDuration: 5, startTime: 0, ...extra }) as EventSpec;
@@ -193,6 +258,7 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('Phase 35.5 long runs',
     for (const [name, sc] of Object.entries(scenes)) {
       if (only && !only.includes(name)) continue;
       const doc = sc.doc();
+      const top = new TopSteps(TOP);
       const c = new SimulationController({ headless: true });
       await c.load(doc);
       const keys = sc.events.map((e) => c.addEvent(e));
@@ -206,9 +272,12 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('Phase 35.5 long runs',
       let winSpin = 0;
       for (let t = 0; t < SIM; t++) {
         for (const o of sc.ops ?? []) if (o.t === t) opLog.push({ ...o, ok: c.controlEvent(o.key, o.op), statusAfter: c.instances().find((i) => i.key === o.key)?.status });
-        const a = performance.now();
-        c.advance(1);
-        worstStep = Math.max(worstStep, performance.now() - a);
+        if (TOP) worstStep = Math.max(worstStep, top.second(c, t));
+        else {
+          const a = performance.now();
+          c.advance(1);
+          worstStep = Math.max(worstStep, performance.now() - a);
+        }
         reached = t + 1;
         { // Speeds every simulated second: a 60 s sample alone misses short transients.
           const P = c.getPhysics()!;
@@ -241,12 +310,14 @@ describe.skipIf(!process.env.BENCH || !process.env.LONG)('Phase 35.5 long runs',
       }
       const ms = performance.now() - t0;
       const statuses = c.instances().map((i) => [i.key, i.status]);
+      const worst = top.finish();
       await c.reset();
       c.unload();
       const bad = checks.filter((x) => x.nonFinite || x.outside || x.maxSpeed > 100 || x.maxSpin > 50).map((x) => x.t);
       const row = {
         scene: name, simSeconds: SIM, reached, complete: reached === SIM, wallS: +(ms / 1000).toFixed(1), worstStepMs: +worstStep.toFixed(0), loadStart: +loadStart.toFixed(1), loadEnd: +os.loadavg()[0].toFixed(1),
         keys, ops: opLog, statuses, bad, peakSpeed: Math.max(0, ...checks.map((x) => x.maxSpeed)), peakSpin: Math.max(0, ...checks.map((x) => x.maxSpin)), duplicatesMax: Math.max(0, ...checks.map((x) => x.duplicates)),
+        ...(TOP ? { top: worst } : {}),
         first: checks[0], last: checks[checks.length - 1], eventsAt: checks.filter((_, i) => i % 10 === 9).map((x) => x.events), activeAt: checks.filter((_, i) => i % 10 === 9).map((x) => x.active), heapAt: checks.filter((_, i) => i % 10 === 9).map((x) => x.heapMB),
       };
       rows.push(row);
