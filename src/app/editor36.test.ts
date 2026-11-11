@@ -400,3 +400,31 @@ describe('car settings follow a duplicate (§19)', () => {
     expect(W().doc.settings.simulation.vehicles!.cars![copy]).toBeUndefined();
   });
 });
+
+describe('leaks (§72): editor ⇄ simulation', () => {
+  it('twenty round trips free every Rapier world, leave no runtime and keep the document and the history as they were', async () => {
+    const { rapierWorlds } = await import('@/physics/RapierEngine');
+    const { simulationController } = await import('@/simulation/SimulationController');
+    const { enterSimulation, exitSimulation } = await import('./actions');
+    W().applyEdit({ add: [
+      { type: 'building', params: { floors: 2, width: 8, depth: 7 }, transform: at(0, 0) },
+      { type: 'car', transform: at(12, 0) },
+      { type: 'tree', transform: at(-12, 4) },
+    ] });
+    const doc0 = serializeDocument(W().doc, false), past0 = W().past.length;
+    const live0 = rapierWorlds.live, created0 = rapierWorlds.created;
+    for (let k = 0; k < 20; k++) {
+      await enterSimulation();
+      expect(rapierWorlds.live).toBe(live0 + 1);
+      expect(simulationController.getPhysics()!.bodyCount()).toBeGreaterThan(0);
+      simulationController.advance(0.25);
+      exitSimulation();
+      expect(rapierWorlds.live).toBe(live0);
+      expect(simulationController.getRuntime()).toBeNull();
+    }
+    expect(rapierWorlds.created - created0).toBe(20);
+    expect(serializeDocument(W().doc, false)).toBe(doc0);
+    expect(W().past.length).toBe(past0);
+    expect(ED().mode).toBe('editor');
+  });
+});

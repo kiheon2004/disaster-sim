@@ -26,6 +26,7 @@ const counts = countsArg.split(',').map(Number);
 const MODE = process.env.MODE ?? 'scale';
 const LEAK_N = Number(process.env.LEAK_N ?? 100);
 const SAMPLE_EVERY = Number(process.env.SAMPLE_EVERY ?? 10);
+const LEAK_OPS = (process.env.LEAK_OPS ?? 'objects,terrain,road,disaster,simSwitch,saveLoad').split(','); // a subset isolates which one holds memory
 const IDLE_MS = Number(process.env.IDLE_MS ?? 3000);
 const ORBIT_MS = Number(process.env.ORBIT_MS ?? 3000);
 const SELECT_N = Number(process.env.SELECT_N ?? 5);
@@ -199,29 +200,38 @@ async function leakRun(n) {
   await page.evaluate(() => window.__view(0, 0, 90, 110));
   await wait(1500);
   const sample = async (i) => {
+    // Two full collections through the DevTools protocol (window.gc alone gave readings that swung by tens of MB), then
+    // the V8 heap in use as the protocol reports it (heapMB) next to performance.memory (pageHeapMB).
+    await cdp.send('HeapProfiler.collectGarbage');
+    await wait(300);
+    await cdp.send('HeapProfiler.collectGarbage');
+    const { usedSize } = await cdp.send('Runtime.getHeapUsage');
     const gpu = await page.evaluate(async () => {
-      window.gc?.();
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 100));
       const st = window.__r3f.get();
       let objects = 0;
       st.scene.traverse(() => objects++);
-      return { geometries: st.gl.info.memory.geometries, textures: st.gl.info.memory.textures, programs: st.gl.info.programs?.length ?? null, sceneObjects: objects, heapMB: +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) };
+      return { geometries: st.gl.info.memory.geometries, textures: st.gl.info.memory.textures, programs: st.gl.info.programs?.length ?? null, sceneObjects: objects, pageHeapMB: +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) };
     });
-    return { i, ...gpu, listeners: await listeners() };
+    return { i, ...gpu, heapMB: +(usedSize / 1048576).toFixed(1), listeners: await listeners() };
   };
   const samples = [await sample(0)];
   const times = { objects: [], terrain: [], road: [], disaster: [], simSwitch: [], saveLoad: [] };
   for (let i = 1; i <= LEAK_N; i++) {
-    const t = await page.evaluate(async (i) => {
+    const t = await page.evaluate(async ({ i, ops }) => {
       const ds = window.__ds, W = ds.world, f = () => window.__frames();
       const out = {};
+      const on = new Set(ops);
       let t0 = performance.now();
+      if (on.has('objects')) {
       const ids = W.getState().addObjects(Array.from({ length: 10 }, (_, k) => ({ type: 'tree', transform: { position: [-60 + k * 3, 0, -80], rotation: [0, 0, 0], scale: [1, 1, 1] } })));
       await f();
       W.getState().remove(ids);
       await f();
       out.objects = performance.now() - t0;
+      }
       t0 = performance.now();
+      if (on.has('terrain')) {
       W.getState().beginTerrainStroke();
       for (let k = 0; k < 5; k++) W.getState().terrainDab({ op: 'raise', x: 70, z: 70, brush: { radius: 6, strength: 0.5 }, dt: 0.05 });
       W.getState().endTerrainStroke();
@@ -229,7 +239,9 @@ async function leakRun(n) {
       W.getState().undo();
       await f();
       out.terrain = performance.now() - t0;
+      }
       t0 = performance.now();
+      if (on.has('road')) {
       const L = ds.roadLib;
       const r = L.drawRoad(W.getState().doc.roads, [[-40, 85], [40, 85]], { curved: false, profile: { ...L.defaultProfile() } });
       W.getState().applyEdit({ roads: r.network });
@@ -237,7 +249,9 @@ async function leakRun(n) {
       W.getState().applyEdit({ roads: L.deleteSegments(W.getState().doc.roads, r.segments) });
       await f();
       out.road = performance.now() - t0;
+      }
       t0 = performance.now();
+      if (on.has('disaster')) {
       ds.placement.armPlacement('fire');
       const id = ds.placement.placeAt([20 + (i % 5), -70]);
       await f();
@@ -245,20 +259,25 @@ async function leakRun(n) {
       ds.placement.disarmPlacement();
       await f();
       out.disaster = performance.now() - t0;
+      }
       t0 = performance.now();
+      if (on.has('simSwitch')) {
       await ds.actions.enterSimulation();
       await f();
       ds.actions.exitSimulation();
       await f();
       out.simSwitch = performance.now() - t0;
+      }
       t0 = performance.now();
+      if (on.has('saveLoad')) {
       const Lb = ds.buildLib;
       W.getState().replaceDocument(Lb.parseDocument(Lb.serializeDocument(W.getState().doc, false)).doc);
       await f();
       out.saveLoad = performance.now() - t0;
+      }
       return out;
-    }, i);
-    for (const k of Object.keys(times)) times[k].push(t[k]);
+    }, { i, ops: LEAK_OPS });
+    for (const k of Object.keys(times)) if (t[k] != null) times[k].push(t[k]);
     if (i % SAMPLE_EVERY === 0) {
       const s = await sample(i);
       samples.push(s);
@@ -267,10 +286,10 @@ async function leakRun(n) {
   }
   const stat = (v) => page.evaluate((v) => window.__stat(v), v);
   const iterMs = {};
-  for (const k of Object.keys(times)) iterMs[k] = await stat(times[k]);
+  for (const k of Object.keys(times)) if (times[k].length) iterMs[k] = await stat(times[k]);
   await page.close();
   const first = samples[0], last = samples[samples.length - 1];
-  return { n, iterations: LEAK_N, samples, iterMs, growth: { geometries: last.geometries - first.geometries, textures: last.textures - first.textures, heapMB: +(last.heapMB - first.heapMB).toFixed(1), windowListeners: last.listeners.window - first.listeners.window, documentListeners: last.listeners.document - first.listeners.document } };
+  return { n, iterations: LEAK_N, ops: LEAK_OPS, samples, iterMs, growth: { geometries: last.geometries - first.geometries, textures: last.textures - first.textures, heapMB: +(last.heapMB - first.heapMB).toFixed(1), windowListeners: last.listeners.window - first.listeners.window, documentListeners: last.listeners.document - first.listeners.document } };
 }
 
 const results = { date: new Date().toISOString(), url, mode: MODE, rows: [] };
