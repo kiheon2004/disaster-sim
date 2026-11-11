@@ -11,7 +11,7 @@ import { useMemberStore } from '@/editor/memberStore';
 import { useBuildStore } from '@/editor/buildStore';
 import { CUSTOM_BUILDING_ID } from '@/objects/palette';
 import { analysisOf, createDesign, regenerate, withDesign } from '@/buildings/design';
-import { addFloor, addMembers, duplicateMembers, moveMembers, newMember, nextUserIds, removeFloor, removeMembers, rotateMembers, setInitialDamage, setMaterial, setRole, setSize } from '@/buildings/edit';
+import { addFloor, addMembers, duplicateMembers, moveMembers, newMember, nextUserIds, removeFloor, removeMembers, rotateMembers, setInitialDamage, setMaterial, setRole, setSize, setType } from '@/buildings/edit';
 import { convertLegacy, type ConversionNote } from '@/buildings/convert';
 import { hasErrors, validateSpec } from '@/buildings/spec';
 import { assertValidDesign } from '@/buildings/schema';
@@ -251,6 +251,36 @@ export function setSelectedRole(role: StructuralRole): boolean {
   const ids = selectedMembers();
   if (!o || !ids.length) return false;
   return commitDesign(o.id, setRole(o.building!, ids, role));
+}
+
+/** Phase 36 §36: change the type of the selected members where the box keeps its meaning (window ↔ door). */
+export function setSelectedType(type: MemberType): boolean {
+  const o = target();
+  const ids = selectedMembers();
+  if (!o || !ids.length) return false;
+  return commitDesign(o.id, setType(o.building!, ids, type));
+}
+
+/**
+ * Phase 36 §36: exact position (building-local m) / heading (°, about +Y) of ONE member — through the same move / rotate
+ * edits as the gizmo, so the level is re-derived and the design validated (and confirmed when more members lose support).
+ */
+export function setMemberPosition(id: string, pos: Vec3): boolean {
+  const o = target();
+  const m = o?.building?.members.find((x) => x.id === id);
+  if (!o || !m || pos.some((v) => !Number.isFinite(v))) return false;
+  const d: Vec3 = [pos[0] - m.position[0], pos[1] - m.position[1], pos[2] - m.position[2]];
+  if (Math.abs(d[0]) + Math.abs(d[1]) + Math.abs(d[2]) < 1e-9) return false;
+  return commitDesign(o.id, moveMembers(o.building!, [id], d));
+}
+
+export function setMemberYaw(id: string, deg: number): boolean {
+  const o = target();
+  const m = o?.building?.members.find((x) => x.id === id);
+  if (!o || !m || !Number.isFinite(deg)) return false;
+  const dy = (deg * Math.PI) / 180 - m.rotation[1];
+  if (Math.abs(dy) < 1e-9) return false;
+  return commitDesign(o.id, rotateMembers(o.building!, [id], dy, [m.position[0], m.position[2]]));
 }
 
 export function setMemberSize(id: string, size: Vec3): boolean {

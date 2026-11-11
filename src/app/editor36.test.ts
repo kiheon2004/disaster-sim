@@ -347,3 +347,18 @@ describe('paste stamps are checked (§16)', () => {
     expect(checkStamp([{ type: 'wall', transform: at(99.9, 0) }], null).ok).toBe(false);
   });
 });
+
+import { setType, TYPE_SWAPS } from '@/buildings/edit';
+import { presetDesign } from '@/roads/city';
+
+describe('member type changes (§36)', () => {
+  it('only window ↔ door; other members are left alone', () => {
+    const d = presetDesign('office', 2)!;
+    const win = d.members.find((m) => m.type === 'window')!;
+    const col = d.members.find((m) => m.type === 'column')!;
+    const out = setType(d, [win.id, col.id], 'door');
+    expect(out.members.find((m) => m.id === win.id)!.type).toBe('door');
+    expect(out.members.find((m) => m.id === col.id)!.type).toBe('column');
+    expect(TYPE_SWAPS.column).toBeUndefined();
+  });
+});

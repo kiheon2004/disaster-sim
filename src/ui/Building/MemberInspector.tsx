@@ -6,12 +6,14 @@ import { useMemberStore } from '@/editor/memberStore';
 import { useWorldStore } from '@/world/worldStore';
 import { analysisOf } from '@/buildings/design';
 import { MATERIAL_IDS, MATERIALS, type MaterialId } from '@/buildings/materials';
-import { ROLES_BY_TYPE, memberUid, type StructuralRole } from '@/buildings/types';
+import { ROLES_BY_TYPE, memberUid, type MemberType, type StructuralRole } from '@/buildings/types';
+import { TYPE_SWAPS } from '@/buildings/edit';
+import { setMemberPosition, setMemberYaw, setSelectedType } from '@/app/buildingActions';
 import {
   deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, setMemberSize, setSelectedInitialDamage, setSelectedMaterial, setSelectedRole,
 } from '@/app/buildingActions';
 import { Section } from '@/ui/common/Panel';
-import { SelectField, SliderField, Vec3Field } from '@/ui/common/fields';
+import { NumberField, SelectField, SliderField, Vec3Field } from '@/ui/common/fields';
 import { Icon } from '@/ui/common/Icon';
 import { displayName, fmt } from '@/ui/format';
 import { AnalysisRows, WarningList } from './AnalysisSummary';
@@ -66,6 +68,10 @@ function OneMember({ buildingId, index }: { buildingId: string; index: number })
     <>
       <Section title={`${t(`member.type.${m.type}` as MessageKey)} · ${m.id}`}>
         <div className={styles.note} style={{ marginBottom: 6 }}>{t('building.members.uid', { uid: memberUid(buildingId, m.id) })}</div>
+        {(TYPE_SWAPS[m.type] ?? []).length > 0 && (
+          <SelectField<MemberType> label={t('ed36.member.type')} value={m.type}
+            options={[m.type, ...(TYPE_SWAPS[m.type] ?? [])].map((v) => ({ value: v, label: t(`member.type.${v}` as MessageKey) }))} onChange={(v) => setSelectedType(v)} />
+        )}
         <SelectField<StructuralRole> label={t('building.members.role')} value={m.role}
           options={ROLES_BY_TYPE[m.type].map((r) => ({ value: r, label: t(`role.${r}` as MessageKey) }))} onChange={(r) => setSelectedRole(r)} />
         <div className={styles.note}>{t(`role.${m.role}.hint` as MessageKey)}</div>
@@ -73,8 +79,12 @@ function OneMember({ buildingId, index }: { buildingId: string; index: number })
           options={MATERIAL_IDS.map((v) => ({ value: v, label: t(`material.${v}` as MessageKey) }))} onChange={(v) => setSelectedMaterial(v)} />
         <Vec3Field label={t('building.members.size')} value={m.size} step={0.05} precision={2} min={0.02} max={200}
           onChange={(v, live) => !live && setMemberSize(m.id, v as Vec3)} />
+        {/* Phase 36 §36: exact position (building-local) and heading, validated like a gizmo move. */}
+        <Vec3Field label={t('ed36.member.position')} value={m.position} step={0.05} precision={2}
+          onChange={(v, live) => !live && setMemberPosition(m.id, v as Vec3)} />
+        <NumberField label={t('ed36.member.yaw')} value={Math.round((m.rotation[1] * 180) / Math.PI * 10) / 10} step={15} precision={1} unit="°"
+          onChange={(v, live) => !live && setMemberYaw(m.id, v)} />
         <div className={styles.summary}>
-          <span>{t('building.members.position')}</span><span>{m.position.map((v) => fmt(v, 2)).join(', ')}</span>
           <span>{t('building.members.level')}</span><span>{m.level < 0 ? t('building.members.foundationLevel') : m.level >= d.spec.floors ? t('building.members.roofLevel') : t('building.storyN', { n: m.level + 1 })}</span>
           {m.host && (<><span>{t('building.members.host')}</span><span>{m.host}</span></>)}
         </div>

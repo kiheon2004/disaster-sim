@@ -249,6 +249,22 @@ export function setRole(d: BuildingDesign, ids: readonly string[], role: Structu
   return bump(d, d.members.map((m) => (set.has(m.id) && (ROLES_BY_TYPE[m.type] as readonly string[]).includes(role) ? { ...clone(m), role } : m)));
 }
 
+/**
+ * Member type changes that keep the box's meaning (Phase 36 §36): an opening stays an opening in the same wall (window
+ * ↔ door). Other types differ in geometry and load path (a column is not a wall turned around), so they are not offered
+ * — delete the member and add the other type instead.
+ */
+export const TYPE_SWAPS: Partial<Record<MemberType, readonly MemberType[]>> = { window: ['door'], door: ['window'] };
+
+export function setType(d: BuildingDesign, ids: readonly string[], type: MemberType): BuildingDesign {
+  const set = new Set(ids);
+  return bump(d, d.members.map((m) => {
+    if (!set.has(m.id) || !(TYPE_SWAPS[m.type] ?? []).includes(type)) return m;
+    const roles = ROLES_BY_TYPE[type] as readonly StructuralRole[];
+    return { ...clone(m), type, role: roles.includes(m.role) ? m.role : roles[0] };
+  }));
+}
+
 export function setSize(d: BuildingDesign, id: string, size: Vec3): BuildingDesign {
   if (size.some((v) => !Number.isFinite(v) || v <= 0.01)) throw new Error('Invalid member size');
   return bump(d, d.members.map((m) => (m.id === id ? { ...clone(m), size: [...size] as Vec3 } : m)));

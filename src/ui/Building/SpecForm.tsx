@@ -8,6 +8,8 @@ import { totalHeight } from '@/buildings/generate';
 import { ColorField, NumberField, SelectField, ToggleField } from '@/ui/common/fields';
 import { fmt } from '@/ui/format';
 import styles from './Building.module.css';
+import { STRUCTURAL_TYPES, typeOfMaterial, type StructuralType } from '@/buildings/structuralType';
+import { useWorldStore } from '@/world/worldStore';
 
 /** Issues of one field, under it. */
 function Issues({ issues, field }: { issues: readonly SpecIssue[]; field: SpecIssue['field'] }) {
@@ -59,6 +61,7 @@ export function SpecForm({ spec, issues, onChange, disabled = false }: { spec: B
         <Issues issues={issues} field="height" />
       </Group>
       <Group title={t('building.group.structure')}>
+        <StructuralTypePicker spec={spec} disabled={disabled} onChange={onChange} />
         <SelectField<StructuralSystem> label={t('building.field.system')} value={spec.system} disabled={disabled}
           options={SYSTEMS.map((v) => ({ value: v, label: t(`struct.system.${v}` as MessageKey) }))}
           onChange={(v) => onChange({ system: v, structureMaterial: SYSTEM_MATERIALS[v].structure, slabMaterial: SYSTEM_MATERIALS[v].slab, claddingMaterial: SYSTEM_MATERIALS[v].cladding })} />
@@ -92,5 +95,30 @@ export function SpecForm({ spec, issues, onChange, disabled = false }: { spec: B
         {num('rooftopUnits', 'param.rooftopUnits', 1, undefined, 0)}
       </Group>
     </div>
+  );
+}
+
+/** Structural types a building can be made of (Phase 36 §34) — the STRUCTURAL_TYPES of the member law, mapped to the system
+ * and materials that produce them. 'light' (glass / light cladding) is not a load-bearing type: it is the envelope only. */
+const TYPE_SYSTEM: Record<Exclude<StructuralType, 'light'>, StructuralSystem> = { steel: 'steelFrame', rc: 'rcFrame', masonry: 'masonry', timber: 'wood' };
+
+function StructuralTypePicker({ spec, disabled, onChange }: { spec: BuildingSpec; disabled?: boolean; onChange: (patch: Partial<BuildingSpec>) => void }) {
+  const t = useT();
+  const v2 = useWorldStore((s) => s.doc.settings.simulation.structure?.model === 'v2');
+  const type = typeOfMaterial(spec.structureMaterial);
+  const prof = STRUCTURAL_TYPES[type];
+  return (
+    <>
+      <SelectField<StructuralType> label={t('ed36.structType')} value={type} disabled={disabled} data-testid="struct-type"
+        options={(Object.keys(TYPE_SYSTEM) as Exclude<StructuralType, 'light'>[]).map((v) => ({ value: v, label: t(`ed36.structType.${v}` as MessageKey) }))}
+        onChange={(v) => {
+          const system = TYPE_SYSTEM[v as Exclude<StructuralType, 'light'>];
+          onChange({ system, structureMaterial: SYSTEM_MATERIALS[system].structure, slabMaterial: SYSTEM_MATERIALS[system].slab, claddingMaterial: SYSTEM_MATERIALS[system].cladding });
+        }} />
+      <div className={styles.note} data-testid="struct-type-law">
+        {t('ed36.structType.law', { plastic: prof.uPlastic.toFixed(2), fracture: prof.uFracture.toFixed(2), joint: t(`ed36.joint.${prof.joint}` as MessageKey), modes: prof.modes.map((m) => t(`structType.mode.${m}` as MessageKey)).join(', ') })}
+        {' '}{t(v2 ? 'ed36.structType.v2on' : 'ed36.structType.v2off')}
+      </div>
+    </>
   );
 }
