@@ -213,4 +213,8 @@ export const enP37Cmd = {
   'cmd37.err.internal': 'The command failed and nothing was changed: {message}',
   'cmd37.note.carSettings': '{count} copied cars take their simulation settings along (autopilot paths stay where they were).',
   'cmd37.warn.setClamped': 'Out of range and limited: {fields}.',
+  'cmd37.parse.unknown': 'Not understood ({code} {token} {expected}).',
+  'cmd37.err.scriptTooLong': '{count} lines is more than a script may have ({max}).',
+  'cmd37.err.scriptLine': 'Line {line} was not understood: {text}',
+  'cmd37.notice.replanned': 'The world changed since this was planned: it was planned again and the result differs — check it and press Enter.',
 };

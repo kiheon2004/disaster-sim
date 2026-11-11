@@ -28,7 +28,7 @@ import { msg, type Env, type Msg } from './context';
 import { formatCanonical } from './canonical';
 import type { IntentOf, Side } from './intent';
 import { findKind, type Kind } from './kinds';
-import { MAX_ITEMS, need, PlanStop, stop, type Draft, type PlanItem, type PlanOptions } from './planTypes';
+import { CONFIRM_ITEMS, MAX_ITEMS, need, PlanStop, stop, type Draft, type PlanItem, type PlanOptions } from './planTypes';
 import { DEFAULT_GAP, resolvePlace, resolveRoad, type RoadRun } from './resolve';
 
 /** Clear distance between neighbours along a road when none is said (m), by what is placed. */
@@ -332,4 +332,5 @@ export function planPlace(i: IntentOf<'place'>, env: Env, o: PlanOptions, d: Dra
   if (!inputs.length) stop(msg('cmd37.err.nothingPlaced', { count }));
   d.ops.push({ op: 'edit', edit: { add: inputs }, result: 'added' });
   d.counts.create = inputs.length;
+  if (inputs.length >= CONFIRM_ITEMS) d.confirm = msg('cmd37.confirm.many', { count: inputs.length });
 }

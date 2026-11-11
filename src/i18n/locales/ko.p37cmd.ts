@@ -211,4 +211,8 @@ export const koP37Cmd: Record<keyof typeof enP37Cmd, string> = {
   'cmd37.err.internal': '명령이 실패했고 아무것도 바뀌지 않았습니다: {message}',
   'cmd37.note.carSettings': '복제한 차 {count}대의 시뮬 설정이 따라갑니다(자율 주행 경로는 그대로).',
   'cmd37.warn.setClamped': '범위를 벗어나 제한했습니다: {fields}.',
+  'cmd37.parse.unknown': '이해하지 못했습니다({code} {token} {expected}).',
+  'cmd37.err.scriptTooLong': '{count}줄은 스크립트 상한({max}줄)을 넘습니다.',
+  'cmd37.err.scriptLine': '{line}번째 줄을 이해하지 못했습니다: {text}',
+  'cmd37.notice.replanned': '계획한 뒤에 월드가 바뀌어 다시 계획했고 결과가 달라졌습니다 — 확인한 뒤 Enter를 누르세요.',
 };

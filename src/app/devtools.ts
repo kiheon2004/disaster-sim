@@ -105,6 +105,15 @@ import type { HeatSourceSpec } from '@/thermal/types';
 import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 
 import * as placementActions from './placementActions';
+import * as commandActions from './commandActions';
+import { useCommandSession } from '@/ui/Command/commandSession';
+import { interpret } from '@/command/interpret';
+import { formatCanonical, parseCanonical } from '@/command/canonical';
+import { planIntent } from '@/command/plan';
+import { previewIntents } from '@/command/run';
+import { envOf } from '@/command/context';
+import { KINDS } from '@/command/kinds';
+import { canonicalFingerprint, terrainBitsHash } from '@/world/fingerprint';
 import { cameraLockIgnoredWrites, cameraLockOwners, cameraLocked } from '@/editor/input/cameraLock';
 import { activeGesture } from '@/editor/input/gesture';
 import { storeyDisplacements } from '@/rendering/sim/storeyDrift';
@@ -139,8 +148,28 @@ export function installDevtools() {
     library: useLibraryStore,
     blueprintLib: { captureBlueprint, planPlacement: planBlueprint, defaultPlacement, parseBlueprintText, serializeBlueprint, buildBuiltinBlueprint, buildTemplate, createTemplate, serializeTemplate, parseTemplate, worldFingerprint },
     locale: useLocaleStore,
-    /** Translate a key in the current locale (browser verification finds buttons by label). */
-    tr: (key: MessageKey) => translate(useLocaleStore.getState().locale, key),
+    /** Translate a key in the current locale (browser verification finds buttons by label). Phase 37: with parameters. */
+    tr: (key: MessageKey, params?: Record<string, string | number>) => translate(useLocaleStore.getState().locale, key, params),
+    /**
+     * Phase 37 command bar (browser verification reads these; only the benchmarks' laps call the actions): the session
+     * (text, open plan, feedback, result sets, history), the actions, the planning Context and the pure pipeline.
+     */
+    command: {
+      session: useCommandSession,
+      actions: commandActions,
+      context: commandActions.commandContext,
+      lib: { interpret, parseCanonical, formatCanonical, planIntent, previewIntents, envOf, KINDS },
+    },
+    /**
+     * Phase 37 document hashes: `raw` = the serialized document (ids included), `canonical` = the same with object and
+     * group ids named by type and running number (two runs of a script give the same one), `terrain` = every
+     * per-vertex array (final terrain and all layers) — "bit-identical after undo" is raw + terrain.
+     */
+    hash: {
+      raw: () => worldFingerprint(useWorldStore.getState().doc),
+      canonical: () => canonicalFingerprint(useWorldStore.getState().doc),
+      terrain: () => terrainBitsHash(useWorldStore.getState().doc),
+    },
     actions,
     /** Phase 35.5 placement / multi-instance UI (browser verification). */
     placement: placementActions,

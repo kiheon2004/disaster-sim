@@ -1,0 +1,336 @@
+/**
+ * Phase 37 (§9, §10, §11, §14, §15, §20): the command bar's flow on the app's own stores — plan → preview → confirm →
+ * one undo step; Esc; questions; commands that act at once; scripts; a disaster placed by a command is the instance a
+ * mouse placement makes; a failed command leaves document, history and selection as they were.
+ */
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { identityTransform, type Vec3 } from '@/core/types';
+import { drawRoad } from '@/roads/network';
+import { defaultProfile } from '@/roads/types';
+import { phenomena } from '@/phenomena/registry';
+import type { EventSpec } from '@/events/specs';
+import { useWorldStore } from '@/world/worldStore';
+import { createEmptyDocument } from '@/world/WorldDocument';
+import { terrainBitsHash, worldFingerprint } from '@/world/fingerprint';
+import { useEditorStore } from '@/editor/editorStore';
+import { usePlacementStore } from '@/ui/placement/placementStore';
+import { useCommandSession } from '@/ui/Command/commandSession';
+import { cancelCommand, chooseOption, commandContext, confirmPlan, draftCommand, historyScript, installCommandSession, runScript, submitCommand } from './commandActions';
+import { placeAt } from './placementActions';
+import { installInputPolicy } from './inputPolicy';
+
+beforeAll(() => {
+  (globalThis as { requestAnimationFrame?: unknown }).requestAnimationFrame ??= (f: () => void) => setTimeout(f, 0);
+  installCommandSession();
+});
+
+const W = () => useWorldStore.getState();
+const ED = () => useEditorStore.getState();
+const S = () => useCommandSession.getState();
+const at = (x: number, z: number) => ({ ...identityTransform(), position: [x, 0, z] as Vec3 });
+const bits = () => `${worldFingerprint(W().doc)} ${terrainBitsHash(W().doc)}`;
+const type = (text: string) => S().setText(text);
+const enter = async (text: string) => {
+  type(text);
+  return submitCommand();
+};
+const instances = () => W().doc.scenario.experiment?.instances ?? [];
+
+beforeEach(() => {
+  W().setLocked(false);
+  W().replaceDocument(createEmptyDocument());
+  W().applyEdit({ roads: drawRoad(W().doc.roads, [[-60, 0], [60, 0]], { curved: false, profile: defaultProfile() }).network });
+  ED().setMode('editor');
+  ED().select(null);
+  usePlacementStore.getState().disarm();
+  usePlacementStore.getState().select(null);
+  S().setText('');
+  S().setPlan(null);
+  S().setFeedback({ k: 'none' });
+  S().setResults([]);
+  S().setSettings({ applySmall: false, scriptPerLine: false });
+});
+
+describe('plan → preview → confirm', () => {
+  it('Enter makes the plan (nothing changes yet); Enter again confirms it as ONE undo step; undo takes all of it back', async () => {
+    const before = bits();
+    const steps = W().past.length;
+    expect(await enter('place building:house count=3 along=road:main side=north gap=2')).toBe('planned');
+    expect(bits()).toBe(before);
+    expect(W().past.length).toBe(steps);
+    const plan = S().plan!;
+    expect(plan.armed).toBe(true);
+    expect(plan.canonical).toEqual(['place building:house count=3 along=road:main side=north gap=2']);
+    expect(plan.preview.diff!.added.length).toBe(3);
+    expect(await submitCommand()).toBe('applied');
+    expect(Object.keys(W().doc.objects).length).toBe(3);
+    expect(W().past.length).toBe(steps + 1);
+    expect(S().plan).toBeNull();
+    expect(S().text).toBe('');
+    expect(S().results.length).toBe(1);
+    expect(S().results[0].length).toBe(3);
+    expect(S().feedback.k).toBe('done');
+    expect(S().history[S().history.length - 1]).toBe('place building:house count=3 along=road:main side=north gap=2');
+    W().undo();
+    expect(bits()).toBe(before);
+    // "The ones just made" no longer exist: the result set is gone with them.
+    expect(S().results).toEqual([]);
+  });
+
+  it('"group them and call them …" after that is one more step, on what the first command made', async () => {
+    await enter('place building:house count=3 along=road:main side=north');
+    await submitCommand();
+    const steps = W().past.length;
+    expect(await enter('group last name="북쪽 블록"')).toBe('planned');
+    expect(await submitCommand()).toBe('applied');
+    expect(W().past.length).toBe(steps + 1);
+    expect(Object.values(W().doc.groups ?? {})).toEqual([{ name: '북쪽 블록' }]);
+    W().undo();
+    expect(W().doc.groups).toBeUndefined();
+    expect(Object.values(W().doc.objects).every((o) => o.group === undefined)).toBe(true);
+  });
+
+  it('editing the text of an open plan drops it (Enter then plans anew); Esc cancels the plan, then has nothing to cancel', async () => {
+    const before = bits();
+    await enter('place tree count=2 at=0,30');
+    expect(S().plan?.armed).toBe(true);
+    type('place tree count=3 at=0,30');
+    expect(S().plan).toBeNull();
+    expect(await submitCommand()).toBe('planned');
+    expect(S().plan!.preview.diff!.added.length).toBe(3);
+    expect(cancelCommand()).toBe(true);
+    expect(S().plan).toBeNull();
+    expect(bits()).toBe(before);
+    expect(cancelCommand()).toBe(false);
+    expect(await confirmPlan()).toBe('empty');
+  });
+
+  it('while typing a draft plan follows the text; it cannot be confirmed without Enter and never shows an error', () => {
+    const before = bits();
+    type('place tree count=2 at=0,30');
+    draftCommand();
+    expect(S().plan).toMatchObject({ armed: false });
+    expect(S().plan!.preview.diff!.added.length).toBe(2);
+    expect(S().understood).toEqual(['place tree count=2 at=0,30']);
+    type('place tree count=2 at=');
+    draftCommand();
+    expect(S().plan).toBeNull();
+    expect(S().understood).toBeNull();
+    expect(S().feedback.k).toBe('none');
+    // Commands that act at once are understood, not run, by typing them.
+    type('count type:tree');
+    draftCommand();
+    expect(S().plan).toBeNull();
+    expect(S().understood).toEqual(['count type:tree']);
+    expect(S().feedback.k).toBe('none');
+    expect(bits()).toBe(before);
+  });
+
+  it('a large edit asks for one more Enter', async () => {
+    // (210 barrels in a row, 0.1 m apart: about 150 m — inside the 200 m world)
+    expect(await enter('place barrel count=210 at=0,40 gap=0.1')).toBe('planned');
+    expect(S().plan!.preview.diff!.added.length).toBe(210);
+    expect(S().plan!.confirm).toEqual({ key: 'cmd37.confirm.many', params: { count: 210 } });
+    expect(await submitCommand()).toBe('confirm');
+    expect(Object.keys(W().doc.objects).length).toBe(0);
+    expect(await submitCommand()).toBe('applied');
+    expect(Object.keys(W().doc.objects).length).toBe(210);
+  });
+
+  it('the world changed under an open plan: planned again — the same result is applied, another result is shown first', async () => {
+    W().applyEdit({ add: [{ type: 'tree', transform: at(0, 30), seed: 1 }] });
+    await enter('move type:tree by=1,0,0');
+    // Something else changes that the plan does not depend on: confirmed as planned.
+    W().applyEdit({ add: [{ type: 'crate', transform: at(40, 40), seed: 2 }] });
+    expect(await submitCommand()).toBe('applied');
+    expect(Object.values(W().doc.objects).find((o) => o.type === 'tree')!.transform.position[0]).toBe(1);
+    // A second tree appears under the next plan: it would move two trees now — shown, with a notice, not applied.
+    await enter('move type:tree by=1,0,0');
+    W().applyEdit({ add: [{ type: 'tree', transform: at(10, 30), seed: 3 }] });
+    const steps = W().past.length;
+    expect(await submitCommand()).toBe('replanned');
+    expect(S().plan?.notice).toEqual({ key: 'cmd37.notice.replanned' });
+    expect(S().plan!.preview.diff!.moved.length).toBe(2);
+    expect(W().past.length).toBe(steps);
+    expect(await submitCommand()).toBe('applied');
+    expect(Object.values(W().doc.objects).filter((o) => o.type === 'tree').map((o) => o.transform.position[0]).sort((a, b) => a - b)).toEqual([2, 11]);
+  });
+});
+
+describe('an open plan ends with what ends every preview (§9)', () => {
+  it('arming an edit tool or a disaster placement, switching mode, replacing the document: the plan is dropped', async () => {
+    const off = installInputPolicy();
+    const open = async () => {
+      await enter('place tree count=2 at=0,30');
+      expect(S().plan?.armed).toBe(true);
+    };
+    await open();
+    ED().setTool('brush');
+    expect(S().plan).toBeNull();
+    ED().setTool('select');
+    await open();
+    usePlacementStore.getState().arm('blast', phenomena.implemented('blast')!.defaults());
+    expect(S().plan).toBeNull();
+    usePlacementStore.getState().disarm();
+    await open();
+    ED().setMode('simulation');
+    expect(S().plan).toBeNull();
+    ED().setMode('editor');
+    await open();
+    await submitCommand();
+    expect(S().results.length).toBe(1);
+    await open();
+    W().replaceDocument(createEmptyDocument());
+    expect(S().plan).toBeNull();
+    // A new document: nothing was "just made" in it.
+    expect(S().results).toEqual([]);
+    off();
+  });
+});
+
+describe('commands that act at once', () => {
+  it('queries, the camera and selection: applied by the first Enter, the document and the history untouched', async () => {
+    W().applyEdit({ add: [{ type: 'tree', transform: at(0, 30), seed: 1 }, { type: 'tree', transform: at(5, 30), seed: 2 }, { type: 'car', transform: at(0, 1.75), seed: 3 }] });
+    const before = bits(), past = W().past, doc = W().doc;
+    expect(await enter('count type:tree')).toBe('applied');
+    const f = S().feedback;
+    expect(f.k === 'done' && f.lines[0].plan.table?.title).toEqual({ key: 'cmd37.sum.count', params: { count: 2 } });
+    expect(f.k === 'done' && f.changed).toBe(false);
+    expect(ED().selectedIds).toEqual([]);
+    expect(await enter('select type:tree')).toBe('applied');
+    expect(ED().selectedIds.length).toBe(2);
+    expect(await enter('focus type:car')).toBe('applied');
+    // (the camera moved; the selection is still the trees)
+    expect(ED().selectedIds.length).toBe(2);
+    expect(await enter('select none')).toBe('applied');
+    expect(ED().selectedIds).toEqual([]);
+    expect(W().doc).toBe(doc);
+    expect(W().past).toBe(past);
+    expect(bits()).toBe(before);
+  });
+
+  it('with "small edits apply at once" switched on: one tree is placed by the first Enter; a delete still previews', async () => {
+    S().setSettings({ applySmall: true });
+    expect(await enter('place tree at=0,30')).toBe('applied');
+    expect(Object.keys(W().doc.objects).length).toBe(1);
+    expect(W().past.length).toBe(2);
+    expect(await enter('delete type:tree')).toBe('planned');
+    expect(await enter('terrain raise circle 30,30 r=5 by=1')).toBe('planned');
+    expect(await enter('road 0,0 -> 0,40')).toBe('planned');
+    expect(await enter('place tree count=30 at=0,40 gap=1')).toBe('planned');
+  });
+});
+
+describe('questions and things not understood', () => {
+  it('"which side of the road?": the options are complete commands; choosing one plans it', async () => {
+    expect(await enter('place building:house count=2 along=road:main')).toBe('feedback');
+    const f = S().feedback;
+    if (f.k !== 'clarify') throw new Error('expected a question');
+    expect(f.question.key).toBe('cmd37.ask.side');
+    expect(f.options.map((o) => o.canonical)).toEqual(['place building:house count=2 along=road:main side=left', 'place building:house count=2 along=road:main side=right']);
+    expect(Object.keys(W().doc.objects).length).toBe(0);
+    await chooseOption(1);
+    expect(S().text).toBe('place building:house count=2 along=road:main side=right');
+    expect(S().plan?.armed).toBe(true);
+    expect(await submitCommand()).toBe('applied');
+    expect(Object.values(W().doc.objects).every((o) => o.transform.position[2] > 0)).toBe(true);
+  });
+
+  it('text that is not a command, and a command about nothing: a message, and nothing changes', async () => {
+    const before = bits(), past = W().past;
+    expect(await enter('frobnicate the widgets')).toBe('feedback');
+    expect(S().feedback.k).toBe('unknown');
+    expect(await enter('move type:crate by=1,0,0')).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'error', error: { key: 'cmd37.err.noMatch' } });
+    expect(cancelCommand()).toBe(true);
+    expect(S().feedback.k).toBe('none');
+    expect(bits()).toBe(before);
+    expect(W().past).toBe(past);
+    expect(await enter('   ')).toBe('empty');
+  });
+
+  it('a failed script leaves the selection as it was', async () => {
+    const ids = W().applyEdit({ add: [{ type: 'tree', transform: at(0, 30), seed: 1 }, { type: 'tree', transform: at(5, 30), seed: 2 }] });
+    ED().setSelection(ids, ids[0]);
+    const before = bits();
+    S().setSettings({ applySmall: true });
+    // Line 1 would delete the selected trees; line 2 fails — everything is taken back, the selection included.
+    expect(await runScript('delete selection\nmove type:crate by=1,0,0')).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'error', line: 1 });
+    expect(bits()).toBe(before);
+    expect([...ED().selectedIds].sort()).toEqual([...ids].sort());
+    expect(ED().selectedId).toBe(ids[0]);
+  });
+});
+
+describe('scripts', () => {
+  const SCRIPT = ['# a small block north of the road', 'place building:house count=3 along=road:main side=north gap=2', 'group last name="North block"', '', 'place car count=2 along=road:main', 'disaster blast at=0,-30 energy=2e9 start=3'].join('\n');
+
+  it('several lines: one plan, one preview, one undo step — or one step per line', async () => {
+    const before = bits(), steps = W().past.length;
+    expect(await runScript(SCRIPT)).toBe('planned');
+    expect(S().plan!.canonical.length).toBe(4);
+    expect(S().plan!.preview.diff!.added.length).toBe(5);
+    expect(bits()).toBe(before);
+    expect(await submitCommand()).toBe('applied');
+    expect(W().past.length).toBe(steps + 1);
+    expect(instances().length).toBe(1);
+    W().undo();
+    expect(bits()).toBe(before);
+    // One step per line.
+    expect(await runScript(SCRIPT, true)).toBe('planned');
+    expect(await submitCommand()).toBe('applied');
+    expect(W().past.length).toBe(steps + 4);
+    for (let k = 0; k < 4; k++) W().undo();
+    expect(bits()).toBe(before);
+    expect(historyScript().split('\n').length).toBeGreaterThan(0);
+  });
+
+  it('a line that is not understood stops the whole script before anything is planned', async () => {
+    const before = bits();
+    expect(await runScript('place tree at=0,30\nfrobnicate\nplace tree at=5,30')).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'unknown', reason: { key: 'cmd37.err.scriptLine', params: { line: 2 } } });
+    expect(bits()).toBe(before);
+    expect(await runScript(Array.from({ length: 501 }, (_, k) => `place tree at=${k % 90},30`).join('\n'))).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'error', error: { key: 'cmd37.err.scriptTooLong' } });
+  });
+});
+
+describe('disasters', () => {
+  it('a disaster placed by a command is the instance a mouse click places — and one world undo step', async () => {
+    // The mouse: arm the library card with this template, click the map at (60, 0).
+    const def = phenomena.implemented('blast')!;
+    usePlacementStore.getState().arm('blast', { ...def.defaults(), energy: 1.8e9 } as EventSpec);
+    usePlacementStore.getState().setContinuous(false);
+    const id = placeAt([60, 0])!;
+    const byMouse = instances().find((i) => i.id === id)!;
+    W().undo();
+    expect(instances()).toEqual([]);
+    usePlacementStore.getState().disarm();
+    // The command.
+    const steps = W().past.length;
+    expect(await enter('disaster blast at=node:n2 energy=1.8e9')).toBe('planned');
+    expect(S().plan!.preview.diff!.instances.added.length).toBe(1);
+    expect(instances()).toEqual([]);
+    expect(await submitCommand()).toBe('applied');
+    expect(instances()).toEqual([byMouse]);
+    expect(W().past.length).toBe(steps + 1);
+    W().undo();
+    expect(instances()).toEqual([]);
+  });
+
+  it('while a simulation runs on the world: edits are refused with the reason, a disaster is written (no undo step)', async () => {
+    W().applyEdit({ add: [{ type: 'tree', transform: at(0, 30), seed: 1 }] });
+    W().setLocked(true);
+    expect(commandContext().simulating).toBe(true);
+    const past = W().past;
+    expect(await enter('move type:tree by=1,0,0')).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'error', error: { key: 'cmd37.err.simulating' } });
+    expect(await enter('count type:tree')).toBe('applied');
+    expect(await enter('disaster blast at=10,10 energy=2e9')).toBe('planned');
+    expect(await submitCommand()).toBe('applied');
+    expect(instances().map((i) => i.type)).toEqual(['blast']);
+    expect(W().past).toBe(past);
+    W().setLocked(false);
+  });
+});

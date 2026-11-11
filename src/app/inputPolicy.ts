@@ -24,6 +24,7 @@ import { abortGestures } from '@/editor/input/gesture';
 import { releaseAllCameraLocks } from '@/editor/input/cameraLock';
 import { exitBuildingEdit } from './buildingActions';
 import { backToLibrary } from './blueprintActions';
+import { useCommandSession } from '@/ui/Command/commandSession';
 
 /** Leave the active editor tool the way its own Esc / Done would (sessions and modes cleaned up). */
 export function exitEditorTool(): void {
@@ -64,6 +65,8 @@ export function installInputPolicy(): () => void {
   unsubs.push(usePlacementStore.subscribe((s, p) => {
     const armed = s.type !== null && p.type === null;
     const picked = s.selected !== null && s.selected !== p.selected;
+    // Phase 37: arming a disaster placement drops an open command plan (its ghosts) — one preview owner at a time.
+    if (armed) useCommandSession.getState().cancelPlan();
     if (!armed && !picked) return;
     if (useEditorStore.getState().mode !== 'editor') return;
     exitEditorTool();
@@ -75,11 +78,15 @@ export function installInputPolicy(): () => void {
       abortGestures('abort');
       releaseAllCameraLocks();
       if (s.dragging) useEditorStore.getState().setDragging(false);
+      // Phase 37: an open command plan was made for the other mode's document state.
+      useCommandSession.getState().cancelPlan();
       return;
     }
     if (s.tool !== p.tool) {
       abortGestures('abort');
       if (s.tool !== 'select') {
+        // Phase 37: arming an edit tool drops an open command plan (the tool's own ghost takes the viewport).
+        useCommandSession.getState().cancelPlan();
         const pl = usePlacementStore.getState();
         if (pl.type) pl.disarm();
         if (pl.selected) pl.select(null);
@@ -99,6 +106,8 @@ export function installInputPolicy(): () => void {
     if (s.docVersion !== p.docVersion) {
       abortGestures('abort');
       releaseAllCameraLocks();
+      // Phase 37: a plan made on the document that was replaced.
+      useCommandSession.getState().cancelPlan();
     }
     if (s.doc.objects !== p.doc.objects) {
       const ed = useEditorStore.getState();
