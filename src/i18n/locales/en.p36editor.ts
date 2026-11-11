@@ -55,4 +55,12 @@ export const enP36Editor = {
   'ed36.outliner.hide': 'Hide in the editor view (still simulated)',
   'ed36.outliner.lock': 'Lock (no picking, moving or deleting)',
   'ed36.outliner.note': 'Hidden objects still exist: they are simulated and shown in the simulation. Locked objects can be selected here, not in the view.',
+  'ed36.copy': 'Copy properties from the primary object',
+  'ed36.copy.scale': 'Scale',
+  'ed36.copy.heading': 'Heading',
+  'ed36.copy.params': 'Parameters (same type)',
+  'ed36.copy.physics': 'Physics (same type)',
+  'ed36.copy.structure': 'Structure (buildings: materials / earthquake properties)',
+  'ed36.copy.apply': 'Apply to the others',
+  'ed36.copy.done': 'Properties applied: {applied}; skipped as not compatible: {skipped}.',
 } as const;

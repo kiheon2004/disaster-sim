@@ -17,6 +17,7 @@ import { useRoadStore } from '@/editor/roadStore';
 import { pasteRoads } from '@/roads/blueprintRoads';
 import { measureLink } from '@/roads/links';
 import { yawOf } from '@/terrain/groundPlacement';
+import { copyProperties, type CopyProp } from '@/editor/build/propertyCopy';
 import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type AlignRef, type MatchWhat, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
 import { toast } from '@/ui/common/toast';
@@ -203,6 +204,21 @@ export function distributeGapsSelection(axis: AlignAxis) {
   const objs = unlockedSelection();
   if (objs.length < 3) return;
   world().applyEdit({ update: distributeGaps(objs, axis, samplerFor(world().doc.terrain)) });
+}
+
+/**
+ * Apply the primary object's properties to the other selected objects (Phase 36 §20), one undo step. Incompatible
+ * object / property pairs are skipped and reported (editor/build/propertyCopy.ts).
+ */
+export function copyPropertiesFromPrimary(props: ReadonlySet<CopyProp>): { applied: number; skipped: number } {
+  const none = { applied: 0, skipped: 0 };
+  if (!editable() || !props.size) return none;
+  const ref = editor().selectedId ? world().doc.objects[editor().selectedId!] : undefined;
+  if (!ref) return none;
+  const r = copyProperties(ref, selectedObjects(), props, samplerFor(world().doc.terrain));
+  if (r.objects.length) world().applyEdit({ update: r.objects });
+  toast(r.skipped ? 'info' : 'success', { key: 'ed36.copy.done', params: { applied: r.applied, skipped: r.skipped } });
+  return r;
 }
 
 /** Same heading / height above ground / scale as the primary selected object (Phase 36), one undo step. */

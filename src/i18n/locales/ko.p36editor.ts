@@ -57,4 +57,12 @@ export const koP36Editor: Record<keyof typeof enP36Editor, string> = {
   'ed36.outliner.hide': '편집 화면에서 숨기기(시뮬레이션에는 있음)',
   'ed36.outliner.lock': '잠금(선택·이동·삭제 안 됨)',
   'ed36.outliner.note': '숨긴 객체도 존재합니다: 시뮬레이션에 포함되고 시뮬레이션 화면에 보입니다. 잠긴 객체는 화면이 아니라 여기서 선택할 수 있습니다.',
+  'ed36.copy': '기준 객체 속성 복사',
+  'ed36.copy.scale': '크기',
+  'ed36.copy.heading': '방향',
+  'ed36.copy.params': '매개변수(같은 종류)',
+  'ed36.copy.physics': '물리 특성(같은 종류)',
+  'ed36.copy.structure': '구조(건물: 재료·지진 특성)',
+  'ed36.copy.apply': '나머지에 적용',
+  'ed36.copy.done': '속성 적용 {applied}건, 맞지 않아 건너뜀 {skipped}건.',
 };

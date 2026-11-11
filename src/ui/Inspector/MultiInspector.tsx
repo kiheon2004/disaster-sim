@@ -5,10 +5,11 @@ import { getDefinition } from '@/objects/registry';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import {
-  alignSelection, copySelection, deleteSelection, distributeGapsSelection, distributeSelection, duplicateSelection, groupSelection, matchSelection, selectSameType,
+  alignSelection, copyPropertiesFromPrimary, copySelection, deleteSelection, distributeGapsSelection, distributeSelection, duplicateSelection, groupSelection, matchSelection, selectSameType,
   transformSelection, ungroupSelection,
 } from '@/app/buildActions';
 import type { AlignRef } from '@/editor/build/groupTransform';
+import { COPY_PROPS, copyApplies, type CopyProp } from '@/editor/build/propertyCopy';
 import { Segmented } from '@/ui/common/Segmented';
 import { displayName } from '@/ui/format';
 import { focusPosition } from '@/app/actions';
@@ -36,6 +37,9 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
   const primary = primaryId ? objects[primaryId] : undefined;
   // Phase 36 §14: alignment states what it lines up — origins (pivots, as before) or footprints (bounds).
   const [ref, setRef] = useState<AlignRef>('origin');
+  const [props, setProps] = useState<Set<CopyProp>>(new Set(['params']));
+  // How many selected objects each property would reach (the rest are skipped as incompatible).
+  const reach = (p: CopyProp) => (primary ? objs.filter((o) => copyApplies(p, primary, o)).length : 0);
 
   const align: [IconName, MessageKey, () => void][] = [
     ['alignStart', 'multi.align.xmin', () => alignSelection('x', 'min', ref)],
@@ -99,6 +103,20 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
               <button className={styles.smallBtn} onClick={() => distributeGapsSelection('z')} disabled={objs.length < 3} title={t('ed36.gaps.z')} data-testid="gaps-z">{t('ed36.gaps')} Z</button>
             </div>
             <div className={styles.note} style={{ marginTop: 6 }}>{t(ref === 'bounds' ? 'ed36.align.bounds.note' : 'ed36.align.origin.note')}</div>
+          </Section>
+          <Section title={t('ed36.copy')}>
+            <div className={styles.note}>{t('ed36.match.ref', { name: primary ? displayName(primary, t) : '—' })}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '3px 8px', marginTop: 6, fontSize: 12 }}>
+              {COPY_PROPS.map((p) => (
+                <label key={p} style={{ display: 'contents' }}>
+                  <span><input type="checkbox" checked={props.has(p)} data-testid={`copy-${p}`}
+                    onChange={(e) => { const s = new Set(props); if (e.target.checked) s.add(p); else s.delete(p); setProps(s); }} /> {t(`ed36.copy.${p}` as MessageKey)}</span>
+                  <span className={styles.note}>{reach(p)}/{objs.length - 1}</span>
+                </label>
+              ))}
+            </div>
+            <button className={styles.smallBtn} style={{ marginTop: 6 }} disabled={!primary || !props.size} data-testid="copy-apply"
+              onClick={() => copyPropertiesFromPrimary(props)}>{t('ed36.copy.apply')}</button>
           </Section>
           <Section title={t('ed36.match')}>
             <div className={styles.note}>{t('ed36.match.ref', { name: primary ? displayName(primary, t) : '—' })}</div>

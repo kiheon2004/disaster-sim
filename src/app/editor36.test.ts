@@ -279,3 +279,24 @@ describe('outliner flags', () => {
     expect(W().past.length).toBe(steps + 1);
   });
 });
+
+import { copyProperties } from '@/editor/build/propertyCopy';
+
+describe('property copy (§20)', () => {
+  it('applies only compatible properties; counts the skipped ones; modular structure via member materials', () => {
+    const flatS = samplerFor(createEmptyDocument().terrain);
+    const [w1, w2, h] = W().addObjects([
+      { type: 'wall', transform: { ...at(0, 0), scale: [2, 1, 1] }, params: { length: 9 } },
+      { type: 'wall', transform: at(5, 0) },
+      { type: 'human', transform: at(9, 0) },
+    ]);
+    const o = W().doc.objects;
+    const r = copyProperties(o[w1], [o[w1], o[w2], o[h]], new Set(['params', 'scale']), flatS);
+    expect(r.applied).toBe(3); // params → wall only; scale → wall + human
+    expect(r.skipped).toBe(1); // params → human
+    const w2n = r.objects.find((x) => x.id === w2)!;
+    expect(w2n.params.length).toBe(9);
+    expect(w2n.transform.scale).toEqual([2, 1, 1]);
+    expect(r.objects.find((x) => x.id === h)!.params).toEqual(o[h].params);
+  });
+});
