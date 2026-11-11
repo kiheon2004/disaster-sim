@@ -68,9 +68,16 @@ export function diffCounts(diff: DocDiff | null): DiffCounts {
 }
 
 /** Warnings of a plan: the planners' own, plus one for each item that was placed with a warning or rejected. */
+/** Warnings that only sum up the plan's own warned / rejected items (counting both would count an item twice). */
+const ITEM_SUMMARIES: ReadonlySet<string> = new Set(['cmd37.warn.placement', 'cmd37.warn.rejected', 'cmd37.warn.overlap']);
+
+/** How many things deserve a look: every item that is not plainly ok, plus the planner's warnings about anything else. */
 export function warningCount(plans: readonly Plan[]): number {
   let n = 0;
-  for (const p of plans) n += p.warnings.length + p.items.filter((i) => i.status !== 'ok').length;
+  for (const p of plans) {
+    const items = p.items.filter((i) => i.status !== 'ok').length;
+    n += items + p.warnings.filter((w) => !(items && ITEM_SUMMARIES.has(w.key))).length;
+  }
   return n;
 }
 

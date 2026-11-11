@@ -9,7 +9,7 @@ import { defaultProfile } from '@/roads/types';
 import { useWorldStore } from '@/world/worldStore';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { useEditorStore } from '@/editor/editorStore';
-import { cancelCommand, draftCommand, enterAppliesAtOnce, installCommandSession, submitCommand } from '@/app/commandActions';
+import { cancelCommand, confirmPlan, draftCommand, enterAppliesAtOnce, installCommandSession, submitCommand } from '@/app/commandActions';
 import { en } from '@/i18n/locales/en';
 import { ko } from '@/i18n/locales/ko';
 import { useCommandSession } from './commandSession';
@@ -174,13 +174,23 @@ describe('what a plan would change', () => {
     expect(diffCounts(null)).toEqual({ created: 0, changed: 0, removed: 0, terrainArea: 0, roadsAdded: 0, roadsRemoved: 0, disastersAdded: 0, disastersChanged: 0, disastersRemoved: 0 });
   });
 
-  it('warnings: the planner\'s own plus every item that is not plainly ok', async () => {
-    // Thirty houses on a 120 m road: not all fit — the planner warns and the plan lists what it placed.
+  it('warnings: every item that is not plainly ok, plus the planner\'s warnings about anything else — an item is not counted twice', async () => {
+    // Thirty houses on a 120 m road: not all fit — one warning ("N of 30"), and every placed item is ok.
     await enter('place building:house count=30 along=road:main side=north gap=2');
     const lines = planLines(S().plan);
     expect(lines.length).toBe(1);
-    expect(lines[0].warnings.length).toBeGreaterThan(0);
-    expect(warningCount(lines)).toBe(lines[0].warnings.length + lines[0].items.filter((i) => i.status !== 'ok').length);
+    expect(lines[0].warnings.map((w) => w.key)).toEqual(['cmd37.warn.room']);
+    expect(lines[0].items.every((i) => i.status === 'ok')).toBe(true);
+    expect(warningCount(lines)).toBe(1);
+    // Two crates on top of the first row of houses: both items are warned (overlap) and the planner sums that up in
+    // one sentence — two things to look at, not three (the bar said "3 warnings" for two warned houses).
+    await confirmPlan();
+    const [hx, hz] = Object.values(useWorldStore.getState().doc.objects)[0].transform.position.filter((_, k) => k !== 1);
+    await enter(`place crate count=2 at=${hx},${hz} gap=0.2`);
+    const warned = planLines(S().plan);
+    expect(warned[0].items.filter((i) => i.status === 'warn').length).toBe(2);
+    expect(warned[0].warnings.map((w) => w.key)).toEqual(['cmd37.warn.placement']);
+    expect(warningCount(warned)).toBe(2);
     expect(warningCount([])).toBe(0);
     expect(planLines(null)).toEqual([]);
   });
