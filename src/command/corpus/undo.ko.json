@@ -1,0 +1,28 @@
+{
+  "class": "undo",
+  "lang": "ko",
+  "cases": [
+    { "text": "방금 거 취소", "expect": ["undo"] },
+    { "text": "방금 거 취소해 주세요", "expect": ["undo"] },
+    { "text": "되돌려", "expect": ["undo"] },
+    { "text": "되돌려 줘", "expect": ["undo"] },
+    { "text": "되돌리세요", "expect": ["undo"] },
+    { "text": "되돌려요", "expect": ["undo"] },
+    { "text": "취소", "expect": ["undo"] },
+    { "text": "취소해", "expect": ["undo"] },
+    { "text": "취소해줘", "expect": ["undo"] },
+    { "text": "취소할래", "expect": ["undo"] },
+    { "text": "실행 취소", "expect": ["undo"] },
+    { "text": "실행취소", "expect": ["undo"] },
+    { "text": "실행 취소합니다", "expect": ["undo"] },
+    { "text": "다시 실행", "expect": ["redo"] },
+    { "text": "다시실행", "expect": ["redo"] },
+    { "text": "다시 해", "expect": ["redo"] },
+    { "text": "다시 해 줘", "expect": ["redo"] },
+    { "text": "되살려", "expect": ["redo"] },
+    { "text": "되살려 주세요", "expect": ["redo"] },
+    { "text": "선택 취소해 줘", "expect": ["select none"] },
+    { "text": "방금 거 지워", "expect": ["delete last"] },
+    { "text": "다시 처음부터 해 줘", "expect": ["reset"] }
+  ]
+}

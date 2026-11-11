@@ -1,0 +1,30 @@
+{
+  "class": "properties",
+  "lang": "en",
+  "cases": [
+    { "text": "give them the same structure as the first one", "expect": ["copy structure from=(selection first 1) to=it"] },
+    { "text": "copy the structure of the first building", "expect": ["copy structure from=(selection first 1) to=selection"] },
+    { "text": "give the selection the same structure as the first building", "expect": ["copy structure from=(selection first 1) to=selection"] },
+    { "text": "copy the structure of #building_ab12", "expect": ["copy structure from=#building_ab12 to=selection"] },
+    { "text": "copy the structure of the largest building", "expect": ["copy structure from=(type:building largest) to=selection"] },
+    { "text": "copy the structure and scale of the largest building", "expect": ["copy structure,scale from=(type:building largest) to=selection"] },
+    { "text": "copy the structure and heading of the first one", "expect": ["copy structure,heading from=(selection first 1) to=selection"] },
+    { "text": "give these buildings the same physics as the largest building", "expect": ["copy physics from=(type:building largest) to=selection"] },
+    { "text": "give the ones I just made the same parameters as #building_ab12", "expect": ["copy params from=#building_ab12 to=last"] },
+    { "text": "give all houses the same structure as the largest building", "expect": ["copy structure from=(type:building largest) to=type:building:house"] },
+    { "text": "copy the parameters of the first one", "expect": ["copy params from=(selection first 1) to=selection"] },
+    { "text": "could you give them the same parameters as the first building", "expect": ["copy params from=(selection first 1) to=it"] },
+    { "text": "copy the material properties of #crate_7f", "expect": ["copy physics from=#crate_7f to=selection"] },
+    { "text": "give all 2-storey buildings the same structure as #building_ab12", "expect": ["copy structure from=#building_ab12 to=(type:building where floors=2)"] },
+    { "text": "copy the structure, parameters and physics of #building_ab12", "expect": ["copy structure,params,physics from=#building_ab12 to=selection"] },
+    { "text": "copy the heading of #building_ab12", "expect": ["copy heading from=#building_ab12 to=selection"] },
+    { "text": "copy the direction of the first one", "expect": ["copy heading from=(selection first 1) to=selection"] },
+    { "text": "copy the size of the largest building", "expect": ["copy scale from=(type:building largest) to=selection"] },
+    { "text": "give the group \"North block\" the same structure as the first one", "expect": ["copy structure from=(selection first 1) to=(group:\"North block\")"] },
+    { "text": "give the new ones the same structure and physics as the largest building", "expect": ["copy structure,physics from=(type:building largest) to=last"] },
+    { "text": "Please give these the same physics and structure as #building_ab12", "expect": ["copy physics,structure from=#building_ab12 to=selection"] },
+    { "text": "give all trees the same physics as #tree_0a1b2c", "expect": ["copy physics from=#tree_0a1b2c to=type:tree"] },
+    { "text": "make these buildings the same height", "expect": ["match selection height"] },
+    { "text": "copy these", "expect": ["duplicate selection"] }
+  ]
+}

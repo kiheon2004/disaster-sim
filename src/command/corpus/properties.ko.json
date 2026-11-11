@@ -1,0 +1,29 @@
+{
+  "class": "properties",
+  "lang": "ko",
+  "cases": [
+    { "text": "첫 번째 건물이랑 같은 구조로", "expect": ["copy structure from=(selection first 1) to=selection"] },
+    { "text": "첫번째건물이랑 같은구조로", "expect": ["copy structure from=(selection first 1) to=selection"] },
+    { "text": "첫 번째 것과 같은 구조로 해 줘", "expect": ["copy structure from=(selection first 1) to=selection"] },
+    { "text": "#building_ab12처럼 같은 구조로", "expect": ["copy structure from=#building_ab12 to=selection"] },
+    { "text": "가장 큰 건물이랑 같은 구조로 해", "expect": ["copy structure from=(type:building largest) to=selection"] },
+    { "text": "가장 큰 건물과 같은 구조와 크기로", "expect": ["copy structure,scale from=(type:building largest) to=selection"] },
+    { "text": "첫 번째 것이랑 같은 구조와 방향으로", "expect": ["copy structure,heading from=(selection first 1) to=selection"] },
+    { "text": "이 건물들 가장 큰 건물과 같은 물성으로", "expect": ["copy physics from=(type:building largest) to=selection"] },
+    { "text": "가장큰건물이랑 같은 물성으로", "expect": ["copy physics from=(type:building largest) to=selection"] },
+    { "text": "방금 만든 것들을 #building_ab12랑 같은 매개변수로", "expect": ["copy params from=#building_ab12 to=last"] },
+    { "text": "주택 전부 가장 큰 건물이랑 같은 구조로 하세요", "expect": ["copy structure from=(type:building largest) to=type:building:house"] },
+    { "text": "첫 번째 것이랑 같은 설정으로", "expect": ["copy params from=(selection first 1) to=selection"] },
+    { "text": "첫 번째 건물이랑 같은 매개변수로 할래", "expect": ["copy params from=(selection first 1) to=selection"] },
+    { "text": "#crate_7f와 같은 물리로", "expect": ["copy physics from=#crate_7f to=selection"] },
+    { "text": "그것들 첫 번째 건물이랑 같은 구조로", "expect": ["copy structure from=(selection first 1) to=it"] },
+    { "text": "2층 건물 전부 #building_ab12랑 같은 구조로", "expect": ["copy structure from=#building_ab12 to=(type:building where floors=2)"] },
+    { "text": "선택한 것 #building_ab12와 같은 구조와 매개변수와 물성으로", "expect": ["copy structure,params,physics from=#building_ab12 to=selection"] },
+    { "text": "'북쪽 블록' 그룹을 첫 번째 것과 같은 구조로 해줘", "expect": ["copy structure from=(selection first 1) to=(group:\"북쪽 블록\")"] },
+    { "text": "방금 만든 건물들 가장 큰 건물이랑 같은 구조와 물성으로", "expect": ["copy structure,physics from=(type:building largest) to=last"] },
+    { "text": "이것들 #building_ab12와 같은 물성과 구조로 해 주세요", "expect": ["copy physics,structure from=#building_ab12 to=selection"] },
+    { "text": "나무 전부 #tree_0a1b2c랑 같은 물성으로", "expect": ["copy physics from=#tree_0a1b2c to=type:tree"] },
+    { "text": "이 건물들 같은 높이로", "expect": ["match selection height"] },
+    { "text": "선택한 것 복제해", "expect": ["duplicate selection"] }
+  ]
+}

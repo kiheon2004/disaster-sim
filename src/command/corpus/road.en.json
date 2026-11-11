@@ -1,0 +1,31 @@
+{
+  "class": "road",
+  "lang": "en",
+  "cases": [
+    { "text": "a two-lane road from n4 to (40, 60)", "expect": ["road node:n4 -> 40,60 preset=street"] },
+    { "text": "A Two-Lane Road FROM n4 TO (40, 60).", "expect": ["road node:n4 -> 40,60 preset=street"] },
+    { "text": "draw a road from (0, 0) to (50, 0)", "expect": ["road 0,0 -> 50,0"] },
+    { "text": "build a four-lane road from here to node n1", "expect": ["road cursor -> node:n1 preset=avenue"] },
+    { "text": "an alley from n1 to n2", "expect": ["road node:n1 -> node:n2 preset=lane"] },
+    { "text": "a narrow road from n3 to over there", "expect": ["road node:n3 -> view preset=narrow"] },
+    { "text": "a dirt road from the centre to (80, -40)", "expect": ["road center -> 80,-40 preset=dirt"] },
+    { "text": "build a gravel road from the junction to the hill", "expect": ["road junction -> feature:hill preset=gravel"] },
+    { "text": "a two-lane road from n4 to 30 m north of n4", "expect": ["road node:n4 -> north(node:n4,30) preset=street"] },
+    { "text": "draw a narrow road from segment s2 to (10, 20)", "expect": ["road seg:s2@0.5 -> 10,20 preset=narrow"] },
+    { "text": "please build a wide road from (10, 10) to (90, 10)", "expect": ["road 10,10 -> 90,10 preset=wide"] },
+    { "text": "an unpaved road from n2 to the lake", "expect": ["road node:n2 -> feature:lake preset=dirt"] },
+    { "text": "a four-lane road from x 0 z 0 to x 50 z 0", "expect": ["road 0,0 -> 50,0 preset=avenue"] },
+    { "text": "road from n1 to n2", "expect": ["road node:n1 -> node:n2"] },
+    { "text": "draw a road from node n5 to junction n6", "expect": ["road node:n5 -> node:n6"] },
+    { "text": "a lane from here to back there", "expect": ["road cursor -> last preset=lane"] },
+    { "text": "a road from the selection to n3", "expect": ["road selection -> node:n3"] },
+    { "text": "could you draw a narrow road from #building_ab12 to the junction", "expect": ["road #building_ab12 -> junction preset=narrow"] },
+    { "text": "a two-lane road from -60,20 to -10,20", "expect": ["road -60,20 -> -10,20 preset=street"] },
+    { "text": "a four-lane road from n1 to 40 m east of n1", "expect": ["road node:n1 -> east(node:n1,40) preset=avenue"] },
+    { "text": "a dirt road from the mountain to the river", "expect": ["road feature:mountain -> feature:river preset=dirt"] },
+    { "text": "a gravel road from (20, -70) to (20, 70)", "expect": ["road 20,-70 -> 20,70 preset=gravel"] },
+    { "text": "build a road from n4", "ask": "place" },
+    { "text": "draw a road to (40, 60)", "ask": "place" },
+    { "text": "two houses north of the road from n2 to n3", "expect": ["place building:house count=2 along=road:n2-n3 side=north"] }
+  ]
+}

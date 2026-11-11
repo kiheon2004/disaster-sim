@@ -1,0 +1,32 @@
+{
+  "class": "mixed",
+  "lang": "en",
+  "cases": [
+    { "text": "place three houses and group them", "expect": ["place building:house count=3", "group last"] },
+    { "text": "place three houses, group them and lock them", "expect": ["place building:house count=3", "group last", "lock last"] },
+    { "text": "put three houses north of the main road, then group them as \"North block\"", "expect": ["place building:house count=3 along=road:main side=north", "group last name=\"North block\""] },
+    { "text": "place two houses and call them \"Twin houses\"", "expect": ["place building:house count=2", "rename last \"Twin houses\""] },
+    { "text": "park five cars on the main road and select them", "expect": ["place car count=5 along=road:main", "select last"] },
+    { "text": "stop the earthquake and delete fire #3", "expect": ["disaster earthquake stop", "disaster fire#3 delete"] },
+    { "text": "select all trees and hide them", "expect": ["select type:tree", "hide type:tree"] },
+    { "text": "hide all trees and lock all cars", "expect": ["hide type:tree", "lock type:car"] },
+    { "text": "duplicate these buildings and move them 10 m east", "expect": ["duplicate selection", "move last by=10,0,0"] },
+    { "text": "plant a forest on the hill and hide it", "expect": ["forest feature:hill", "hide last"] },
+    { "text": "draw a road from n1 to n2; put five houses north of the road from n1 to n2", "expect": ["road node:n1 -> node:n2", "place building:house count=5 along=road:n1-n2 side=north"] },
+    { "text": "group the selection and lock it", "expect": ["group selection", "lock selection"] },
+    { "text": "group the new ones as \"East row\" and hide them", "expect": ["group last name=\"East row\"", "hide last"] },
+    { "text": "delete all trees, then run", "expect": ["delete type:tree", "run"] },
+    { "text": "speed 2×, then run", "expect": ["speed=2", "run"] },
+    { "text": "pause and reset", "expect": ["pause", "reset"] },
+    { "text": "reset and then run", "expect": ["reset", "run"] },
+    { "text": "select the tallest building and zoom to it", "expect": ["select type:building tallest", "focus type:building tallest"] },
+    { "text": "rotate the new ones by 30 degrees, then double them", "expect": ["rotate last by=30", "scale last x2"] },
+    { "text": "move the selection 3 m north and then rotate it 90°", "expect": ["move selection by=0,0,-3", "rotate selection by=90"] },
+    { "text": "move this 5 m east, then duplicate it", "expect": ["move selection by=5,0,0", "duplicate selection"] },
+    { "text": "a 1.8e9 J explosion at the junction in 5 s; run", "expect": ["disaster blast at=junction energy=1.8e9 start=5", "run"] },
+    { "text": "flatten a 10 m circle here, then paint with grass", "expect": ["terrain flatten circle cursor r=10", "paint circle cursor r=10 ground=grass"] },
+    { "text": "deselect all and select all trees", "expect": ["select none", "select type:tree"] },
+    { "text": "align the west edges of the selection and space them evenly north–south", "expect": ["align selection axis=x mode=min ref=origin", "distribute selection axis=z gaps"] },
+    { "text": "delete the trees and the street lights", "unknown": true, "why": "two kinds in one target" }
+  ]
+}

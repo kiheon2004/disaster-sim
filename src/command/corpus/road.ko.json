@@ -1,0 +1,31 @@
+{
+  "class": "road",
+  "lang": "ko",
+  "cases": [
+    { "text": "n4에서 (40, 60)까지 2차로 도로", "expect": ["road node:n4 -> 40,60 preset=street"] },
+    { "text": "n4에서(40,60)까지2차로도로", "expect": ["road node:n4 -> 40,60 preset=street"] },
+    { "text": "(0, 0)에서 (50, 0)까지 도로 그려", "expect": ["road 0,0 -> 50,0"] },
+    { "text": "여기에서 n1까지 4차로 도로 만들어", "expect": ["road cursor -> node:n1 preset=avenue"] },
+    { "text": "n1에서 n2까지 골목길 깔아 줘", "expect": ["road node:n1 -> node:n2 preset=lane"] },
+    { "text": "n3에서 저기까지 좁은 도로 놓아", "expect": ["road node:n3 -> view preset=narrow"] },
+    { "text": "가운데에서 (80, -40)까지 흙길", "expect": ["road center -> 80,-40 preset=dirt"] },
+    { "text": "교차로에서 언덕까지 자갈길 놓으세요", "expect": ["road junction -> feature:hill preset=gravel"] },
+    { "text": "n4에서 n4 북쪽 30 m까지 이차선 도로", "expect": ["road node:n4 -> north(node:n4,30) preset=street"] },
+    { "text": "구간 s2에서 (10, 20)까지 좁은 도로 그려줘", "expect": ["road seg:s2@0.5 -> 10,20 preset=narrow"] },
+    { "text": "(10, 10)에서 (90, 10)까지 넓은 도로 만들어 주세요", "expect": ["road 10,10 -> 90,10 preset=wide"] },
+    { "text": "n2에서 호수까지 비포장 도로", "expect": ["road node:n2 -> feature:lake preset=dirt"] },
+    { "text": "x 0 z 0에서 x 50 z 0까지 사차선 도로 깔아", "expect": ["road 0,0 -> 50,0 preset=avenue"] },
+    { "text": "n1에서n2까지 도로", "expect": ["road node:n1 -> node:n2"] },
+    { "text": "노드 n5에서 교차로 n6까지 도로 그려라", "expect": ["road node:n5 -> node:n6"] },
+    { "text": "여기에서 거기까지 골목 만들어", "expect": ["road cursor -> last preset=lane"] },
+    { "text": "선택한 것에서 n3까지 도로", "expect": ["road selection -> node:n3"] },
+    { "text": "#building_ab12에서 교차로까지 좁은 도로 그릴래", "expect": ["road #building_ab12 -> junction preset=narrow"] },
+    { "text": "좌표 -60, 20에서 좌표 -10, 20까지 2차로 도로 놓아 줘", "expect": ["road -60,20 -> -10,20 preset=street"] },
+    { "text": "n1에서 n1 동쪽 40 m까지 4차로 도로", "expect": ["road node:n1 -> east(node:n1,40) preset=avenue"] },
+    { "text": "산에서 강까지 흙길 만들어", "expect": ["road feature:mountain -> feature:river preset=dirt"] },
+    { "text": "(20, -70)에서 (20, 70)까지 자갈길", "expect": ["road 20,-70 -> 20,70 preset=gravel"] },
+    { "text": "n4에서 도로 만들어", "ask": "place" },
+    { "text": "(40, 60)까지 도로 깔아", "ask": "place" },
+    { "text": "n2–n3 도로 북쪽에 주택 두 채", "expect": ["place building:house count=2 along=road:n2-n3 side=north"] }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "class": "undo",
+  "lang": "en",
+  "cases": [
+    { "text": "undo that", "expect": ["undo"] },
+    { "text": "undo", "expect": ["undo"] },
+    { "text": "Undo.", "expect": ["undo"] },
+    { "text": "please undo", "expect": ["undo"] },
+    { "text": "could you undo that", "expect": ["undo"] },
+    { "text": "I want to undo that", "expect": ["undo"] },
+    { "text": "take that back", "expect": ["undo"] },
+    { "text": "can you take that back", "expect": ["undo"] },
+    { "text": "revert that", "expect": ["undo"] },
+    { "text": "let's revert that", "expect": ["undo"] },
+    { "text": "redo", "expect": ["redo"] },
+    { "text": "REDO", "expect": ["redo"] },
+    { "text": "please redo", "expect": ["redo"] },
+    { "text": "can you redo", "expect": ["redo"] },
+    { "text": "I want to redo", "expect": ["redo"] },
+    { "text": "clear the selection, please", "expect": ["select none"] },
+    { "text": "delete the ones I just made", "expect": ["delete last"] },
+    { "text": "start over, please", "expect": ["reset"] }
+  ]
+}
