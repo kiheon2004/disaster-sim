@@ -165,18 +165,20 @@ describe('batch: one command = one undo step (§10)', () => {
       // The same experiment plan (a new object every time).
       S().setExperiment({ instances: [blast('p1', 3, 3)] });
       S().updateSimulationSettings({});
-      // There and back: the value the object had (as a new object) — not the same reference, so this one is a change…
+      // There and back, ending on a NEW object that says what the old one said (locked, then unlocked again).
       S().updateTransform(tree.id, { position: [50, 0, 50] }, { history: false });
-      S().applyEdit({ update: [tree] });
+      S().applyEdit({ update: [{ ...tree, locked: true }] });
+      S().applyEdit({ update: [{ ...tree, transform: { ...tree.transform, position: [...tree.transform.position] as [number, number, number] } }] });
     });
     expect(res).toEqual({ ok: true, value: undefined, changed: false });
     expect(S().past).toBe(past);
-    // … and the document is the one from before, reference for reference (nothing for subscribers to redo, no new save).
+    // The document is the one from before, reference for reference (nothing for subscribers to redo, no new save).
     expect(S().doc.objects).toBe(doc.objects);
     expect(S().doc.roads).toBe(doc.roads);
     expect(S().doc.scenario).toBe(doc.scenario);
     expect(S().doc.settings).toBe(doc.settings);
     expect(S().doc.meta).toBe(doc.meta);
+    expect(S().doc).toBe(doc);
     expect(snap(S().doc)).toEqual(snap(doc));
   });
 

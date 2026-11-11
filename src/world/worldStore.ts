@@ -9,6 +9,7 @@ import { defaultExperiment, type ExperimentSettings } from '@/phenomena/types';
 import type { EarthquakeEventSpec } from '@/events/specs';
 import { normalizeSeismic, seismicOf } from '@/simulation/seismic/structuralProps';
 import { createId } from '@/core/id';
+import { sameObjectValue } from './sameObject';
 import { getDefinition } from '@/objects/registry';
 import {
   applyParams,
@@ -140,6 +141,8 @@ interface ObjectTransaction {
  */
 interface Batch {
   entries: HistoryEntry[];
+  /** The document when the batch opened (put back as it is when the batch turns out to have changed nothing). */
+  doc: WorldDocument;
   terrain: ReturnType<typeof snapshotLayers>;
   layers: LayerSnapshot;
   objects: Objects;
@@ -290,12 +293,12 @@ export interface WorldState {
 /** Same plain value (settings, scenario, features, a road network: small JSON-like data). */
 const sameValue = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-/** Same object map: the same ids holding the very same objects (objects are immutable values). */
+/** Same object map: the same ids holding the same object values (a new object that says the same is not a change). */
 function sameEntries(a: Objects, b: Objects): boolean {
   if (a === b) return true;
   const keys = Object.keys(a);
   if (keys.length !== Object.keys(b).length) return false;
-  for (const k of keys) if (a[k] !== b[k]) return false;
+  for (const k of keys) if (a[k] !== b[k] && (!b[k] || !sameObjectValue(a[k], b[k]))) return false;
   return true;
 }
 
@@ -664,7 +667,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     if (groups) out.groups = groups;
     else delete out.groups;
     if (!changed) {
-      set({ doc: out });
+      // Nothing changed: the very document from before (same references — nothing for a view or the autosave to redo).
+      if (doc !== b.doc) set({ doc: b.doc });
       return false;
     }
     const entry: HistoryEntry = { objects: b.objects, terrain, roads: b.roads, landscape: { features: b.features, next: b.next, patch } };
@@ -1027,7 +1031,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (stroke || tx) return { ok: false, reason: 'busy' };
       const d0 = get().doc;
       const b: Batch = {
-        entries: [], terrain: snapshotLayers(d0.terrain), layers: snapshotLandscape(d0.landscape, [...ALL_LAYERS]),
+        entries: [], doc: d0, terrain: snapshotLayers(d0.terrain), layers: snapshotLandscape(d0.landscape, [...ALL_LAYERS]),
         objects: d0.objects, roads: d0.roads, features: d0.landscape.features, next: d0.landscape.next,
         settings: d0.settings, scenario: d0.scenario, groups: d0.groups, meta: d0.meta,
       };

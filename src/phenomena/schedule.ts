@@ -106,3 +106,14 @@ export function createInstance(type: string, instances: readonly PhenomenonInsta
   delete s.startTime;
   return { id: nextInstanceId(instances), type, spec: s, enabled: true, start: { at }, visualize: true };
 }
+
+/**
+ * The instances without some of them (Phase 37: the rule of `removePhenomenon`, as a pure function the command planner
+ * shares): instances that started relative to a removed one keep the time they resolved to, as an absolute start.
+ */
+export function removeInstances(instances: readonly PhenomenonInstance[], ids: readonly string[], ctx: PhenomenonContext): PhenomenonInstance[] {
+  const gone = new Set(ids);
+  const startOf = new Map(resolveSchedule(instances, ctx).items.map((r) => [r.instance.id, r.start]));
+  return instances.filter((i) => !gone.has(i.id)).map((i) => ('after' in i.start && gone.has(i.start.after) ? { ...i, start: { at: startOf.get(i.id) ?? 0 } } : i));
+}
+

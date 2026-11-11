@@ -29,7 +29,7 @@ import { RuleBasedParser } from '@/commands/RuleBasedParser';
 import type { CommandParser, ParseDefaults, ParseResult } from '@/commands/CommandParser';
 import { dispatchCommands, type CommandTarget } from '@/commands/CommandDispatcher';
 import { phenomena } from '@/phenomena/registry';
-import { createInstance, resolveSchedule } from '@/phenomena/schedule';
+import { createInstance, removeInstances, resolveSchedule } from '@/phenomena/schedule';
 import { defaultScenarios, runComparison, type ScenarioResult } from '@/phenomena/experiment';
 import { defaultExperiment, type PhenomenonContext, type PhenomenonInstance } from '@/phenomena/types';
 import { parseWaterState, serializeWaterState } from '@/simulation/water/waterStateCodec';
@@ -449,11 +449,7 @@ export function updatePhenomenon(id: string, patch: Partial<PhenomenonInstance>)
 
 export function removePhenomenon(id: string) {
   // Instances that started after the removed one keep their resolved time.
-  const ctx = phenomenonContext();
-  const sched = resolveSchedule(experiment().instances, ctx);
-  const startOf = new Map(sched.items.map((r) => [r.instance.id, r.start]));
-  const rest = experiment().instances.filter((i) => i.id !== id).map((i) => ('after' in i.start && i.start.after === id ? { ...i, start: { at: startOf.get(i.id) ?? 0 } } : i));
-  useWorldStore.getState().setExperiment({ instances: rest });
+  useWorldStore.getState().setExperiment({ instances: removeInstances(experiment().instances, [id], phenomenonContext()) });
 }
 
 /** Per-phenomenon visualization → the existing view layers (render-only). */
