@@ -384,3 +384,19 @@ describe('structure lab preset (§51)', () => {
     }
   });
 });
+
+describe('car settings follow a duplicate (§19)', () => {
+  it('drive / autopilot copied to the new id (occupants not), one undo step', () => {
+    const car = W().addObject({ type: 'car', transform: at(0, 0) });
+    W().updateSimulationSettings({ vehicles: { model: 'dynamics', cars: { [car]: { drive: 'awd', autopilot: { path: [[0, 0], [20, 0]], speed: 5 }, occupants: [{ human: 'h1', seat: 'driver', restrained: true }] } } } as never });
+    const n = W().past.length;
+    const copy = W().duplicate(car)!;
+    const cars = W().doc.settings.simulation.vehicles!.cars!;
+    expect(cars[copy]).toMatchObject({ drive: 'awd', autopilot: { speed: 5 } });
+    expect(cars[copy].occupants).toBeUndefined();
+    expect(W().past.length).toBe(n + 1);
+    W().undo();
+    expect(W().doc.objects[copy]).toBeUndefined();
+    expect(W().doc.settings.simulation.vehicles!.cars![copy]).toBeUndefined();
+  });
+});

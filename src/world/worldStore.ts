@@ -649,7 +649,21 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       }
       // Phase 36: the copy is not locked (it is meant to be moved) and its road link is measured where it is.
       delete copy.locked;
-      commit({ ...objects, [copy.id]: relinkMoved(src, copy, get().doc.roads) });
+      const next = { ...objects, [copy.id]: relinkMoved(src, copy, get().doc.roads) };
+      // A car's own simulation settings (drive, controls, autopilot) go with the copy, in the same undo step; occupants
+      // do not (a person cannot sit in two cars).
+      const doc0 = get().doc;
+      const car = doc0.settings.simulation.vehicles?.cars?.[src.id];
+      if (car && !get().locked) {
+        const { occupants: _o, ...rest } = structuredClone(car);
+        void _o;
+        const vehicles = { ...doc0.settings.simulation.vehicles!, cars: { ...doc0.settings.simulation.vehicles!.cars, [copy.id]: rest } };
+        const settings = { ...doc0.settings, simulation: { ...doc0.settings.simulation, vehicles } };
+        const entry: HistoryEntry = { objects: doc0.objects, terrain: null, roads: doc0.roads, landscape: landEntry(doc0, null), config: { settings: doc0.settings, scenario: doc0.scenario } };
+        set({ doc: { ...touch(doc0, next), settings }, past: pushHistory(get().past, entry), future: [] });
+        return copy.id;
+      }
+      commit(next);
       return copy.id;
     },
 
