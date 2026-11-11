@@ -262,28 +262,26 @@ if (want('bar')) {
     el.addEventListener('compositionend', () => { window.__ime.ends++; });
     el.addEventListener('keydown', (e) => { window.__ime.keys.push({ key: e.key, keyCode: e.keyCode, composing: e.isComposing }); }, true);
   }, INPUT);
-  const hist0 = (await bar()).history;
+  const b0 = await bar();
+  const hist0 = b0.history;
   const sel0 = (await sel()).length;
   // "나무 선택" typed as an IME would: the last syllable is still being composed when Enter is pressed.
-  await cdp.send('Input.insertText', { text: KO ? '나무 선' : '나무 선' });
+  await cdp.send('Input.insertText', { text: '나무 선' });
   await cdp.send('Input.imeSetComposition', { text: 'ㅌ', selectionStart: 1, selectionEnd: 1 });
   await cdp.send('Input.imeSetComposition', { text: '태', selectionStart: 1, selectionEnd: 1 });
   await cdp.send('Input.imeSetComposition', { text: '택', selectionStart: 1, selectionEnd: 1 });
   await wait(150);
-  // (a) what Chrome sends for a key the IME consumes: keyCode 229, key "Process"
-  await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Process', code: 'Enter', windowsVirtualKeyCode: 229, nativeVirtualKeyCode: 229 });
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Process', code: 'Enter', windowsVirtualKeyCode: 229, nativeVirtualKeyCode: 229 });
-  await wait(250);
-  // (b) an Enter key event while the composition is still open (isComposing = true)
-  await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
+  // The real keyboard's Enter while the composition is open: Chrome sends it with isComposing = true. (A key event the
+  // IME consumes arrives as keyCode 229 / "Process" on a real Korean IME; sending one through CDP commits the composition
+  // in headless Chrome, so that third sign is covered by the unit test barKeys.test.ts, not here.)
+  await page.keyboard.press('Enter');
   await wait(400);
   const ime1 = await ev(() => window.__ime);
   b = await bar();
-  check('S2-1 the composition is real (compositionstart fired, not ended; the Enter events carry keyCode 229 / isComposing)',
-    ime1.starts >= 1 && ime1.ends === 0 && ime1.keys.some((k) => k.keyCode === 229) && ime1.keys.some((k) => k.key === 'Enter' && k.composing), ime1);
-  check('S2-2 Enter during the composition does not submit (no selection, no history entry, no feedback, the text is kept)',
-    b.history === hist0 && (await sel()).length === sel0 && b.fb === 'none' && b.plan?.armed !== true && b.dom.value.startsWith('나무 선'), { value: b.dom.value, fb: b.fb, history: b.history });
+  check('S2-1 the composition is real: compositionstart fired, not ended, and the Enter key event carries isComposing',
+    ime1.starts >= 1 && ime1.ends === 0 && ime1.keys.some((k) => k.key === 'Enter' && k.composing), ime1);
+  check('S2-2 Enter during the composition does not submit (selection, history and feedback as before, no plan, the text is kept)',
+    b.history === hist0 && (await sel()).length === sel0 && b.fb === b0.fb && same(b.done, b0.done) && b.plan?.armed !== true && b.dom.value.startsWith('나무 선'), { value: b.dom.value, fb: [b0.fb, b.fb], history: [hist0, b.history], sel: [sel0, (await sel()).length] });
   // Commit the syllable (compositionend), then a real Enter submits.
   await cdp.send('Input.insertText', { text: '택' });
   await wait(250);
@@ -314,7 +312,7 @@ if (want('build')) {
   b = await say(T.houses[0]);
   d = await drawn();
   check('S4-1 "three houses north of the road, 2 m apart" → the canonical command, 3 ghosts, 3 frontage snaps, nothing placed yet',
-    same(understoodOf(b), T.houses[1]) && d.ghosts === 3 && b.plan.items.length === 3 && b.plan.items.every((i) => i.status !== 'rejected' && i.snap === 'frontage') && (await ofType('building')).length === 0, { understood: understoodOf(b), d, items: b.plan?.items });
+    same(understoodOf(b), T.houses[1]) && d.ghosts === 3 && b.plan.items.length === 3 && b.plan.items.every((i) => i.status !== 'rejected' && i.snap === 'roadFront') && (await ofType('building')).length === 0, { understood: understoodOf(b), d, items: b.plan?.items });
   await shot('S4-preview');
   const u1 = await undoDepth();
   await enter(900);
@@ -323,7 +321,7 @@ if (want('build')) {
     const doc = window.__ds.world.getState().doc;
     return ids.map((id) => {
       const o = doc.objects[id];
-      const [hx, hz] = window.__ds.snapLib.footprintHalves(o);
+      const [hx, hz] = window.__ds.snapLib.footprintHalves(o.type, o.params, o.transform.scale);
       // The object's local +z (a building's front) in the world: Euler XYZ rotation applied to (0, 0, 1).
       const st = window.__r3f.get();
       const v = st.camera.position.clone().set(0, 0, 1).applyEuler(st.camera.rotation.clone().set(o.transform.rotation[0], o.transform.rotation[1], o.transform.rotation[2], 'XYZ'));
@@ -331,21 +329,25 @@ if (want('build')) {
     });
   }, houses.map((h) => h.id));
   const gaps = geo.slice(1).map((g, k) => g.x - g.hx - (geo[k].x + geo[k].hx));
-  const profile = await ev(() => { const r = window.__ds.world.getState().doc.roads; const s = Object.values(r.segments)[0]; const sec = window.__ds.roadLib.sectionAt ? null : null; return { seg: s.id, sec }; });
-  // The mouse's own rule for the same spot: the snap engine's frontage point for the middle house.
+  // The mouse's own rule for the same spot: the snap engine's frontage point for the middle house, asked directly.
   const mouse = await ev((g) => {
     const doc = window.__ds.world.getState().doc;
     const o = Object.values(doc.objects).find((x) => x.type === 'building' && Math.abs(x.transform.position[0] - g.x) < 0.01);
-    return { z: o.transform.position[2] };
-  }, geo[1]);
+    const half = window.__ds.snapLib.footprintHalves(o.type, o.params, o.transform.scale);
+    // A point 0.5 m off the house's own spot (as a mouse would hover), the other houses excluded so they do not attract it.
+    const r = window.__ds.snapLib.snapPoint({ x: o.transform.position[0], z: o.transform.position[2] - 0.5, yaw: 0, half, type: o.type, exclude: new Set(Object.keys(doc.objects)) }, { objects: [], roads: doc.roads, grid: 1 });
+    return { x: r?.x ?? null, z: r?.z ?? null, kind: r?.kind ?? null };
+  }, geo[1]).catch((e) => ({ error: String(e).slice(0, 120) }));
+  check('S4-2b the middle house stands exactly where the mouse\'s snap engine puts a house at that spot (roadFront)', mouse.kind === 'roadFront' && Math.abs(mouse.z - geo[1].z) < 0.01, { mouse, z: geo[1].z });
   check('S4-2 Enter places 3 houses north of the road (−z), in one row, 2 m between footprints, fronts facing the road',
-    houses.length === 3 && geo.every((g) => g.z < -3 && Math.abs(g.z - geo[0].z) < 0.01 && g.front[1] > 0.99) && gaps.every((g) => Math.abs(g - 2) < 0.05) && (await undoDepth()) === u1 + 1, { geo, gaps, profile, mouse });
+    houses.length === 3 && geo.every((g) => g.z < -3 && Math.abs(g.z - geo[0].z) < 0.01 && g.front[1] > 0.99) && gaps.every((g) => Math.abs(g - 2) < 0.05) && (await undoDepth()) === u1 + 1, { geo, gaps, mouse });
   // The frontage rule itself: the front edge is 1 m behind the outer edge of the sidewalk (road half width from the profile).
   const setback = await ev((g) => {
     const doc = window.__ds.world.getState().doc;
     const seg = Object.values(doc.roads.segments)[0];
     const p = seg.profile;
-    const half = (p.lanes * p.laneWidth) / 2 + (p.shoulder ?? 0) + (p.sidewalk ?? 0);
+    // The curbs stand at ± width / 2; the sidewalk's outer edge is sidewalkWidth further out (roads/crossSection.ts).
+    const half = p.width / 2 + (p.sidewalk === 'none' ? 0 : p.sidewalkWidth);
     return { half, frontEdge: -(g.z + g.hz), expected: half + 1 };
   }, geo[1]);
   check('S4-3 the front edge is 1 m behind the outer edge of the sidewalk (the snap engine\'s frontage setback)', Math.abs(setback.frontEdge - setback.expected) < 0.06, setback);
@@ -363,17 +365,19 @@ if (want('build')) {
   await enter(900);
   check('S5-2 Enter places exactly those', (await ofType('building')).length === fit, { placed: (await ofType('building')).length, fit });
   await undoKey();
+  await undoKey(); // and the short street: with two roads "the road" is a question (S14), S6 wants the single one
+  check('S5-3 two undo steps: the houses, then the short street', (await ofType('building')).length === 0 && (await ev(() => Object.keys(window.__ds.world.getState().doc.roads.segments).length)) === 1, {});
 
   // S6 — group + name, one step
   await run(T.houses[0]);
   houses = await ofType('building');
   const u2 = await undoDepth();
   b = await run(T.group[0]);
-  const grp = await ev(() => { const doc = window.__ds.world.getState().doc; const gs = [...new Set(Object.values(doc.objects).map((o) => o.group).filter(Boolean))]; return { groups: gs, names: gs.map((g) => doc.groups?.[g] ?? null) }; });
+  const grp = await ev(() => { const doc = window.__ds.world.getState().doc; const gs = [...new Set(Object.values(doc.objects).map((o) => o.group).filter(Boolean))]; return { groups: gs, names: gs.map((g) => doc.groups?.[g]?.name ?? null) }; });
   await click('[data-testid="tab-scene"]');
   const outliner = (await textOf('[data-testid="outliner-list"]')) ?? (await ev(() => document.body.innerText));
   check('S6-1 "group the ones I just made, named …": the three houses are one group with that name, shown in the outliner, ONE undo step',
-    houses.length === 3 && grp.groups.length === 1 && grp.names[0] === T.group[2] && outliner.includes(T.group[2]) && (await undoDepth()) === u2 + 1, { grp, understood: understoodOf(b) });
+    houses.length === 3 && grp.groups.length === 1 && grp.names[0] === T.group[2] && outliner.includes(T.group[2]) && (await undoDepth()) === u2 + 1, { houses: houses.length, grp, understood: understoodOf(b), fb: b.fb });
   await undoKey();
   const after = await ev(() => { const doc = window.__ds.world.getState().doc; return { grouped: Object.values(doc.objects).filter((o) => o.group).length, names: Object.keys(doc.groups ?? {}).length, buildings: Object.values(doc.objects).filter((o) => o.type === 'building').length }; });
   check('S6-2 one undo: the group and its name are gone, the houses stay', after.grouped === 0 && after.names === 0 && after.buildings === 3, after);
@@ -392,21 +396,23 @@ if (want('select')) {
   check('S7-2 "buildings within 30 m of n4": exactly the buildings whose centre is within 30 m of that node', same(understoodOf(b), T.nearN4[1]) && same((await sel()).slice().sort(), expectNear) && expectNear.length > 0, { selected: (await sel()).length, expected: expectNear.length });
   // setup: a steep mound with trees on it (the default town is flat)
   await run('terrain raise circle 70,-70 r=14 by=12');
-  await run('forest circle 70,-70 r=13 density=high seed=1');
+  // setup: trees on the mound's flank (a forest plan rejects steep spots, so they are put there directly)
+  await ev(() => { const w = window.__ds.world.getState(); w.addObjects(Array.from({ length: 12 }, (_, k) => { const a = (k / 12) * 2 * Math.PI, r = 4 + (k % 3) * 3; return { type: 'tree', transform: { position: [70 + r * Math.cos(a), 0, -70 + r * Math.sin(a)], rotation: [0, 0, 0], scale: [1, 1, 1] } }; })); });
+  await wait(300);
   b = await say(T.steep[0]);
   const expectSteep = await ev(() => { const doc = window.__ds.world.getState().doc; const s = window.__ds.buildLib.samplerFor(doc.terrain); return Object.values(doc.objects).filter((o) => o.type === 'tree' && s.sampleSlope(o.transform.position[0], o.transform.position[2]) > 20).map((o) => o.id).sort(); });
-  check('S7-3 "trees on slopes over 20°": exactly the trees standing on ground steeper than 20°', same(understoodOf(b), T.steep[1]) && same((await sel()).slice().sort(), expectSteep) && expectSteep.length > 0, { selected: (await sel()).length, expected: expectSteep.length });
+  check('S7-3 "trees on slopes over 20°": exactly the trees standing on ground steeper than 20°', same(understoodOf(b), T.steep[1]) && same((await sel()).slice().sort(), expectSteep) && expectSteep.length > 0, { selected: (await sel()).length, expected: expectSteep.length, fb: b.fb, keys: b.fbKeys });
   // setup: two trees locked, one hidden
   const marked = await ev(() => { const w = window.__ds.world.getState(); const t = Object.values(w.doc.objects).filter((o) => o.type === 'tree').slice(0, 3); w.applyEdit({ update: [{ ...t[0], locked: true }, { ...t[1], locked: true }, { ...t[2], hidden: true }] }); return t.map((o) => o.id); });
   const allTrees = (await ofType('tree')).length;
   b = await say('delete type:tree');
   const lockedNote = b.plan?.notes.includes('cmd37.note.lockedSkipped'), hiddenNote = b.plan?.notes.includes('cmd37.note.hiddenSkipped');
   check('S7-4 "delete type:tree": locked trees and the hidden one are left out and reported; a delete is always previewed',
-    b.plan?.armed && b.plan.counts.remove === allTrees - 3 && lockedNote && hiddenNote && (await ofType('tree')).length === allTrees, { remove: b.plan?.counts.remove, allTrees, notes: b.plan?.notes, marked });
+    b.plan?.armed && b.plan.counts.remove === allTrees - 3 && lockedNote && hiddenNote && (await ofType('tree')).length === allTrees, { remove: b.plan?.counts.remove, allTrees, notes: b.plan?.notes, marked, fb: b.fb, keys: b.fbKeys, understood: understoodOf(b), flags: (await objects()).filter((o) => marked.includes(o.id)).map((o) => [o.locked, o.hidden]) });
   await page.keyboard.press('Escape');
   await wait(200);
   b = await say('select type:tree where hidden');
-  check('S7-5 a hidden object named by its filter is included', (await sel()).length === 1 && (await sel())[0] === marked[2], { sel: await sel() });
+  check('S7-5 a hidden object named by its filter is included', (await sel()).length === 1 && (await sel())[0] === marked[2], { sel: await sel(), fb: b.fb, keys: b.fbKeys, understood: understoodOf(b) });
 
   // S8 — the same value for all: command vs the multi-selection inspector
   const cars = (await ofType('car')).slice(0, 3).map((o) => o.id);
@@ -415,7 +421,7 @@ if (want('select')) {
   const u0 = await undoDepth();
   b = await run(T.setX[0]);
   const byCommand = (await objects()).filter((o) => cars.includes(o.id)).map((o) => ({ id: o.id, p: o.p, r: o.r }));
-  check('S8-1 "set x to 10 for the selection": the three cars are at x = 10, one undo step', same(understoodOf(b) ?? T.setX[1], T.setX[1]) && byCommand.every((o) => Math.abs(o.p[0] - 10) < 1e-9) && (await undoDepth()) === u0 + 1, { byCommand });
+  check('S8-1 "set x to 10 for the selection": the three cars are at x = 10, one undo step', same(understoodOf(b) ?? T.setX[1], T.setX[1]) && byCommand.every((o) => Math.abs(o.p[0] - 10) < 1e-9) && (await undoDepth()) === u0 + 1, { byCommand, fb: b.fb, keys: b.fbKeys, understood: understoodOf(b), plan: b.plan && { canonical: b.plan.canonical, counts: b.plan.counts }, selBefore: cars.length, selNow: (await sel()).length });
   await undoKey();
   await ev((ids) => window.__ds.editor.getState().setSelection(ids, ids[0]), cars);
   await wait(400);
