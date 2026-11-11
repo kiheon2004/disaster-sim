@@ -46,8 +46,11 @@ export function presetKeyOf(item: PaletteItem): string | undefined {
   return rest;
 }
 
-/** The preset a bare type places (`place building` = a modular house, not a legacy box). */
-const DEFAULT_PRESET: Partial<Record<ObjectType, string>> = { building: 'house' };
+/**
+ * The preset a bare type places when it is not the type's first palette item: `place building` = a modular house (not
+ * a legacy box), `place wall` = the masonry wall (the palette lists the guardrail first).
+ */
+const DEFAULT_PRESET: Partial<Record<ObjectType, string>> = { building: 'house', wall: 'masonry' };
 
 function build(): { kinds: Kind[]; byKey: Map<string, Kind>; defaults: Map<ObjectType, Kind> } {
   const kinds: Kind[] = [];

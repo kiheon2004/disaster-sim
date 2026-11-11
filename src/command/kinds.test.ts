@@ -38,6 +38,8 @@ describe('command kinds', () => {
     expect(findKind('tree')?.key).toBe('tree:broadleaf');
     expect(findKind('streetlight')?.key).toBe('streetLight');
     expect(findKind('sign')?.key).toBe('sign:road');
+    expect(findKind('wall')?.key).toBe('wall:masonry');
+    expect(findKind('crate')?.key).toBe('crate:wood');
     expect(findKind('container', '40ft')?.key).toBe('container:40ft');
     expect(findKind('spaceship')).toBeNull();
     expect(findKind('car', 'limo')).toBeNull();
