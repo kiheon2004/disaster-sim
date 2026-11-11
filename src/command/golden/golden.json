@@ -1,0 +1,26 @@
+{
+  "default-town": {
+    "lines": 14,
+    "start": "02dfbb338498d05a",
+    "end": "6c369601c403e27c",
+    "terrain": "563e6a96f9e5bfcd:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}",
+    "objects": 81,
+    "instances": 2
+  },
+  "sample-town": {
+    "lines": 19,
+    "start": "582cafbb94721b00",
+    "end": "ad063a206dcd3348",
+    "terrain": "6dcbe1223250e175:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}",
+    "objects": 79,
+    "instances": 1
+  },
+  "mountain-village": {
+    "lines": 15,
+    "start": "8ad0026c22750784",
+    "end": "b4a9ba22784786a0",
+    "terrain": "0f8df84af16a59bd:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}",
+    "objects": 306,
+    "instances": 2
+  }
+}

@@ -1,0 +1,16 @@
+# 기본 월드 — 큰길 북쪽에 주택 세 채를 짓고 묶은 뒤, 언덕과 숲과 새 길을 만들고 재난 두 개를 겁니다.
+# Default world — three houses north of the main road as a group, a hill with a forest, a new street, two disasters.
+place building:house count=3 along=road:main side=north gap=2 floors=2
+group last name="북쪽 블록"
+place car count=4 along=road:main
+terrain raise circle 40,45 r=12 by=3
+paint circle 40,45 r=12 ground=grass
+forest circle 40,45 r=14 density=low seed=3
+road 20,0 -> 20,30 preset=street
+move group:"북쪽 블록" by=0,0,-4
+rotate type:streetLight by=15
+disaster blast at=node:n4 energy=1.8e9 start=5
+disaster fire at=next(last)
+select type:tree where near node:n4 r=30
+hide selection
+count type:building

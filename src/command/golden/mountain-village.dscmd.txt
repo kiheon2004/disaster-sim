@@ -1,0 +1,17 @@
+# 템플릿 "산골 마을" — 길가에 집과 가로등을 더 놓고, 길을 내고, 땅을 고르고, 방향·높이를 맞추고, 비와 화재를 겁니다.
+# Template "mountain village" — more houses and street lights on the road, a new road, ground work, heading / height edits, rain and a fire.
+place building:house count=4 along=road:main side=south gap=3
+group last name="아랫마을"
+place streetLight count=6 along=road:main side=north gap=20
+road -60,70 -> -60,95 preset=street
+terrain smooth circle -60,85 r=10
+place car count=3 along=road:nearest(-60,90)
+select type:building where floors>=3
+set selection heading=90
+set group:"아랫마을" lift=0.5
+match group:"아랫마을" height to=(type:building:apartment first 1)
+forest circle 70,100 r=12 density=high seed=5
+disaster rain intensity=80 duration=1800
+disaster fire at=30,90
+measure node:n1 node:n2
+count disasters

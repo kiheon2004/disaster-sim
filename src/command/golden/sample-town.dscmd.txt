@@ -1,0 +1,21 @@
+# 샘플 마을(도로망 없음) — 좌표와 객체만으로 편집합니다: 잠금, 정렬, 복제, 삭제, 지형, 지진.
+# Sample town (no road network) — edits by coordinates and objects: lock, align, duplicate, delete, terrain, earthquake.
+select type:tree
+lock selection
+select type:human first 6
+align selection axis=z mode=min ref=origin
+distribute selection axis=x
+select type:car first 4
+duplicate selection offset=0,6
+group last name="주차 줄"
+delete type:sign
+terrain flatten circle 60,60 r=10 to=1
+place barrel count=6 at=60,60 gap=1.5
+group last name="드럼통"
+scale group:"드럼통" x1.5
+terrain lower rect -80,60,-50,90 by=2
+paint rect -80,60,-50,90 ground=sand
+disaster earthquake at=center magnitude=6.5 start=3
+unlock type:tree
+select none
+list groups
