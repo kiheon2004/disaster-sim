@@ -93,3 +93,16 @@ describe('snap engine', () => {
     expect(snapPoint({ x: 0.2, z: 0.2, yaw: 0, half: [1, 1], type: 'wall' }, env({ objects: Object.values(d.objects), roads: d.roads })).kind).toBe('grid');
   });
 });
+
+describe('frontage + neighbour', () => {
+  it('a building on the road frontage also sits flush with its neighbour along the road', () => {
+    const net = road();
+    const half: [number, number] = [4, 3.5];
+    const front = -(3.5 + 2 + 1 + 3.5);
+    const n = createWorldObject({ type: 'wall', params: { length: 8, height: 3, thickness: 7 }, transform: tf(-30, front) }, 1);
+    const t = snapPoint({ x: -21.5, z: front - 0.4, yaw: 0, half, type: 'building' }, env({ roads: net, objects: [n], grid: 0 }));
+    expect(t.kind).toBe('roadFront');
+    expect(t.z).toBeCloseTo(front, 6);
+    expect(t.x).toBeCloseTo(-22, 6);
+  });
+});

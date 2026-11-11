@@ -207,25 +207,44 @@ if (want('build')) {
   await above(0, 0, 150);
   await click('[data-testid="tab-roads"]');
   await click('[data-road-mode="draw"]');
-  await clickWorld(-70, 0); await clickWorld(0, 0); await clickWorld(70, 0);
+  await wait(600); // the road tool mounts on the next render
+  // (The viewport tool strip covers the canvas's left edge — the road starts inside the free area.)
+  await clickWorld(-55, 0); await clickWorld(0, 0); await clickWorld(55, 0);
   await page.keyboard.press('Enter');
   await wait(600);
-  const segs = await ev(() => Object.keys(window.__ds.world.getState().doc.roads.segments).length);
-  check('S1-2 road drawn by clicks + Enter', segs >= 1, { segs });
+  const r1 = await ev(() => { const n = window.__ds.world.getState().doc.roads; return { segs: Object.keys(n.segments).length, xs: Object.values(n.nodes).map((v) => Math.round(v.x)).sort((a, b) => a - b) }; });
+  check('S1-2 road drawn by clicks + Enter (from −55 to 55)', r1.segs >= 1 && r1.xs[0] <= -54 && r1.xs[r1.xs.length - 1] >= 54, r1);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await wait(300);
   await above(-30, -20, 90);
   await armItem('building.m.house');
-  await clickWorld(-30, -20);
-  await clickWorld(-10, -20);
+  // S3 (road): clicked about 1 m off the frontage line, the house snaps to it (facing the road, 1 m behind the sidewalk);
+  // the second, clicked 0.5 m from touching the first, snaps flush against it (neighbour edge).
+  const hDepth = await ev(() => window.__ds.buildingLib.presetSpec('house').depth);
+  const width = await ev(() => window.__ds.buildingLib.presetSpec('house').width);
+  // The frontage line from the drawn road's own section: carriageway half width + sidewalk + 1 m setback + half depth.
+  const outer = await ev(() => { const s = Object.values(window.__ds.world.getState().doc.roads.segments)[0]; const p = s.profile; return p.width / 2 + (p.sidewalk === 'both' || p.sidewalk === 'left' ? p.sidewalkWidth : 0); });
+  const frontZ = -(outer + 1 + hDepth / 2);
+  const engine = await ev((z) => {
+    const ds = window.__ds; const d = ds.world.getState().doc;
+    const params = ds.buildingLib.deriveFields(ds.buildingLib.createDesign(ds.buildingLib.presetSpec('house'), 'house'), 1).params;
+    return { t: ds.snapLib.snapPoint({ x: -30, z, yaw: 0, half: ds.snapLib.footprintHalves('building', params), type: 'building' }, { objects: Object.values(d.objects), roads: d.roads, grid: 1 }),
+      nodes: Object.values(d.roads.nodes).map((n) => [n.x, n.z]), tool: ds.editor.getState().tool, item: ds.editor.getState().placeItemId, snap: ds.editor.getState().snap };
+  }, frontZ - 1);
+  await clickWorld(-30, frontZ - 1);
+  const hint = await ev(() => document.querySelector('[data-testid="snap-hint"]')?.dataset.kind ?? null);
+  await clickWorld(-30 + width + 0.5, frontZ - 0.3);
   await page.keyboard.press('Escape');
   await wait(300);
   let objs = await objects();
-  const houses = objs.filter((o) => o.type === 'building');
+  const houses = objs.filter((o) => o.type === 'building').sort((a, b) => a.p[0] - b.p[0]);
   check('S1-3 two buildings placed with the mouse', houses.length === 2, { n: houses.length });
-  // S3 (road): placed near the road, a building snaps to the frontage and faces the road.
-  const front = await ev(() => { const o = Object.values(window.__ds.world.getState().doc.objects).find((x) => x.type === 'building'); return o ? { z: o.transform.position[2] } : null; });
-  check('S3-1 building snapped to the road frontage (behind the sidewalk)', front && Math.abs(front.z) > 9 && Math.abs(front.z) < 20, front);
+  // The real footprint (member extents) — not the nominal plan size — is what snaps.
+  const realHalf = await ev(() => { const ds = window.__ds; return ds.snapLib.footprintHalves('building', ds.buildingLib.deriveFields(ds.buildingLib.createDesign(ds.buildingLib.presetSpec('house'), 'house'), 1).params); });
+  const roadZ = await ev(() => Object.values(window.__ds.world.getState().doc.roads.nodes)[0].z); // the drawn centreline (click precision)
+  const realFront = roadZ - (outer + 1 + realHalf[1]);
+  check('S3-1 the house snapped to the road frontage (1 m behind the sidewalk), facing the road', houses[0] && Math.abs(houses[0].p[2] - realFront) < 1e-6 && hint === 'roadFront' && Math.abs(houses[0].r[1]) < 1e-9, { z: houses[0]?.p[2], realFront, hint, yaw: houses[0]?.r });
+  check('S3-2 the second house snapped flush against the first along the street (no gap, no overlap)', houses[1] && Math.abs(houses[1].p[0] - houses[0].p[0] - 2 * realHalf[0]) < 1e-6 && Math.abs(houses[1].p[2] - realFront) < 1e-6, { x0: houses[0]?.p[0], x1: houses[1]?.p[0], w: 2 * realHalf[0] });
 
   // S2: exact position / heading typed in the inspector.
   await above(houses[0].p[0], houses[0].p[2], 60);
@@ -234,20 +253,21 @@ if (want('build')) {
   const axisInputs = await page.$$('[data-testid="right-panel"] input[aria-label]');
   void axisInputs;
   const posInputs = await page.$$eval('[data-testid="right-panel"] input', (els) => els.map((e, i) => ({ i, label: e.getAttribute('aria-label') ?? '', v: e.value })));
-  const xi = posInputs.findIndex((x) => /^(X|위치 X|Position X)/.test(x.label) || x.label === 'X');
+  const posLabel = await ev(() => window.__ds.tr('ed36.pos'));
+  const xi = posInputs.findIndex((x) => x.label === `${posLabel} X`);
   const inputs = await page.$$('[data-testid="right-panel"] input');
-  if (xi >= 0) await typeInto(inputs[xi], -25.5);
+  if (xi >= 0) await typeInto(inputs[xi], -45.5);
   const after2 = (await objects()).find((o) => o.id === houses[0].id);
-  check('S2-1 X typed in the inspector moves the building exactly', xi >= 0 && Math.abs(after2.p[0] + 25.5) < 1e-6, { xi, p: after2?.p, labels: posInputs.slice(0, 8).map((x) => x.label) });
+  check('S2-1 X typed in the inspector moves the building exactly', xi >= 0 && Math.abs(after2.p[0] + 45.5) < 1e-6, { xi, p: after2?.p, labels: posInputs.slice(0, 8).map((x) => x.label) });
 
   // S4: multi-select (Shift+click) and move together with the gizmo.
-  await above(-20, -20, 80);
+  await above(-35, -15, 90);
   objs = await objects();
   const [h1, h2] = objs.filter((o) => o.type === 'building');
   await clickWorld(h1.p[0], h1.p[2], 3);
   await clickWorld(h2.p[0], h2.p[2], 3, ['Shift']);
-  s = await sel();
-  check('S4-1 Shift+click adds to the selection', s.length === 2, { s });
+  const s4 = await sel();
+  check('S4-1 Shift+click adds to the selection', s4.length === 2, { s4 });
   const piv = [(h1.p[0] + h2.p[0]) / 2, (h1.p[2] + h2.p[2]) / 2];
   await dragScreen(await screen(piv[0], piv[1], 0), 0, 50);
   const m1 = (await objects()).find((o) => o.id === h1.id), m2 = (await objects()).find((o) => o.id === h2.id);
@@ -326,6 +346,7 @@ if (want('terrain')) {
   await above(0, 40, 140);
   await click('[data-testid="tab-roads"]');
   await click('[data-road-mode="draw"]');
+  await wait(600);
   await clickWorld(10, 60); await clickWorld(10, -60);
   await page.keyboard.press('Enter');
   await wait(600);

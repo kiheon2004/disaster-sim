@@ -177,6 +177,22 @@ function objectCandidates(q: SnapQuery, env: SnapEnv, out: SnapTarget[]) {
   }
 }
 
+/**
+ * A frontage / lane snap fixes the distance to the road and the heading; ALONG the road the object may still sit flush
+ * with a neighbour (or on its column line): the best edge snap along the road axis (the moving object's local x) at the
+ * snapped point. Other targets are returned as they are.
+ */
+function alongRoad(best: SnapTarget, q: SnapQuery, env: SnapEnv): SnapTarget {
+  const off = env.disabled;
+  if ((best.kind !== 'roadFront' && best.kind !== 'roadLane') || best.yaw === undefined || (off?.has('objectEdge') && off?.has('structGrid'))) return best;
+  const along: SnapTarget[] = [];
+  objectCandidates({ ...q, x: best.x, z: best.z, yaw: best.yaw }, env, along);
+  const edge = along
+    .filter((c) => (c.kind === 'objectEdge' || c.kind === 'structGrid') && c.axis === 0 && !off?.has(c.kind) && c.dist <= SNAP_TOLERANCE[c.kind])
+    .sort((a, b) => a.dist - b.dist || (a.ref ?? '').localeCompare(b.ref ?? ''))[0];
+  return edge ? { ...best, x: edge.x, z: edge.z, ref: `${best.ref}|${edge.ref}`, dist: Math.hypot(edge.x - q.x, edge.z - q.z) } : best;
+}
+
 /** The grid point of the cursor (or the free cursor when the grid is off). */
 function gridTarget(x: number, z: number, step: number): SnapTarget {
   if (!(step > 0)) return { kind: 'free', x, z, dist: 0 };
@@ -194,17 +210,25 @@ export function snapPoint(q: SnapQuery, env: SnapEnv): SnapTarget {
   const usable = cands.filter((c) => !off?.has(c.kind));
   // Hysteresis: the previous target (same kind and reference) wins while it stays within the extended tolerance.
   const prev = env.prev;
-  if (prev && prev.ref && !prev.ref.includes('|') && prev.kind !== 'objectEdge' && prev.kind !== 'structGrid') {
-    const same = usable.find((c) => c.kind === prev.kind && c.ref === prev.ref);
-    if (same && same.dist <= SNAP_TOLERANCE[same.kind] * SNAP_HYSTERESIS) return same;
+  if (prev && prev.ref && prev.kind !== 'objectEdge' && prev.kind !== 'structGrid' && (prev.kind === 'roadFront' || prev.kind === 'roadLane' || !prev.ref.includes('|'))) {
+    const head = prev.ref.split('|')[0];
+    const same = usable.find((c) => c.kind === prev.kind && c.ref === head);
+    if (same && same.dist <= SNAP_TOLERANCE[same.kind] * SNAP_HYSTERESIS) return alongRoad(same, q, env);
   }
   if (prev && prev.ref && (prev.kind === 'objectEdge' || prev.kind === 'structGrid')) {
     const refs = prev.ref.split('|');
     const parts = refs.map((r) => usable.find((c) => c.ref === r)).filter((c): c is SnapTarget => !!c && c.dist <= SNAP_TOLERANCE[c.kind] * SNAP_HYSTERESIS);
     if (parts.length === refs.length) {
+      // The held parts stay; an axis without one takes the best new edge / grid snap in tolerance (a one-axis snap held
+      // from an earlier cursor position must not keep the other axis from snapping).
+      for (const ax of [0, 1] as const) {
+        if (parts.some((c) => c.axis === ax)) continue;
+        const add = usable.filter((c) => (c.kind === 'objectEdge' || c.kind === 'structGrid') && c.axis === ax && c.dist <= SNAP_TOLERANCE[c.kind]).sort((a, b) => a.dist - b.dist || (a.ref ?? '').localeCompare(b.ref ?? ''))[0];
+        if (add) parts.push(add);
+      }
       let x = q.x, z = q.z;
       for (const c of parts) { x += c.x - q.x; z += c.z - q.z; }
-      return { ...prev, x, z, dist: Math.hypot(x - q.x, z - q.z) };
+      return { ...prev, x, z, ref: parts.map((c) => c.ref).join('|'), dist: Math.hypot(x - q.x, z - q.z) };
     }
   }
   const order = (a: SnapTarget, b: SnapTarget) => a.dist - b.dist || (a.ref ?? '').localeCompare(b.ref ?? '');
@@ -228,7 +252,7 @@ export function snapPoint(q: SnapQuery, env: SnapEnv): SnapTarget {
       return { kind: parts[0].kind, x, z, ref: parts.map((c) => c.ref).join('|'), dist: Math.hypot(x - q.x, z - q.z) };
     }
     const best = usable.filter((c) => c.kind === kind && c.dist <= SNAP_TOLERANCE[kind]).sort(order)[0];
-    if (best) return best;
+    if (best) return alongRoad(best, q, env);
   }
   return off?.has('grid') ? { kind: 'free', x: q.x, z: q.z, dist: 0 } : gridTarget(q.x, q.z, env.grid);
 }

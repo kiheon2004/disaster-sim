@@ -107,6 +107,7 @@ import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 import * as placementActions from './placementActions';
 import { cameraLockIgnoredWrites, cameraLockOwners, cameraLocked } from '@/editor/input/cameraLock';
 import { activeGesture } from '@/editor/input/gesture';
+import { footprintHalves, snapPoint } from '@/editor/snap/snapEngine';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 
 export function installDevtools() {
@@ -144,6 +145,8 @@ export function installDevtools() {
     placement: placementActions,
     /** Phase 36 input ownership (browser verification): lock owners, the gesture in progress. */
     input: { cameraLockOwners, cameraLocked, cameraLockIgnoredWrites, activeGesture },
+    /** Phase 36 snapping (browser verification). */
+    snapLib: { snapPoint, footprintHalves },
     placementStore: usePlacementStore,
     view: useViewStore,
     sim: simulationController,
