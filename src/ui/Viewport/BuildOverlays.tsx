@@ -19,6 +19,8 @@ export function BuildHint({ fallback }: { fallback: string }) {
   const count = useEditorStore((s) => s.selectedIds.length);
   const warnings = useSyncExternalStore(useGhostWarnings.subscribe, useGhostWarnings.get);
   const snapped = useSyncExternalStore(snapHint.subscribe, snapHint.get);
+  const space = useEditorStore((s) => s.transformSpace);
+  const lock = useEditorStore((s) => s.axisLock);
   const name = item ? t(item.labelKey) : '';
   const toolLabel = BUILD_TOOLS.find((b) => b.tool === tool)?.label;
   let text = fallback;
@@ -30,6 +32,11 @@ export function BuildHint({ fallback }: { fallback: string }) {
   return (
     <>
       {text}
+      {tool === 'select' && count > 0 && (space === 'local' || lock) && (
+        <span className={styles.snapTag} style={{ marginLeft: 8 }} data-testid="gizmo-state">
+          {space === 'local' ? t('ed36.gizmo.local') : ''}{space === 'local' && lock ? ' · ' : ''}{lock ? t('ed36.gizmo.lock', { axis: lock.toUpperCase() }) : ''}
+        </span>
+      )}
       {snapped && (
         <span className={styles.snapTag} style={{ marginLeft: 8 }} data-testid="snap-hint" data-kind={snapped}>
           ⌖ {t('snap.label')}: {t(`snap.kind.${snapped}` as MessageKey)}

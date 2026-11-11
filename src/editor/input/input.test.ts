@@ -289,3 +289,15 @@ describe('input policy', () => {
     expect(useEditorStore.getState().selectedIds).toEqual([]);
   });
 });
+
+describe('gizmo frame and axis lock (§11)', () => {
+  it('Q-style toggle and X / Y / Z lock live in the editor store; a mode change clears the lock', () => {
+    const ed = () => useEditorStore.getState();
+    ed().setTransformSpace('local');
+    ed().setAxisLock('x');
+    expect([ed().transformSpace, ed().axisLock]).toEqual(['local', 'x']);
+    ed().setTransformMode('rotate');
+    expect(ed().axisLock).toBe(null);
+    ed().setTransformSpace('world');
+  });
+});

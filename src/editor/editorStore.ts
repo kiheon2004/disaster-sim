@@ -39,6 +39,9 @@ interface EditorState {
   selectedIds: EntityId[];
   hoveredId: EntityId | null;
   transformMode: TransformMode;
+  /** Phase 36 §11: gizmo frame for moves (rotate / scale are always local) and an axis lock (X / Y / Z keys). */
+  transformSpace: 'world' | 'local';
+  axisLock: 'x' | 'y' | 'z' | null;
   snap: boolean;
   /** Natural variation (size/color) when placing nature & people presets. */
   randomize: boolean;
@@ -82,6 +85,8 @@ interface EditorState {
   setSelection: (ids: EntityId[], primary?: EntityId | null) => void;
   hover: (id: EntityId | null) => void;
   setTransformMode: (m: TransformMode) => void;
+  setTransformSpace: (s: 'world' | 'local') => void;
+  setAxisLock: (a: 'x' | 'y' | 'z' | null) => void;
   toggleSnap: () => void;
   toggleRandomize: () => void;
   setDragging: (d: boolean) => void;
@@ -107,6 +112,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedIds: [],
   hoveredId: null,
   transformMode: 'translate',
+  transformSpace: 'world',
+  axisLock: null,
   snap: true,
   randomize: true,
   dragging: false,
@@ -144,7 +151,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ selectedIds: unique, selectedId: p });
   },
   hover: (hoveredId) => (get().hoveredId !== hoveredId ? set({ hoveredId }) : undefined),
-  setTransformMode: (transformMode) => set({ transformMode }),
+  setTransformMode: (transformMode) => set({ transformMode, axisLock: null }),
+  setTransformSpace: (transformSpace) => set({ transformSpace }),
+  setAxisLock: (axisLock) => set({ axisLock }),
   toggleSnap: () => set({ snap: !get().snap }),
   toggleRandomize: () => set({ randomize: !get().randomize }),
   setDragging: (dragging) => set({ dragging }),

@@ -100,4 +100,6 @@ export const enP36Editor = {
   'ed36.preset.mountainVillage': 'Mountain terrain',
   'ed36.preset.coastalCity': 'Coastal area',
   'ed36.preset.riverValley': 'River and lowland',
+  'ed36.gizmo.local': 'Object axes (Q)',
+  'ed36.gizmo.lock': '{axis} axis only',
 } as const;

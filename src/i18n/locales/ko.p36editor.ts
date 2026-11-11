@@ -102,4 +102,6 @@ export const koP36Editor: Record<keyof typeof enP36Editor, string> = {
   'ed36.preset.mountainVillage': '산악 지형',
   'ed36.preset.coastalCity': '해안 지역',
   'ed36.preset.riverValley': '강과 저지대',
+  'ed36.gizmo.local': '객체 축 (Q)',
+  'ed36.gizmo.lock': '{axis}축만',
 };

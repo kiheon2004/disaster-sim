@@ -123,6 +123,14 @@ if (want('input')) {
   await wait(300);
   check('input-6 Ctrl+Z restores it', near((await objects()).find((o) => o.id === b.id).p, b.p), {});
 
+  // Q = object axes, X / Y / Z = axis lock (again = unlock), shown in the viewport hint.
+  await page.keyboard.press('KeyQ'); await wait(150);
+  await page.keyboard.press('KeyX'); await wait(250);
+  const g1 = await ev(() => ({ space: window.__ds.editor.getState().transformSpace, lock: window.__ds.editor.getState().axisLock, hint: document.querySelector('[data-testid="gizmo-state"]')?.textContent ?? null }));
+  await page.keyboard.press('KeyX'); await page.keyboard.press('KeyQ'); await wait(200);
+  const g2 = await ev(() => ({ space: window.__ds.editor.getState().transformSpace, lock: window.__ds.editor.getState().axisLock }));
+  check('input-11 Q toggles object axes, X locks the gizmo to X (shown in the hint), pressing again undoes it', g1.space === 'local' && g1.lock === 'x' && !!g1.hint && g2.space === 'world' && g2.lock === null, { g1, g2 });
+
   // Orbit still works with the left button on empty ground (camera position changes).
   await page.keyboard.press('Escape');
   await wait(200);

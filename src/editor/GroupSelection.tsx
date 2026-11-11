@@ -57,6 +57,7 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
   const objects = useWorldStore((st) => st.doc.objects);
   const terrain = useWorldStore((st) => st.doc.terrain);
   const mode = useEditorStore((st) => st.transformMode);
+  const lock = useEditorStore((st) => st.axisLock);
   const snap = useEditorStore((st) => st.snap);
   const snapping = useBuildStore((st) => st.snapping);
   const camera = useThree((st) => st.camera);
@@ -131,8 +132,9 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
           mode={mode}
           size={0.9}
           space="world"
-          showX={mode !== 'rotate'}
-          showZ={mode !== 'rotate'}
+          showX={mode !== 'rotate' && (!lock || lock === 'x')}
+          showY={!lock || lock === 'y' || mode === 'rotate'}
+          showZ={mode !== 'rotate' && (!lock || lock === 'z')}
           translationSnap={snap ? gridStep(snapping.grid, 0) : null}
           rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
           scaleSnap={snap ? 0.1 : null}

@@ -344,6 +344,15 @@ export function useEditorHotkeys() {
         case 'w':
           ed.setTransformMode('translate');
           break;
+        // Phase 36 §11: Q = move in world / object (local) axes; X / Y / Z = lock the gizmo to that axis (again = unlock).
+        case 'q':
+          if (ed.tool === 'select') ed.setTransformSpace(ed.transformSpace === 'world' ? 'local' : 'world');
+          break;
+        case 'x':
+        case 'y':
+        case 'z':
+          if (ed.tool === 'select' && ed.selectedIds.length) ed.setAxisLock(ed.axisLock === key ? null : (key as 'x' | 'y' | 'z'));
+          break;
         case 'e':
           ed.setTransformMode('rotate');
           break;

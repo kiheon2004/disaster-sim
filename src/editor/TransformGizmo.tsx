@@ -20,6 +20,8 @@ import { snapHint } from './snap/snapHint';
 export function TransformGizmo() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const mode = useEditorStore((s) => s.transformMode);
+  const space = useEditorStore((s) => s.transformSpace);
+  const lock = useEditorStore((s) => s.axisLock);
   const snap = useEditorStore((s) => s.snap);
   const snapping = useBuildStore((s) => s.snapping);
   // Phase 36: no gizmo on a locked object (it cannot be moved; unlock it in the outliner / inspector).
@@ -47,7 +49,8 @@ export function TransformGizmo() {
     // Phase 36 §13: a horizontal move snaps like placement (roads, neighbours' edges / centres, structural grid, grid),
     // on the dragged axes only (the X arrow changes X only). The heading is not changed by a move.
     const axis0 = controlsRef.current?.axis ?? '';
-    const horizontal = axis0 === 'XYZ' || (!!axis0 && !axis0.includes('Y'));
+    // (In object axes a single handle moves along the object's own x / z — world snapping would break that constraint.)
+    const horizontal = axis0 === 'XYZ' || (space === 'world' && !!axis0 && !axis0.includes('Y'));
     if (obj && snap && mode === 'translate' && horizontal) {
       const t = snapPoint(
         { x: target.position.x, z: target.position.z, yaw: yawOf([target.rotation.x, target.rotation.y, target.rotation.z]), half: footprintHalves(obj.type, obj.params, [target.scale.x, target.scale.y, target.scale.z]), type: obj.type, exclude: new Set([selectedId]) },
@@ -91,9 +94,11 @@ export function TransformGizmo() {
       object={target}
       mode={mode}
       size={0.8}
-      space={mode === 'translate' ? 'world' : 'local'}
-      showX={mode !== 'rotate'}
-      showZ={mode !== 'rotate'}
+      space={mode === 'translate' ? space : 'local'}
+      // Rotation turns about Y only (headings); an axis lock (X / Y / Z keys) leaves just that axis's handle.
+      showX={mode !== 'rotate' && (!lock || lock === 'x')}
+      showY={!lock || lock === 'y' || mode === 'rotate'}
+      showZ={mode !== 'rotate' && (!lock || lock === 'z')}
       // (Translation snapping is done by the snap engine in write(), the grid included.)
       translationSnap={null}
       rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
