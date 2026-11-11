@@ -50,6 +50,10 @@
     { "text": "경사 10도 아래 나무 전부 선택", "expect": ["select type:tree where slope<10"] },
     { "text": "길 위에 있는 차 선택해요", "expect": ["select type:car where on road"] },
     { "text": "숨겨진 건물 전부 선택", "expect": ["select type:building where hidden"] },
-    { "text": "건물과 나무 선택해", "unknown": true, "why": "two kinds in one target" }
+    { "text": "#Building_AB12 선택", "expect": ["select #Building_AB12"] },
+    { "text": "N4에서 30 m 이내 나무들 선택", "expect": ["select type:tree where near node:n4 r=30"] },
+    { "text": "건물과 나무 선택해", "unknown": true, "why": "two kinds in one target" },
+    { "text": "나무 선택", "expect": ["select type:tree"] },
+    { "text": "건물 선택해 줘", "expect": ["select type:building"] }
   ]
 }

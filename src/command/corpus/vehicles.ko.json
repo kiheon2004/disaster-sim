@@ -32,6 +32,12 @@
     { "text": "사람 마흔 명 지도 중앙에", "expect": ["place human count=40 at=center"] },
     { "text": "행인 쉰 명 이곳에 놓아요", "expect": ["place human count=50 at=cursor"] },
     { "text": "길 위에 차 아홉 대", "expect": ["place car count=9 along=road:any"] },
+    { "text": "구간 s2에 차 세 대", "expect": ["place car count=3 along=seg:s2"] },
+    { "text": "s3에 사람 다섯 명", "expect": ["place human count=5 along=seg:s3"] },
+    { "text": "S2 도로에 차 두 대", "expect": ["place car count=2 along=seg:s2"] },
+    { "text": "큰길 양쪽에 트럭 두 대 주차해", "expect": ["place car:truck count=2 along=road:main side=left", "place car:truck count=2 along=road:main side=right"] },
+    { "text": "여기에 다섯 대 놓아", "ask": "kind" },
+    { "text": "세 명 배치해", "ask": "kind" },
     { "text": "트럭 전부 지워", "expect": ["delete type:car:truck"] },
     { "text": "서쪽을 보게 트럭 한 대 놓아", "unknown": true, "why": "facing words are not supported in this version" }
   ]

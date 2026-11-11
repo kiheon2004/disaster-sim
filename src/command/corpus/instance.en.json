@@ -32,6 +32,9 @@
     { "text": "move the tornado to n4", "expect": ["disaster tornado move to=node:n4"] },
     { "text": "move the landslide to the hill", "expect": ["disaster landslide move to=feature:hill"] },
     { "text": "move p4 to 15 m north of the junction", "expect": ["disaster p4 move to=north(junction,15)"] },
+    { "text": "cancel the fire", "expect": ["disaster fire delete"] },
+    { "text": "cancel p3", "expect": ["disaster p3 delete"] },
+    { "text": "delete P3", "expect": ["disaster p3 delete"] },
     { "text": "move p3", "ask": "place" },
     { "text": "please stop", "expect": ["pause"] },
     { "text": "remove all trees", "expect": ["delete type:tree"] }

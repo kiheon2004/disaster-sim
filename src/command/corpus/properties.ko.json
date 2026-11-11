@@ -23,7 +23,15 @@
     { "text": "방금 만든 건물들 가장 큰 건물이랑 같은 구조와 물성으로", "expect": ["copy structure,physics from=(type:building largest) to=last"] },
     { "text": "이것들 #building_ab12와 같은 물성과 구조로 해 주세요", "expect": ["copy physics,structure from=#building_ab12 to=selection"] },
     { "text": "나무 전부 #tree_0a1b2c랑 같은 물성으로", "expect": ["copy physics from=#tree_0a1b2c to=type:tree"] },
+    { "text": "첫 번째 것이랑 같은 방향과 크기로", "expect": ["copy heading,scale from=(selection first 1) to=selection"] },
+    { "text": "같은 구조로", "ask": "target" },
+    { "text": "같은 물성으로 해 줘", "ask": "target" },
+    { "text": "첫 번째 건물이랑 같게", "ask": "field" },
+    { "text": "#building_ab12처럼 같게 해", "ask": "field" },
+    { "text": "#building_ab12처럼 같은 크기로", "expect": ["match it scale to=#building_ab12"] },
     { "text": "이 건물들 같은 높이로", "expect": ["match selection height"] },
-    { "text": "선택한 것 복제해", "expect": ["duplicate selection"] }
+    { "text": "선택한 것 복제해", "expect": ["duplicate selection"] },
+    { "text": "#building_ab12의 방향을 복사해", "expect": ["copy heading from=#building_ab12 to=selection"] },
+    { "text": "#building_ab12의 크기 복사", "expect": ["copy scale from=#building_ab12 to=selection"] }
   ]
 }

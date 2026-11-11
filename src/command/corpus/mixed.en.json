@@ -27,6 +27,9 @@
     { "text": "flatten a 10 m circle here, then paint with grass", "expect": ["terrain flatten circle cursor r=10", "paint circle cursor r=10 ground=grass"] },
     { "text": "deselect all and select all trees", "expect": ["select none", "select type:tree"] },
     { "text": "align the west edges of the selection and space them evenly north–south", "expect": ["align selection axis=x mode=min ref=origin", "distribute selection axis=z gaps"] },
+    { "text": "move the selection east and rotate it 30°", "ask": "amount" },
+    { "text": "move this 5 m and double it", "ask": "direction" },
+    { "text": "place three houses and rename them", "ask": "name" },
     { "text": "delete the trees and the street lights", "unknown": true, "why": "two kinds in one target" }
   ]
 }

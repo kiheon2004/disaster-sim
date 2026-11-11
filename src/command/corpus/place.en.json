@@ -70,8 +70,15 @@
     { "text": "five road barriers on this road", "expect": ["place roadBarrier count=5 along=road:nearest(cursor)"] },
     { "text": "seven balls on top of the hill", "expect": ["place ball count=7 at=feature:hill"] },
     { "text": "a hollow ball here", "expect": ["place ball:hollow at=cursor"] },
+    { "text": "three houses on both sides of the main road", "expect": ["place building:house count=3 along=road:main side=left", "place building:house count=3 along=road:main side=right"] },
+    { "text": "five street lights on both sides of the road, 10 m apart", "expect": ["place streetLight count=5 along=road:any side=left gap=10", "place streetLight count=5 along=road:any side=right gap=10"] },
+    { "text": "a street light on segment s2", "expect": ["place streetLight at=seg:s2@0.5"] },
+    { "text": "a warehouse on s3", "expect": ["place building:warehouse at=seg:s3@0.5"] },
+    { "text": "place a house there", "expect": ["place building:house at=view"] },
     { "text": "put three here", "ask": "kind" },
     { "text": "add two back there", "ask": "kind" },
-    { "text": "place a house facing north", "unknown": true, "why": "facing words are not supported in this version" }
+    { "text": "place a house facing north", "unknown": true, "why": "facing words are not supported in this version" },
+    { "text": "a street light on road s2", "expect": ["place streetLight at=seg:s2@0.5"] },
+    { "text": "four street lights along road s2", "expect": ["place streetLight count=4 along=seg:s2"] }
   ]
 }

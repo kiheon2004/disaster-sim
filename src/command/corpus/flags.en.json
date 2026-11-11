@@ -34,6 +34,12 @@
     { "text": "unlock everything that is locked", "expect": ["unlock all where locked"] },
     { "text": "could you unlock the group \"North block\"", "expect": ["unlock group:\"North block\""] },
     { "text": "unlock the new ones", "expect": ["unlock last"] },
+    { "text": "lock them all", "expect": ["lock it"] },
+    { "text": "hide these all", "expect": ["hide selection"] },
+    { "text": "lock building", "expect": ["lock type:building"] },
+    { "text": "hide car", "expect": ["hide type:car"] },
+    { "text": "show hidden", "expect": ["show all where hidden"] },
+    { "text": "Show hidden, please", "expect": ["show all where hidden"] },
     { "text": "show me the trees", "expect": ["focus type:tree"] },
     { "text": "don't hide the trees", "unknown": true, "why": "negation" }
   ]

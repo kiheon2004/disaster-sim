@@ -24,6 +24,11 @@
     { "text": "n1에서 n1 동쪽 40 m까지 4차로 도로", "expect": ["road node:n1 -> east(node:n1,40) preset=avenue"] },
     { "text": "산에서 강까지 흙길 만들어", "expect": ["road feature:mountain -> feature:river preset=dirt"] },
     { "text": "(20, -70)에서 (20, 70)까지 자갈길", "expect": ["road 20,-70 -> 20,70 preset=gravel"] },
+    { "text": "N1에서 N2까지 도로", "expect": ["road node:n1 -> node:n2"] },
+    { "text": "도로 만들어", "ask": "place" },
+    { "text": "2차로 도로 깔아", "ask": "place" },
+    { "text": "6차로 도로 n1에서 n2까지", "unknown": true, "why": "a lane count that is not a preset" },
+    { "text": "n1에서 n2까지 8차로 도로", "unknown": true, "why": "a lane count that is not a preset" },
     { "text": "n4에서 도로 만들어", "ask": "place" },
     { "text": "(40, 60)까지 도로 깔아", "ask": "place" },
     { "text": "n2–n3 도로 북쪽에 주택 두 채", "expect": ["place building:house count=2 along=road:n2-n3 side=north"] }

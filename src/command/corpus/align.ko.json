@@ -38,6 +38,9 @@
     { "text": "선택한 것 같은 크기로", "expect": ["match selection scale"] },
     { "text": "첫 번째 것에 맞춰 같은 높이로", "expect": ["match it height to=(selection first 1)"] },
     { "text": "#building_ab12처럼 같은 높이로", "expect": ["match it height to=#building_ab12"] },
+    { "text": "#b1처럼 같은 크기로", "expect": ["match it scale to=#b1"] },
+    { "text": "첫 번째 건물이랑 같은 방향으로", "expect": ["match it heading to=(selection first 1)"] },
+    { "text": "이 건물들 가장 큰 건물과 같은 크기로", "expect": ["match selection scale to=(type:building largest)"] },
     { "text": "나무 전부 같은 방향으로 맞춰", "expect": ["match type:tree heading"] },
     { "text": "방금 만든 것들 같은 높이로", "expect": ["match last height"] }
   ]

@@ -72,8 +72,15 @@
     { "text": "도로 방호벽 다섯 개 여기 도로에", "expect": ["place roadBarrier count=5 along=road:nearest(cursor)"] },
     { "text": "공 일곱 개 언덕 위에", "expect": ["place ball count=7 at=feature:hill"] },
     { "text": "속 빈 공 하나 여기에", "expect": ["place ball:hollow at=cursor"] },
+    { "text": "큰길 양쪽에 주택 세 채", "expect": ["place building:house count=3 along=road:main side=left", "place building:house count=3 along=road:main side=right"] },
+    { "text": "도로 양쪽에 가로등 다섯 개 간격 10 m", "expect": ["place streetLight count=5 along=road:any side=left gap=10", "place streetLight count=5 along=road:any side=right gap=10"] },
+    { "text": "구간 s2에 가로등 하나", "expect": ["place streetLight at=seg:s2@0.5"] },
+    { "text": "s3에 창고 한 동", "expect": ["place building:warehouse at=seg:s3@0.5"] },
+    { "text": "두 채 지어", "ask": "kind" },
     { "text": "여기에 세 개 놓아", "ask": "kind" },
     { "text": "거기에 두 개 추가해 줘", "ask": "kind" },
-    { "text": "북쪽을 보게 주택 하나 놓아", "unknown": true, "why": "facing words are not supported in this version" }
+    { "text": "북쪽을 보게 주택 하나 놓아", "unknown": true, "why": "facing words are not supported in this version" },
+    { "text": "s2 도로에 가로등 하나", "expect": ["place streetLight at=seg:s2@0.5"] },
+    { "text": "s2 도로를 따라 가로등 네 개", "expect": ["place streetLight count=4 along=seg:s2"] }
   ]
 }

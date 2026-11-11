@@ -32,7 +32,16 @@
     { "text": "paint the hill rock", "expect": ["paint feature:hill ground=rock"] },
     { "text": "paint the river with riverbed", "expect": ["paint feature:river ground=riverbed"] },
     { "text": "paint 2 m around all trees with grass", "expect": ["paint around type:tree r=2 ground=grass"] },
+    { "text": "flatten here", "ask": "amount" },
+    { "text": "smooth the ground over there", "ask": "amount" },
+    { "text": "raise the ground by 2 m", "ask": "place" },
+    { "text": "raise it to 3 m", "unknown": true, "why": "raise / lower to a height is not supported (flatten has to=)" },
+    { "text": "lower the hill to 2 m", "unknown": true, "why": "raise / lower to a height is not supported (flatten has to=)" },
+    { "text": "paint a 5 m circle here with snow", "unknown": true, "why": "not a ground name" },
+    { "text": "paint the hill with lava", "unknown": true, "why": "not a ground name" },
     { "text": "raise the buildings by 0.5 m", "expect": ["move type:building by=0,0.5,0"] },
-    { "text": "lower these buildings 1 m", "expect": ["move selection by=0,-1,0"] }
+    { "text": "lower these buildings 1 m", "expect": ["move selection by=0,-1,0"] },
+    { "text": "paint here with grass", "ask": "amount" },
+    { "text": "paint over there with sand", "ask": "amount" }
   ]
 }

@@ -33,6 +33,9 @@
     { "text": "토네이도를 n4로 옮겨 줘", "expect": ["disaster tornado move to=node:n4"] },
     { "text": "산사태를 언덕으로 옮기세요", "expect": ["disaster landslide move to=feature:hill"] },
     { "text": "p4를 교차로 북쪽 15 m로 옮겨", "expect": ["disaster p4 move to=north(junction,15)"] },
+    { "text": "지진 취소", "expect": ["disaster earthquake delete"] },
+    { "text": "화재 #2 취소해", "expect": ["disaster fire#2 delete"] },
+    { "text": "P3 지워", "expect": ["disaster p3 delete"] },
     { "text": "p3 옮겨", "ask": "place" },
     { "text": "멈춰 주세요", "expect": ["pause"] },
     { "text": "나무 전부 없애", "expect": ["delete type:tree"] }

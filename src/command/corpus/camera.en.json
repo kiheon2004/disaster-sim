@@ -33,7 +33,13 @@
     { "text": "show me the trucks", "expect": ["focus type:car:truck"] },
     { "text": "focus on the buildings with brace warnings", "expect": ["focus type:building where warning=brace"] },
     { "text": "zoom to the buildings with warnings", "expect": ["focus type:building where warning"] },
+    { "text": "go to N4", "expect": ["focus at=node:n4"] },
+    { "text": "show me the fire", "unknown": true, "why": "a placed disaster is not a camera target" },
+    { "text": "show me the main road", "unknown": true, "why": "a road is not a camera target" },
+    { "text": "zoom to the tornado", "unknown": true, "why": "a placed disaster is not a camera target" },
     { "text": "show the hidden trees again", "expect": ["show type:tree where hidden"] },
-    { "text": "move the selection to node n4", "expect": ["move selection to=node:n4"] }
+    { "text": "move the selection to node n4", "expect": ["move selection to=node:n4"] },
+    { "text": "focus on building", "expect": ["focus type:building"] },
+    { "text": "zoom to tree", "expect": ["focus type:tree"] }
   ]
 }

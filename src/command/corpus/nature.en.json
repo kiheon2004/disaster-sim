@@ -31,6 +31,15 @@
     { "text": "Plant 12 trees on the hill", "expect": ["place tree count=12 at=feature:hill"] },
     { "text": "plant thirty trees", "expect": ["place tree count=30"] },
     { "text": "plant nine trees here", "expect": ["place tree count=9 at=cursor"] },
-    { "text": "a sparse forest on the mountain, seed 3", "expect": ["forest feature:mountain density=low seed=3"] }
+    { "text": "a sparse forest on the mountain, seed 3", "expect": ["forest feature:mountain density=low seed=3"] },
+    { "text": "put a tree there", "expect": ["place tree at=view"] },
+    { "text": "two pines there", "expect": ["place tree:conifer count=2 at=view"] },
+    { "text": "plant three", "ask": "kind" },
+    { "text": "plant a forest", "ask": "place" },
+    { "text": "a dense forest", "ask": "place" },
+    { "text": "a pine forest", "unknown": true, "why": "a forest has no species option" },
+    { "text": "plant a conifer forest on the hill", "unknown": true, "why": "a forest has no species option" },
+    { "text": "a forest here", "ask": "amount" },
+    { "text": "make a forest over there", "ask": "amount" }
   ]
 }

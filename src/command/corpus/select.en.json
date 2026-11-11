@@ -52,6 +52,10 @@
     { "text": "select buildings with 2 floors or less", "expect": ["select type:building where floors<=2"] },
     { "text": "select cars on a road", "expect": ["select type:car where on road"] },
     { "text": "select buildings with height less than 8 m", "expect": ["select type:building where height<8"] },
-    { "text": "select the trees and the cars", "unknown": true, "why": "two kinds in one target" }
+    { "text": "select #Building_AB12", "expect": ["select #Building_AB12"] },
+    { "text": "select the trees within 30 m of N4", "expect": ["select type:tree where near node:n4 r=30"] },
+    { "text": "select the trees and the cars", "unknown": true, "why": "two kinds in one target" },
+    { "text": "select tree", "expect": ["select type:tree"] },
+    { "text": "select building", "expect": ["select type:building"] }
   ]
 }

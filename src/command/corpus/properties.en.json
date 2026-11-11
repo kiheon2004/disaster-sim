@@ -24,7 +24,14 @@
     { "text": "give the new ones the same structure and physics as the largest building", "expect": ["copy structure,physics from=(type:building largest) to=last"] },
     { "text": "Please give these the same physics and structure as #building_ab12", "expect": ["copy physics,structure from=#building_ab12 to=selection"] },
     { "text": "give all trees the same physics as #tree_0a1b2c", "expect": ["copy physics from=#tree_0a1b2c to=type:tree"] },
+    { "text": "give them the same heading and size as the first one", "expect": ["copy heading,scale from=(selection first 1) to=it"] },
+    { "text": "copy the structure", "ask": "target" },
+    { "text": "copy the physics", "ask": "target" },
+    { "text": "make them the same as the first building", "ask": "field" },
+    { "text": "the same as #building_ab12", "ask": "field" },
+    { "text": "give them the same size as #building_ab12", "expect": ["match it scale to=#building_ab12"] },
     { "text": "make these buildings the same height", "expect": ["match selection height"] },
-    { "text": "copy these", "expect": ["duplicate selection"] }
+    { "text": "copy these", "expect": ["duplicate selection"] },
+    { "text": "copy the size of #building_ab12", "expect": ["copy scale from=#building_ab12 to=selection"] }
   ]
 }

@@ -33,6 +33,12 @@
     { "text": "잠긴 것 잠금 풀어 줘", "expect": ["unlock all where locked"] },
     { "text": "'북쪽 블록' 그룹 잠금 해제해 주세요", "expect": ["unlock group:\"북쪽 블록\""] },
     { "text": "방금 만든 것 잠금 풀어", "expect": ["unlock last"] },
+    { "text": "이 건물들 모두 잠가", "expect": ["lock selection"] },
+    { "text": "방금 만든 것 모두 숨겨", "expect": ["hide last"] },
+    { "text": "건물 잠가", "expect": ["lock type:building"] },
+    { "text": "차 숨겨", "expect": ["hide type:car"] },
+    { "text": "숨긴 것 표시해", "expect": ["show all where hidden"] },
+    { "text": "숨긴 것 전부 다시 보이게 해", "expect": ["show all where hidden"] },
     { "text": "나무들 보여 줘", "expect": ["focus type:tree"] },
     { "text": "나무는 숨기지 마", "unknown": true, "why": "negation" }
   ]

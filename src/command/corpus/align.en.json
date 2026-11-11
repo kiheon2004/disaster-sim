@@ -37,6 +37,9 @@
     { "text": "make the selection the same size", "expect": ["match selection scale"] },
     { "text": "same height as the first one", "expect": ["match it height to=(selection first 1)"] },
     { "text": "make them the same height, like #building_ab12", "expect": ["match it height to=#building_ab12"] },
+    { "text": "the same heading as #b1", "expect": ["match it heading to=#b1"] },
+    { "text": "give them the same size as the largest building", "expect": ["match it scale to=(type:building largest)"] },
+    { "text": "make these the same heading as the first one", "expect": ["match selection heading to=(selection first 1)"] },
     { "text": "make all trees face the same way", "expect": ["match type:tree heading"] },
     { "text": "same height for the new ones", "expect": ["match last height"] }
   ]

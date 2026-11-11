@@ -29,6 +29,9 @@
     { "text": "여기 반경 10 m 평평하게 하고 잔디로 칠해", "expect": ["terrain flatten circle cursor r=10", "paint circle cursor r=10 ground=grass"] },
     { "text": "선택 해제하고 나무 전부 선택", "expect": ["select none", "select type:tree"] },
     { "text": "선택한 것 서쪽 맞추고 남북으로 같은 간격으로", "expect": ["align selection axis=x mode=min ref=origin", "distribute selection axis=z gaps"] },
+    { "text": "선택한 것 동쪽으로 옮기고 30도 회전", "ask": "amount" },
+    { "text": "이것 5 m 옮기고 두 배로", "ask": "direction" },
+    { "text": "주택 세 채 놓고 이름 바꿔", "ask": "name" },
     { "text": "나무와 가로등 지워", "unknown": true, "why": "two kinds in one target" }
   ]
 }

@@ -20,6 +20,8 @@
     { "text": "그룹 몇 개 있어요?", "expect": ["count groups"] },
     { "text": "도로 몇 개야?", "expect": ["count roads"] },
     { "text": "가새 경고 있는 건물은?", "expect": ["list type:building where warning=brace"] },
+    { "text": "건물 몇 채야? 가새 경고 있는 건물은?", "expect": ["count type:building", "list type:building where warning=brace"] },
+    { "text": "나무 몇 그루야? 차는 몇 대야?", "expect": ["count type:tree", "count type:car"] },
     { "text": "어떤 건물이 가새 경고 있어?", "expect": ["list type:building where warning=brace"] },
     { "text": "경고 있는 건물 목록", "expect": ["list type:building where warning"] },
     { "text": "잠긴 건물은?", "expect": ["list type:building where locked"] },
@@ -45,6 +47,8 @@
     { "text": "가장 큰 건물 알려 줘", "expect": ["info type:building largest"] },
     { "text": "피해 알려 줘", "expect": ["info sim"] },
     { "text": "얼마나 무너졌어?", "expect": ["info sim"] },
-    { "text": "붕괴 현황", "expect": ["info sim"] }
+    { "text": "붕괴 현황", "expect": ["info sim"] },
+    { "text": "건물 몇 채야? 가새 경고 있는 것은?", "expect": ["count type:building", "list type:building where warning=brace"] },
+    { "text": "나무 몇 그루야? 숨긴 것은?", "expect": ["count type:tree", "list type:tree where hidden"] }
   ]
 }

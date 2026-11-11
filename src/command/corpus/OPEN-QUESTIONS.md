@@ -1,75 +1,101 @@
 # Corpus — open questions (Phase 37 §6)
 
-Sentences the corpus author could not give an expectation for from `NL-CONVENTIONS.md` alone. None of them is in the
-corpus (no guessed answers). Each needs a rule; then the sentence can be added with a hand-written expectation.
-Section B lists expectations that ARE in the corpus but rest on combining two rules (no example of their own in the
-conventions) — veto any of them and the case is removed.
+Sentences the corpus author could not give an expectation for from `NL-CONVENTIONS.md` alone are listed here instead
+of being guessed. The 30 questions of the first round were decided on 2026-11-11 (`NL-CONVENTIONS.md` §6, D1–D30) and
+are now cases in the corpus; section 1 keeps the short record. Section 2 is the second round (N1–N5 → D31–D35), also decided. Section 3 lists expectations that ARE in the corpus but rest on combining two rules. Section 4 is what the
+canonical grammar cannot write.
 
-## A. Not decided by the conventions (left out)
+## 1. Decided (A1–A30 → D1–D30) — now in the corpus
 
-| # | Sentence | Question |
-|---|---|---|
-| A1 | 규모 7 지진을 발생시켜 · make an earthquake · generate a magnitude 6.5 earthquake | §5 legacy form: "earthquake = `duration magnitude pga` (only those the type resolves)". Which fields are written when only the magnitude is said — the definition's defaults (`duration=25 pga=0.3`), or nothing because the type resolves them? No earthquake + run-verb sentence is in the corpus. |
-| A2 | 여기에 규모 7 지진을 일으켜 · 중앙에 초당 5세제곱미터의 물을 공급해줘 | Legacy run-now sentence WITH a position (or a start time): is `at=` / `start=` written next to "every basic field"? And 공급해 is not in the run-verb list. |
-| A3 | 선택한 것 모두 높이 0.5 m 올려 (specification §1) | "선택한 것 모두": `selection` (모두 only stresses it) or `all`? Proposed: `move selection by=0,0.5,0`. |
-| A4 | 큰길 양쪽에 주택 세 채 · three houses on both sides of the main road | Two commands — each with `count=3`, or three in all? (The corpus has both-sides sentences without a count only.) |
-| A5 | 여기에 다섯 대 놓아 · 세 그루 심어 | A counter with no kind word ("counters also hint the kind"): `place car count=5 at=cursor` / `place tree count=3`, or `ask kind`? (The corpus asks `kind` only with 개 / no counter.) |
-| A6 | 숲을 만들어 · plant a forest · 숲, 밀도 낮게 | `forest` needs an area and none is said: `ask` — with which slot (`place`?) — or `unknown`? |
-| A7 | 여기를 평평하게 · 땅을 2 m 올려 · flatten here | §3.9 says 여기를 / 땅을 is GROUND, but an area needs a radius / rectangle. `ask amount`? `ask place`? A default radius? |
-| A8 | 여기 반경 10 m를 3 m로 올려 · raise it to 3 m | A height to raise / lower TO: the grammar has `to=` for flatten only. `unknown`? |
-| A9 | 같은 구조로 · copy the structure · 첫 번째 건물이랑 같게 | `copy` with no reference (→ `ask target`?) or with no property (→ `ask field`?). |
-| A10 | #building_ab12처럼 같은 크기로 · 첫 번째 건물이랑 같은 방향으로 · give them the same heading as #b1 | §3.5 (`match … scale to=#id`) and §3.6 (`copy scale from=#id to=selection`) both fit when the property is heading / scale and a reference is named. Which wins? (The corpus uses height for match-with-reference and structure / params / physics, lists, or the verb "copy" for copy.) |
-| A11 | 선택한 것 n4로 이동 · 이것 북쪽으로 3 m 이동 | 이동 with an object target: §3.12 lists "로 이동 (camera)", §3.4 only shows 옮겨. Move, or camera? (The corpus uses 이동 only as the camera verb with a place and no target.) |
-| A12 | 그것 n4의 남쪽으로 옮겨 · move it to the south of n4 | Place `south(node:n4)` + move-to, or "a direction without a distance" → `ask amount`? |
-| A13 | 구간 s2에 차 세 대 · three cars on segment s2 | §2.4 reads "구간 s2 / segment s2" as a point (`at=seg:s2@0.5`), §2.5 as a road (`along=seg:s2`). In `place`, which? (The corpus uses "s2 도로 / road s2" for along and "구간 s2 / segment s2" only where a point is needed.) |
-| A14 | put a tree there | "there" alone: `view` (pointing) or `last` (back there)? |
-| A15 | 지진 취소 · cancel the fire | "취소 with a disaster word is not undo" — then what: `disaster earthquake delete`, `stop`, or `unknown`? |
-| A16 | 다시 시작 · 계속 · resume · continue (no disaster word) | Resume the whole simulation (`run`)? `reset` (다시 시작 ≈ restart)? `unknown`? |
-| A17 | 전부 멈춰 · stop everything | `pause`, or `disaster all stop` ("everything with a disaster verb object")? |
-| A18 | 중력 0.5 g · gravity 0.5 g | "`<n>` g (×9.81)… only m/s² is accepted": `ask field`, or `magnitude=4.905`? |
-| A19 | 언덕에 소나무 숲 · a pine forest on the hill | The grammar's `forest` has no species. Drop the species, or `unknown`? |
-| A20 | 나무 지워 · delete tree · 건물 잠가 | A bare kind noun (no 전부 / 들 / 다 / all / the …s, no filter) as the target of an editing verb: `type:tree` (every tree)? The corpus uses bare kinds only in queries and with a filter / rank, as the conventions' own examples do. |
-| A21 | 화재 보여 줘 · 큰길 보여 줘 · 도로 지워 | A placed disaster or a road as a camera / delete target: no target or place form exists for them. |
-| A22 | 도로 만들어 · 6차로 도로 n1에서 n2까지 | A road with no end at all (two missing pieces — `ask place` or `unknown`?) and a lane count that is not a preset. |
-| A23 | 선택한 것 동쪽으로 옮기고 30도 회전 | Several clauses, one of them missing a piece: is the whole sentence `ask amount`? |
-| A24 | 선택한 것 동쪽으로 5 옮겨 · 30 회전 | A number with no unit: §0 says "`ask` / `unknown`" — which, and which slot? |
-| A25 | N4로 가 · select #Building_AB12 | §1: case never changes the meaning — are ids lower-cased (`node:n4`), or kept as typed? |
-| A26 | 건물 몇 채야? 가새 경고 있는 건물은? (specification §6, one line) | Is "?" a clause separator (two queries), like `,` and `;`? The corpus has the two questions as separate sentences. |
-| A27 | 복사해서 … (§3.7) | Which continuations are meant ("복사해서 동쪽에 놓아"?), and is the result `duplicate` alone? |
-| A28 | show hidden | The phrase is listed as a verb form of `show <target>`: with nothing else, `show it` or `show all where hidden`? (The corpus has "show everything hidden again" → `show all where hidden`.) |
-| A29 | 여기 반경 5 m 눈으로 칠해 | A ground name that is not in the list: `unknown`, or `ask field`? |
-| A30 | 교차로에 바람 30 m/s · rain at the junction | `at=` on a map-wide disaster (wind) — written and ignored later, or left out? |
+| # | Example sentence | Outcome (rule D#) | Class file |
+|---|---|---|---|
+| D1 | 규모 7 지진을 발생시켜 · make an earthquake | legacy form with a run verb: `disaster earthquake magnitude=7 now` / `magnitude=6.5 now` (pga / duration only when said); the other four legacy types write every basic field | disaster |
+| D2 | 여기에 규모 7 지진을 일으켜 · 중앙에 초당 5세제곱미터의 물을 공급해줘 | a said position / start time is written too; 공급해 / supply runs a water source: `disaster waterSource at=center duration=600 rate=5 now` | disaster |
+| D3 | 선택한 것 모두 높이 0.5 m 올려 | 모두 / all after a set only stresses it: `move selection by=0,0.5,0` | transform, flags, edit |
+| D4 | 큰길 양쪽에 주택 세 채 | each side gets the count (two commands, both `count=3`) | place, vehicles |
+| D5 | 여기에 다섯 대 놓아 · 세 그루 심어 | a counter names no kind: `ask kind` | vehicles, nature, place |
+| D6 | 숲을 만들어 · plant a forest | no area: `ask place` | nature |
+| D7 | 여기를 평평하게 / 땅을 2 m 올려 | a place but no extent: `ask amount`; no place at all: `ask place` | terrain |
+| D8 | 여기 반경 10 m를 3 m로 올려 · raise it to 3 m | `unknown` | terrain |
+| D9 | 같은 구조로 / 첫 번째 건물이랑 같게 | no reference: `ask target`; no property: `ask field` | properties |
+| D10 | #b1처럼 같은 크기로 · the same heading as #b1 | heading / scale / height + a reference, no copy verb: `match … to=`; copy is for structure / params / physics, lists, and the verb 복사 / copy | align, properties |
+| D11 | 선택한 것 n4로 이동 · 이것 북쪽으로 3 m 이동 | 이동 with an object target is a move; with only a place, the camera | transform |
+| D12 | 그것 n4의 남쪽으로 옮겨 | `move it to=south(node:n4)` | transform |
+| D13 | 구간 s2에 차 세 대 | a segment with 에 / on: `along=seg:s2` for cars and people, `at=seg:s2@0.5` for everything else | vehicles, place |
+| D14 | put a tree there | "there" alone = `view` | nature, place (en) |
+| D15 | 지진 취소 · cancel the fire | `disaster <type> delete` | instance |
+| D16 | 계속 · 재개 · resume · continue / 다시 시작 · restart (alone) | `run` / `reset` | run |
+| D17 | 전부 멈춰 · stop everything | `pause` | run |
+| D18 | 중력 0.5 g | `ask field` | disaster |
+| D19 | 언덕에 소나무 숲 · a pine forest | `unknown` | nature |
+| D20 | 나무 지워 · delete tree · 건물 잠가 | a bare kind noun with an editing verb = every object of the kind | edit, flags |
+| D21 | 화재 보여 줘 · 큰길 보여 줘 · 도로 지워 | `unknown` ("화재 지워" stays `disaster fire delete`) | camera, edit |
+| D22 | 도로 만들어 / 6차로 도로 n1에서 n2까지 | `ask place` / `unknown` | road |
+| D23 | 선택한 것 동쪽으로 옮기고 30도 회전 | the whole sentence is the `ask` of the incomplete clause | mixed |
+| D24 | 선택한 것 동쪽으로 5 옮겨 · 30 회전 | a number with no unit where one is needed: `ask amount` | transform |
+| D25 | N4로 가 · select #Building_AB12 | node / segment / instance ids lower-case; object ids as typed | camera, select, vehicles, road, instance, edit |
+| D26 | 건물 몇 채야? 가새 경고 있는 건물은? | `?` separates clauses: two queries | query |
+| D27 | 복사해서 동쪽에 10 m 놓아 / 복사해 | `duplicate it offset=10,0` / `duplicate it` | edit |
+| D28 | show hidden | `show all where hidden` | flags |
+| D29 | 여기 반경 5 m 눈으로 칠해 | `unknown` | terrain |
+| D30 | 교차로에 바람 30 m/s · rain at the junction | a said position is written: `disaster wind at=junction speed=30` | disaster |
 
-## B. In the corpus, by combining rules (no example of their own)
+Checked against the 1,550 earlier cases: none contradicted a decision, no expectation was changed.
+
+## 2. Second-round questions (N1–N5 → D31–D35) — decided 2026-11-11, now in the corpus
+
+| # | Example sentence | Outcome (rule D#) | Class file |
+|---|---|---|---|
+| D31 | how many buildings? which have brace warnings? · 건물 몇 채야? 가새 경고 있는 것은? | in a sentence of several clauses, a later query clause with no kind takes the earlier clause's kind (§4): `count type:building` + `list type:building where warning=brace`; the same words alone stay `list all where warning=brace` | query |
+| D32 | 여기에 숲을 만들어 · a forest here / 여기를 잔디로 칠해 · paint here with grass | a place but no extent for `forest` / `paint`: `ask amount` (as D7 for terrain) | nature, terrain |
+| D33 | 나무 선택 · select tree / 나무 보여 줘 · focus on building | a bare kind noun is every object of the kind for select and the camera too: `select type:tree`, `focus type:tree` (D21 stays: a road or a placed disaster is not such a target) | select, camera |
+| D34 | s2 도로에 가로등 하나 · a street light on road s2 | for everything but cars and people, a plain 에 / on with a segment id is D13 (`at=seg:s2@0.5`) whether it is called 구간 / segment or 도로 / road; a side word or 따라 / along makes it `along=seg:s2` | place |
+| D35 | #building_ab12의 방향을 복사해 | 복사 / copy with a property as its object is `copy <property> from=<ref> to=selection`; 복사해 with no property stays duplicate (D27) | properties |
+
+Nothing is open after the second round.
+
+## 3. In the corpus, by combining rules (no example of their own)
+
+B1–B18 were accepted as written on 2026-11-11 (§6, last paragraph); B19–B24 (second round) were accepted the same day.
 
 | # | Sentence → expectation | Rules combined |
 |---|---|---|
-| B1 | 여기에 세 개 놓아 · put three here → `ask kind` | §0 (place cannot be written without a kind; the slot list has `kind`) |
+| B1 | 여기에 세 개 놓아 · put three here → `ask kind` | §0 (place cannot be written without a kind) |
 | B2 | 선택한 것 10으로 설정해 · set the selection to 10 → `ask field` | §0 ("`set` a field + value") |
-| B3 | 더 빠르게 · faster → `ask amount` | §5 (relative amounts the grammar cannot write) applied to speed |
+| B3 | 더 빠르게 · faster → `ask amount` | §5 (relative amounts) applied to speed |
 | B4 | p3 옮겨 · move p3 → `ask place` | §0 + §3.11 (`disaster <instance> move` needs `to=`) |
-| B5 | 여기 반경 10 m 평평하게 하고 잔디로 칠해 → `terrain flatten circle cursor r=10` + `paint circle cursor r=10 ground=grass` | §4 (position words carry over when the later clause needs one) applied to an area |
-| B6 | 주택 두 채 놓고 이름을 '쌍둥이 집'으로 → `place …` + `rename last "쌍둥이 집"` | §4 (after place: `last`) + §3.7 rename; the name merges into `group … name=` only after a group clause |
+| B5 | 여기 반경 10 m 평평하게 하고 잔디로 칠해 → flatten + `paint circle cursor r=10 ground=grass` | §4 (position words carry over) applied to an area |
+| B6 | 주택 두 채 놓고 이름을 '쌍둥이 집'으로 → `place …` + `rename last "쌍둥이 집"` | §4 (after place: `last`) + §3.7 rename |
 | B7 | 나무 처음 세 개 선택 · select the first three trees → `select type:tree first 3` | §2.3 limits on a kind base |
-| B8 | 숨겨 · 잠금 풀어 · 숨김 해제 · 묶어 · 지워 · 복제해 (and hide / unlock / unhide / group / delete / duplicate) → `<verb> it` | §3 (a target that is not said is `it`) |
-| B9 | 잠긴 것 선택 해제 → `remove all where locked` · how many are hidden? → `count all where hidden` · 숨긴 것 전부 삭제해 → `delete all where hidden` | by analogy with "숨긴 것 다시 보여 줘" → `show all where hidden` and "which have brace warnings?" → `list all where …` |
-| B10 | 가장 큰 건물과 같은 구조와 크기로 · copy the structure and scale of … → `copy structure,scale …` | §3.6 ("order as said" implies a list); the `와` / `and` of the list is not a clause split (§4) |
-| B11 | give them the same structure as the first one → `copy structure from=(selection first 1) to=it` | §2.3 (them = `it`) + §3.6 (`to=` is the sentence's target). The Korean twin has no target word → `to=selection`. |
-| B12 | 강풍 불게 해 · unleash a gale → `disaster wind direction=E duration=60 speed=40 now` | §5 legacy form with every default from `phenomena/definitions.ts` (wind 40 m/s, E, 60 s; rain 80 mm/h, 1800 s; rising water S, 1.5 m, 0.5 m/min) |
+| B8 | 숨겨 · 잠금 풀어 · 숨김 해제 · 묶어 · 지워 · 복제해 (and the English verbs alone) → `<verb> it` | §3 (a target that is not said is `it`) |
+| B9 | 잠긴 것 선택 해제 → `remove all where locked` · how many are hidden? → `count all where hidden` | by analogy with "숨긴 것 다시 보여 줘" → `show all where hidden` |
+| B10 | 가장 큰 건물과 같은 구조와 크기로 · copy the structure and scale of … → `copy structure,scale …` | §3.6 ("order as said"); the list's 와 / and is not a clause split |
+| B11 | give them the same structure as the first one → `copy structure from=(selection first 1) to=it` | §2.3 (them = `it`) + §3.6 (`to=` is the sentence's target) |
+| B12 | 강풍 불게 해 · unleash a gale → `disaster wind direction=E duration=60 speed=40 now` | §5 / D1 with the defaults of the audit §2.3 (wind 40 m/s, E, 60 s; rain 80 mm/h, 1800 s; rising water S, 1.5 m, 0.5 m/min; water source 5 m³/s, 600 s) |
 | B13 | 남풍 72 km/h 바람 → `speed=20` | §2.2 (km/h ÷ 3.6) — values chosen so the division is exact |
-| B14 | 두 번째 폭발 멈춰 · stop the second explosion → `disaster blast#2 stop` | §3.11 ("세 번째 화재 / the third fire") for another ordinal and type |
+| B14 | 두 번째 폭발 멈춰 · stop the second explosion → `disaster blast#2 stop` | §3.11 for another ordinal and type |
 | B15 | 선택한 것에서 #building_ab12까지 거리 → `measure selection #building_ab12` | §3.13 + §2.4 (selection / last / #id as places) |
 | B16 | put the selection 2 m above the ground → `set selection lift=2` | §3.4 (the phrase decides, whatever the verb) |
 | B17 | 산에서 분화, 10분 동안 → `disaster volcano at=feature:mountain duration=600` | §2.2 position from "…에서" |
-| B18 | 방금 만든 것 묶어서 '동쪽 줄'이라고 하고 숨겨 → `group last name=…` + `hide last` | §4 (a later clause with no target takes the earlier clause's target — here the group clause's) |
+| B18 | 방금 만든 것 묶어서 '동쪽 줄'이라고 하고 숨겨 → `group last name=…` + `hide last` | §4 (a later clause takes the earlier clause's target) |
+| B19 | plant three · park five here → `ask kind` | D5: "세 그루 심어" asks although it has the tree verb AND the tree counter — a verb alone names a kind even less |
+| B20 | copy it 10 m east · copy these 5 m north → `duplicate … offset=` · copy → `duplicate it` | §3.7 ("copy (them)" = duplicate; "duplicate it 10 m east") + D27 |
+| B21 | 선택한 것 전부 지워 → `delete selection` · delete them all → `delete it` · hide these all → `hide selection` | D3 with the other all-words of §2.3 (전부) and with it / these as the set |
+| B22 | 교차로에 풍속 30 m/s 바람을 일으켜 → `disaster wind at=junction direction=E duration=60 speed=30 now` | D1 (every basic field) + D2 / D30 (a said position is written) |
+| B23 | 주택 세 채 놓고 이름 바꿔 · place three houses and rename them → `ask name` | D23 (the incomplete clause's ask) + §3.7 (rename with no quoted name) |
+| B24 | s3에 창고 한 동 · a warehouse on s3 → `place building:warehouse at=seg:s3@0.5` | D13 for a bare segment id (§2.4 reads "s2" as a segment) |
 
-## C. What the canonical grammar cannot write (reported, not worked around)
+## 4. What the canonical grammar cannot write (reported, not worked around)
 
-- A forest of one species (A19); a terrain raise / lower TO a height (A8); a road or a placed disaster as a camera or
-  delete target (A21).
-- `place wall` (담장 · 벽 · 담 / wall): `findKind('wall')` gives the first palette wall, `wall:guardrail` — a bare "wall"
-  places a guardrail, not `wall:masonry` (`kinds.ts` DEFAULT_PRESET names building only).
-- `copy … to=` a group whose name has a space is written with parentheses: `to=(group:"북쪽 블록")` (the formatter wraps
-  any target text with a space). The corpus follows the formatter.
-- §5 lists the legacy rising-water fields as `boundary level riseRate`; the catalog's basic fields are
-  `level riseRate duration`. The corpus follows the conventions.
+| What | Outcome now |
+|---|---|
+| A forest of one species ("언덕에 소나무 숲") | `unknown` (D19) |
+| Terrain raise / lower TO a height ("3 m로 올려") | `unknown` (D8) — `to=` is for flatten only |
+| A road or a placed disaster as a camera / delete / hide target ("큰길 보여 줘", "화재 보여 줘", "도로 지워") | `unknown` (D21) |
+| Two kinds in one target, diagonal and camera-relative moves, distribute with a given gap | `unknown` / `ask` by rule (§3.4, §3.5, §5) |
+| `copy … to=` a group whose name has a space | canonical only with parentheses — `to=(group:"북쪽 블록")` (the formatter wraps any target text with a space); the corpus follows the formatter |
+
+Fixed since the first round: a bare `wall` (담장 · 벽 · 담 / wall) is the masonry wall (`kinds.ts`, main `1e3e1e2`) — the
+corpus's `place wall` lines needed no change.
+Noted, not a grammar limit: §5 / D1 list the legacy rising-water fields as `boundary level riseRate`; the catalog's
+basic fields are `level riseRate duration`. The corpus follows the conventions.

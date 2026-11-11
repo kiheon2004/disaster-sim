@@ -31,6 +31,14 @@
     { "text": "언덕 위에 나무 12그루 심어줘", "expect": ["place tree count=12 at=feature:hill"] },
     { "text": "나무 서른 그루 심어", "expect": ["place tree count=30"] },
     { "text": "여기에 나무 아홉 그루 심어요", "expect": ["place tree count=9 at=cursor"] },
-    { "text": "산에 숲을 만들어, 밀도 낮게, 시드 3", "expect": ["forest feature:mountain density=low seed=3"] }
+    { "text": "산에 숲을 만들어, 밀도 낮게, 시드 3", "expect": ["forest feature:mountain density=low seed=3"] },
+    { "text": "세 그루 심어", "ask": "kind" },
+    { "text": "여기에 열 그루 심어 줘", "ask": "kind" },
+    { "text": "숲을 만들어", "ask": "place" },
+    { "text": "숲, 밀도 낮게", "ask": "place" },
+    { "text": "언덕에 소나무 숲", "unknown": true, "why": "a forest has no species option" },
+    { "text": "산에 활엽수 숲을 만들어", "unknown": true, "why": "a forest has no species option" },
+    { "text": "여기에 숲을 만들어", "ask": "amount" },
+    { "text": "저기에 숲 만들어 줘", "ask": "amount" }
   ]
 }

@@ -24,6 +24,11 @@
     { "text": "a four-lane road from n1 to 40 m east of n1", "expect": ["road node:n1 -> east(node:n1,40) preset=avenue"] },
     { "text": "a dirt road from the mountain to the river", "expect": ["road feature:mountain -> feature:river preset=dirt"] },
     { "text": "a gravel road from (20, -70) to (20, 70)", "expect": ["road 20,-70 -> 20,70 preset=gravel"] },
+    { "text": "a road from N1 to N2", "expect": ["road node:n1 -> node:n2"] },
+    { "text": "build a road", "ask": "place" },
+    { "text": "draw a two-lane road", "ask": "place" },
+    { "text": "a six-lane road from n1 to n2", "unknown": true, "why": "a lane count that is not a preset" },
+    { "text": "an 8-lane road from n1 to n2", "unknown": true, "why": "a lane count that is not a preset" },
     { "text": "build a road from n4", "ask": "place" },
     { "text": "draw a road to (40, 60)", "ask": "place" },
     { "text": "two houses north of the road from n2 to n3", "expect": ["place building:house count=2 along=road:n2-n3 side=north"] }

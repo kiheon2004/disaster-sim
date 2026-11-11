@@ -31,6 +31,11 @@
     { "text": "forty people in the middle of the map", "expect": ["place human count=40 at=center"] },
     { "text": "fifty pedestrians at this spot", "expect": ["place human count=50 at=cursor"] },
     { "text": "nine cars on the street", "expect": ["place car count=9 along=road:any"] },
+    { "text": "three cars on segment s2", "expect": ["place car count=3 along=seg:s2"] },
+    { "text": "five people on segment s3", "expect": ["place human count=5 along=seg:s3"] },
+    { "text": "two cars on road S2", "expect": ["place car count=2 along=seg:s2"] },
+    { "text": "park two trucks on both sides of the main road", "expect": ["place car:truck count=2 along=road:main side=left", "place car:truck count=2 along=road:main side=right"] },
+    { "text": "park five here", "ask": "kind" },
     { "text": "delete all trucks", "expect": ["delete type:car:truck"] },
     { "text": "a truck facing west", "unknown": true, "why": "facing words are not supported in this version" }
   ]

@@ -16,6 +16,8 @@
     { "text": "how many groups are there", "expect": ["count groups"] },
     { "text": "how many roads?", "expect": ["count roads"] },
     { "text": "which have brace warnings?", "expect": ["list all where warning=brace"] },
+    { "text": "how many buildings? which buildings have brace warnings?", "expect": ["count type:building", "list type:building where warning=brace"] },
+    { "text": "how many trees? how many cars?", "expect": ["count type:tree", "count type:car"] },
     { "text": "which buildings have brace warnings?", "expect": ["list type:building where warning=brace"] },
     { "text": "list the buildings with warnings", "expect": ["list type:building where warning"] },
     { "text": "which buildings are locked?", "expect": ["list type:building where locked"] },
@@ -41,6 +43,8 @@
     { "text": "tell me about the largest building", "expect": ["info type:building largest"] },
     { "text": "damage", "expect": ["info sim"] },
     { "text": "how much collapsed?", "expect": ["info sim"] },
-    { "text": "collapse summary", "expect": ["info sim"] }
+    { "text": "collapse summary", "expect": ["info sim"] },
+    { "text": "how many buildings? which have brace warnings?", "expect": ["count type:building", "list type:building where warning=brace"] },
+    { "text": "how many cars are there? which are locked?", "expect": ["count type:car", "list type:car where locked"] }
   ]
 }

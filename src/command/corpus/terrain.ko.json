@@ -32,7 +32,16 @@
     { "text": "강을 강바닥으로 칠합니다", "expect": ["paint feature:river ground=riverbed"] },
     { "text": "나무 전부 주변 2 m 풀로 칠해", "expect": ["paint around type:tree r=2 ground=grass"] },
     { "text": "여기 반경 8 m 바위로 칠해", "expect": ["paint circle cursor r=8 ground=rock"] },
+    { "text": "여기를 평평하게", "ask": "amount" },
+    { "text": "저기를 부드럽게 해 줘", "ask": "amount" },
+    { "text": "땅을 2 m 올려", "ask": "place" },
+    { "text": "여기 반경 10 m를 3 m로 올려", "unknown": true, "why": "raise / lower to a height is not supported (flatten has to=)" },
+    { "text": "언덕을 2 m로 낮춰", "unknown": true, "why": "raise / lower to a height is not supported (flatten has to=)" },
+    { "text": "여기 반경 5 m 눈으로 칠해", "unknown": true, "why": "not a ground name" },
+    { "text": "언덕을 용암으로 칠해", "unknown": true, "why": "not a ground name" },
     { "text": "건물들을 0.5 m 올려", "expect": ["move type:building by=0,0.5,0"] },
-    { "text": "이 건물들 1 m 내려", "expect": ["move selection by=0,-1,0"] }
+    { "text": "이 건물들 1 m 내려", "expect": ["move selection by=0,-1,0"] },
+    { "text": "여기를 잔디로 칠해", "ask": "amount" },
+    { "text": "저기를 모래로 칠해 줘", "ask": "amount" }
   ]
 }
