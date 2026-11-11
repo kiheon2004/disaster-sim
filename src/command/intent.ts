@@ -35,6 +35,8 @@ export type PlaceRef =
   | { p: 'selection' }
   | { p: 'last' }
   | { p: 'group'; name: string }
+  /** A group by its id (what a question about same-named groups puts in). */
+  | { p: 'groupId'; id: string }
   /** An object or a group by its name (object names first; a choice when several match). */
   | { p: 'name'; name: string }
   /** A terrain feature — its centre: by id (f3), or by kind (hill, lake …; a choice when there are several). */
@@ -57,6 +59,7 @@ export const placeRefSchema: z.ZodType<PlaceRef> = z.lazy(() =>
     z.object({ p: z.literal('selection') }).strict(),
     z.object({ p: z.literal('last') }).strict(),
     z.object({ p: z.literal('group'), name: z.string().min(1) }).strict(),
+    z.object({ p: z.literal('groupId'), id: z.string().min(1) }).strict(),
     z.object({ p: z.literal('name'), name: z.string().min(1) }).strict(),
     z.object({ p: z.literal('feature'), id: z.string().min(1) }).strict(),
     z.object({ p: z.literal('dir'), dir: z.enum(DIRECTIONS), of: placeRefSchema, dist: z.number().finite().nonnegative().optional() }).strict(),
@@ -100,6 +103,8 @@ export type TargetBase =
   | { b: 'all' }
   | { b: 'id'; id: string }
   | { b: 'group'; name: string }
+  /** A group by its id (what a question about same-named groups puts in). */
+  | { b: 'groupId'; id: string }
   /** Objects or a group by name (object names first; a choice when several match). */
   | { b: 'name'; name: string }
   /** Every object of a kind (`preset`: a palette preset of that kind, e.g. building:house). */
@@ -132,6 +137,7 @@ const targetBaseSchema: z.ZodType<TargetBase> = z.union([
   z.object({ b: z.literal('all') }).strict(),
   z.object({ b: z.literal('id'), id: z.string().min(1) }).strict(),
   z.object({ b: z.literal('group'), name: z.string().min(1) }).strict(),
+  z.object({ b: z.literal('groupId'), id: z.string().min(1) }).strict(),
   z.object({ b: z.literal('name'), name: z.string().min(1) }).strict(),
   z.object({ b: z.literal('type'), type: z.string().min(1), preset: z.string().min(1).optional() }).strict(),
 ]);

@@ -20,7 +20,7 @@
  *   run | pause | reset | speed=<k> | focus <target> | focus at=<place> | undo | redo
  *   count|list|info <target> | count|list|info disasters|groups|roads|sim | measure <target> | measure <place> <place>
  *
- *   target   = selection | last | it | all | #<id> | group:"…" | name:"…" | type:<type>[:<preset>]
+ *   target   = selection | last | it | all | #<id> | group:"…" | group:<group id> | name:"…" | type:<type>[:<preset>]
  *              [where <pred> {and <pred>}] [largest | tallest | nearest <place>] [first N]
  *   pred     = floors|slope|height (>=|<=|>|<|=) <n> | near <place> r=<m> | on road [<road>] | hidden | locked | visible | unlocked | warning[=<code>]
  *   place    = <x>,<z> | node:<id> | seg:<id>[@<0…1>] | junction | cursor | view | center | selection | last | #<id> | group:"…" | name:"…"
@@ -181,16 +181,18 @@ export function parsePlace(tok: string): PlaceRef | null {
   if (call) {
     const fn = call[1].toLowerCase();
     const args = splitTop(call[2]).map((a) => a.trim());
-    if (fn === 'next' && args.length === 1) {
-      const of = parsePlace(args[0]);
+    if (fn === 'next') {
+      const of = parsePlace(args.join(','));
       return of ? { p: 'next', of } : null;
     }
-    if ((DIRECTIONS as readonly string[]).includes(fn) && (args.length === 1 || args.length === 2)) {
-      const of = parsePlace(args[0]);
-      if (!of) return null;
-      if (args.length === 1) return { p: 'dir', dir: fn as Direction, of };
-      const dist = readNumber(args[1], ['m']);
-      return dist !== null && dist >= 0 ? { p: 'dir', dir: fn as Direction, of, dist } : null;
+    if ((DIRECTIONS as readonly string[]).includes(fn) && args.length >= 1) {
+      // north(<place>) or north(<place>,<m>) — the place itself may hold a comma (north(40,60) / north(40,60,5)).
+      const whole = parsePlace(args.join(','));
+      if (whole) return { p: 'dir', dir: fn as Direction, of: whole };
+      if (args.length < 2) return null;
+      const of = parsePlace(args.slice(0, -1).join(','));
+      const dist = readNumber(args[args.length - 1], ['m']);
+      return of && dist !== null && dist >= 0 ? { p: 'dir', dir: fn as Direction, of, dist } : null;
     }
     return null;
   }
@@ -208,7 +210,9 @@ export function parsePlace(tok: string): PlaceRef | null {
     }
     if (head === 'group' || head === 'name') {
       const name = unquote(rest);
-      return name ? { p: head, name } : null;
+      if (name) return { p: head, name };
+      // group:<id> — a group by its id (unquoted)
+      return head === 'group' && ID.test(rest) ? { p: 'groupId', id: rest } : null;
     }
   }
   return null;
@@ -221,6 +225,7 @@ export function formatPlace(p: PlaceRef): string {
     case 'seg': return `seg:${p.id}@${formatNumber(p.t)}`;
     case 'object': return `#${p.id}`;
     case 'group': return `group:${quote(p.name)}`;
+    case 'groupId': return `group:${p.id}`;
     case 'name': return `name:${quote(p.name)}`;
     case 'feature': return `feature:${p.id}`;
     case 'dir': return `${p.dir}(${formatPlace(p.of)}${p.dist !== undefined ? `,${formatNumber(p.dist)}` : ''})`;
@@ -302,7 +307,8 @@ function parseBase(tok: string): TargetBase | null {
   const head = tok.slice(0, colon).toLowerCase(), rest = tok.slice(colon + 1);
   if (head === 'group' || head === 'name') {
     const name = unquote(rest);
-    return name ? { b: head, name } : null;
+    if (name) return { b: head, name };
+    return head === 'group' && ID.test(rest) ? { b: 'groupId', id: rest } : null;
   }
   if (head === 'type') {
     const [type, preset, more] = rest.split(':');
@@ -390,6 +396,7 @@ function formatBase(b: TargetBase): string {
   switch (b.b) {
     case 'id': return `#${b.id}`;
     case 'group': return `group:${quote(b.name)}`;
+    case 'groupId': return `group:${b.id}`;
     case 'name': return `name:${quote(b.name)}`;
     case 'type': return b.preset ? `type:${b.type}:${b.preset}` : `type:${b.type}`;
     default: return b.b;
