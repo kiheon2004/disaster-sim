@@ -6,7 +6,9 @@
  */
 import type { EntityId } from '@/core/types';
 import type { WorldDocument } from '@/core/model';
-import { useWorldStore } from '@/world/worldStore';
+import { useWorldStore, type WorldEdit } from '@/world/worldStore';
+import { applyStamp } from '@/world/stamp';
+import { rekeyCarSettings } from '@/vehicle/carCopies';
 import { useEditorStore } from '@/editor/editorStore';
 import { useRoadStore } from '@/editor/roadStore';
 import { useNatureStore } from '@/editor/natureStore';
@@ -353,7 +355,10 @@ export function alignToObjects() {
   setPlacementYaw(Math.atan2(Math.sin(base + k * q), Math.cos(base + k * q)));
 }
 
-/** Commit the placement at the pinned spot: ONE undo step, or nothing on any error. */
+/**
+ * Commit the placement at the pinned spot: ONE undo step, or nothing on any error. Phase 37: the car settings the
+ * blueprint carries (`bp.cars`) are written under the new ids in that step (`plan.items[k]` ↔ `ids[k]`).
+ */
 export function confirmPlacement(): EntityId[] {
   if (!editable()) return [];
   const p = B().place;
@@ -368,7 +373,10 @@ export function confirmPlacement(): EntityId[] {
   const t0 = performance.now();
   let ids: EntityId[] = [];
   try {
-    ids = W().applyEdit(plan.edit);
+    const placed = applyStamp(useWorldStore, plan.edit, p.blueprint.cars, plan.items);
+    // Refused (a drag / brush stroke is open and the blueprint carries car settings): nothing changed.
+    if (!placed) { toast('warn', { key: 'p37left.stamp.busy' }); return []; }
+    ids = placed;
   } catch (e) {
     toast('error', { key: 'bp.toast.placeFailed' }, (e as Error).message);
     return [];
@@ -409,7 +417,8 @@ export async function templateWorld(id: string, seed: number): Promise<{ templat
 /**
  * Apply a template. 'new': the current world is closed and the template opens as a new world
  * (history starts empty). 'replace': terrain, roads, nature, objects, the environment settings
- * and (if the template has one) the experiment setup are replaced in ONE undo step.
+ * and (if the template has one) the experiment setup are replaced in ONE undo step. Phase 37: the objects get new
+ * ids there, so the template's car settings (keyed by its own object ids) are re-keyed to them in the same step.
  */
 export async function applyTemplate(id: string, seed: number, mode: 'new' | 'replace', name?: string): Promise<boolean> {
   if (!editable()) return false;
@@ -423,7 +432,8 @@ export async function applyTemplate(id: string, seed: number, mode: 'new' | 'rep
     try {
       // ONE undo step: geometry, objects, roads, nature AND the environment settings / experiment
       // setup (Phase 21: undoing a template never leaves its hazard configuration behind).
-      W().applyEdit({
+      const sources = Object.values(doc.objects);
+      const edit: WorldEdit = {
         remove: Object.keys(W().doc.objects),
         roads: doc.roads,
         landscape: {
@@ -431,10 +441,19 @@ export async function applyTemplate(id: string, seed: number, mode: 'new' | 'rep
           features: doc.landscape.features, next: doc.landscape.next,
           layers: { rect: { x0: 0, z0: 0, x1: doc.terrain.nx - 1, z1: doc.terrain.nz - 1 }, sculpt: doc.landscape.sculpt, paint: doc.landscape.paint },
         },
-        add: Object.values(doc.objects).map((o) => ({ type: o.type, name: o.name, seed: o.seed, params: o.params, physics: o.physics, seismic: o.seismic, building: o.building, terrainAlign: o.terrainAlign, transform: o.transform, roadLink: o.roadLink, group: o.group })),
-        settings: doc.settings,
+        add: sources.map((o) => ({ type: o.type, name: o.name, seed: o.seed, params: o.params, physics: o.physics, seismic: o.seismic, building: o.building, terrainAlign: o.terrainAlign, transform: o.transform, roadLink: o.roadLink, group: o.group })),
         ...(r.template.includesExperiment ? { scenario: doc.scenario } : {}),
-      });
+      };
+      if (!Object.keys(doc.settings.simulation.vehicles?.cars ?? {}).length) W().applyEdit({ ...edit, settings: doc.settings });
+      else {
+        // The car entries need the new ids (`add` order = `sources` order): the geometry and the re-keyed settings
+        // are one batch = one undo step. A failure inside rolls everything back.
+        const res = W().batch(() => {
+          const ids = W().applyEdit(edit);
+          W().applyEdit({ settings: rekeyCarSettings(doc.settings, sources.map((o, k) => [o.id, ids[k]] as const)) });
+        });
+        if (!res.ok) throw res.reason === 'error' ? res.error : new Error(res.reason);
+      }
     } catch (e) {
       toast('error', { key: 'bp.toast.placeFailed' }, (e as Error).message);
       return false;

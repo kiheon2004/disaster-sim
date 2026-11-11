@@ -38,6 +38,7 @@ import { footprintOf } from '@/editor/build/footprint';
 import { mapFeature, roundMm } from './frame';
 import { boundaryDistance, inside, insideIntervals, lineCoverage, perimeterMean, piecePoints, polygonBounds, shapePolygon, type SelectionShape } from './selection';
 import { preFeatureAt } from './place';
+import { carSettingsOfCopies } from '@/vehicle/carCopies';
 import {
   ALL_INCLUDED, BLUEPRINT_FORMAT, BLUEPRINT_VERSION, MIN_READER_VERSION,
   type BlueprintAttachment, type BlueprintCategory, type BlueprintDependency, type BlueprintItem, type BlueprintMeta, type BlueprintRoads,
@@ -498,6 +499,9 @@ export function captureBlueprint(doc: WorldDocument, sel: CaptureSelection, opts
     dependencies: deps,
     preview: { size: hasArea ? [roundMm(bx1 - bx0), roundMm(bz1 - bz0)] : [0, 0], bounds: lb, relief, counts, thumbnail: null },
   };
+  // Phase 37: the captured cars' simulation settings, under local ids (occupants: captured people only).
+  const cars = carSettingsOfCopies(doc.settings.simulation.vehicles?.cars, objLocal);
+  if (Object.keys(cars).length) blueprint.cars = cars;
   const empty = !objects.length && !vegetation.length && !roads.segments.length && !features.length && !terrain;
   return { blueprint, report: { area, anchor: [ax, az], datum, counts, excluded, dependencies: deps, empty } };
 }

@@ -31,6 +31,8 @@ import type { Feature } from '@/landscape/types';
 import { decodeElevation, decodeGround } from '@/terrain/terrainCodec';
 import { NATURE_REGION_FORMAT } from '@/landscape/region';
 import { createId } from '@/core/id';
+import { carSchema, type VehicleCar } from '@/vehicle/settings';
+import { carSettingsOfCopies, type CarSettingsMap } from '@/vehicle/carCopies';
 import {
   BLUEPRINT_CATEGORIES, BLUEPRINT_FORMAT, BLUEPRINT_VERSION, MIN_READER_VERSION,
   type BlueprintCategory, type BlueprintItem, type BlueprintRoads, type BlueprintTerrain, type DependencyKind, type UnifiedBlueprint, type UnsupportedData,
@@ -169,7 +171,7 @@ const previewSchema = z.object({
   thumbnail: z.string().max(LIMITS.thumbnail).refine((s) => THUMB.test(s), 'thumbnail must be a base64 png / jpeg / webp data URL').nullable().catch(null),
 });
 
-const TOP_KEYS = ['format', 'version', 'minReaderVersion', 'id', 'meta', 'origin', 'area', 'objects', 'vegetation', 'designs', 'roads', 'attachments', 'features', 'terrain', 'dependencies', 'preview'] as const;
+const TOP_KEYS = ['format', 'version', 'minReaderVersion', 'id', 'meta', 'origin', 'area', 'objects', 'vegetation', 'designs', 'roads', 'attachments', 'features', 'terrain', 'dependencies', 'preview', 'cars'] as const;
 const topSchema = z.object({
   format: z.literal(BLUEPRINT_FORMAT),
   version: z.number().int().min(2),
@@ -191,7 +193,21 @@ const topSchema = z.object({
   terrain: terrainSchema.nullable(),
   dependencies: z.array(dependencySchema).max(LIMITS.dependencies).catch([]),
   preview: previewSchema,
+  // Phase 37: car settings by local object id (optional; an invalid entry is dropped on its own and reported).
+  cars: z.record(z.string(), carSchema.nullable().catch(null)).optional().catch(undefined),
 });
+
+/**
+ * Car settings of a file (Phase 37): the valid entries of objects that are in the blueprint, occupants pointing at
+ * objects of the blueprint — by the one copy rule (identity mapping `ids` → the same ids, or old → new keys).
+ * Returns the entries and how many were left out.
+ */
+function parseCars(raw: Record<string, unknown> | undefined, pairs: readonly (readonly [string, string])[]): { cars: Record<string, VehicleCar>; dropped: number } {
+  const cars = carSettingsOfCopies(raw as CarSettingsMap | undefined, pairs);
+  // (as the project loader does: a timed program is kept in time order)
+  for (const c of Object.values(cars)) c.program?.sort((a, b) => a.t - b.t);
+  return { cars, dropped: Object.keys(raw ?? {}).length - Object.keys(cars).length };
+}
 
 // ── Safety ─────────────────────────────────────────────────────────────────
 
@@ -408,6 +424,9 @@ function parseV2(r: Record<string, unknown>): BlueprintParseResult {
   // Dependencies referring to ids that do not exist are kept (they describe the source) but
   // must at least be well formed — checked by the schema.
   if (Object.keys(entryFields).length) unsupported.entryFields = entryFields;
+  // Car settings (Phase 37): entries of objects in the blueprint; the rest is left out and reported.
+  const carData = parseCars(d.cars, [...ids].map((id) => [id, id] as const));
+  if (carData.dropped || (r.cars !== undefined && d.cars === undefined)) report.unsupported.push('cars[] (invalid entry or missing object, dropped)');
   const bp: UnifiedBlueprint = {
     format: BLUEPRINT_FORMAT,
     version: BLUEPRINT_VERSION,
@@ -432,6 +451,7 @@ function parseV2(r: Record<string, unknown>): BlueprintParseResult {
       thumbnail: d.preview.thumbnail,
     },
   };
+  if (Object.keys(carData.cars).length) bp.cars = carData.cars;
   if (unsupported.fields || unsupported.objects || unsupported.features || unsupported.entryFields || unsupported.attachments) bp.unsupported = unsupported;
   return { ok: true, blueprint: bp, report };
 }
@@ -485,6 +505,8 @@ const legacyBlueprint = z.object({
     nodes: z.array(z.object({ x: coord, z: coord, y: coord.nullable().default(null) })).max(LIMITS.nodes),
     segments: z.array(z.object({ a: z.number().int().min(0), b: z.number().int().min(0), control: z.array(p2).max(64).default([]), profile: profileSchema.catch({}).default({}), condition: z.number().min(0).max(1).optional().catch(undefined) })).max(LIMITS.segments),
   }).optional().catch(undefined),
+  // Phase 37: car settings by index into `objects` (editor/build/blueprint.ts).
+  cars: z.record(z.string(), carSchema.nullable().catch(null)).optional().catch(undefined),
 });
 
 /** Phase 16–18 copy / paste payload → v2 (ids made local, designs into the table). */
@@ -499,6 +521,8 @@ function migrateV1(r: Record<string, unknown>): BlueprintParseResult {
   const unsupported: UnsupportedData = {};
   const groups = new Map<string, string>();
   const links: { item: BlueprintItem; link: NonNullable<z.infer<typeof legacyObject>['roadLink']> }[] = [];
+  /** v1 object index → local id (car settings are keyed by the index in v1). */
+  const localOf: [string, string][] = [];
   for (let i = 0; i < p.data.objects.length; i++) {
     const raw = p.data.objects[i] as Record<string, unknown>;
     if (raw && typeof raw === 'object' && typeof raw.type === 'string' && !hasDefinition(raw.type)) {
@@ -543,6 +567,7 @@ function migrateV1(r: Record<string, unknown>): BlueprintParseResult {
       item.group = groups.get(v.group);
     }
     list.push(item);
+    localOf.push([String(i), item.id]);
     if (v.roadLink) links.push({ item, link: v.roadLink });
   }
   const roads: BlueprintRoads = { nodes: [], segments: [], zones: [] };
@@ -572,6 +597,9 @@ function migrateV1(r: Record<string, unknown>): BlueprintParseResult {
     area, objects, vegetation, designs, roads, attachments, features: [], terrain: null, dependencies: [],
     preview: { size: [w, dd], bounds: area.length ? [-w / 2, -dd / 2, w / 2, dd / 2] : [0, 0, 0, 0], relief: [0, 0], counts: countsOf(objects, vegetation, roads, []), thumbnail: null },
   };
+  const carData = parseCars(p.data.cars, localOf);
+  if (Object.keys(carData.cars).length) bp.cars = carData.cars;
+  if (carData.dropped) report.unsupported.push('cars[] (invalid entry or missing object, dropped)');
   if (unsupported.objects) bp.unsupported = unsupported;
   return { ok: true, blueprint: bp, report };
 }
@@ -673,6 +701,8 @@ export function exportValue(bp: UnifiedBlueprint): Record<string, unknown> {
     dependencies: bp.dependencies,
     preview: bp.preview,
   };
+  // Phase 37: only when the blueprint carries car settings (canonical JSON sorts the keys; absent = as before).
+  if (bp.cars && Object.keys(bp.cars).length) out.cars = bp.cars;
   return out;
 }
 

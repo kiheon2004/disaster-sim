@@ -12,7 +12,8 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useBuildStore } from '@/editor/buildStore';
 import type { CreateObjectInput } from '@/world/WorldDocument';
 import { samplerFor } from '@/terrain/TerrainSampler';
-import { createBlueprint, instantiateBlueprint } from '@/editor/build/blueprint';
+import { createBlueprint, instantiateBlueprint, stampKeys } from '@/editor/build/blueprint';
+import { applyStamp } from '@/world/stamp';
 import { useRoadStore } from '@/editor/roadStore';
 import { pasteRoads } from '@/roads/blueprintRoads';
 import { measureLink } from '@/roads/links';
@@ -22,11 +23,14 @@ import { checkStamp } from '@/editor/build/placementCheck';
 import { withFlags, withGroup, withoutGroup } from '@/editor/build/objectEdits';
 import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type AlignRef, type MatchWhat, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
+import { setCommonTransform, type CommonTransformPatch, type CommonTransformResult } from '@/editor/build/numericTransform';
 import { toast } from '@/ui/common/toast';
 
 const world = () => useWorldStore.getState();
 const editor = () => useEditorStore.getState();
 const editable = () => editor().mode === 'editor' && !world().locked;
+/** The document's car settings (Phase 37): copied cars take theirs along — createBlueprint / applyStamp. */
+const carSettings = () => world().doc.settings.simulation.vehicles?.cars;
 
 export function selectedObjects(): WorldObject[] {
   const objs = world().doc.objects;
@@ -56,6 +60,17 @@ export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean
     for (const u of unit) (remove ? cur.delete(u) : cur.add(u));
     ed.setSelection([...cur], remove ? ed.selectedId : id);
   } else ed.setSelection(unit, id);
+}
+
+/**
+ * Outliner range and keyboard selection (Phase 37 §17). `ids` = the objects of the rows from the anchor row to the
+ * target row (`rowRange`, editor/outliner.ts); `primary` = the object of the target row. Groups are selected whole, as
+ * a click and a box selection do (`alt`: exactly the listed objects). `add` (Ctrl/⌘+Shift) keeps the current selection.
+ */
+export function selectRange(ids: readonly EntityId[], primary: EntityId | null, mods: { add?: boolean; alt?: boolean } = {}) {
+  const ed = editor();
+  const unit = mods.alt ? [...ids] : expandGroups(ids);
+  ed.setSelection(mods.add ? [...ed.selectedIds, ...unit] : unit, primary);
 }
 
 /**
@@ -155,7 +170,10 @@ export function deleteSelection() {
   editor().setSelection(editor().selectedIds.filter((id) => !gone.has(id)));
 }
 
-/** Copies 2 m south-east of the originals, groups preserved as new groups, one undo step. */
+/**
+ * Copies 2 m south-east of the originals, groups preserved as new groups, one undo step. Phase 37: the copied cars'
+ * simulation settings go with them in that step (occupants: only people copied along — vehicle/carCopies.ts).
+ */
 export function duplicateSelection() {
   if (!editable()) return;
   const objs = selectedObjects();
@@ -167,10 +185,16 @@ export function duplicateSelection() {
     return;
   }
   const terrain = samplerFor(world().doc.terrain);
-  const bp = createBlueprint(objs, terrain);
+  const bp = createBlueprint(objs, terrain, '', undefined, carSettings());
   const pivot = selectionPivot(objs);
-  const ids = world().applyEdit({ add: instantiateBlueprint(bp, pivot.x + 2, pivot.z + 2, 0, terrain) });
+  const ids = applyStamp(useWorldStore, { add: instantiateBlueprint(bp, pivot.x + 2, pivot.z + 2, 0, terrain) }, bp.cars, stampKeys(bp));
+  if (!ids) return stampRefused();
   editor().setSelection(ids);
+}
+
+/** A stamp with car settings was refused (a drag / brush stroke is open): nothing changed — say so. */
+function stampRefused(): void {
+  toast('warn', { key: 'p37left.stamp.busy' });
 }
 
 /** Move / rotate the selection as one rigid unit about its pivot (one undo step). */
@@ -228,6 +252,25 @@ export function distributeSelection(axis: AlignAxis) {
   world().applyEdit({ update: distributeObjects(objs, axis, samplerFor(world().doc.terrain)) });
 }
 
+/**
+ * One value for a transform field of every selected object (Phase 37 §17 — the common fields of the multi-selection
+ * Inspector): x / y / z, height above ground, heading, uniform scale. One undo step — or, with `live` (a label scrub
+ * inside a transaction), no step of its own. The rules are `setCommonTransform`'s (the Phase 37 command `set` calls
+ * the same function). What was limited or skipped is reported once, when the edit is final.
+ */
+export function setSelectionCommon(patch: CommonTransformPatch, live = false): CommonTransformResult | null {
+  if (!editable()) return null;
+  const r = setCommonTransform(selectedObjects(), patch, samplerFor(world().doc.terrain));
+  if (r.objects.length) world().applyEdit({ update: r.objects }, { history: !live });
+  if (live) return r;
+  if (r.locked) toast('info', { key: 'ed36.lockedSkipped', params: { count: r.locked } });
+  const axes = r.clamped.filter((k) => k !== 'scale').map((k) => (k === 'lift' ? 'y' : k));
+  if (axes.length) toast('warn', { key: 'ed36.clamped', params: { axes: axes.join(', ') } });
+  if (r.rejected.length) toast('warn', { key: 'ed36.rejected', params: { axes: r.rejected.join(', ') } });
+  if (r.keptSize) toast('info', { key: 'p37left.common.keptSize', params: { count: r.keptSize } });
+  return r;
+}
+
 /** Put the selected objects in one new group (leaving any previous group). */
 export function groupSelection() {
   if (!editable()) return;
@@ -252,7 +295,7 @@ export function copySelection(): boolean {
   if (editor().tool === 'road') return copyRoadSelection();
   const objs = selectedObjects();
   if (!objs.length) return false;
-  useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(world().doc.terrain)));
+  useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(world().doc.terrain), '', undefined, carSettings()));
   toast('info', { key: 'build.toast.copied', params: { count: objs.length } });
   return true;
 }
@@ -264,7 +307,7 @@ export function copyRoadSelection(): boolean {
   const doc = world().doc;
   const set = new Set(segs);
   const objs = Object.values(doc.objects).filter((o) => o.roadLink && set.has(o.roadLink.segment));
-  useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(doc.terrain), '', { network: doc.roads, segments: segs }));
+  useBuildStore.getState().setClipboard(createBlueprint(objs, samplerFor(doc.terrain), '', { network: doc.roads, segments: segs }, carSettings()));
   toast('info', { key: 'road.toast.copied', params: { roads: segs.length, count: objs.length } });
   return true;
 }
@@ -279,7 +322,10 @@ export function startPaste() {
   editor().setTool('paste');
 }
 
-/** Place the clipboard with its anchor at (x, z). Returns the new ids (selected). */
+/**
+ * Place the clipboard with its anchor at (x, z). Returns the new ids (selected). Phase 37: the car settings the
+ * clipboard took at copy time are written under the new ids in the same undo step.
+ */
 export function pasteAt(x: number, z: number): EntityId[] {
   const b = useBuildStore.getState();
   if (!editable() || !b.clipboard) return [];
@@ -290,8 +336,10 @@ export function pasteAt(x: number, z: number): EntityId[] {
     toast('warn', { key: 'ed36.paste.outside' });
     return [];
   }
+  const keys = stampKeys(b.clipboard);
   if (!b.clipboard.roads) {
-    const ids = world().applyEdit({ add: inputs });
+    const ids = applyStamp(useWorldStore, { add: inputs }, b.clipboard.cars, keys);
+    if (!ids) { stampRefused(); return []; }
     editor().setSelection(ids);
     return ids;
   }
@@ -305,7 +353,8 @@ export function pasteAt(x: number, z: number): EntityId[] {
       const link = measureLink(r.network, p[0], p[2], yawOf(inputs[i].transform.rotation), o.roadLink.policy, ids.length === 1 ? ids[0] : undefined);
       if (link && ids.includes(link.segment)) inputs[i].roadLink = link;
     });
-    const ids = world().applyEdit({ roads: r.network, add: inputs });
+    const ids = applyStamp(useWorldStore, { roads: r.network, add: inputs }, b.clipboard.cars, keys);
+    if (!ids) { stampRefused(); return []; }
     if (r.unconnectedCrossings) toast('warn', { key: 'road.toast.unconnected', params: { n: r.unconnectedCrossings } });
     useRoadStore.getState().select({ segments: r.segments.flat(), node: null });
     if (editor().tool !== 'road') editor().setSelection(ids);

@@ -34,6 +34,7 @@ import { NO_PAINT } from '@/landscape/types';
 import { expandForRivers, featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
 import { adoptTerrain, ALL_LAYERS, applyLayerPatch, diffLayerPatch, makeLayerPatch, makeLayerPatchFromRect, naturalProvider, recompose, restoreLandscape, snapshotLandscape, snapshotLandscapeRect, type LayerPatch, type LayerSnapshot, type RectLayerSnapshot } from '@/landscape/apply';
 import { roadStats } from '@/roads/stats';
+import { addCarSettings, carSettingsOfCopies } from '@/vehicle/carCopies';
 
 const HISTORY_LIMIT = 100;
 /**
@@ -791,14 +792,11 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       delete copy.locked;
       const next = { ...objects, [copy.id]: relinkMoved(src, copy, get().doc.roads) };
       // A car's own simulation settings (drive, controls, autopilot) go with the copy, in the same undo step; occupants
-      // do not (a person cannot sit in two cars).
+      // do not (a person cannot sit in two cars — the person is not part of this one-object copy). The rule is the one
+      // of every stamp path: src/vehicle/carCopies.ts.
       const doc0 = get().doc;
-      const car = doc0.settings.simulation.vehicles?.cars?.[src.id];
-      if (car && !get().locked) {
-        const { occupants: _o, ...rest } = structuredClone(car);
-        void _o;
-        const vehicles = { ...doc0.settings.simulation.vehicles!, cars: { ...doc0.settings.simulation.vehicles!.cars, [copy.id]: rest } };
-        const settings = { ...doc0.settings, simulation: { ...doc0.settings.simulation, vehicles } };
+      const settings = addCarSettings(doc0.settings, carSettingsOfCopies(doc0.settings.simulation.vehicles?.cars, [[src.id, copy.id]]));
+      if (settings !== doc0.settings) {
         const entry: HistoryEntry = { objects: doc0.objects, terrain: null, roads: doc0.roads, landscape: landEntry(doc0, null), config: { settings: doc0.settings } };
         set({ doc: { ...touch(doc0, next), settings }, ...record(entry) });
         return copy.id;

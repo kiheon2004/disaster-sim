@@ -23,6 +23,8 @@ import { groundPose, isGrounded, yawOf } from '@/terrain/groundPlacement';
 import { selectionPivot, yawRotate } from './groupTransform';
 import type { LinkPolicy, RoadNetwork } from '@/roads/types';
 import { blueprintRoadsSchema, captureRoads, type BlueprintRoads } from '@/roads/blueprintRoads';
+import { carSchema, type VehicleCar } from '@/vehicle/settings';
+import { carSettingsOfCopies, type CarSettingsMap } from '@/vehicle/carCopies';
 
 export const BLUEPRINT_FORMAT = 'disaster-sim/blueprint';
 export const BLUEPRINT_VERSION = 1;
@@ -64,14 +66,25 @@ export interface Blueprint {
   objects: BlueprintObject[];
   /** Road segments (Phase 18), relative to the anchor; pasted with fresh ids. */
   roads?: BlueprintRoads;
+  /**
+   * Phase 37: the simulation settings of the copied cars (`settings.simulation.vehicles.cars` of the source), keyed by
+   * the car's index in `objects` (decimal string); an occupant's `human` is the index of that person in `objects`
+   * (occupants whose person was not copied are not here). Absent when no copied car had settings — a blueprint
+   * without it serializes exactly as before. Written under the new ids on paste (world/stamp.ts).
+   */
+  cars?: Record<string, VehicleCar>;
 }
+
+/** The key of each blueprint object in `cars` (Phase 37): `stampKeys(bp)[k]` belongs to `instantiateBlueprint(bp, …)[k]`. */
+export const stampKeys = (bp: Blueprint): string[] => bp.objects.map((_, i) => String(i));
 
 /**
  * Build a blueprint from objects of the world (deep copies; ids dropped). `roads` (Phase 18):
  * segments of the network to copy along; links of copied objects to copied segments are kept,
- * links to other roads are dropped (the copy is not attached to the source's roads).
+ * links to other roads are dropped (the copy is not attached to the source's roads). `cars` (Phase 37): the source
+ * world's car settings (`settings.simulation.vehicles.cars`) — the entries of the copied cars travel with the blueprint.
  */
-export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSampler, name = '', roads?: { network: RoadNetwork; segments: readonly string[] }): Blueprint {
+export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSampler, name = '', roads?: { network: RoadNetwork; segments: readonly string[] }, cars?: CarSettingsMap): Blueprint {
   const segIds = roads ? roads.segments.filter((id) => roads.network.segments[id]) : [];
   let pivot = selectionPivot(objs);
   if (roads && segIds.length && !objs.length) {
@@ -86,9 +99,12 @@ export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSa
   const captured = roads && segIds.length ? captureRoads(roads.network, segIds, pivot.x, pivot.z, groundAtPivot) : null;
   const groupKeys = new Map<string, string>();
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  /** Source id of each blueprint object (same order as `objects`). */
+  const sourceIds: string[] = [];
   const objects = [...objs]
     .sort((a, b) => a.type.localeCompare(b.type) || a.serial - b.serial || a.id.localeCompare(b.id))
     .map((o): BlueprintObject => {
+      sourceIds.push(o.id);
       const [x, y, zz] = o.transform.position;
       x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, zz); z1 = Math.max(z1, zz);
       const grounded = isGrounded(o, terrain);
@@ -125,12 +141,15 @@ export function createBlueprint(objs: readonly WorldObject[], terrain: TerrainSa
     objects,
   };
   if (captured) bp.roads = captured.roads;
+  const carEntries = carSettingsOfCopies(cars, sourceIds.map((id, i) => [id, String(i)] as const));
+  if (Object.keys(carEntries).length) bp.cars = carEntries;
   return bp;
 }
 
 /**
- * Inputs that place the blueprint with its anchor at (x, z), rotated by `yaw` about it.
- * Group keys map to NEW group ids (one per key per paste).
+ * Inputs that place the blueprint with its anchor at (x, z), rotated by `yaw` about it — one per blueprint object, in
+ * the order of `bp.objects` (`applyEdit` returns the new ids in the same order: that is how a stamp knows which
+ * source each new id came from). Group keys map to NEW group ids (one per key per paste).
  */
 export function instantiateBlueprint(bp: Blueprint, x: number, z: number, yaw: number, terrain: TerrainSampler): (CreateObjectInput & { group?: string })[] {
   const c = Math.cos(yaw);
@@ -190,6 +209,8 @@ const blueprintSchema = z.object({
     roadLink: z.object({ segment: z.number().int().min(0), t: z.number().min(0).max(1), lateral: z.number(), yaw: z.number(), policy: z.enum(['follow', 'preserve', 'detach']).catch('follow') }).optional().catch(undefined),
   })),
   roads: blueprintRoadsSchema.optional().catch(undefined),
+  // Phase 37: car settings by object index; an invalid entry is dropped on its own.
+  cars: z.record(z.string(), carSchema.nullable().catch(null)).optional().catch(undefined),
 });
 
 export function serializeBlueprint(bp: Blueprint): string {
@@ -206,7 +227,11 @@ export function parseBlueprint(json: string): Blueprint | null {
   }
   const r = blueprintSchema.safeParse(raw);
   if (!r.success) return null;
-  const objects = r.data.objects.filter((o) => hasDefinition(o.type)).map((o) => {
+  // Objects of unknown types leave the list: the car entries follow their objects to the new indices.
+  const kept = r.data.objects.map((o, i) => ({ o, i })).filter(({ o }) => hasDefinition(o.type));
+  const { cars: rawCars, ...data } = r.data;
+  const cars = carSettingsOfCopies(rawCars as CarSettingsMap | undefined, kept.map(({ i }, k) => [String(i), String(k)] as const));
+  const objects = kept.map(({ o }) => {
     const def = getDefinition(o.type as ObjectType);
     const { building: rawBuilding, ...rest } = o;
     const out = {
@@ -224,5 +249,5 @@ export function parseBlueprint(json: string): Blueprint | null {
     }
     return out;
   });
-  return { ...r.data, objects } as Blueprint;
+  return { ...data, objects, ...(Object.keys(cars).length ? { cars } : {}) } as Blueprint;
 }

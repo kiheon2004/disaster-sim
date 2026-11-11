@@ -76,4 +76,8 @@
 .rowBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rowBtnOn { color: var(--warn); }
 .renameInput { flex: 1; min-width: 0; font-size: 12px; padding: 1px 4px; }
+/* Phase 37: the list takes the keyboard (↑ / ↓ / Home / End); the row the keys are on is outlined while it has focus. */
+.list:focus { outline: none; }
+.list:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
+.list:focus-visible .cursor { outline: 2px solid var(--accent); outline-offset: -2px; }
 .note { padding: 6px 10px 8px; font-size: 11px; color: var(--text-3); line-height: 1.45; flex-shrink: 0; }

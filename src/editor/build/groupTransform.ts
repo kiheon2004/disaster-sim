@@ -167,10 +167,17 @@ export function distributeObjects(objs: readonly WorldObject[], axis: AlignAxis,
   });
 }
 
-function moveTo(o: WorldObject, x: number, z: number, terrain: TerrainSampler): WorldObject {
+/**
+ * One object moved to (x, z) — the move rule of every multi-object edit (align, distribute, and the common-field edit
+ * of Phase 37, numericTransform.ts `setCommonTransform`): an object that stood on the ground is re-seated at the new
+ * spot (height, and its tilt on a slope), a lifted one keeps its height. The same object comes back when it is already
+ * there. `grounded` = whether it stood on the ground (default: measured on `o`; a caller that has already changed the
+ * object's heading / scale passes what it measured before).
+ */
+export function moveTo(o: WorldObject, x: number, z: number, terrain: TerrainSampler, grounded = isGrounded(o, terrain)): WorldObject {
   const p = o.transform.position;
   if (x === p[0] && z === p[2]) return o;
-  if (isGrounded(o, terrain)) {
+  if (grounded) {
     const pose = groundPose(o, x, z, yawOf(o.transform.rotation), terrain);
     return releasePlinth({ ...o, transform: { ...o.transform, position: pose.position, rotation: terrain.flat ? o.transform.rotation : pose.rotation } });
   }

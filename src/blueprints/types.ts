@@ -32,6 +32,7 @@ import type { ObjectParams, PhysicalProperties, SeismicProperties } from '@/core
 import type { BuildingDesign } from '@/buildings/types';
 import type { LinkPolicy, RoadProfile, ZoneType } from '@/roads/types';
 import type { Feature, P2 } from '@/landscape/types';
+import type { VehicleCar } from '@/vehicle/settings';
 
 export const BLUEPRINT_FORMAT = 'disaster-sim/blueprint';
 /** Current blueprint format version (1 = Phase 16–18 copy / paste payload). */
@@ -205,6 +206,14 @@ export interface UnifiedBlueprint {
   terrain: BlueprintTerrain | null;
   dependencies: BlueprintDependency[];
   preview: BlueprintPreview;
+  /**
+   * Phase 37: the simulation settings of the captured cars (`settings.simulation.vehicles.cars` of the source), keyed
+   * by the car's LOCAL object id (o<k>); an occupant's `human` is the local id of that person (occupants whose person
+   * was not captured are not here). Absent when no captured car had settings — such a blueprint serializes and hashes
+   * exactly as before. Optional top-level field: a reader from before Phase 37 keeps it as unsupported data and writes
+   * it back. Placement writes the entries under the new world ids in the same undo step (world/stamp.ts).
+   */
+  cars?: Record<string, VehicleCar>;
   /**
    * Forward compatibility: top-level fields this version does not understand (from a newer
    * writer) and entries it cannot use (objects of unknown types, unknown feature kinds). Kept

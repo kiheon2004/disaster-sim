@@ -52,7 +52,8 @@ const controlSchema = z.object({
   handbrake: z.boolean().optional(),
   gear: z.enum(['P', 'R', 'N', 'D']).optional(),
 });
-const carSchema = z.object({
+/** One car's entry (also the car entries a clipboard / Blueprint carries, Phase 37 — src/vehicle/carCopies.ts). */
+export const carSchema = z.object({
   level: z.enum(['vehicle', 'rigid']).optional(),
   drive: z.enum(['fwd', 'rwd', 'awd']).optional(),
   abs: z.boolean().optional(),

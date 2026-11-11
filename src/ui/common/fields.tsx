@@ -34,6 +34,13 @@ export interface NumberInputProps {
   unit?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  /**
+   * Shown while the field is empty (Phase 37). A value that is not a number (NaN) shows as an empty field: the common
+   * fields of a multi-selection pass NaN + "—" when the selected objects differ; typing a number commits it.
+   */
+  placeholder?: string;
+  /** `data-testid` of the text input. */
+  testId?: string;
 }
 
 /** Hook implementing pointer-drag scrubbing on a label element. */
@@ -89,6 +96,8 @@ function NumberText(p: NumberInputProps & { className?: string }) {
       inputMode="decimal"
       aria-label={p.ariaLabel}
       disabled={p.disabled}
+      placeholder={p.placeholder}
+      data-testid={p.testId}
       value={text}
       onFocus={(e) => {
         focused.current = true;

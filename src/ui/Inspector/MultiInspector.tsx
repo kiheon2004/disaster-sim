@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useT, type MessageKey } from '@/i18n/i18n';
 import type { WorldObject } from '@/core/model';
 import { getDefinition } from '@/objects/registry';
@@ -6,8 +6,11 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import {
   alignSelection, copyPropertiesFromPrimary, copySelection, deleteSelection, distributeGapsSelection, distributeSelection, duplicateSelection, groupSelection, matchSelection, selectSameType,
-  transformSelection, ungroupSelection,
+  setSelectionCommon, transformSelection, ungroupSelection,
 } from '@/app/buildActions';
+import { commonTransform, type CommonField } from '@/editor/build/numericTransform';
+import { samplerFor } from '@/terrain/TerrainSampler';
+import { NumberField } from '@/ui/common/fields';
 import type { AlignRef } from '@/editor/build/groupTransform';
 import { COPY_PROPS, copyApplies, type CopyProp } from '@/editor/build/propertyCopy';
 import { Segmented } from '@/ui/common/Segmented';
@@ -17,6 +20,63 @@ import { selectionPivot } from '@/editor/build/groupTransform';
 import { Icon, type IconName } from '@/ui/common/Icon';
 import { Section } from '@/ui/common/Panel';
 import styles from './Inspector.module.css';
+
+/** Label scrub = one transaction, as in the single-object Inspector: one undo step on release, none when nothing changed. */
+const scrubTx = {
+  onScrubStart: () => useWorldStore.getState().beginTransaction(),
+  onScrubEnd: () => { useWorldStore.getState().commitTransaction(); },
+};
+
+/** The common fields (Phase 37 §17): label key, step, display precision, range and unit — as the single-object fields. */
+const COMMON: { field: CommonField; label: MessageKey; step: number; precision: number; min?: number; max?: number; unit?: string }[] = [
+  { field: 'x', label: 'p37left.common.x', step: 0.1, precision: 2 },
+  { field: 'y', label: 'p37left.common.y', step: 0.1, precision: 2 },
+  { field: 'z', label: 'p37left.common.z', step: 0.1, precision: 2 },
+  { field: 'lift', label: 'p37left.common.lift', step: 0.1, precision: 2, unit: 'm' },
+  { field: 'heading', label: 'p37left.common.heading', step: 1, precision: 1 },
+  { field: 'scale', label: 'p37left.common.scale', step: 0.05, precision: 2, min: 0.1, max: 10 },
+];
+
+/**
+ * Above this many selected objects the fields are not re-read on every frame of a continuous edit (gizmo drag, label
+ * scrub): reading "height above ground" seats every object on the terrain. They are read again when the edit ends.
+ */
+const LIVE_READ_LIMIT = 200;
+
+/**
+ * One value for a transform field of every selected object. A field shows the value when all objects agree and is
+ * empty ("—") when they differ; a typed value goes to all of them in one undo step (`setSelectionCommon` →
+ * `setCommonTransform`, the function the Phase 37 command `set` calls too).
+ */
+function CommonFields({ ids, objs }: { ids: string[]; objs: WorldObject[] }) {
+  const t = useT();
+  const terrain = useWorldStore((s) => s.doc.terrain);
+  // The history changes when a continuous edit is committed: the moment a large selection is read again.
+  const past = useWorldStore((s) => s.past);
+  const last = useRef<{ ids: string[]; values: ReturnType<typeof commonTransform> } | null>(null);
+  const common = useMemo(() => {
+    const kept = last.current;
+    if (kept && kept.ids === ids && objs.length > LIVE_READ_LIMIT && useWorldStore.getState().busy()) return kept.values;
+    const values = commonTransform(objs, samplerFor(terrain));
+    last.current = { ids, values };
+    return values;
+  }, [ids, objs, terrain, past]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A mixed field has no number to step or scrub from: NaN is never a value to apply.
+  const set = (field: CommonField, n: number, live: boolean) => { if (Number.isFinite(n)) setSelectionCommon({ [field]: n }, live); };
+  return (
+    <Section title={t('p37left.common')}>
+      {COMMON.map((c) => {
+        const v = common[c.field];
+        return (
+          <NumberField key={c.field} label={t(c.label)} value={v ?? NaN} step={c.step} precision={c.precision} min={c.min} max={c.max} unit={c.unit}
+            placeholder={t('p37left.common.mixed')} title={v === null ? t('p37left.common.mixed.title') : undefined} testId={`multi-${c.field}`}
+            {...scrubTx} onChange={(n, live) => set(c.field, n, live)} />
+        );
+      })}
+      <div className={styles.note} style={{ marginTop: 6 }}>{t('p37left.common.note')}</div>
+    </Section>
+  );
+}
 
 /** Selection Inspector for several objects (Phase 16): contents, group, align, rotate, edit. */
 export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boolean }) {
@@ -81,6 +141,7 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
       </Section>
       {!readOnly && (
         <>
+          <CommonFields ids={ids} objs={objs} />
           <Section title={t('object.group')}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button className={styles.smallBtn} disabled={oneGroup} onClick={groupSelection}><Icon name="group" size={12} /> {t('multi.group')} (Ctrl+G)</button>

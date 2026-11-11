@@ -125,6 +125,12 @@ export interface PlacementReport {
 
 export interface PlacementPlan {
   edit: WorldEdit & { add: CreateObjectInput[]; addSeat: (number | null)[] };
+  /**
+   * Phase 37: the local id (o<k> / v<k>) of the blueprint item behind each entry of `edit.add` (same order; items left
+   * out — toggled off, outside the world — have no entry). `applyEdit` returns the new ids in the order of `add`, so
+   * `items[k]` ↔ `ids[k]`: this is how the car settings (`bp.cars`) find the new ids (world/stamp.ts).
+   */
+  items: string[];
   report: PlacementReport;
 }
 
@@ -190,6 +196,7 @@ export function planPlacement(doc: WorldDocument, bp: UnifiedBlueprint, o: Place
     connections: [], footprint,
   };
   const edit: PlacementPlan['edit'] = { add: [], addSeat: [] };
+  const placedItems: string[] = [];
 
   // ── Terrain layers ─────────────────────────────────────────────────────────
   const layers = inc.terrain ? decodeLayers(bp) : null;
@@ -417,6 +424,7 @@ export function planPlacement(doc: WorldDocument, bp: UnifiedBlueprint, o: Place
     paramsList.push(params);
     edit.add.push(input);
     edit.addSeat.push(seat);
+    placedItems.push(item.id);
     if (veg) report.counts.vegetation++;
     else report.counts.objects++;
   }
@@ -463,7 +471,7 @@ export function planPlacement(doc: WorldDocument, bp: UnifiedBlueprint, o: Place
     if (poor) warnings.push({ code: 'foundation', value: poor });
   }
   if (!edit.add.length && !edit.roads && !edit.landscape) errors.push({ code: 'empty' });
-  return { edit, report };
+  return { edit, items: placedItems, report };
 }
 
 function riverMeets(doc: WorldDocument, [x, z]: P2): { to: P2; kind: ConnectionHint['kind'] } | null {
