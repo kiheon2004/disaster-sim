@@ -18,7 +18,7 @@ import type { Intent } from '@/command/intent';
 import { SMALL_EDIT_ITEMS, type Effect, type Plan } from '@/command/planTypes';
 import { previewIntents, runIntents, type Preview, type RunFailure, type RunResult } from '@/command/run';
 import { useCommandSession, type OpenPlan } from '@/ui/Command/commandSession';
-import { enterSimulation, phenomenonContext, resetSimulation, runSimulation } from './actions';
+import { enterSimulation, phenomenonContext, resetSimulation, runExperiment, runSimulation } from './actions';
 
 const S = () => useCommandSession.getState();
 const W = () => useWorldStore.getState();
@@ -103,6 +103,11 @@ async function carryOut(effects: readonly Effect[], finalSelection: { ids: reado
         break;
       case 'sim':
         if (fx.op === 'run') {
+          // From the editor "run" starts the placed disasters too (what "Run experiment" does — a run started by the
+          // play button alone has none of them, and "stop the rain" would find nothing); with none placed, or during
+          // a run, it is the play button.
+          const placed = (W().doc.scenario.experiment?.instances ?? []).some((x) => x.enabled);
+          if (E().mode === 'editor' && placed) await runExperiment();
           if (E().mode === 'editor') await enterSimulation();
           if (simulationController.isLoaded()) simulationController.play();
         } else if (fx.op === 'pause') simulationController.pause();
@@ -185,7 +190,11 @@ async function commit(text: string, intents: Intent[], perLine: boolean): Promis
 /** Interpret a text (one line, or a script of several) into intents; feedback is set when it cannot be. */
 function read(text: string, quiet: boolean): { intents: Intent[]; canonical: string[]; script: boolean } | null {
   const lines = scriptLines(text);
-  if (!lines.length) return null;
+  if (!lines.length) {
+    // Only comments ("# …"): said, so that Enter is never silently nothing.
+    if (!quiet && text.trim()) S().setFeedback({ k: 'error', error: msg('cmd37.err.onlyComments'), notes: [], line: 0 });
+    return null;
+  }
   if (lines.length > MAX_SCRIPT_LINES) {
     if (!quiet) S().setFeedback({ k: 'error', error: msg('cmd37.err.scriptTooLong', { count: lines.length, max: MAX_SCRIPT_LINES }), notes: [], line: 0 });
     return null;

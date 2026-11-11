@@ -8,6 +8,7 @@
  * themselves while its input has the keyboard.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { scriptLines } from '@/command/interpret';
 import { createPortal } from 'react-dom';
 import { translateMessage, useLocale, useT } from '@/i18n/i18n';
 import { Icon } from '@/ui/common/Icon';
@@ -294,7 +295,7 @@ export function CommandBar() {
         <input
           ref={inputRef}
           className={styles.input}
-          value={isScript ? t('cmd37.ui.scriptInBar', { count: text.split('\n').filter((l) => l.trim() && !l.trim().startsWith('#')).length }) : text}
+          value={isScript ? t('cmd37.ui.scriptInBar', { count: scriptLines(text).length }) : text}
           readOnly={isScript}
           onChange={(e) => edit(e.target.value)}
           onKeyDown={onKeyDown}

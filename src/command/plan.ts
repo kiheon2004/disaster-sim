@@ -58,7 +58,7 @@ function dispatch(i: Intent, env: Env, o: PlanOptions, d: Draft): void {
     case 'forest': return planForestCommand(i, env, o, d);
     case 'disaster': return planDisaster(i, env, d);
     case 'instance': return planInstance(i, env, d);
-    case 'sim': return planSim(i, d);
+    case 'sim': return planSim(i, env, d);
     case 'speed': return planSpeed(i, d);
     case 'focus': return planFocus(i, env, d);
     case 'query': return planQuery(i, env, d);

@@ -139,11 +139,20 @@ async function leaveBar() {
   for (let k = 0; k < 4 && (await barFocused()); k++) { await page.keyboard.press('Escape'); await wait(150); }
   if (await barFocused()) { await ev(() => document.activeElement?.blur()); await wait(100); }
 }
+/**
+ * Empty the focused text field: its text is selected through the DOM (⌘/Ctrl+A sent by puppeteer does not select in
+ * headless Chrome on macOS — after a refused command the old text stayed and the next one was typed behind it), then a
+ * real Backspace deletes it.
+ */
+async function clearField() {
+  await ev(() => { const el = document.activeElement; if (el && typeof el.select === 'function') el.select(); });
+  await page.keyboard.press('Backspace');
+  await wait(60);
+}
 /** Replace the bar's text by typing (non-ASCII goes through Input.insertText, as an IME's committed text does). */
 async function typeBar(text) {
   await openBar();
-  await chord('KeyA', mod);
-  await page.keyboard.press('Backspace');
+  await clearField();
   await page.keyboard.type(text, { delay: 4 });
   await wait(450); // the debounced draft
 }
@@ -170,7 +179,7 @@ const T = KO ? {
   steep: ['경사 20도 넘는 곳의 나무 다 선택', ['select type:tree where slope>20']],
   setX: ['선택한 것 x를 10으로', ['set selection x=10']],
   flatten: ['여기 반경 10 m 평평하게', ['terrain flatten circle cursor r=10']],
-  forest: ['(30, 30) 반경 25 m에 숲, 밀도 0.4, 시드 7', ['forest circle 30,30 r=25 density=0.4 seed=7']],
+  forest: ['(30, 30) 반경 25 m에 숲, 밀도 5, 시드 7', ['forest circle 30,30 r=25 density=5 seed=7']],
   blast: ['교차로에 폭발 1.8×10⁹ J, 5초 뒤', ['disaster blast at=junction energy=1.8e9 start=5']],
   quake: ['여기에 규모 7 지진', ['disaster earthquake at=cursor magnitude=7']],
   fireAt: (id) => [`#${id}에 화재, 12초 뒤에`, [`disaster fire at=#${id} start=12`]],
@@ -188,7 +197,7 @@ const T = KO ? {
   steep: ['select every tree on slopes over 20°', ['select type:tree where slope>20']],
   setX: ['set x to 10 for the selection', ['set selection x=10']],
   flatten: ['flatten a 10 m circle here', ['terrain flatten circle cursor r=10']],
-  forest: ['a forest within 25 m of (30, 30), density 0.4, seed 7', ['forest circle 30,30 r=25 density=0.4 seed=7']],
+  forest: ['a forest within 25 m of (30, 30), density 5, seed 7', ['forest circle 30,30 r=25 density=5 seed=7']],
   blast: ['a 1.8e9 J explosion at the junction in 5 s', ['disaster blast at=junction energy=1.8e9 start=5']],
   quake: ['a magnitude 7 earthquake here', ['disaster earthquake at=cursor magnitude=7']],
   fireAt: (id) => [`a fire at #${id} after 12 seconds`, [`disaster fire at=#${id} start=12`]],
@@ -253,8 +262,7 @@ if (want('bar')) {
   // input has a real composition (compositionstart fired, isComposing on its key events).
   await leaveBar();
   await openBar();
-  await chord('KeyA', mod);
-  await page.keyboard.press('Backspace');
+  await clearField();
   await ev((s) => {
     const el = document.querySelector(s);
     window.__ime = { starts: 0, ends: 0, keys: [] };
@@ -397,11 +405,11 @@ if (want('select')) {
   // setup: a steep mound with trees on it (the default town is flat)
   await run('terrain raise circle 70,-70 r=14 by=12');
   // setup: trees on the mound's flank (a forest plan rejects steep spots, so they are put there directly)
-  await ev(() => { const w = window.__ds.world.getState(); w.addObjects(Array.from({ length: 12 }, (_, k) => { const a = (k / 12) * 2 * Math.PI, r = 4 + (k % 3) * 3; return { type: 'tree', transform: { position: [70 + r * Math.cos(a), 0, -70 + r * Math.sin(a)], rotation: [0, 0, 0], scale: [1, 1, 1] } }; })); });
+  await ev(() => { const w = window.__ds.world.getState(); w.addObjects(Array.from({ length: 12 }, (_, k) => { const a = (k / 12) * 2 * Math.PI, r = [4, 12.5, 13.5][k % 3]; /* four on the flat top, eight on the rim's slope */ return { type: 'tree', transform: { position: [70 + r * Math.cos(a), 0, -70 + r * Math.sin(a)], rotation: [0, 0, 0], scale: [1, 1, 1] } }; })); });
   await wait(300);
   b = await say(T.steep[0]);
   const expectSteep = await ev(() => { const doc = window.__ds.world.getState().doc; const s = window.__ds.buildLib.samplerFor(doc.terrain); return Object.values(doc.objects).filter((o) => o.type === 'tree' && s.sampleSlope(o.transform.position[0], o.transform.position[2]) > 20).map((o) => o.id).sort(); });
-  check('S7-3 "trees on slopes over 20°": exactly the trees standing on ground steeper than 20°', same(understoodOf(b), T.steep[1]) && same((await sel()).slice().sort(), expectSteep) && expectSteep.length > 0, { selected: (await sel()).length, expected: expectSteep.length, fb: b.fb, keys: b.fbKeys });
+  check('S7-3 "trees on slopes over 20°": exactly the trees standing on ground steeper than 20°', same(understoodOf(b), T.steep[1]) && same((await sel()).slice().sort(), expectSteep) && expectSteep.length > 0, { selected: (await sel()).length, expected: expectSteep.length, fb: b.fb, keys: b.fbKeys, text: b.text, mound: await ev(() => { const doc = window.__ds.world.getState().doc; const sm = window.__ds.buildLib.samplerFor(doc.terrain); return { profile: [0, 8, 11, 12, 13, 14, 15, 16].map((r) => [r, +sm.sampleHeight(70 + r, -70).toFixed(2)]), slopes: Object.values(doc.objects).filter((o) => o.type === 'tree' && Math.hypot(o.transform.position[0] - 70, o.transform.position[2] + 70) < 15).map((o) => Math.round(sm.sampleSlope(o.transform.position[0], o.transform.position[2]))) }; }) });
   // setup: two trees locked, one hidden
   const marked = await ev(() => { const w = window.__ds.world.getState(); const t = Object.values(w.doc.objects).filter((o) => o.type === 'tree').slice(0, 3); w.applyEdit({ update: [{ ...t[0], locked: true }, { ...t[1], locked: true }, { ...t[2], hidden: true }] }); return t.map((o) => o.id); });
   const allTrees = (await ofType('tree')).length;
@@ -438,36 +446,49 @@ if (want('select')) {
 if (want('terrain')) {
   await fresh();
   await view(40, 55, 110, 50);
-  // setup: a mound with a house on its side
+  // setup: a 5 m plateau (a typed raise lifts the whole circle and falls off at its rim) and a house on the low ground
+  // beside it. The flatten is typed with the pointer 12 m from the plateau's centre: its circle covers plateau, rim and
+  // low ground, the house included (the house's footprint reaches the rim, so it starts a little below the plateau).
   await run('terrain raise circle 40,55 r=16 by=5');
-  await run('place building:house at=44,58');
+  await run('place building:house at=58,55');
   const h0 = await hashes();
   const u0 = await undoDepth();
-  await pointAt(40, 55);
+  const house0 = (await ofType('building')).find((o) => Math.abs(o.p[0] - 58) < 1 && Math.abs(o.p[2] - 55) < 1);
+  await pointAt(52, 55);
   const cursor = await ev(() => window.__ds.command.session.getState().cursor);
   let b = await say(T.flatten[0]);
   let d = await drawn();
-  check('S9-1 "flatten a 10 m circle here": "here" is the ground point under the pointer; the preview is a height-change heat map, the document is unchanged',
-    same(understoodOf(b), T.flatten[1]) && cursor && near(cursor, [40, 55], 1.5) && d.terrain && d.terrain.area > 100 && b.plan.diff.terrain.area > 100 && sameBits(await hashes(), h0), { cursor, d, diff: b.plan?.diff });
+  check('S9-1 "flatten a 10 m circle here": "here" is the ground point under the pointer; the preview is a height-change heat map (and the house that will rise with the ground), the document is unchanged',
+    same(understoodOf(b), T.flatten[1]) && cursor && near(cursor, [52, 55], 1.5) && d.terrain && d.terrain.area > 100 && d.terrain.up > 4 && b.plan.diff.terrain.area > 100 && b.plan.diff.moved === 1 && sameBits(await hashes(), h0), { cursor, d, diff: b.plan?.diff });
   await shot('S9-heatmap');
   await enter(900);
-  const seated = await ev(() => { const doc = window.__ds.world.getState().doc; const s = window.__ds.buildLib.samplerFor(doc.terrain); const o = Object.values(doc.objects).find((x) => x.type === 'building' && Math.abs(x.transform.position[0] - 44) < 1 && Math.abs(x.transform.position[2] - 58) < 1); const c = window.__ds.command.session.getState().cursor; return { y: o.transform.position[1], ground: s.sampleHeight(o.transform.position[0], o.transform.position[2]), centre: s.sampleHeight(40, 55), edge: s.sampleHeight(40 + 6, 55), c }; });
+  const seated = await ev(() => { const doc = window.__ds.world.getState().doc; const s = window.__ds.buildLib.samplerFor(doc.terrain); const o = Object.values(doc.objects).find((x) => x.type === 'building' && Math.abs(x.transform.position[0] - 58) < 1 && Math.abs(x.transform.position[2] - 55) < 1); return { y: o.transform.position[1], ground: s.sampleHeight(o.transform.position[0], o.transform.position[2]), centre: s.sampleHeight(52, 55), east: s.sampleHeight(58, 55), west: s.sampleHeight(46, 55), outside: s.sampleHeight(70, 55) }; });
   const h1 = await hashes();
-  check('S9-2 Enter flattens it (the circle is level) and the house sits on the new ground; one undo step', Math.abs(seated.centre - seated.edge) < 0.05 && Math.abs(seated.y - seated.ground) < 0.35 && !sameBits(h1, h0) && (await undoDepth()) === u0 + 1, seated);
+  check('S9-2 Enter flattens it (the circle is level at the height under the pointer) and the house has risen with the ground; one undo step',
+    Math.abs(seated.centre - seated.east) < 0.05 && Math.abs(seated.centre - seated.west) < 0.05 && seated.centre > 4 && seated.outside < 0.5 && house0 && seated.y > house0.p[1] + 0.5 && Math.abs(seated.y - seated.ground) < 0.35 && !sameBits(h1, h0) && (await undoDepth()) === u0 + 1, { seated, houseBefore: house0?.p });
   await undoKey();
   const h2 = await hashes();
   check('S9-3 undo is bit-identical (document and every terrain / layer array)', sameBits(h2, h0), { h0, h2 });
   await redoKey();
   check('S9-4 redo is bit-identical to the confirmed state', sameBits(await hashes(), h1), {});
+  // A flatten that changes nothing (the top of the plateau is level already) is no step at all — objects stand nearby.
+  await undoKey();
+  await pointAt(40, 55);
+  b = await say(T.flatten[0]);
+  await enter(600);
+  check('S9-5 flattening ground that is level already changes nothing: no undo step, the same document bit for bit', sameBits(await hashes(), h0) && (await undoDepth()) === u0, { plan: (await bar()).plan, depth: (await undoDepth()) - u0 });
+  await leaveBar();
 
   // S10
   await view(30, 30, 130, 40);
   const t0n = (await ofType('tree')).length;
   b = await say(T.forest[0]);
   d = await drawn();
-  const rejectLine = (await textOf('[data-testid="command-results"]')) ?? '';
-  const rejected = b.plan?.items.filter((i) => i.status === 'rejected').length ?? 0;
-  check('S10-1 the forest plan shows its trees as ghosts and says why spots were rejected', same(understoodOf(b), T.forest[1]) && d.ghosts > 5 && (rejected > 0 || b.plan.notes.some((n) => n.startsWith('cmd37.note.forest'))) && rejectLine.length > 0, { ghosts: d.ghosts, rejected, notes: b.plan?.notes });
+  const shownForest = (await textOf('[data-testid="command-results"]')) ?? '';
+  const why = (b.plan?.warnings ?? []).filter((k) => k.startsWith('cmd37.forest.'));
+  const whyText = await ev((keys) => { const s = window.__ds.command.session.getState(); const ws = s.plan.preview.result.lines.flatMap((l) => l.plan.warnings); return keys.map((k) => { const w = ws.find((x) => x.key === k); return window.__ds.tr(w.key, w.params); }); }, why);
+  check('S10-1 the forest plan shows its trees as ghosts and says in words why spots were rejected (road, building …)',
+    same(understoodOf(b), T.forest[1]) && d.ghosts > 5 && d.ghosts === b.plan.counts.create && why.length > 0 && whyText.every((t) => shownForest.includes(t)), { ghosts: d.ghosts, why, whyText, notes: b.plan?.notes });
   await enter(1000);
   const first = (await ofType('tree')).slice(t0n).map((o) => [o.p.map((v) => +v.toFixed(4)), o.seed]).sort();
   await undoKey();
@@ -492,19 +513,20 @@ if (want('disaster')) {
   const n4 = await ev(() => { const n = window.__ds.world.getState().doc.roads.nodes.n4; return [n.x, n.z]; });
   const blast = list[0];
   // The mouse path for the same spot: arm the explosion (setup) and click the junction with the real mouse.
-  await ev(() => window.__ds.placement.arm('blast'));
+  await ev(() => window.__ds.placement.armPlacement('blast'));
   await wait(300);
   await above(n4[0], n4[1], 70);
   const [sx, sy] = await screen(n4[0], n4[1]);
   await page.mouse.move(sx - 8, sy - 5); await page.mouse.move(sx, sy, { steps: 3 }); await wait(200);
   await page.mouse.click(sx, sy);
   await wait(500);
-  await ev(() => window.__ds.placement.disarm?.());
+  await ev(() => window.__ds.placement.disarmPlacement());
   list = await insts();
   const byMouse = list[1];
-  const strip = (i) => { const { id: _i, key: _k, ...rest } = i; const spec = { ...rest.spec }; delete spec.energy; delete spec.startTime; return { ...rest, at: undefined, spec: { ...spec, position: spec.position?.map((v) => Math.round(v)) } }; };
+  // Everything but the id and the two values the sentence gave (energy, start).
+  const strip = (i) => { const { id: _i, start: _s, ...rest } = i; const spec = { ...rest.spec }; delete spec.energy; return { ...rest, spec }; };
   check('S11-2 Enter places a blast instance at the junction: 1.8e9 J, starting at 5 s — every other value is what the mouse placement gives',
-    blast?.type === 'blast' && blast.spec.energy === 1.8e9 && (blast.at === 5 || blast.spec.startTime === 5) && near(blast.spec.position, n4, 0.11) && byMouse?.type === 'blast' && same(strip(blast), strip(byMouse)), { blast, byMouse });
+    blast?.type === 'blast' && blast.spec.energy === 1.8e9 && blast.start?.at === 5 && near(blast.spec.position, n4, 0.11) && byMouse?.type === 'blast' && byMouse.id !== blast.id && same(strip(blast), strip(byMouse)), { blast, byMouse });
   await undoKey(); // the mouse-placed one
   await view(0, 0, 150, 40);
   await pointAt(30, -40);
@@ -517,11 +539,13 @@ if (want('disaster')) {
   b = await run(fire[0]);
   list = await insts();
   const f = list.find((i) => i.type === 'fire');
-  check('S11-4 "a fire at #<id> after 12 seconds": a fire instance at that building, starting at 12 s', f && (f.at === 12 || f.spec.startTime === 12) && near(f.spec.position ?? f.spec.center ?? [], [target.p[0], target.p[2]], 0.11), { f, target: target.p });
+  check('S11-4 "a fire at #<id> after 12 seconds": a fire instance at that building, starting at 12 s', same(understoodOf(b) ?? fire[1], fire[1]) && f && f.start?.at === 12 && near(f.spec.position ?? f.spec.center ?? [], [target.p[0], target.p[2]], 0.11), { f, target: target.p, text: fire[0], fb: b.fb, keys: b.fbKeys, understood: understoodOf(b), plan: b.plan && b.plan.canonical });
   check('S11-5 three commands = three undo steps; the pins are in the scene', (await undoDepth()) === u0 + 3 && list.length === 3, { depth: (await undoDepth()) - u0, n: list.length });
 
   // S12
   await run('disaster rain intensity=60 duration=600');
+  await run('disaster blast at=40,40 energy=1e8 start=600');
+  const late = (await insts()).find((i) => i.type === 'blast' && i.start?.at === 600);
   const docBefore = await hashes();
   b = await run(T.runSim[0]);
   await page.waitForFunction(() => window.__ds.simStore.getState().status === 'running', { timeout: 120_000 }).catch(() => null);
@@ -540,15 +564,20 @@ if (want('disaster')) {
   await wait(1200);
   b = await run(T.stopRain[0]);
   await wait(600);
-  const rain = await ev(() => window.__ds.sim.instances().find((i) => i.type === 'rain'));
-  check('S12-4 "stop the rain" stops that instance', rain && (rain.status === 'stopped' || rain.status === 'ended' || rain.status === 'cancelled'), { rain });
-  b = await say(T.pauseBlast[0]);
-  check('S12-5 "pause the explosion" is refused: an explosion cannot be paused (said, not done)', b.fb === 'error' && b.fbKeys.some((k) => k.startsWith('cmd37.err.control')), { fb: b.fb, keys: b.fbKeys });
+  const rain = await ev(() => window.__ds.sim.instances().filter((i) => i.spec.event === 'rain').map((i) => ({ key: i.key, status: i.status, end: i.end })));
+  check('S12-4 "stop the rain" stops that instance (the others go on)', same(understoodOf(b) ?? T.stopRain[1], T.stopRain[1]) && rain.length === 1 && rain[0].status !== 'active' && rain[0].status !== 'pending' && rain[0].end !== null, { rain, fb: b.fb, keys: b.fbKeys, all: await ev(() => window.__ds.sim.instances().map((i) => [i.key, i.spec.event, i.status])) });
+  // The explosion that has not gone off yet (start 600 s), named by its id: pausing is not something an explosion can do.
+  b = await say(KO ? `${late.id} 일시정지` : `pause ${late.id}`);
+  const lateNow = await ev((id) => window.__ds.sim.instances().filter((i) => i.key === id || i.key.endsWith(id)).map((i) => i.status), late.id);
+  check('S12-5 "pause p<k>" on an explosion is refused with the reason (an explosion cannot be paused) — said, not done', same(b.understood ?? [`disaster ${late.id} pause`], [`disaster ${late.id} pause`]) && b.fb === 'error' && b.fbKeys.includes('cmd37.err.unsupportedControl'), { fb: b.fb, keys: b.fbKeys, understood: b.understood, lateNow });
   await page.keyboard.press('Escape');
   b = await run(T.resetSim[0]);
   await wait(1200);
-  st = await ev(() => ({ status: window.__ds.simStore.getState().status, mode: window.__ds.editor.getState().mode }));
-  check('S12-6 "reset" goes back to the unchanged document', (st.status === 'idle' || st.mode === 'edit') && sameBits(await hashes(), docBefore), { st });
+  st = await ev(() => ({ status: window.__ds.simStore.getState().status, mode: window.__ds.editor.getState().mode, time: window.__ds.simStore.getState().time ?? window.__ds.sim.time?.() ?? null, instances: window.__ds.sim.isLoaded() ? window.__ds.sim.instances().map((i) => i.status) : [] }));
+  check('S12-6 "reset" puts the run back to its start (as the reset button does: every disaster pending again); the document was never changed', st.status !== 'running' && st.instances.every((x) => x === 'pending') && sameBits(await hashes(), docBefore), { st });
+  await ev(() => window.__ds.actions.exitSimulation()); // setup for what follows: back to the editor
+  await wait(500);
+  check('S12-7 back in the editor the document is the one from before the run, bit for bit', sameBits(await hashes(), docBefore) && (await ev(() => window.__ds.editor.getState().mode)) === 'editor', {});
   await shot('S12-run');
 }
 
@@ -629,8 +658,7 @@ async function scriptRun(text) {
   await openBar();
   if (!(await has('[data-testid="command-script-text"]'))) await click('[data-testid="command-script"]');
   await page.click('[data-testid="command-script-text"]', { clickCount: 3 });
-  await chord('KeyA', mod);
-  await page.keyboard.press('Backspace');
+  await clearField();
   // (typed line by line: Enter in the script box is a new line)
   for (const line of text.split('\n')) { await page.keyboard.type(line, { delay: 1 }); await page.keyboard.press('Enter'); }
   await wait(200);
@@ -834,7 +862,7 @@ if (want('life')) {
   const cases = [
     ['a tool is armed (B = brush)', async () => { await leaveBarKeepPlan(); await page.keyboard.press('KeyB'); }],
     ['a palette placement is armed', async () => { await ev(() => window.__ds.editor.getState().setPlacing?.({ type: 'tree' }) ?? window.__ds.editor.getState().setTool('place')); }],
-    ['a disaster placement is armed', async () => { await ev(() => window.__ds.placement.arm('blast')); }],
+    ['a disaster placement is armed', async () => { await ev(() => window.__ds.placement.armPlacement('blast')); }],
     ['the document is replaced', async () => { await ev(() => window.__ds.actions.loadSampleTown()); }],
     ['the mode switches (simulation starts)', async () => { await leaveBarKeepPlan(); await page.keyboard.press('Space'); }],
   ];
@@ -846,8 +874,8 @@ if (want('life')) {
     const g = await gone();
     check(`S21 an open plan is cancelled when ${name}: no plan, no ghost in the scene`, was && g.plan === null && g.scene === 0, { was, g });
     // back to a clean editor for the next case
-    await ev(() => { window.__ds.placement.disarm?.(); const e = window.__ds.editor.getState(); e.setTool('select'); });
-    if ((await ev(() => window.__ds.simStore.getState().status)) !== 'idle') { await run(T.resetSim[0]); await wait(1000); }
+    await ev(() => { window.__ds.placement.disarmPlacement(); const e = window.__ds.editor.getState(); e.setTool('select'); });
+    if ((await ev(() => window.__ds.editor.getState().mode)) !== 'editor') { await ev(() => window.__ds.actions.exitSimulation()); await wait(1000); }
     await wait(300);
   }
   // 20 plans opened and cancelled: the renderer's geometry / texture counts come back to where they were.

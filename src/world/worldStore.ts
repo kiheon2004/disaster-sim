@@ -9,7 +9,7 @@ import { defaultExperiment, type ExperimentSettings } from '@/phenomena/types';
 import type { EarthquakeEventSpec } from '@/events/specs';
 import { normalizeSeismic, seismicOf } from '@/simulation/seismic/structuralProps';
 import { createId } from '@/core/id';
-import { sameObjectValue } from './sameObject';
+import { sameObjectState } from './sameObject';
 import { getDefinition } from '@/objects/registry';
 import {
   applyParams,
@@ -294,13 +294,26 @@ export interface WorldState {
 /** Same plain value (settings, scenario, features, a road network: small JSON-like data). */
 const sameValue = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-/** Same object map: the same ids holding the same object values (a new object that says the same is not a change). */
-function sameEntries(a: Objects, b: Objects): boolean {
-  if (a === b) return true;
-  const keys = Object.keys(a);
-  if (keys.length !== Object.keys(b).length) return false;
-  for (const k of keys) if (a[k] !== b[k] && (!b[k] || !sameObjectValue(a[k], b[k]))) return false;
-  return true;
+/**
+ * What a batch leaves of the object map: an object that ends the batch in the same state it began in — the same value
+ * in the same pose, whatever numbers the pose is written with — is the object from BEFORE the batch (the terrain follow
+ * rule writes the heading of every grounded object within 40 m of a terrain change back in (−π, π], moved or not: without
+ * this a command that changes nothing still recorded a step, and one that changes little rewrote its neighbours).
+ * Returns `before` itself when nothing is left changed.
+ */
+function settleObjects(now: Objects, before: Objects): Objects {
+  if (now === before) return before;
+  let out: Objects | null = null;
+  let same = Object.keys(now).length === Object.keys(before).length;
+  for (const k of Object.keys(now)) {
+    const a = now[k], b = before[k];
+    if (a === b) continue;
+    if (b && sameObjectState(b, a)) {
+      out ??= { ...now };
+      out[k] = b;
+    } else same = false;
+  }
+  return same ? before : out ?? now;
 }
 
 const touch = (doc: WorldDocument, objects: Objects): WorldDocument => ({
@@ -656,7 +669,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     // (settings-only terrain steps carry a one-vertex patch, like setWaterLevel outside a batch)
     const terrain = rect || terrainSettings ? makePatch(t, b.terrain, rect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }) : null;
     const patch = touched ? diffLayerPatch(land, t.nx, b.layers) : null;
-    const objects = sameEntries(doc.objects, b.objects) ? b.objects : doc.objects;
+    const objects = settleObjects(doc.objects, b.objects);
     const roads = doc.roads === b.roads || (!terrain && sameValue({ ...doc.roads, underlay: 0 }, { ...b.roads, underlay: 0 })) ? b.roads : doc.roads;
     const features = land.features === b.features || sameValue(land.features, b.features) ? b.features : land.features;
     const next = features === b.features ? b.next : land.next;

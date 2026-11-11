@@ -25,6 +25,7 @@ import { scratchWorld } from '@/world/worldStore';
 import { parseCanonical } from './canonical';
 import { emptyContext, envOf, orderedObjects, type CommandContext } from './context';
 import { planIntent } from './plan';
+import { applyOps } from './run';
 import type { Plan, PlanResult } from './planTypes';
 
 const profile = (preset: string): RoadProfile => ({ ...defaultProfile(), ...PROFILE_PRESETS[preset] });
@@ -613,6 +614,16 @@ describe('disasters and run control', () => {
   it('run control is effects only; editing commands are refused while a simulation runs', () => {
     const doc = town().getState().doc;
     expect(ok(doc, 'run')).toMatchObject({ ops: [], effects: [{ fx: 'sim', op: 'run' }], immediate: true });
+    expect(ok(doc, 'run').notes).toEqual([]);
+    // With disasters placed, "run" from the editor says that they start with it (disabled ones are not counted);
+    // during a run it is a plain resume.
+    const st = town();
+    for (const line of ['disaster rain', 'disaster blast at=0,30 start=5']) applyOps(st, ok(st.getState().doc, line).ops);
+    const placed = st.getState().doc;
+    expect(placed.scenario.experiment.instances.length).toBe(2);
+    expect(ok(placed, 'run').notes).toEqual([{ key: 'cmd37.note.runWith', params: { count: 2 } }]);
+    expect(ok(placed, 'run', { ...emptyContext(), simulating: true }).notes).toEqual([]);
+    expect(ok(placed, 'pause').notes).toEqual([]);
     expect(ok(doc, 'speed=2').effects).toEqual([{ fx: 'speed', value: 2 }]);
     expect(errorKey(plan(doc, 'speed=3'))).toBe('cmd37.err.speed');
     expect(ok(doc, 'undo').effects).toEqual([{ fx: 'undo' }]);

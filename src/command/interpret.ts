@@ -28,12 +28,22 @@ export interface ScriptLine {
   text: string;
 }
 
-/** The command lines of a script: blank lines and lines starting with `#` are comments. */
+/**
+ * A comment line of a script: `#` alone, or `#` followed by a space. `#` directly followed by a character is NOT a
+ * comment — it is an object id ("#building_ab12에 화재", "#tree_1 delete"): such a line is a command, and one that is
+ * neither ("#todo") is reported as not understood rather than silently skipped.
+ */
+export function isScriptComment(line: string): boolean {
+  const t = line.trim();
+  return t === '#' || /^#\s/.test(t);
+}
+
+/** The command lines of a script: blank lines and comment lines (`# …`) are left out. */
 export function scriptLines(text: string): ScriptLine[] {
   const out: ScriptLine[] = [];
   text.split(/\r?\n/).forEach((line, k) => {
     const t = line.trim();
-    if (t && !t.startsWith('#')) out.push({ n: k + 1, text: t });
+    if (t && !isScriptComment(t)) out.push({ n: k + 1, text: t });
   });
   return out;
 }

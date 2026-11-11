@@ -7,7 +7,7 @@
 import { useRef, useState } from 'react';
 import { useT } from '@/i18n/i18n';
 import { cancelCommand, historyScript, runScript } from '@/app/commandActions';
-import { MAX_SCRIPT_LINES } from '@/command/interpret';
+import { MAX_SCRIPT_LINES, scriptLines } from '@/command/interpret';
 import { SMALL_EDIT_ITEMS } from '@/command/planTypes';
 import { useCommandSession } from './commandSession';
 import { focusCommandBar, useBarStore } from './barStore';
@@ -30,7 +30,7 @@ export function ScriptEditor({ onDone }: { onDone: (r: Outcome) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState('');
   const setScript = (text: string) => useBarStore.getState().setScript(text);
-  const lines = script.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith('#')).length;
+  const lines = scriptLines(script).length;
 
   const run = async () => {
     if (busy.current || !script.trim()) return;

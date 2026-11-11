@@ -432,3 +432,29 @@ describe('for the bar\'s own controls (ui)', () => {
   });
 });
 
+describe('a line that starts with an object id', () => {
+  it('"#<id> …" is a command, not a script comment — a sentence, a canonical line, and a line of a script', async () => {
+    // Found in Chrome (S11): "#building_…에 화재, 12초 뒤에" did nothing at all — every line starting with # was dropped as
+    // a comment, with no message.
+    const [id] = W().applyEdit({ add: [{ type: 'tree', transform: at(10, 20) }] });
+    expect(await enter(`#${id}에 화재, 12초 뒤에`)).toBe('planned');
+    expect(S().plan!.canonical).toEqual([`disaster fire at=#${id} start=12`]);
+    expect(await confirmPlan()).toBe('applied');
+    expect(instances().map((i) => [i.type, i.start])).toEqual([['fire', { at: 12 }]]);
+    // In a script: comments ("# …", "#") are skipped, an id line runs.
+    expect(await enter(`# a comment\n#\n#${id} 숨겨\n   # another comment\nselect none`)).toBe('planned');
+    expect(S().plan!.canonical).toEqual([`hide #${id}`, 'select none']);
+    expect(await confirmPlan()).toBe('applied');
+    expect(W().doc.objects[id].hidden).toBe(true);
+    // "#word" that is neither a comment nor an id is reported, never skipped: the script does not run.
+    const before = bits();
+    expect(await enter('#todo\nplace tree at=0,30')).toBe('feedback');
+    expect(S().feedback.k).toBe('unknown');
+    expect(bits()).toBe(before);
+    // Only comments: Enter says so.
+    expect(await enter('# nothing here')).toBe('feedback');
+    expect(S().feedback).toMatchObject({ k: 'error', error: { key: 'cmd37.err.onlyComments' } });
+    expect(bits()).toBe(before);
+  });
+});
+

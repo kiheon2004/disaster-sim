@@ -158,9 +158,15 @@ export function planInstance(i: IntentOf<'instance'>, env: Env, d: Draft): void 
   d.immediate = true;
 }
 
-export function planSim(i: IntentOf<'sim'>, d: Draft): void {
+export function planSim(i: IntentOf<'sim'>, env: Env, d: Draft): void {
   d.effects.push({ fx: 'sim', op: i.op });
   d.immediate = true;
+  // "Run" from the editor starts the placed disasters with it (the disasters tab's "run experiment"); with none placed
+  // it is the play button. During a run it resumes — disasters placed meanwhile are started by their own `now`.
+  if (i.op === 'run' && !env.ctx.simulating) {
+    const count = (env.doc.scenario.experiment?.instances ?? []).filter((x) => x.enabled).length;
+    if (count) d.notes.push(msg('cmd37.note.runWith', { count }));
+  }
 }
 
 export function planSpeed(i: IntentOf<'speed'>, d: Draft): void {

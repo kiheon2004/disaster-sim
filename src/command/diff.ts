@@ -6,10 +6,11 @@
  */
 import type { EntityId } from '@/core/types';
 import type { WorldDocument, WorldObject } from '@/core/model';
-import { sameOrientation } from '@/core/math';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import { changedRect, type GridRect } from '@/terrain/TerrainData';
-import { sameObjectValue } from '@/world/sameObject';
+import { sameObjectState, samePose } from '@/world/sameObject';
+
+export { samePose };
 
 export interface TerrainDiff {
   rect: GridRect;
@@ -41,21 +42,6 @@ export interface DocDiff {
   any: boolean;
 }
 
-/** Below this a position (m) / orientation (quaternion component) difference is numerical noise, not a move. */
-const POSE_EPS = 1e-9;
-
-/**
- * The same POSE: the same place, size and orientation. The numbers may differ — a heading written back as −0.78 rad
- * for 5.5 rad, the other Euler form of the same orientation, or a last bit off after a quaternion round trip. The store
- * re-seats grounded objects within 40 m of a terrain change and writes their heading back that way even when the ground
- * under them did not change; such an object has not moved and must not be shown or counted as moved.
- */
-export const samePose = (a: WorldObject, b: WorldObject) =>
-  a.transform === b.transform ||
-  (a.transform.position.every((v, i) => Math.abs(v - b.transform.position[i]) <= POSE_EPS) &&
-    a.transform.scale.every((v, i) => v === b.transform.scale[i]) &&
-    sameOrientation(a.transform.rotation, b.transform.rotation, POSE_EPS));
-
 const byOrder = (a: WorldObject, b: WorldObject) => (a.type < b.type ? -1 : a.type > b.type ? 1 : 0) || a.serial - b.serial || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 export function diffDocuments(before: WorldDocument, after: WorldDocument): DocDiff {
@@ -69,7 +55,7 @@ export function diffDocuments(before: WorldDocument, after: WorldDocument): DocD
       else if (a === b) continue;
       else if (!samePose(a, b)) moved.push({ before: a, after: b });
       // The same pose: changed only if something else differs (an object written again with equal content is not).
-      else if (sameObjectValue(a, a.transform === b.transform ? b : { ...b, transform: a.transform })) rewritten++;
+      else if (sameObjectState(a, b)) rewritten++;
       else changed.push({ before: a, after: b });
     }
     for (const id of Object.keys(before.objects) as EntityId[]) if (!after.objects[id]) removed.push(before.objects[id]);

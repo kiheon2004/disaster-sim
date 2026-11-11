@@ -271,15 +271,33 @@ describe('preview', () => {
     expect(d.moved[0].after.transform.position[1]).toBeGreaterThan(0.5);
     expect(d.changed).toEqual([]);
     expect(d.added).toEqual([]);
-    // The far objects the store wrote again (the car and the person: headings 5.5 and 4 rad are not in (−π, π]) are
-    // counted apart, not as changes; the tree (1 rad) was not touched.
-    expect(d.rewritten).toBe(2);
-    // Confirming does the same: on the document those objects have the same pose as before, bit-equal or not.
+    // The far objects are the very objects from before: the batch keeps an object that ends in the state it began in
+    // (the store's follow rule had written the car's and the person's heading again: 5.5 and 4 rad are not in (−π, π]).
+    expect(d.rewritten).toBe(0);
+    // Confirming does the same on the document.
     okRun(runIntents(st, intents('terrain raise circle 20,20 r=8 by=2'), emptyContext()));
     const after = st.getState().doc;
-    for (const id of [far1, far2, far3]) expect(samePose(doc.objects[id], after.objects[id])).toBe(true);
-    expect(after.objects[far3]).toBe(doc.objects[far3]);
+    for (const id of [far1, far2, far3]) expect(after.objects[id]).toBe(doc.objects[id]);
     expect(samePose(doc.objects[under], after.objects[under])).toBe(false);
+  });
+
+  it('a terrain command that changes nothing records no step, even with objects nearby (flatten on level ground)', () => {
+    // Found in Chrome (S9): flatten on a plateau changed no height, yet the follow rule wrote three neighbours again —
+    // one undo step and another document hash for a command whose preview said "nothing changes".
+    const st = town();
+    okRun(runIntents(st, intents('terrain raise circle 40,55 r=16 by=5'), emptyContext()));
+    okRun(runIntents(st, intents('place building:house at=44,58'), emptyContext()));
+    const S = () => st.getState();
+    const doc = S().doc;
+    const before = bits(doc);
+    const steps = S().past.length;
+    const p = previewIntents(doc, intents('terrain flatten circle 40,55 r=10'), emptyContext());
+    expect(p.diff!.any).toBe(false);
+    const r = okRun(runIntents(st, intents('terrain flatten circle 40,55 r=10'), emptyContext()));
+    expect(r.changed).toBe(false);
+    expect(S().past.length).toBe(steps);
+    expect(S().doc).toBe(doc);
+    expect(bits(S().doc)).toBe(before);
   });
 
   it('moved and removed objects, and a failed preview', () => {
