@@ -15,7 +15,7 @@ import { useEditorStore } from '@/editor/editorStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { downloadDocument, parseDocument, pickDocumentFile, storage, type LoadResult } from '@/world/serialization';
 import { sampleTown } from '@/world/sampleScene';
-import { defaultTownObjects, defaultTownRoads } from '@/world/defaultTown';
+import { defaultTownObjects, defaultTownRoads, structureLabObjects, structureLabRoads } from '@/world/defaultTown';
 import { stressScene } from '@/world/stressScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
@@ -299,6 +299,18 @@ export function loadCelestialDemo(id: CelestialScenario) {
   useWorldStore.getState().addObjects(h ? p.objects.map((o) => ({ ...o, transform: { ...o.transform, position: [o.transform.position[0], h(o.transform.position[0], o.transform.position[2]), o.transform.position[2]] } })) : p.objects);
   useWorldStore.setState({ past: [], future: [] });
   toast('success', { key: 'celestial.demo.loaded', params: { name: t(`celestial.scenario.${id}`) } });
+}
+
+/** Phase 36 §51: the structure lab (one building per structural type on one street, structure model v2). */
+export function loadStructureLab() {
+  if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('confirm.new'))) return;
+  const doc = createEmptyDocument(t('ed36.preset.structureLab'));
+  useEditorStore.getState().select(null);
+  useWorldStore.getState().replaceDocument(doc);
+  useWorldStore.getState().applyEdit({ roads: structureLabRoads() });
+  useWorldStore.getState().addObjects(structureLabObjects());
+  useWorldStore.getState().updateSimulationSettings({ structure: { model: 'v2' } });
+  useWorldStore.setState({ past: [], future: [] });
 }
 
 export function loadSampleTown() {

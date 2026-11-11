@@ -94,4 +94,10 @@ export const enP36Editor = {
   'structType.mode.splitting': 'splitting',
   'structType.mode.bending': 'bending',
   'structType.mode.cladding': 'cladding loss',
+  'ed36.preset.title': 'New world from a preset',
+  'ed36.preset.structureLab': 'Structure lab (one building per structural type)',
+  'ed36.preset.denseCity': 'Road-grid city',
+  'ed36.preset.mountainVillage': 'Mountain terrain',
+  'ed36.preset.coastalCity': 'Coastal area',
+  'ed36.preset.riverValley': 'River and lowland',
 } as const;

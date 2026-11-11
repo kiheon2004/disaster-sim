@@ -103,3 +103,30 @@ export function defaultTownObjects(): CreateObjectInput[] {
   }
   return out;
 }
+
+/**
+ * Structure lab (Phase 36 §51): a flat test ground with one building of each structural type side by side at the same
+ * height class (steel frame, RC frame, masonry, timber — 3 storeys, same plan), on one straight street with parked cars
+ * and people on the sidewalk — for comparing how the types respond to the same disaster. Deterministic.
+ */
+export function structureLabRoads(): RoadNetwork {
+  return drawRoad(emptyNetwork(), [[-80, 0], [80, 0]], { curved: false, profile: profile('street') }).network;
+}
+
+export function structureLabObjects(): CreateObjectInput[] {
+  const rnd = seededRandom(20261110);
+  const out: CreateObjectInput[] = [];
+  const plan = { width: 12, depth: 10, floors: 3, floorHeight: 3.2, groundFloorHeight: 3.6, bay: 4, sign: false };
+  // Street 'street' = 7 m carriageway + 2 m sidewalks: the outer edge at 5.5 m; buildings 1.5 m behind it.
+  const z = -(5.5 + 1.5 + plan.depth / 2);
+  const specs: [BuildingSpec, string][] = [
+    [{ ...defaultSpec(), ...plan, system: 'steelFrame', structureMaterial: 'structuralSteel', slabMaterial: 'reinforcedConcrete', claddingMaterial: 'glass', color: '#8d9db2' }, 'steel'],
+    [rc({ ...plan, color: '#b88f7a' }), 'rc'],
+    [masonry({ ...plan, color: '#c9b79c' }), 'masonry'],
+    [{ ...defaultSpec(), ...plan, system: 'wood', structureMaterial: 'timber', slabMaterial: 'timber', claddingMaterial: 'timber', color: '#d4c2a1' }, 'timber'],
+  ];
+  specs.forEach(([spec], i) => out.push(building(spec, undefined, -42 + i * 28, z, 0, rnd)));
+  [-30, 0, 30].forEach((x) => out.push(place('car.sedan', x, 2.2, 0, rnd)));
+  for (let i = 0; i < 6; i++) out.push(place('human.adult', -50 + i * 20, -4.6, rnd() * Math.PI * 2, rnd));
+  return out;
+}

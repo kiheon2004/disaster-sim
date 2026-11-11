@@ -19,6 +19,8 @@ import { HelpButton } from './HelpDialog';
 import { useBlueprintStore } from '@/editor/blueprintStore';
 import styles from './TopBar.module.css';
 import { exportBackup, hasBackup } from '@/app/autosave';
+import { loadStructureLab } from '@/app/actions';
+import { applyTemplate } from '@/app/blueprintActions';
 
 export function TopBar() {
   const t = useT();
@@ -96,6 +98,16 @@ function MoreMenu({ disabled }: { disabled: boolean }) {
         <div className={styles.menu} role="menu">
           <button role="menuitem" onClick={run(newProject)}><Icon name="plus" size={14} /> {t('topbar.new')}</button>
           <button role="menuitem" onClick={run(loadSampleTown)}><Icon name="sparkle" size={14} /> {t('topbar.sample')}</button>
+          {/* Phase 36 §51: world presets that exist (templates of the blueprint library + the structure lab). */}
+          <div className={styles.menuSep} />
+          <div className={styles.menuLabel}>{t('ed36.preset.title')}</div>
+          <button role="menuitem" data-testid="preset-structureLab" onClick={run(loadStructureLab)}><Icon name="building" size={14} /> {t('ed36.preset.structureLab')}</button>
+          {(['denseCity', 'mountainVillage', 'coastalCity', 'riverValley'] as const).map((id) => (
+            <button key={id} role="menuitem" data-testid={`preset-${id}`} onClick={run(() => {
+              if (Object.keys(useWorldStore.getState().doc.objects).length && !window.confirm(t('confirm.new'))) return;
+              void applyTemplate(id, 1, 'new', t(`ed36.preset.${id}`));
+            })}><Icon name="terrain" size={14} /> {t(`ed36.preset.${id}`)}</button>
+          ))}
           {[100, 500, 1000].map((n) => (
             <button key={n} role="menuitem" onClick={run(() => loadStressScene(n))}><Icon name="list" size={14} /> {t('topbar.stress', { n })}</button>
           ))}

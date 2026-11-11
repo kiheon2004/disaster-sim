@@ -24,3 +24,5 @@
 .menu button { text-align: left; background: transparent; border-color: transparent; padding: 7px 10px; display: flex; gap: 8px; align-items: center; }
 .menu button:hover:not(:disabled) { background: var(--bg-4); border-color: transparent; }
 .menuSep { height: 1px; background: var(--line); margin: 4px 0; }
+/* Phase 36: group label inside the ⋯ menu (world presets). */
+.menuLabel { padding: 4px 10px 2px; font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; }

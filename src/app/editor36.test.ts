@@ -362,3 +362,25 @@ describe('member type changes (§36)', () => {
     expect(TYPE_SWAPS.column).toBeUndefined();
   });
 });
+
+import { structureLabObjects, structureLabRoads } from '@/world/defaultTown';
+import { typeOfMaterial } from '@/buildings/structuralType';
+import { FootprintIndex, collisionFootprint } from '@/editor/build/footprint';
+
+describe('structure lab preset (§51)', () => {
+  it('one building of each load-bearing structural type, clear of the road and of each other', () => {
+    W().replaceDocument(createEmptyDocument());
+    W().applyEdit({ roads: structureLabRoads() });
+    W().addObjects(structureLabObjects());
+    const objs = Object.values(W().doc.objects);
+    const types = objs.filter((o) => o.type === 'building').map((o) => typeOfMaterial(o.building!.spec.structureMaterial)).sort();
+    expect(types).toEqual(['masonry', 'rc', 'steel', 'timber']);
+    const idx = new FootprintIndex();
+    for (const o of objs.filter((o) => o.type === 'building')) {
+      const fp = collisionFootprint(o.type, o.params, o.transform.scale, o.transform.position[0], o.transform.position[2], 0)!;
+      expect(idx.overlaps(fp)).toBe(false);
+      idx.add(fp);
+      expect(Math.abs(o.transform.position[2]) - o.building!.spec.depth / 2).toBeGreaterThan(5.5); // behind the sidewalk
+    }
+  });
+});

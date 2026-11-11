@@ -96,4 +96,10 @@ export const koP36Editor: Record<keyof typeof enP36Editor, string> = {
   'structType.mode.splitting': '쪼개짐',
   'structType.mode.bending': '굽힘',
   'structType.mode.cladding': '외장 탈락',
+  'ed36.preset.title': '프리셋으로 새 월드',
+  'ed36.preset.structureLab': '구조물 실험장(구조 형식별 건물 1동씩)',
+  'ed36.preset.denseCity': '도로 중심 도시',
+  'ed36.preset.mountainVillage': '산악 지형',
+  'ed36.preset.coastalCity': '해안 지역',
+  'ed36.preset.riverValley': '강과 저지대',
 };
