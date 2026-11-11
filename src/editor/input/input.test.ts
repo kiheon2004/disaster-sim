@@ -37,7 +37,7 @@ function key(k: string, code = ''): KeyboardEvent {
 
 import { attachCameraLock, cameraLocked, cameraLockOwners, lockCamera, releaseAllCameraLocks, unlockCamera } from './cameraLock';
 import { abortGestures, activeGesture, beginGesture } from './gesture';
-import { keyOf } from './keys';
+import { isTyping, keyOf, opensCommandBar } from './keys';
 
 afterEach(() => {
   abortGestures();
@@ -140,6 +140,68 @@ describe('shortcut keys', () => {
     expect(keyOf(key('}', 'BracketRight'))).toBe(']');
     expect(keyOf(key('Escape', 'Escape'))).toBe('escape');
     expect(keyOf(key('Delete', 'Delete'))).toBe('delete');
+  });
+
+  // Phase 37 (§14): the command bar's keys.
+  it('the slash key is read from the physical key too', () => {
+    expect(keyOf(key('/', 'Slash'))).toBe('/');
+    expect(keyOf(key('?', 'Slash'))).toBe('/'); // Shift+/
+    expect(keyOf(key('Process', 'Slash'))).toBe('/');
+  });
+
+  it('/ (no modifier) and Ctrl / ⌘ + K open the command bar — nothing else does', () => {
+    const mods = (k: string, code: string, m: { ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; altKey?: boolean }) => Object.assign(key(k, code), m);
+    expect(opensCommandBar(key('/', 'Slash'))).toBe(true);
+    expect(opensCommandBar(mods('k', 'KeyK', { ctrlKey: true }))).toBe(true);
+    expect(opensCommandBar(mods('k', 'KeyK', { metaKey: true }))).toBe(true);
+    // Hangul mode: the K key types ㅏ, the physical key is still K.
+    expect(opensCommandBar(mods('ㅏ', 'KeyK', { metaKey: true }))).toBe(true);
+    expect(opensCommandBar(key('k', 'KeyK'))).toBe(false);
+    expect(opensCommandBar(mods('?', 'Slash', { shiftKey: true }))).toBe(false);
+    expect(opensCommandBar(mods('/', 'Slash', { ctrlKey: true }))).toBe(false);
+    expect(opensCommandBar(mods('/', 'Slash', { altKey: true }))).toBe(false);
+    expect(opensCommandBar(mods('k', 'KeyK', { ctrlKey: true, shiftKey: true }))).toBe(false);
+    // The numeric pad's divide key types '/' but is not the Slash key.
+    expect(opensCommandBar(key('/', 'NumpadDivide'))).toBe(false);
+    expect(opensCommandBar(key('Enter', 'Enter'))).toBe(false);
+  });
+});
+
+// Phase 37 (audit U9): one rule for "the key belongs to the field it comes from".
+describe('typing or shortcut', () => {
+  const from = (el: { tagName: string; type?: string; isContentEditable?: boolean } | null, k: string, code: string): KeyboardEvent => {
+    const e = key(k, code);
+    Object.defineProperty(e, 'target', { value: el });
+    return e;
+  };
+  const input = (type?: string) => ({ tagName: 'INPUT', ...(type !== undefined ? { type } : {}) });
+
+  it('text fields, text areas, selects and editable elements take every key', () => {
+    for (const el of [input('text'), input('number'), input('search'), input(), { tagName: 'TEXTAREA' }, { tagName: 'SELECT' }, { tagName: 'DIV', isContentEditable: true }]) {
+      for (const [k, code] of [['/', 'Slash'], ['v', 'KeyV'], ['Escape', 'Escape'], ['Delete', 'Delete'], [' ', 'Space'], ['ArrowUp', 'ArrowUp']]) expect(isTyping(from(el, k, code)), `${el.tagName} ${k}`).toBe(true);
+    }
+  });
+
+  it('a slider, a checkbox, a radio button, a colour and a button input take only their own keys', () => {
+    for (const type of ['range', 'checkbox', 'radio', 'color', 'button', 'submit']) {
+      for (const [k, code] of [['/', 'Slash'], ['v', 'KeyV'], ['Escape', 'Escape'], ['Delete', 'Delete'], ['k', 'KeyK'], ['w', 'KeyW']]) expect(isTyping(from(input(type), k, code)), `${type} ${k}`).toBe(false);
+    }
+    // A slider keeps its arrows (they move it) …
+    expect(isTyping(from(input('range'), 'ArrowLeft', 'ArrowLeft'))).toBe(true);
+    expect(isTyping(from(input('range'), 'Home', 'Home'))).toBe(true);
+    expect(isTyping(from(input('range'), ' ', 'Space'))).toBe(false);
+    // … a checkbox its Space (it toggles it), a button input Space and Enter.
+    expect(isTyping(from(input('checkbox'), ' ', 'Space'))).toBe(true);
+    expect(isTyping(from(input('radio'), ' ', 'Space'))).toBe(true);
+    expect(isTyping(from(input('checkbox'), 'ArrowLeft', 'ArrowLeft'))).toBe(false);
+    expect(isTyping(from(input('checkbox'), 'Enter', 'Enter'))).toBe(false);
+    expect(isTyping(from(input('button'), 'Enter', 'Enter'))).toBe(true);
+    expect(isTyping(from(input('color'), ' ', 'Space'))).toBe(true);
+    expect(isTyping(from(input('RANGE'), 'v', 'KeyV'))).toBe(false);
+  });
+
+  it('other elements (the canvas, buttons, the page) are never typing', () => {
+    for (const el of [{ tagName: 'CANVAS' }, { tagName: 'BUTTON' }, { tagName: 'BODY' }, { tagName: 'DIV' }, null]) expect(isTyping(from(el, 'v', 'KeyV'))).toBe(false);
   });
 });
 

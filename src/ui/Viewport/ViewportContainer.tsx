@@ -32,6 +32,7 @@ import { PerfHud } from './PerfHud';
 import { PerfProbe } from '@/rendering/PerfProbe';
 import { useViewStore } from '@/rendering/viewStore';
 import { BuildHint, AreaApplyBar, OriginalWorldBadge } from './BuildOverlays';
+import { CommandContextMenu, useContextMenuTrigger } from '@/ui/Command/ContextMenu';
 import styles from './ViewportContainer.module.css';
 
 export function ViewportContainer() {
@@ -47,9 +48,11 @@ export function ViewportContainer() {
   const hudOpen = useUiStore((s) => s.hudOpen);
   const overlayOpen = useUiStore((s) => s.overlayOpen);
   const rightOpen = useUiStore((s) => s.rightOpen);
+  // Phase 37: a right CLICK on the canvas opens the context menu (a right drag stays the camera pan).
+  const contextMenu = useContextMenuTrigger();
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} onPointerDown={contextMenu.onPointerDown} onPointerUp={contextMenu.onPointerUp}>
       <Viewport showGrid={isEditor}>
         {isEditor ? <EditorScene /> : <SimulationScene />}
         {perf && <PerfProbe />}
@@ -115,6 +118,7 @@ export function ViewportContainer() {
         </div>
       )}
       {loading && <div className={styles.loading}>{t('app.loadingPhysics')}</div>}
+      <CommandContextMenu />
     </div>
   );
 }

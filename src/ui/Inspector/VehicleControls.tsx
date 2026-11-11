@@ -10,6 +10,7 @@ import { Section } from '@/ui/common/Panel';
 import { FieldRow, NumberField, SliderField, ToggleField } from '@/ui/common/fields';
 import { Segmented } from '@/ui/common/Segmented';
 import { fmt } from '@/ui/format';
+import { isTyping } from '@/editor/input/keys';
 import styles from './Inspector.module.css';
 
 /**
@@ -25,17 +26,6 @@ export const DRIVE_KEYS = {
 } as const;
 export const GEAR_KEYS: Record<string, Gear> = { Digit1: 'P', Digit2: 'R', Digit3: 'N', Digit4: 'D' };
 const ALL_KEYS = new Set<string>([...Object.values(DRIVE_KEYS).flat(), ...Object.keys(GEAR_KEYS)]);
-
-/** Typing in a text field (range sliders and switches are not typing, but arrows there move the slider). */
-function typing(e: KeyboardEvent): boolean {
-  const el = e.target as HTMLElement | null;
-  if (!el) return false;
-  if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return true;
-  if (el.tagName !== 'INPUT') return false;
-  const type = (el as HTMLInputElement).type;
-  if (type === 'range') return e.code.startsWith('Arrow');
-  return type !== 'checkbox' && type !== 'button' && type !== 'radio';
-}
 
 /** Input of the held keys for the axes a key belongs to (pressed = full input, released = 0). */
 export function keyInput(held: ReadonlySet<string>, code: string): ControlInput {
@@ -61,7 +51,7 @@ export function useDriveKeys(id: EntityId, changed: () => void) {
       changed();
     };
     const down = (e: KeyboardEvent) => {
-      if (!ALL_KEYS.has(e.code) || e.ctrlKey || e.metaKey || e.altKey || typing(e)) return;
+      if (!ALL_KEYS.has(e.code) || e.ctrlKey || e.metaKey || e.altKey || isTyping(e)) return;
       const v = drivable(simulationController, id);
       if (!v?.live) return;
       e.preventDefault();

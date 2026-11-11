@@ -25,8 +25,3 @@
 .secondary { display: inline-flex; align-items: center; gap: 6px; }
 .preview { flex: 1; min-width: 0; font-size: 11px; color: var(--text-2); line-height: 1.4; padding: 4px 8px; background: var(--bg-2); border-radius: 6px; border: 1px solid var(--line); }
 .preview b { color: var(--warn); font-weight: 600; }
-
-/* Phase 35.5: slim bottom strip + command drawer */
-.drawerBar { display: flex; align-items: center; height: 26px; padding: 0 8px; border-top: 1px solid var(--line); }
-.drawerBtn { height: 22px; padding: 0 8px; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-1); background: transparent; border-color: transparent; }
-.drawer { height: 210px; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--line); }

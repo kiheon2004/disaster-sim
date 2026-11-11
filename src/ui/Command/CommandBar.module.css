@@ -1,0 +1,114 @@
+/* Phase 37 — the command bar (bottom strip). Heights are fixed on purpose: the input row (32 px) and the summary line
+   (22 px) never grow, and the result area has ONE height whenever it is shown — the 3D canvas above resizes with this
+   strip, so nothing here may change height while the user types. States are a mark and a word; colour only repeats them. */
+.bar { display: flex; flex-direction: column; min-width: 0; }
+
+/* Result area: min(160 px, window height − 640 px) keeps the 3D view ≥ 35 % of the window down to 1280 × 720. */
+.results {
+  box-sizing: border-box; flex-shrink: 0;
+  height: clamp(0px, calc(100vh - 640px), 160px); max-height: min(160px, calc(100vh - 640px));
+  overflow: auto; border-top: 1px solid var(--line); background: var(--bg-0); font-size: 12px; line-height: 1.5;
+}
+.view { padding: 6px 12px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 24px; }
+.title { font-weight: 700; color: var(--text-0); }
+.spacer { flex: 1; }
+.block { display: flex; flex-direction: column; gap: 1px; padding: 2px 0; }
+.block + .block { border-top: 1px dashed var(--line); margin-top: 2px; padding-top: 4px; }
+.line { min-width: 0; overflow-wrap: anywhere; color: var(--text-1); }
+.note { color: var(--text-2); padding-left: 12px; }
+.warnLine { color: var(--warn); }
+.errLine { color: #ff9a8a; }
+.okMark { color: #9fe0bd; font-weight: 600; }
+.mono { font-family: var(--font-mono); font-size: 11.5px; }
+.dim { color: var(--text-2); }
+.counts { color: var(--text-0); font-family: var(--font-mono); font-size: 11.5px; white-space: nowrap; flex-shrink: 0; }
+
+.small { height: 22px; padding: 0 9px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0; }
+.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+
+.items { list-style: none; margin: 2px 0 0; padding: 0 0 0 12px; display: flex; flex-direction: column; gap: 1px; }
+.item { color: var(--text-1); }
+.i_ok { color: #9fe0bd; }
+.i_warn { color: var(--warn); }
+.i_rejected { color: #ff9a8a; }
+
+.options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 2px 0; }
+.option { min-height: 22px; padding: 1px 9px; font-size: 11.5px; text-align: left; overflow-wrap: anywhere; }
+.key { display: inline-block; min-width: 15px; padding: 0 3px; margin-right: 3px; border: 1px solid var(--line-strong); border-radius: 3px; font-family: var(--font-mono); font-size: 10.5px; text-align: center; color: var(--text-0); background: var(--bg-1); }
+
+.tableWrap { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 3px 0 2px; max-width: 100%; overflow-x: auto; }
+.table { border-collapse: collapse; font-size: 11.5px; }
+.table caption { caption-side: top; text-align: left; color: var(--text-2); padding-bottom: 2px; white-space: nowrap; }
+.table th, .table td { border: 1px solid var(--line); padding: 1px 8px; text-align: left; vertical-align: top; }
+.table th { color: var(--text-2); font-weight: 600; background: var(--bg-1); white-space: nowrap; }
+.table td { color: var(--text-1); font-variant-numeric: tabular-nums; }
+.pick { cursor: pointer; }
+.pick:hover td, .pick:focus-visible td { background: var(--accent-soft); color: var(--text-0); }
+.kbd { display: inline-block; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 3px; font-family: var(--font-mono); font-size: 11px; color: var(--text-0); background: var(--bg-1); white-space: nowrap; }
+
+/* Help */
+.tabs { display: inline-flex; gap: 4px; }
+.tabOn { border-color: var(--accent); color: #fff; }
+.examples { columns: 300px; column-gap: 20px; }
+.exClass { break-inside: avoid; margin: 0 0 8px; }
+.exClass h4 { margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-2); text-transform: uppercase; }
+.example { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 2px; min-width: 0; }
+.exBtn { padding: 1px 7px; font-size: 12px; text-align: left; background: transparent; border-color: transparent; color: var(--text-0); max-width: 100%; overflow-wrap: anywhere; }
+.exBtn:hover:not(:disabled) { border-color: var(--accent); }
+.exCanon { padding-left: 8px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Script editor */
+.scriptView { height: 100%; box-sizing: border-box; }
+.script { flex: 1; min-height: 40px; width: 100%; resize: none; font-family: var(--font-mono); font-size: 12px; line-height: 1.45; white-space: pre; overflow: auto; }
+.check { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-1); white-space: nowrap; }
+.check input { margin: 0; }
+
+/* Summary line: fixed height, one line; the understood text gives way first. */
+.summary {
+  box-sizing: border-box; height: 22px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  border-top: 1px solid var(--line); font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden;
+}
+.state { flex-shrink: 0; font-weight: 700; color: var(--text-1); }
+.s_idle { color: var(--text-2); }
+.s_draft { color: var(--text-1); }
+.s_plan, .s_confirm { color: var(--accent-strong); }
+.s_question { color: var(--warn); }
+.s_error { color: #ff9a8a; }
+.s_done { color: #9fe0bd; }
+.understood { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-0); }
+.warn { flex-shrink: 0; color: var(--warn); font-weight: 600; }
+.result { flex: 0 10 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-0); }
+.hint { margin-left: auto; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+
+/* Input row: fixed height. */
+.row { box-sizing: border-box; height: 32px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+.prompt { color: var(--accent-strong); font-weight: 700; font-family: var(--font-mono); }
+.input { flex: 1; min-width: 80px; height: 24px; padding: 0 8px; font-size: 13px; }
+.input:read-only { color: var(--text-2); font-style: italic; }
+.btn { height: 24px; padding: 0 8px; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-1); background: transparent; border-color: transparent; white-space: nowrap; flex-shrink: 0; }
+.btn[aria-pressed='true'] { border-color: var(--accent); color: #fff; }
+
+/* Completion list and context menu: portals on the body (the bottom strip and the viewport clip their children). */
+.list {
+  position: fixed; z-index: 90; margin: 0; padding: 3px; list-style: none; min-width: 220px; max-width: min(560px, calc(100vw - 16px)); max-height: 240px; overflow: auto;
+  background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius-m); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); font-size: 12px;
+}
+.cand { display: flex; align-items: baseline; gap: 6px; padding: 2px 8px 2px 4px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+.cand:hover { background: var(--bg-3); }
+.candOn, .candOn:hover { background: var(--accent-soft); outline: 1px solid var(--accent); }
+.candMark { width: 9px; flex-shrink: 0; color: var(--accent-strong); }
+.candText { font-family: var(--font-mono); color: var(--text-0); overflow: hidden; text-overflow: ellipsis; }
+.candKind { margin-left: auto; padding-left: 12px; color: var(--text-2); font-size: 11px; }
+.candMore { padding: 2px 8px; color: var(--text-2); font-size: 11px; }
+
+.menu {
+  position: fixed; z-index: 95; min-width: 200px; max-width: 340px; padding: 4px; display: flex; flex-direction: column; gap: 1px;
+  background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius-m); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); font-size: 12px;
+}
+.menu button { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 8px; text-align: left; background: transparent; border-color: transparent; color: var(--text-0); white-space: nowrap; }
+.menu button:hover:not(:disabled), .menu button:focus-visible { background: var(--bg-4); }
+.menuHead { padding: 3px 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-1); border-bottom: 1px solid var(--line); margin-bottom: 2px; }
+.menuLabel { padding: 4px 8px 1px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-2); }
+.menuNote { padding: 3px 8px; font-size: 11px; color: var(--text-2); white-space: normal; }

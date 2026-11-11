@@ -15,7 +15,7 @@ import { terrainBitsHash, worldFingerprint } from '@/world/fingerprint';
 import { useEditorStore } from '@/editor/editorStore';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 import { useCommandSession } from '@/ui/Command/commandSession';
-import { cancelCommand, chooseOption, commandContext, confirmPlan, draftCommand, historyScript, installCommandSession, runScript, submitCommand } from './commandActions';
+import { cancelCommand, chooseOption, commandContext, confirmPlan, draftCommand, enterAppliesAtOnce, escapeCommand, historyScript, installCommandSession, proposeCommand, runScript, submitCommand, understandCommand } from './commandActions';
 import { placeAt } from './placementActions';
 import { installInputPolicy } from './inputPolicy';
 
@@ -334,3 +334,101 @@ describe('disasters', () => {
     W().setLocked(false);
   });
 });
+
+describe('for the bar\'s own controls (ui)', () => {
+  it('a proposed command (context menu, suggestion, example) is put in the bar and drafted — it does not run', () => {
+    const before = bits(), past = W().past;
+    proposeCommand('place tree count=2 at=12.3,-4.5');
+    expect(S().text).toBe('place tree count=2 at=12.3,-4.5');
+    expect(S().understood).toEqual(['place tree count=2 at=12.3,-4.5']);
+    expect(S().plan).toMatchObject({ armed: false });
+    expect(S().plan!.preview.diff!.added.length).toBe(2);
+    expect(bits()).toBe(before);
+    expect(W().past).toBe(past);
+  });
+
+  it('a proposed command replaces an open plan; a sentence that is not understood is proposed without an error', async () => {
+    await enter('place tree at=0,30');
+    expect(S().plan?.armed).toBe(true);
+    proposeCommand('disaster blast at=5,5');
+    expect(S().plan).toMatchObject({ armed: false, text: 'disaster blast at=5,5' });
+    proposeCommand('frobnicate here');
+    expect(S().plan).toBeNull();
+    expect(S().understood).toBeNull();
+    expect(S().feedback.k).toBe('none');
+  });
+
+  it('with the live preview paused only the parser follows the text: "understood as" is kept up, no plan is made, nothing is timed', async () => {
+    const before = bits();
+    S().setDraftMs(450);
+    type('place tree count=2 at=0,30');
+    understandCommand();
+    expect(S().understood).toEqual(['place tree count=2 at=0,30']);
+    expect(S().plan).toBeNull();
+    // (the slow time stays: the pause lasts until the bar is empty and drafted again)
+    expect(S().draftMs).toBe(450);
+    type('place tree count=2 at=');
+    understandCommand();
+    expect(S().understood).toBeNull();
+    expect(S().feedback.k).toBe('none');
+    // Enter still plans; an open plan is not touched by the parser pass.
+    expect(await enter('place tree count=2 at=0,30')).toBe('planned');
+    const plan = S().plan;
+    S().setUnderstood(null);
+    understandCommand();
+    expect(S().plan).toBe(plan);
+    expect(S().understood).toBeNull();
+    cancelCommand();
+    type('');
+    draftCommand();
+    expect(S().draftMs).toBeLessThan(50);
+    expect(bits()).toBe(before);
+  });
+
+  it('enterAppliesAtOnce: only a draft of the current text that needs no preview', async () => {
+    expect(enterAppliesAtOnce()).toBe(false);
+    proposeCommand('place tree at=0,30');
+    expect(enterAppliesAtOnce()).toBe(false);
+    S().setSettings({ applySmall: true });
+    expect(enterAppliesAtOnce()).toBe(true);
+    // The text moved on from the draft: nothing is promised about it.
+    type('place tree at=0,31');
+    expect(enterAppliesAtOnce()).toBe(false);
+    proposeCommand('delete type:tree');
+    expect(enterAppliesAtOnce()).toBe(false);
+    // A disaster that starts at once has nothing to preview, with or without the setting.
+    S().setSettings({ applySmall: false });
+    proposeCommand('disaster blast at=5,5 now');
+    expect(S().plan).toMatchObject({ armed: false });
+    expect(enterAppliesAtOnce()).toBe(true);
+    // An open plan is confirmed, not "applied at once".
+    await enter('place tree at=0,30');
+    expect(enterAppliesAtOnce()).toBe(false);
+  });
+
+  it('Esc outside the bar: an open plan, then an open question, goes first; a draft or a message does not take the key', async () => {
+    const before = bits();
+    expect(escapeCommand()).toBe(false);
+    // A draft (typed, no Enter): Esc stays the editor's.
+    proposeCommand('place tree at=0,30');
+    expect(escapeCommand()).toBe(false);
+    expect(S().plan).toMatchObject({ armed: false });
+    // An open plan: cancelled, once.
+    await enter('place tree count=2 at=0,30');
+    expect(escapeCommand()).toBe(true);
+    expect(S().plan).toBeNull();
+    expect(escapeCommand()).toBe(false);
+    // A question.
+    await enter('place building:house count=2 along=road:main');
+    expect(S().feedback.k).toBe('clarify');
+    expect(escapeCommand()).toBe(true);
+    expect(S().feedback.k).toBe('none');
+    // A message about a command that could not run is not a reason to take Esc from the viewport.
+    await enter('move type:crate by=1,0,0');
+    expect(S().feedback.k).toBe('error');
+    expect(escapeCommand()).toBe(false);
+    expect(S().feedback.k).toBe('error');
+    expect(bits()).toBe(before);
+  });
+});
+

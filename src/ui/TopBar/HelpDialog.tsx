@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT, type MessageKey } from '@/i18n/i18n';
 import { Icon } from '@/ui/common/Icon';
+import { COMMAND_KEYS } from '@/ui/Command/help';
 import styles from './HelpDialog.module.css';
 
 const KEYS: [string, MessageKey][] = [
@@ -25,6 +26,8 @@ const KEYS: [string, MessageKey][] = [
   ['Ctrl/⌘ + Shift + Z', 'help.key.redo'],
   ['Space', 'help.key.playPause'],
   ['Esc', 'shortcut.escape'],
+  // Phase 37: the command bar (its own keys work while its input has the keyboard).
+  ...COMMAND_KEYS.map(([k, d, anywhere]): [string, MessageKey] => [anywhere ? k : `${k} (command bar)`, d]),
 ];
 
 const STEPS: MessageKey[] = ['help.step1', 'help.step2', 'help.step3', 'help.step4', 'help.step5'];

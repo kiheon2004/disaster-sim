@@ -315,6 +315,44 @@ export async function runScript(text: string, perLine = S().settings.scriptPerLi
 /** The history as a script: one confirmed command per line, oldest first. */
 export const historyScript = (): string => S().history.join('\n');
 
+// ── For the bar's own controls (Phase 37 ui) ─────────────────────────────────────────
+
+/**
+ * Put a command in the bar without running it (the context menu's "place here …", a suggestion, a help example): it
+ * becomes the text and is drafted like typed text — Enter then plans it, on the same path as every command.
+ */
+export function proposeCommand(text: string): void {
+  S().setText(text);
+  draftCommand();
+}
+
+/**
+ * While typing with the live preview paused (the last draft plan was too slow — §19, §22): only the parser side runs,
+ * so "understood as …" still follows the text; no plan is made until Enter. Nothing but `understood` is written.
+ */
+export function understandCommand(): void {
+  if (S().plan?.armed) return;
+  const text = S().text;
+  const r = text.trim() ? read(text, true) : null;
+  S().setUnderstood(r ? r.canonical : null);
+}
+
+/** Whether Enter would apply the draft of the current text at once (nothing to preview, or a small edit the user allowed). */
+export function enterAppliesAtOnce(): boolean {
+  const p = S().plan;
+  return !!p && !p.armed && p.text === S().text && immediate(p.preview);
+}
+
+/**
+ * Esc pressed outside the bar (the viewport has the keyboard): an open plan made by Enter, or an open question, is
+ * cancelled before the editor's own Esc chain (placement, deselect …). False = Esc is free for that chain.
+ */
+export function escapeCommand(): boolean {
+  const s = S();
+  if (!s.plan?.armed && s.feedback.k !== 'clarify' && s.feedback.k !== 'ask') return false;
+  return cancelCommand();
+}
+
 /** Keep "the ones just made" true: ids that no longer exist drop out; a new document starts with none. */
 let installed = false;
 export function installCommandSession(): void {

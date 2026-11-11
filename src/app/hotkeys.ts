@@ -20,7 +20,9 @@ import { useBlueprintStore } from '@/editor/blueprintStore';
 import { backToLibrary, pinPlacement, rotatePlacement } from '@/app/blueprintActions';
 import { closePolygon } from '@/editor/tools/BlueprintTool';
 import { activeGesture } from '@/editor/input/gesture';
-import { isTyping, keyOf } from '@/editor/input/keys';
+import { isTyping, keyOf, opensCommandBar } from '@/editor/input/keys';
+import { focusCommandBar } from '@/ui/Command/barStore';
+import { escapeCommand } from './commandActions';
 
 export { isTyping, keyOf };
 
@@ -233,6 +235,17 @@ export function useEditorHotkeys() {
       const build = useBuildStore.getState();
       const mod = e.metaKey || e.ctrlKey;
       const key = keyOf(e);
+
+      // Phase 37: the command bar, in both modes (so before the simulation branch below, which returns early).
+      // `/` or Ctrl / ⌘ + K puts the keyboard in the bar; the key itself is not typed into it.
+      if (opensCommandBar(e)) {
+        e.preventDefault();
+        focusCommandBar();
+        return;
+      }
+      // Esc: a plan opened with Enter (or an open question) is cancelled first, also when the viewport has the keyboard —
+      // before a disaster placement is disarmed or anything is deselected.
+      if (key === 'escape' && escapeCommand()) return;
 
       // Phase 35.5: disaster placement keys come first, in both modes.
       if (placementKeys(e, key, mod)) return;
