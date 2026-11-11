@@ -18,7 +18,7 @@ import { deriveFields } from '@/buildings/design';
 import type { BuildingDesign } from '@/buildings/types';
 import { parseLink, parseNetwork, serializeNetwork, type RoadLoadReport } from '@/roads/schema';
 import { rebakeAll } from '@/roads/sync';
-import { bakeRegion } from '@/roads/bake';
+import { bakeRegion, transitionRect } from '@/roads/bake';
 import { fullRect } from '@/terrain/TerrainData';
 import { parseLandscape, serializeLandscape, type LandscapeLoadReport } from '@/landscape/schema';
 import { composeAll } from '@/landscape/compose';
@@ -414,6 +414,15 @@ export function parseDocument(json: string): LoadResult {
     const r = bakeRegion(terrain, net, net, fullRect(terrain), naturalProvider(landscape));
     net = { ...net, underlay: r.underlay };
     for (let i = 0; i < saved.h.length; i++) if (saved.h[i] !== terrain.heights[i] || saved.g[i] !== terrain.ground[i]) recomposedVertices++;
+  } else {
+    // Phase 36: the saved terrain (v6, or layers that could not be read) was baked before width tapers existed, so it
+    // still has the stair at straight width joints: re-bake the taper zones (only there) so the collider matches the mesh.
+    const rect = transitionRect(terrain, net);
+    if (rect) {
+      const before = { h: terrain.heights.slice(), g: terrain.ground.slice() };
+      net = { ...net, underlay: bakeRegion(terrain, net, net, rect, naturalProvider(landscape)).underlay };
+      for (let i = 0; i < before.h.length; i++) if (before.h[i] !== terrain.heights[i] || before.g[i] !== terrain.ground[i]) recomposedVertices++;
+    }
   }
   const { designs: _table, roads: _rawRoads, landscape: _rawLand, groups: rawGroups, ...data } = res.data;
   void _table;

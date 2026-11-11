@@ -256,8 +256,12 @@ export function splitSegment(net: RoadNetwork, segId: string, x: number, z: numb
   return { network: n, node };
 }
 
-/** Profiles that can merge into one segment. */
-const sameProfile = (p: RoadProfile, q: RoadProfile) => (Object.keys(p) as (keyof RoadProfile)[]).every((k) => p[k] === q[k]);
+/**
+ * Profiles that can merge into one segment. Every key of EITHER profile is compared (Phase 36: comparing only the first
+ * profile's keys let a profile without shoulders "equal" one with shoulders, and the merge silently dropped them).
+ */
+export const sameProfile = (p: RoadProfile, q: RoadProfile) =>
+  [...new Set([...Object.keys(p), ...Object.keys(q)])].every((k) => p[k as keyof RoadProfile] === q[k as keyof RoadProfile]);
 
 /**
  * Merge the two segments meeting at a degree-2 node with identical profiles into one (the node
@@ -379,7 +383,7 @@ export function setCondition(net: RoadNetwork, ids: readonly string[], condition
 
 export interface NetworkIssue {
   /** i18n key suffix: road.issue.<code> */
-  code: 'missingNode' | 'selfLoop' | 'tooShort' | 'duplicate' | 'acute' | 'tightCurve' | 'steep' | 'cutFill';
+  code: 'missingNode' | 'selfLoop' | 'tooShort' | 'duplicate' | 'acute' | 'tightCurve' | 'steep' | 'cutFill' | 'shortTransition';
   level: 'error' | 'warning';
   segment?: string;
   node?: string;
@@ -422,10 +426,17 @@ export function networkWarnings(n: RoadNetwork): NetworkIssue[] {
       if (gap < (20 * Math.PI) / 180) out.push({ code: 'acute', level: 'warning', node: node.id, value: (gap * 180) / Math.PI });
     }
   }
+  // Phase 36: a width transition shorter than the taper rule (both roads too short) is steep; value = its length (m).
+  for (const tr of transitionsOf(n).values()) {
+    if (!tr.short) continue;
+    for (const segment of [tr.host, tr.narrow]) out.push({ code: 'shortTransition', level: 'warning', segment, node: tr.node, value: tr.hostLength + tr.narrowLength });
+  }
   return out;
 }
 
 import { minRadius as minRadiusOf } from './curve';
+// (Used inside functions only: crossSection.ts reads this module's geometry, so the import cycle is harmless.)
+import { transitionsOf } from './crossSection';
 
 /** Directions (angle in x/z) of the segments leaving a node. */
 export function nodeDirections(n: RoadNetwork, nodeId: string): { segment: RoadSegment; angle: number; atStart: boolean; dx: number; dz: number }[] {

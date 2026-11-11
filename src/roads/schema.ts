@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import { PROFILE_LIMITS, ROAD_MATERIALS, ELEVATION_POLICIES, SIDEWALK_SIDES, DRAINAGE_LEVELS, ZONE_TYPES, LINK_POLICIES, defaultProfile, emptyNetwork, type RoadLink, type RoadNetwork, type RoadProfile, type RoadSegment, type Underlay } from './types';
 import { structuralIssues } from './network';
+import { GROUND_MATERIALS } from '@/terrain/GroundMaterials';
 
 const finite = z.number().refine(Number.isFinite);
 const clampTo = ([lo, hi]: readonly [number, number]) => finite.transform((v) => Math.min(hi, Math.max(lo, v)));
@@ -84,7 +85,8 @@ export function decodeUnderlay(s: SerializedUnderlay, vertices: number): Underla
   let prev = -1;
   for (let k = 0; k < di.length; k++) {
     const step = parseInt(di[k], 36), cm = parseInt(dh[k], 36), g = parseInt(s.g[k], 36);
-    if (!(step > 0) || !Number.isFinite(cm) || !Number.isFinite(g) || g > 5) return null;
+    // Every ground type is valid under a road (Phase 36: rock / mud / riverbed 6–8 were rejected and the underlay lost).
+    if (!(step > 0) || !Number.isFinite(cm) || !Number.isFinite(g) || g < 0 || g >= GROUND_MATERIALS.length) return null;
     prev += step;
     if (prev >= vertices) return null;
     out.idx.push(prev);

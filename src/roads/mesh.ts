@@ -14,9 +14,10 @@ import type { TerrainData } from '@/core/model';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { pointAt, type Centerline } from './curve';
 import { naturalOf, profileAt, segmentProfile } from './bake';
+import { sectionAt, taperStations, type MarkLine, type RoadSection } from './crossSection';
 import { intersectionsOf, type Intersection } from './intersections';
 import { CURB_COLOR, ROAD_MATERIAL_PROPS, SIDEWALK_COLOR } from './materials';
-import { segmentLine } from './network';
+import { degree, segmentLine } from './network';
 import type { RoadNetwork, RoadSegment } from './types';
 
 /** Lift of the road surface above the terrain (no z-fighting) and of markings above it (m). */
@@ -86,12 +87,20 @@ function frame(line: Centerline, s: number) {
   return { x: p.x, z: p.z, rx: -p.tz, rz: p.tx, tx: p.tx, tz: p.tz, s };
 }
 
-/** Arc lengths of the cross-sections between the trims (the samples plus the exact ends). */
-function sections(line: Centerline, s0: number, s1: number): number[] {
+/** Arc lengths of the cross-sections between the trims (the samples plus the exact ends and the taper starts). */
+function sections(line: Centerline, s0: number, s1: number, extra: readonly number[] = []): number[] {
   const out = [s0];
   for (const p of line.samples) if (p.s > s0 + 0.05 && p.s < s1 - 0.05) out.push(p.s);
   out.push(s1);
-  return out;
+  if (!extra.length) return out;
+  // Phase 36: a cross-section exactly where a taper starts keeps its edges straight lines (a sample replaced if close).
+  for (const e of extra) {
+    if (e <= s0 + 0.05 || e >= s1 - 0.05) continue;
+    const near = out.findIndex((s, i) => i > 0 && i < out.length - 1 && Math.abs(s - e) < 0.05);
+    if (near >= 0) out[near] = e;
+    else out.push(e);
+  }
+  return out.sort((a, b) => a - b);
 }
 
 export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
@@ -104,32 +113,32 @@ export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
   if (s1 - s0 < 0.2) return out;
   const p = seg.profile;
   const prof = segmentProfile(terrain, naturalOf(terrain, n), n, seg, line);
-  const w = p.width / 2;
-  const fall = ROAD_MATERIAL_PROPS[p.material].crossFall;
-  const height = (x: number, z: number, cx: number, cz: number, s: number) => {
+  const S = sections(line, s0, s1, taperStations(n, seg)).map((s) => frame(line, s));
+  // Phase 36: the cross-section of every station (the profile's own, except inside a width taper).
+  const X = S.map((f) => sectionAt(n, seg, f.s));
+  const height = (x: number, z: number, cx: number, cz: number, s: number, k: number) => {
     // Graded / fixed: the profile at the centerline, minus the crown fall at the curbs.
-    if (prof) return profileAt(line, prof, s) - (x === cx && z === cz ? 0 : fall * w);
+    if (prof) return profileAt(line, prof, s) - (x === cx && z === cz ? 0 : X[k].fall * X[k].w);
     // Follow: terrain, sampled a little inside so the curb ramp next to the edge is not picked up.
     const ix = x + (cx - x) * 0.35, iz = z + (cz - z) * 0.35;
     return sampler.sampleHeight(ix, iz);
   };
-  const S = sections(line, s0, s1).map((s) => frame(line, s));
   const color = c3(ROAD_MATERIAL_PROPS[p.material].color);
-  // Edge points with fold-over protection (inner side of tight curves).
-  const edge = (o: number) => {
+  // Edge points (offset per station) with fold-over protection (inner side of tight curves).
+  const edge = (o: (k: number) => number) => {
     const pts: { x: number; z: number }[] = [];
-    for (const f of S) {
-      let x = f.x + f.rx * o, z = f.z + f.rz * o;
+    S.forEach((f, k) => {
+      let x = f.x + f.rx * o(k), z = f.z + f.rz * o(k);
       const prev = pts[pts.length - 1];
       if (prev && (x - prev.x) * f.tx + (z - prev.z) * f.tz < 0.02) { x = prev.x; z = prev.z; }
       pts.push({ x, z });
-    }
+    });
     return pts;
   };
-  const L = edge(-w), R = edge(w);
-  const yC = S.map((f) => height(f.x, f.z, f.x, f.z, f.s) + SURFACE_LIFT);
-  const yL = S.map((f, i) => height(L[i].x, L[i].z, f.x, f.z, f.s) + SURFACE_LIFT);
-  const yR = S.map((f, i) => height(R[i].x, R[i].z, f.x, f.z, f.s) + SURFACE_LIFT);
+  const L = edge((k) => -X[k].w), R = edge((k) => X[k].w);
+  const yC = S.map((f, k) => height(f.x, f.z, f.x, f.z, f.s, k) + SURFACE_LIFT);
+  const yL = S.map((f, i) => height(L[i].x, L[i].z, f.x, f.z, f.s, i) + SURFACE_LIFT);
+  const yR = S.map((f, i) => height(R[i].x, R[i].z, f.x, f.z, f.s, i) + SURFACE_LIFT);
   for (let i = 0; i < S.length - 1; i++) {
     const a = S[i], b = S[i + 1];
     const v = (q: { x: number; z: number }, y: number) => [q.x, y, q.z];
@@ -139,70 +148,91 @@ export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
     out.surface.tri(v(a, yC[i]), v(R[i], yR[i]), v(R[i + 1], yR[i + 1]), color, [[0.5, uvA], [1, uvA], [1, uvB]]);
     out.surface.tri(v(a, yC[i]), v(R[i + 1], yR[i + 1]), v(b, yC[i + 1]), color, [[0.5, uvA], [1, uvB], [0.5, uvB]]);
   }
-  // Sidewalks + curb faces.
+  // What each end meets (Phase 36 end faces): nothing (a free end), a junction / bend whose corners may continue a
+  // sidewalk, or the next road of a straight joint, which continues everything (the taper makes the sections equal).
+  const ends = [true, false].map((atStart) => {
+    const node = atStart ? seg.a : seg.b;
+    const ix = ints.get(node);
+    return { road: ix?.roads.find((r) => r.segment.id === seg.id && r.atStart === atStart), free: !ix && degree(n, node) === 1 };
+  });
+  const freeEnd = (atStart: boolean) => ends[atStart ? 0 : 1].free;
+  const continued = (atStart: boolean, side: 1 | -1) => {
+    const e = ends[atStart ? 0 : 1];
+    if (e.free) return false;
+    if (!e.road) return true;
+    // +r of an intersection road is the travel-right side when the road starts at the node.
+    return (e.road.atStart ? side > 0 : side < 0) ? e.road.cornerPlus : e.road.cornerMinus;
+  };
+  // Sidewalks + curb faces (a sidewalk may start or end inside a taper: drawn where it has a width at either station).
   for (const side of [-1, 1] as const) {
-    const travelSide = side > 0 ? 'right' : 'left';
-    if (!(p.sidewalk === 'both' || p.sidewalk === travelSide)) continue;
+    const sw = (k: number) => (side > 0 ? X[k].swR : X[k].swL);
+    const curb = (k: number) => (side > 0 ? X[k].curbR : X[k].curbL);
+    if (!X.some((_, k) => sw(k) > 0)) continue;
     const inner = side > 0 ? R : L;
     const yIn = side > 0 ? yR : yL;
-    const outer = edge(side * (w + p.sidewalkWidth));
+    const outer = edge((k) => side * (X[k].w + sw(k)));
+    const top = (k: number, q: { x: number; z: number }) => [q.x, yIn[k] + curb(k), q.z];
     for (let i = 0; i < S.length - 1; i++) {
-      const top = (k: number, q: { x: number; z: number }) => [q.x, yIn[k] + p.curbHeight, q.z];
+      if (!(sw(i) > 0 || sw(i + 1) > 0)) continue;
       out.walk.quad(top(i, inner[i]), top(i, outer[i]), top(i + 1, outer[i + 1]), top(i + 1, inner[i + 1]), WALK);
-      // Curb face (vertical), from the carriageway up to the walk.
-      out.walk.quad([inner[i].x, yIn[i], inner[i].z], [inner[i + 1].x, yIn[i + 1], inner[i + 1].z], top(i + 1, inner[i + 1]), top(i, inner[i]), CURB);
+      // Curb face (vertical), from the carriageway up to the walk, facing the carriageway on both sides (Phase 36: the
+      // right-hand faces used to face away from the road and were culled).
+      wall(out.walk, inner[i], inner[i + 1], yIn[i], yIn[i + 1], curb(i), curb(i + 1), -side * S[i].rx, -side * S[i].rz, CURB);
+    }
+    // Phase 36: the end of a sidewalk that nothing continues (free road end, or a junction side without a corner) gets
+    // an end face instead of an open edge in the air.
+    for (const k of [0, S.length - 1]) {
+      if (!(sw(k) > 0) || continued(k === 0, side)) continue;
+      const dir = k === 0 ? -1 : 1;
+      wall(out.walk, inner[k], outer[k], yIn[k] - SURFACE_LIFT, yIn[k] - SURFACE_LIFT, curb(k) + SURFACE_LIFT, curb(k) + SURFACE_LIFT, dir * S[k].tx, dir * S[k].tz, CURB);
     }
   }
-  if (p.markings && ROAD_MATERIAL_PROPS[p.material].marked) markings(out.marking, S, yC, yL, yR, p.lanes, w, p.oneWay, p.shoulderWidth ?? 0, p.medianWidth ?? 0);
+  // Phase 36: a free road end shows the edge of the (lifted) carriageway slab instead of a gap above the terrain. It
+  // goes with the curb faces (walk layer): the surface layer holds only upward faces.
+  for (const k of [0, S.length - 1]) {
+    if (!freeEnd(k === 0)) continue;
+    const dir = k === 0 ? -1 : 1, f = S[k];
+    wall(out.walk, L[k], f, yL[k] - SURFACE_LIFT, yC[k] - SURFACE_LIFT, SURFACE_LIFT, SURFACE_LIFT, dir * f.tx, dir * f.tz, color);
+    wall(out.walk, f, R[k], yC[k] - SURFACE_LIFT, yR[k] - SURFACE_LIFT, SURFACE_LIFT, SURFACE_LIFT, dir * f.tx, dir * f.tz, color);
+  }
+  markings(out.marking, S, X, yC, yL, yR);
   return out;
 }
 
-/** Lane / center / edge lines as thin strips following the cross-sections. */
-function markings(m: MeshData, S: ReturnType<typeof frame>[], yC: number[], yL: number[], yR: number[], lanes: number, w: number, oneWay: boolean, shoulder = 0, median = 0) {
+/**
+ * Vertical face p → q rising from the bottom heights (yp, yq) by (hp, hq), wound so that it faces the horizontal
+ * direction (tx, tz): the road materials are one-sided, a face wound the other way is culled.
+ */
+function wall(m: MeshData, p: { x: number; z: number }, q: { x: number; z: number }, yp: number, yq: number, hp: number, hq: number, tx: number, tz: number, color: THREE.Color) {
+  // The quad's normal is (−dz, 0, dx) for p → q = (dx, dz).
+  if (-(q.z - p.z) * tx + (q.x - p.x) * tz < 0) [p, q, yp, yq, hp, hq] = [q, p, yq, yp, hq, hp];
+  if (!(hp > 1e-4 || hq > 1e-4)) return;
+  m.quad([p.x, yp, p.z], [q.x, yq, q.z], [q.x, yq + hq, q.z], [p.x, yp + hp, p.z], color);
+}
+
+/**
+ * Lane / center / edge lines as thin strips following the cross-sections. The lines of each station come from its
+ * section (roads/crossSection.ts, the Phase 18 / 35.5 rules); a line keeps its identity (key) along the segment, so a
+ * taper bends it from one offset to the other, and a line missing at one end of a span (a dropped lane) ends there.
+ */
+function markings(m: MeshData, S: ReturnType<typeof frame>[], X: readonly RoadSection[], yC: number[], yL: number[], yR: number[]) {
   const yAt = (i: number, o: number) => {
-    const f = Math.abs(o) / Math.max(1e-6, w);
+    const f = Math.abs(o) / Math.max(1e-6, X[i].w);
     return (o < 0 ? yC[i] + (yL[i] - yC[i]) * f : yC[i] + (yR[i] - yC[i]) * f) + MARK_LIFT;
   };
-  const strip = (o: number, width: number, color: THREE.Color, dashed: boolean) => {
+  // Every line once, in first-seen order (= the profile's drawing order on a segment without a taper).
+  const keys: string[] = [];
+  for (const sec of X) for (const l of sec.lines) if (!keys.includes(l.key)) keys.push(l.key);
+  const at = X.map((sec) => new Map(sec.lines.map((l) => [l.key, l])));
+  for (const key of keys) {
     for (let i = 0; i < S.length - 1; i++) {
+      const la = at[i].get(key), lb = at[i + 1].get(key);
+      if (!la || !lb) continue;
       const a = S[i], b = S[i + 1];
-      if (dashed && Math.floor(((a.s + b.s) / 2) / 3) % 3 !== 0) continue; // 3 m dash, 6 m gap
-      const p = (f: typeof a, k: number, d: number) => [f.x + f.rx * (o + d), yAt(k, o), f.z + f.rz * (o + d)];
-      m.quad(p(a, i, -width / 2), p(a, i, width / 2), p(b, i + 1, width / 2), p(b, i + 1, -width / 2), color);
+      if (la.dashed && Math.floor(((a.s + b.s) / 2) / 3) % 3 !== 0) continue; // 3 m dash, 6 m gap
+      const p = (f: typeof a, k: number, l: MarkLine, d: number) => [f.x + f.rx * (l.o + d), yAt(k, l.o), f.z + f.rz * (l.o + d)];
+      m.quad(p(a, i, la, -la.width / 2), p(a, i, la, la.width / 2), p(b, i + 1, lb, lb.width / 2), p(b, i + 1, lb, -lb.width / 2), la.yellow ? YELLOW : WHITE);
     }
-  };
-  if (shoulder > 0 || median > 0) {
-    // Phase 35.5 cross-section: lanes between the shoulders (edge lines at the lane edge) and around the median.
-    const tw = w - shoulder;
-    const lw = (2 * tw - median) / lanes;
-    if (oneWay) for (let k = 1; k < lanes; k++) strip(-tw + lw * k, 0.12, WHITE, true);
-    else {
-      if (median > 0) { strip(-median / 2, 0.12, YELLOW, false); strip(median / 2, 0.12, YELLOW, false); }
-      else if (lanes >= 2) { strip(-0.11, 0.1, YELLOW, false); strip(0.11, 0.1, YELLOW, false); }
-      const perDir = Math.floor(lanes / 2);
-      for (let k = 1; k < perDir; k++) { strip(median / 2 + lw * k, 0.12, WHITE, true); strip(-median / 2 - lw * k, 0.12, WHITE, true); }
-    }
-    strip(-tw, 0.15, WHITE, false);
-    strip(tw, 0.15, WHITE, false);
-    return;
-  }
-  const laneW = (2 * w) / lanes;
-  if (oneWay) {
-    for (let k = 1; k < lanes; k++) strip(-w + laneW * k, 0.12, WHITE, true);
-  } else {
-    if (lanes >= 2) {
-      strip(-0.11, 0.1, YELLOW, false);
-      strip(0.11, 0.1, YELLOW, false);
-    }
-    const perDir = Math.floor(lanes / 2);
-    for (let k = 1; k < perDir; k++) {
-      strip(laneW * k, 0.12, WHITE, true);
-      strip(-laneW * k, 0.12, WHITE, true);
-    }
-  }
-  if (w > 2) {
-    strip(-w + 0.25, 0.12, WHITE, false);
-    strip(w - 0.25, 0.12, WHITE, false);
   }
 }
 
@@ -229,6 +259,11 @@ export function intersectionPiece(ctx: MeshContext, ix: Intersection): RoadPiece
     for (let i = 0; i < c.poly.length; i++) {
       const a = c.poly[i], b = c.poly[(i + 1) % c.poly.length];
       out.walk.tri(top(cx, cz), top(a[0], a[1]), top(b[0], b[1]), WALK);
+    }
+    // Phase 36: the curb face along the corner (it used to be an open slit), facing the junction surface.
+    for (let i = 0; i < c.curbLine.length - 1; i++) {
+      const [ax, az] = c.curbLine[i], [bx, bz] = c.curbLine[i + 1];
+      wall(out.walk, { x: ax, z: az }, { x: bx, z: bz }, yAt(ax, az), yAt(bx, bz), c.curb, c.curb, node.x - (ax + bx) / 2, node.z - (az + bz) / 2, CURB);
     }
   }
   for (const cw of ix.crosswalks) {

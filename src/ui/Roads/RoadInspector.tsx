@@ -9,6 +9,7 @@ import { minRadius } from '@/roads/curve';
 import { naturalOf, nodeElevation, segmentSlopes } from '@/roads/bake';
 import { degree, networkWarnings, segmentLine } from '@/roads/network';
 import { intersectionsOf } from '@/roads/intersections';
+import { transitionsOf } from '@/roads/crossSection';
 import { DRAIN_SPACING, INLET_CAPACITY, roadPhysics } from '@/roads/materials';
 import type { RoadNetwork, RoadSegment } from '@/roads/types';
 import { deleteRoadSegments, linkedObjects, mergeRoadsAt, setRoadNodeElevation, updateRoadProfile } from '@/app/roadActions';
@@ -76,9 +77,12 @@ export function RoadInspector() {
         const r = minRadius(line);
         const segWarn = warnings.filter((w) => w.segment && selection.segments.includes(w.segment));
         const ixWarn = [s.a, s.b].flatMap((nd) => ints.get(nd)?.warnings ?? []);
+        // Phase 36: the width tapers this road takes part in (straight joints to a road of another cross-section).
+        const tapers = [...transitionsOf(roads).values()].filter((tr) => tr.host === s.id || tr.narrow === s.id);
         const rows: [string, string, 'computed' | 'approx' | null][] = [
           [t('road.inspector.length'), `${(segs.length > 1 ? totalLen : line.length).toFixed(1)} m`, 'computed'],
           [t('road.width'), `${s.profile.width.toFixed(1)} m · ${t('road.lanes')} ${s.profile.lanes}${s.profile.oneWay ? ` · ${t('road.oneWay')}` : ''}`, null],
+          ...tapers.map((tr): [string, string, 'computed'] => [t('road.inspector.transition'), t('road.inspector.transitionVal', { v: (tr.hostLength + tr.narrowLength).toFixed(1), node: tr.node }), 'computed']),
           [t('road.material'), t(`road.material.${s.profile.material}`), null],
           [t('road.elevation'), t(`road.elevation.${s.profile.elevation}`), null],
           [t('road.inspector.grade'), `${(slopes.grade * 100).toFixed(1)} %`, 'computed'],

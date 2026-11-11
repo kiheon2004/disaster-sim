@@ -19,6 +19,7 @@ import { HEIGHT_QUANTUM, type GridRect } from '@/terrain/TerrainData';
 import { nearest, pointAt, type Centerline } from './curve';
 import { ROAD_MATERIAL_PROPS, SIDEWALK_GROUND } from './materials';
 import { intersectionsOf, type Intersection } from './intersections';
+import { nominalSection, sectionAt, sectionExtent, taperParts, transitionsOf } from './crossSection';
 import { segmentLine } from './network';
 import type { RoadNetwork, RoadNode, RoadSegment } from './types';
 
@@ -129,7 +130,7 @@ export function segmentSlopes(t: TerrainData, nat: Natural, n: RoadNetwork, s: R
       const hq = prof ? prof[i - 1] : naturalAt(t, nat, q.x, q.z);
       grade = Math.max(grade, Math.abs(h - hq) / Math.max(1e-6, p.s - q.s));
     }
-    const w = s.profile.width / 2;
+    const w = sectionAt(n, s, p.s).w;
     const l = naturalAt(t, nat, p.x - p.tz * w, p.z + p.tx * w);
     const r = naturalAt(t, nat, p.x + p.tz * w, p.z - p.tx * w);
     if (!prof) cross = Math.max(cross, Math.abs(l - r) / (2 * w));
@@ -157,17 +158,22 @@ function rectOf(t: TerrainData, x0: number, z0: number, x1: number, z1: number):
   return ix0 > ix1 || iz0 > iz1 ? null : { x0: ix0, z0: iz0, x1: ix1, z1: iz1 };
 }
 
-/** Outer reach of a segment's influence (m): sidewalks + cut / fill blend. */
-export function reach(s: RoadSegment): number {
+/**
+ * Outer reach of a segment's influence (m): sidewalks + cut / fill blend. With the network, a taper toward a neighbour
+ * with a wider sidewalk (or a split taper on the narrow segment) widens it to the widest section of the segment.
+ */
+export function reach(s: RoadSegment, n?: RoadNetwork): number {
   const side = s.profile.sidewalk === 'none' ? 0 : s.profile.sidewalkWidth;
   // (A follow road with fixed node elevations is graded too: the blend is always included.)
-  return s.profile.width / 2 + side + MAX_BLEND + 1;
+  const r = s.profile.width / 2 + side + MAX_BLEND + 1;
+  const ext = n && sectionExtent(n, s);
+  return ext ? Math.max(r, ext.w + ext.sw + MAX_BLEND + 1) : r;
 }
 
 /** World-space bounding box of a segment's influence. */
 export function segmentBounds(n: RoadNetwork, s: RoadSegment): [number, number, number, number] {
   const line = segmentLine(n, s);
-  const r = reach(s);
+  const r = reach(s, n);
   let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
   for (const p of line.samples) {
     x0 = Math.min(x0, p.x); z0 = Math.min(z0, p.z); x1 = Math.max(x1, p.x); z1 = Math.max(z1, p.z);
@@ -194,13 +200,13 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
     const line = segmentLine(n, s);
     const prof = segmentProfile(t, nat, n, s, line);
     const p = s.profile;
-    const w = p.width / 2 + EDGE_MARGIN;
-    const swL = p.sidewalk === 'both' || p.sidewalk === 'left' ? p.sidewalkWidth : 0;
-    const swR = p.sidewalk === 'both' || p.sidewalk === 'right' ? p.sidewalkWidth : 0;
+    // Phase 36: widths come from the section at the vertex's station (the profile's own except inside a taper).
+    const tapered = taperParts(n, s).length > 0;
+    const own = nominalSection(p);
+    const ext = sectionExtent(n, s);
     const blend = p.elevation === 'follow' && !prof ? 0 : MAX_BLEND;
-    const R = p.width / 2 + Math.max(swL, swR) + blend + 1;
+    const R = ext ? ext.w + ext.sw + blend + 1 : p.width / 2 + Math.max(own.swL, own.swR) + blend + 1;
     const g = ROAD_MATERIAL_PROPS[p.material].ground;
-    const fall = ROAD_MATERIAL_PROPS[p.material].crossFall;
     const trimA = ints.get(s.a)?.trim.get(s.id) ?? 0;
     const trimB = ints.get(s.b)?.trim.get(s.id) ?? 0;
     // Every vertex of the segment's reach box inside the rectangle, once.
@@ -219,15 +225,18 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
         if ((atEndA && endBeyond(line, 0, x, z)) || (atEndB && endBeyond(line, line.length, x, z))) continue;
         if (hit.s < trimA - 0.5 || hit.s > line.length - trimB + 0.5) continue;
         const hc = prof ? profileAt(line, prof, hit.s) : NaN;
-        const side = hit.side > 0 ? swR : swL;
+        const sec = tapered ? sectionAt(n, s, hit.s) : own;
+        const hw = sec.w, fall = sec.fall;
+        const side = hit.side > 0 ? sec.swR : sec.swL;
+        const curb = hit.side > 0 ? sec.curbR : sec.curbL;
         // Crown: the carriageway falls from the centerline to the curbs (graded / fixed roads).
-        const gutter = hc - fall * (p.width / 2);
-        if (hit.dist <= w) put(i, { rank: 0, dist: hit.dist, h: hc - fall * Math.min(hit.dist, p.width / 2), g });
+        const gutter = hc - fall * hw;
+        if (hit.dist <= hw + EDGE_MARGIN) put(i, { rank: 0, dist: hit.dist, h: hc - fall * Math.min(hit.dist, hw), g });
         // Sidewalks stand a curb above the gutter (follow roads: above the natural ground).
-        else if (hit.dist <= p.width / 2 + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : gutter) + p.curbHeight, g: SIDEWALK_GROUND });
+        else if (hit.dist <= hw + side + EDGE_MARGIN && side > 0) put(i, { rank: 1, dist: hit.dist, h: (Number.isNaN(hc) ? nat.height(i) : gutter) + curb, g: SIDEWALK_GROUND });
         else if (blend > 0 && !Number.isNaN(hc)) {
-          const edge = p.width / 2 + side;
-          const edgeH = gutter + (side > 0 ? p.curbHeight : 0);
+          const edge = hw + side;
+          const edgeH = gutter + (side > 0 ? curb : 0);
           const natH = nat.height(i);
           const bw = Math.min(MAX_BLEND, Math.max(1, 2 * Math.abs(edgeH - natH)));
           const d = hit.dist - edge;
@@ -351,10 +360,47 @@ export function bakeRegion(t: TerrainData, prev: RoadNetwork, next: RoadNetwork,
 }
 
 /**
+ * Boxes of the taper zones (whole reach) of every width transition that a change at `nodes` can reshape: a transition at
+ * one of the nodes, or one whose host / narrow segment ends there (a junction trim at the far end bounds the taper length).
+ * The taper lies on the unchanged neighbour, so a changed segment's own reach does not cover it.
+ */
+export function transitionBoxes(n: RoadNetwork, nodes: ReadonlySet<string>): [number, number, number, number][] {
+  const out: [number, number, number, number][] = [];
+  for (const tr of transitionsOf(n).values()) {
+    const segs = [n.segments[tr.host], n.segments[tr.narrow]];
+    if (!nodes.has(tr.node) && !segs.some((s) => nodes.has(s.a) || nodes.has(s.b))) continue;
+    for (const s of segs) {
+      const line = segmentLine(n, s);
+      const r = reach(s, n);
+      for (const part of taperParts(n, s)) {
+        if (part.node !== tr.node) continue;
+        let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+        for (const p of line.samples) {
+          if ((part.atStart ? p.s : line.length - p.s) > part.length + 1) continue;
+          x0 = Math.min(x0, p.x); z0 = Math.min(z0, p.z); x1 = Math.max(x1, p.x); z1 = Math.max(z1, p.z);
+        }
+        if (Number.isFinite(x0)) out.push([x0 - r, z0 - r, x1 + r, z1 + r]);
+      }
+    }
+  }
+  return out;
+}
+
+/** Vertex rectangle covering every taper zone of a network (null = no width transition). */
+export function transitionRect(t: TerrainData, n: RoadNetwork): GridRect | null {
+  const boxes = transitionBoxes(n, new Set(Object.keys(n.nodes)));
+  if (!boxes.length) return null;
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const bb of boxes) { x0 = Math.min(x0, bb[0]); z0 = Math.min(z0, bb[1]); x1 = Math.max(x1, bb[2]); z1 = Math.max(z1, bb[3]); }
+  return rectOf(t, x0, z0, x1, z1);
+}
+
+/**
  * Vertex rectangle covering everything a change a → b can touch: the segments that differ or
  * end at a moved node (whole reach, both versions), plus the junction areas at their end nodes
- * (intersection polygons + the trimmed ends of the neighbouring roads, both versions). Only one
- * ring of neighbours: a neighbour's graded profile depends on its own nodes, which did not move.
+ * (intersection polygons + the trimmed ends of the neighbouring roads, both versions) and the
+ * taper zones of width transitions there (Phase 36, both versions). Only one ring of neighbours:
+ * a neighbour's graded profile depends on its own nodes, which did not move.
  */
 export function dirtyRect(t: TerrainData, a: RoadNetwork, b: RoadNetwork): GridRect | null {
   const boxes: [number, number, number, number][] = [];
@@ -381,9 +427,10 @@ export function dirtyRect(t: TerrainData, a: RoadNetwork, b: RoadNetwork): GridR
       if (!ix) continue;
       let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, r = 0;
       for (const poly of [ix.surface, ...ix.corners.map((c) => c.poly)]) for (const [x, z] of poly) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); }
-      for (const road of ix.roads) r = Math.max(r, reach(road.segment));
+      for (const road of ix.roads) r = Math.max(r, reach(road.segment, n));
       if (Number.isFinite(x0)) boxes.push([x0 - r, z0 - r, x1 + r, z1 + r]);
     }
+    boxes.push(...transitionBoxes(n, junctions));
   }
   if (!boxes.length) return null;
   let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;

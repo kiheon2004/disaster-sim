@@ -14,6 +14,7 @@ import { intersectionsOf } from '@/roads/intersections';
 import { intersectionPiece, segmentPiece, type MeshData, type RoadPiece } from '@/roads/mesh';
 import { segmentLine } from '@/roads/network';
 import { segmentBounds } from '@/roads/bake';
+import { taperSignature } from '@/roads/crossSection';
 import { roadStats } from '@/roads/stats';
 import type { RoadNetwork } from '@/roads/types';
 
@@ -95,7 +96,8 @@ export class RoadBatches {
       const a = n.nodes[s.a], b = n.nodes[s.b];
       const line = segmentLine(n, s);
       const mid = line.samples[Math.floor(line.samples.length / 2)];
-      const sig = `${a.x},${a.z},${a.y}|${b.x},${b.z},${b.y}|${s.control.join(';')}|${JSON.stringify(s.profile)}|${ints.get(s.a)?.trim.get(s.id) ?? 0}|${ints.get(s.b)?.trim.get(s.id) ?? 0}`;
+      // Phase 36: + the width taper (it depends on the neighbour's section across a straight joint, not on this segment).
+      const sig = `${a.x},${a.z},${a.y}|${b.x},${b.z},${b.y}|${s.control.join(';')}|${JSON.stringify(s.profile)}|${ints.get(s.a)?.trim.get(s.id) ?? 0}|${ints.get(s.b)?.trim.get(s.id) ?? 0}|${taperSignature(n, s)}`;
       add(chunkKey(mid.x, mid.z), `s:${s.id}`, sig, segmentBounds(n, s));
     }
     for (const ix of ints.values()) {

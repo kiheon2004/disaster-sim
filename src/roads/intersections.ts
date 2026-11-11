@@ -27,6 +27,9 @@ export interface IntersectionRoad {
   w: number;
   outerMinus: number;
   outerPlus: number;
+  /** A sidewalk corner continues this road's sidewalk on the -r / +r side (else the sidewalk ends at the trim). */
+  cornerMinus: boolean;
+  cornerPlus: boolean;
 }
 
 export interface Crosswalk {
@@ -45,8 +48,8 @@ export interface Intersection {
   trim: Map<string, number>;
   /** Carriageway polygon (counter-clockwise in angle order). */
   surface: P2[];
-  /** Sidewalk corner polygons with their curb height. */
-  corners: { poly: P2[]; curb: number }[];
+  /** Sidewalk corner polygons with their curb height and curb line (the edge facing the carriageway, mesh curb faces). */
+  corners: { poly: P2[]; curb: number; curbLine: P2[] }[];
   material: RoadMaterial;
   crosswalks: Crosswalk[];
   /** A real junction (≥ 3 roads) rather than a bend. */
@@ -98,7 +101,7 @@ function buildIntersection(n: RoadNetwork, nodeId: string): Intersection | null 
     const plusSide = d.atStart ? 'right' : 'left';
     const minusSide = d.atStart ? 'left' : 'right';
     return {
-      segment: d.segment, atStart: d.atStart, dx: d.dx, dz: d.dz, angle: d.angle, trim: 0,
+      segment: d.segment, atStart: d.atStart, dx: d.dx, dz: d.dz, angle: d.angle, trim: 0, cornerMinus: false, cornerPlus: false,
       w: p.width / 2,
       outerPlus: p.width / 2 + (sideHasWalk(d.segment, plusSide) ? p.sidewalkWidth : 0),
       outerMinus: p.width / 2 + (sideHasWalk(d.segment, minusSide) ? p.sidewalkWidth : 0),
@@ -150,7 +153,9 @@ function buildIntersection(n: RoadNetwork, nodeId: string): Intersection | null 
       if (o) poly.push(o);
       poly.push(cap(b, -b.outerMinus), cap(b, -b.w));
       if (c) poly.push(c);
-      corners.push({ poly, curb: Math.min(a.segment.profile.curbHeight, b.segment.profile.curbHeight) });
+      corners.push({ poly, curb: Math.min(a.segment.profile.curbHeight, b.segment.profile.curbHeight), curbLine: c ? [cap(b, -b.w), c, cap(a, a.w)] : [cap(b, -b.w), cap(a, a.w)] });
+      a.cornerPlus = true;
+      b.cornerMinus = true;
     }
   }
   const widest = [...roads].sort((x, y) => y.w - x.w || (x.segment.id < y.segment.id ? -1 : 1))[0];

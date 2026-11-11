@@ -6,6 +6,7 @@
 import type { TerrainData } from '@/core/model';
 import type { RoadNetwork } from '@/roads/types';
 import { segmentLine } from '@/roads/network';
+import { sectionAt } from '@/roads/crossSection';
 import { nearestFast as nearest } from '@/roads/curve';
 import { coastCarve, coastDistance, featureBounds, featureLine, lakeCarve, landformDelta, polygonDistance, riverCarve, riverProfile } from './features';
 import { landformSampler } from './compose';
@@ -67,8 +68,9 @@ export function layerBreakdown(land: Landscape, roads: RoadNetwork, t: TerrainDa
     if (h !== null && h < L && (!carve || h - L < carve.dh)) carve = { id: f.id, kind: f.kind, dh: h - L };
   }
   for (const s of Object.values(roads.segments)) {
-    const d = nearest(segmentLine(roads, s), x, z).dist;
-    if (!near.road || d < near.road.dist) near.road = { id: s.id, dist: Math.max(0, d - s.profile.width / 2) };
+    const { dist: d, s: at } = nearest(segmentLine(roads, s), x, z);
+    // Distance to the curb of the section there (Phase 36: narrower inside a width taper).
+    if (!near.road || d < near.road.dist) near.road = { id: s.id, dist: Math.max(0, d - sectionAt(roads, s, at).w) };
   }
   const natural = bilinear(land.natural.heights, t, x, z);
   const final = bilinear(t.heights, t, x, z);

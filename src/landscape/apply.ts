@@ -10,7 +10,7 @@
  */
 import type { TerrainData } from '@/core/model';
 import type { GridRect } from '@/terrain/TerrainData';
-import { bakeRegion, reach, segmentBounds, type Natural } from '@/roads/bake';
+import { bakeRegion, reach, segmentBounds, transitionBoxes, type Natural } from '@/roads/bake';
 import { intersectionsOf } from '@/roads/intersections';
 import type { RoadNetwork } from '@/roads/types';
 import { composeRect, createLandscape, expandForRivers, rectOfBox, unionRects } from './compose';
@@ -45,9 +45,11 @@ export function roadInfluence(t: TerrainData, roads: RoadNetwork, rect: GridRect
     if (!ix) continue;
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, r = 0;
     for (const poly of [ix.surface, ...ix.corners.map((c) => c.poly)]) for (const [x, z] of poly) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); }
-    for (const road of ix.roads) r = Math.max(r, reach(road.segment));
+    for (const road of ix.roads) r = Math.max(r, reach(road.segment, roads));
     out = unionRects(out, rectOfBox(t, [x0 - r, z0 - r, x1 + r, z1 + r]))!;
   }
+  // Phase 36: width tapers across straight joints at those nodes (they lie on the neighbouring segment).
+  for (const box of transitionBoxes(roads, nodes)) out = unionRects(out, rectOfBox(t, box))!;
   return out;
 }
 

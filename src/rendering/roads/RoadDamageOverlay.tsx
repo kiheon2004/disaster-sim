@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { SimulationRuntime } from '@/simulation/SimulationRuntime';
 import { simulationController } from '@/simulation/SimulationController';
 import { segmentLine } from '@/roads/network';
+import { sectionAt } from '@/roads/crossSection';
 import { ROAD_IMPASSABLE, ROAD_INUNDATED, type RoadSegmentState } from '@/simulation/roads/RoadRuntime';
 
 /** Overlay color of a damaged segment (null = intact, nothing drawn). */
@@ -56,8 +57,9 @@ export function RoadDamageOverlay({ runtime }: { runtime: SimulationRuntime }) {
       c.set(hex);
       const seg = roads.network.segments[st.id];
       const line = segmentLine(roads.network, seg);
-      const w = seg.profile.width / 2;
       const S = line.samples;
+      // Carriageway half width at each sample (Phase 36: it narrows inside a width taper).
+      const half = S.map((p) => sectionAt(roads.network, seg, p.s).w);
       const y = (x: number, z: number) => terrain.sampleHeight(x, z) + 0.08;
       const quad = (a: number[], b: number[], cc: number[], d: number[], col3: THREE.Color) => {
         for (const p of [a, b, cc, a, cc, d]) { pos.push(p[0], p[1], p[2]); col.push(col3.r, col3.g, col3.b); }
@@ -65,14 +67,14 @@ export function RoadDamageOverlay({ runtime }: { runtime: SimulationRuntime }) {
       for (let i = 0; i < S.length - 1; i++) {
         const p = S[i], q = S[i + 1];
         const L = (s: typeof p, o: number) => [s.x - s.tz * o, y(s.x - s.tz * o, s.z + s.tx * o), s.z + s.tx * o];
-        quad(L(p, -w), L(p, w), L(q, w), L(q, -w), c);
+        quad(L(p, -half[i]), L(p, half[i]), L(q, half[i + 1]), L(q, -half[i + 1]), c);
       }
       // Crack marks: dark transverse strips, more of them the worse the cracking.
       if (st.crack >= 0.05) {
         const dark = new THREE.Color('#2b1a10');
         const every = Math.max(2, Math.round(12 * (1 - st.crack)));
         for (let i = 1; i < S.length - 1; i += every) {
-          const p = S[i];
+          const p = S[i], w = half[i];
           const a = [p.x - p.tz * -w * 0.9 + p.tx * 0.12, 0, p.z + p.tx * -w * 0.9 + p.tz * 0.12];
           const b = [p.x - p.tz * w * 0.9 + p.tx * 0.12, 0, p.z + p.tx * w * 0.9 + p.tz * 0.12];
           const cc = [p.x - p.tz * w * 0.9 - p.tx * 0.12, 0, p.z + p.tx * w * 0.9 - p.tz * 0.12];

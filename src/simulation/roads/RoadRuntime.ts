@@ -24,6 +24,7 @@
  */
 import type { RoadNetwork, RoadMaterial } from '@/roads/types';
 import { segmentLine } from '@/roads/network';
+import { sectionAt } from '@/roads/crossSection';
 import { pointAt } from '@/roads/curve';
 import { DRAIN_SPACING, INLET_CAPACITY, ROAD_MATERIAL_PROPS } from '@/roads/materials';
 
@@ -111,9 +112,11 @@ export class RoadRuntime {
       const n = Math.max(1, Math.round(line.length / SAMPLE_SPACING));
       const samples: { x: number; z: number }[] = [];
       const gutters: { x: number; z: number }[] = [];
-      const g = Math.max(0.3, s.profile.width / 2 - 0.3);
+      // Gutters 0.3 m inside the curb of the section at each station (Phase 36: it narrows inside a width taper).
+      const gutter = (st: number) => Math.max(0.3, sectionAt(network, s, st).w - 0.3);
       for (let k = 0; k <= n; k++) {
         const p = pointAt(line, (line.length * k) / n);
+        const g = gutter(p.s);
         samples.push({ x: p.x, z: p.z });
         gutters.push({ x: p.x - p.tz * g, z: p.z + p.tx * g }, { x: p.x + p.tz * g, z: p.z - p.tx * g });
       }
@@ -125,9 +128,9 @@ export class RoadRuntime {
       const spacing = DRAIN_SPACING[s.profile.drainage];
       if (spacing > 0) {
         const count = Math.max(1, Math.floor(line.length / spacing));
-        const lateral = Math.max(0.3, s.profile.width / 2 - 0.3);
         for (let k = 0; k < count; k++) {
           const p = pointAt(line, ((k + 0.5) * line.length) / count);
+          const lateral = gutter(p.s);
           for (const side of [1, -1]) this.inlets.push({ x: p.x - p.tz * lateral * side, z: p.z + p.tx * lateral * side, capacity: INLET_CAPACITY, segment: s.id });
         }
       }

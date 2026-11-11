@@ -11,7 +11,7 @@
  * object, one design-table entry in the file).
  */
 import type { CreateObjectInput } from '@/world/WorldDocument';
-import { laneCenter } from './crossSection';
+import { laneCenter, sectionAt } from './crossSection';
 import type { ObjectParams, WorldObject } from '@/core/model';
 import type { ObjectType } from '@/core/types';
 import { Rng } from '@/core/random';
@@ -29,9 +29,18 @@ import { degree, drawRoad, segmentLine } from './network';
 import { blocksOf, pointInPolygon, type Block } from './blocks';
 import { measureLink, roadYaw } from './links';
 import { segmentBounds } from './bake';
-import { defaultProfile, PROFILE_PRESETS, sideWidth, type LinkPolicy, type RoadNetwork, type RoadProfile, type RoadSegment, type ZoneType } from './types';
+import { defaultProfile, PROFILE_PRESETS, type LinkPolicy, type RoadNetwork, type RoadProfile, type RoadSegment, type ZoneType } from './types';
 
 type P2 = [number, number];
+
+/**
+ * Half width including the sidewalk on a side (+1 right, −1 left) at arc length s: `sideWidth` of the profile, except
+ * inside a Phase 36 width taper where the section at the station applies (same arithmetic, so equal elsewhere).
+ */
+function outerEdge(n: RoadNetwork, seg: RoadSegment, s: number, side: 1 | -1): number {
+  const sec = sectionAt(n, seg, s);
+  return sec.w + (side > 0 ? sec.swR : sec.swL);
+}
 
 // ── Road clearance ─────────────────────────────────────────────────────────────
 
@@ -50,7 +59,7 @@ export function footprintOnRoad(n: RoadNetwork, f: Footprint, margin = 0.3): boo
     const line = segmentLine(n, seg);
     for (const [x, z] of pts) {
       const h = nearest(line, x, z);
-      const reach = sideWidth(seg.profile, h.side > 0 ? 'right' : 'left') + margin;
+      const reach = outerEdge(n, seg, h.s, h.side > 0 ? 1 : -1) + margin;
       if (h.dist < reach) return true;
     }
     // Footprint edges crossing the centerline between sample points (large footprints).
@@ -119,10 +128,10 @@ export function frontage(n: RoadNetwork, segIds: readonly string[], o: FrontageO
     const used = count * o.spacing;
     const start = s0 + (s1 - s0 - used) / 2 + o.spacing * (o.phase ?? 0.5);
     for (const side of sides) {
-      const lateral = side * (sideWidth(seg.profile, side > 0 ? 'right' : 'left') + o.setback + o.depth / 2);
       for (let k = 0; k < count; k++) {
         const s = start + k * o.spacing;
         if (s > s1 + 1e-6) break;
+        const lateral = side * (outerEdge(n, seg, s, side) + o.setback + o.depth / 2);
         const p = pointAt(line, s);
         const x = p.x - p.tz * lateral, z = p.z + p.tx * lateral;
         // Toward the road = −side · right normal = side · (tz, −tx).
@@ -264,7 +273,7 @@ export function buildingsAlong(ctx: CityContext, segIds: readonly string[], o: B
         if (s + w > s1) break;
         const mid = s + w / 2;
         const p = pointAt(line, mid);
-        const lateral = side * (sideWidth(seg.profile, side > 0 ? 'right' : 'left') + o.setback + d / 2);
+        const lateral = side * (outerEdge(ctx.network, seg, mid, side) + o.setback + d / 2);
         const pt: FrontagePoint = { x: p.x - p.tz * lateral, z: p.z + p.tx * lateral, yaw: Math.atan2(side * p.tz, -side * p.tx), segment: id, side, s: mid };
         planAt(ctx, { type: 'building', building: design }, [pt], subSeed(o.seed, `${id}:${side}`, k), o.slopeLimit, o.policy, own, existing, plan, 'b');
         s += w + o.gap;
@@ -323,8 +332,9 @@ export function infrastructureAlong(ctx: CityContext, segIds: readonly string[],
   /** Point on the sidewalk near the curb (or just outside a road without sidewalk). */
   const curbPoint = (seg: RoadSegment, s: number, side: 1 | -1): FrontagePoint => {
     const p = pointAt(segmentLine(n, seg), s);
-    const walk = sideWidth(seg.profile, side > 0 ? 'right' : 'left') - seg.profile.width / 2;
-    const lateral = side * (seg.profile.width / 2 + (walk > 0 ? Math.min(0.7, walk / 2) : 0.8));
+    const hw = sectionAt(n, seg, s).w;
+    const walk = outerEdge(n, seg, s, side) - hw;
+    const lateral = side * (hw + (walk > 0 ? Math.min(0.7, walk / 2) : 0.8));
     return { x: p.x - p.tz * lateral, z: p.z + p.tx * lateral, yaw: 0, segment: seg.id, side, s };
   };
   const sidesOf = (): (1 | -1)[] => (o.side === 'both' ? [1, -1] : o.side === 'right' ? [1] : [-1]);
@@ -359,7 +369,7 @@ export function infrastructureAlong(ctx: CityContext, segIds: readonly string[],
       for (const side of sidesOf()) {
         for (let s = s0 + len / 2; s + len / 2 <= s1 + 1e-6; s += Math.max(len, o.spacing)) {
           const t = pointAt(line, s);
-          const walk = sideWidth(seg.profile, side > 0 ? 'right' : 'left');
+          const walk = outerEdge(n, seg, s, side);
           const lateral = side * (o.kind === 'fence' ? walk + 0.5 : walk + 0.35);
           pts.push({ x: t.x - t.tz * lateral, z: t.z + t.tx * lateral, yaw: roadYaw(t.tx, t.tz), segment: id, side, s });
         }
@@ -439,24 +449,31 @@ export function vehiclesAlong(ctx: CityContext, segIds: readonly string[], o: Ve
     const s1 = line.length - (ints.get(seg.b)?.trim.get(id) ?? 0) - 4;
     // Lane centers (lateral) with their travel direction (+1 = a→b) — from the cross-section (Phase 35.5: lanes between
     // the shoulders and around the median; a road without them gives exactly the former width / lanes split).
-    const lanes: { lateral: number; dir: 1 | -1 }[] = [];
+    // Phase 36: the lateral is taken from the section at each station, so vehicles follow a width taper; a lane that ends
+    // inside a taper (lane drop) gets no vehicle there.
+    const lanes: { lateral: (s: number) => number | null; dir: 1 | -1 }[] = [];
     if (o.mode === 'parked') {
       // On the shoulder when there is one, otherwise at the curb.
-      const curb = (p.shoulderWidth ?? 0) > 1.6 ? p.width / 2 - (p.shoulderWidth ?? 0) / 2 : p.width / 2 - 1.1;
+      const curb = (s: number) => {
+        const sec = sectionAt(n, seg, s);
+        return sec.shoulder > 1.6 ? sec.w - sec.shoulder / 2 : sec.w - 1.1;
+      };
       lanes.push({ lateral: curb, dir: 1 });
-      if (!p.oneWay) lanes.push({ lateral: -curb, dir: -1 });
+      if (!p.oneWay) lanes.push({ lateral: (s) => -curb(s), dir: -1 });
     } else {
       for (let i = 0; i < p.lanes; i++) {
         const lateral = laneCenter(p, i);
-        lanes.push({ lateral, dir: p.oneWay ? 1 : lateral >= 0 ? 1 : -1 });
+        lanes.push({ lateral: (s) => sectionAt(n, seg, s).lanes[i], dir: p.oneWay ? 1 : lateral >= 0 ? 1 : -1 });
       }
     }
     for (const lane of lanes) {
       for (let s = s0 + rng.next() * o.spacing * 0.5; s <= s1; s += o.spacing * (0.8 + rng.next() * 0.4)) {
         const t = pointAt(line, s);
         const item = rng.pick(o.presets);
+        const lateral = lane.lateral(s);
+        if (lateral === null) continue;
         const yaw = roadYaw(lane.dir * t.tx, lane.dir * t.tz);
-        const pt: FrontagePoint = { x: t.x - t.tz * lane.lateral, z: t.z + t.tx * lane.lateral, yaw, segment: id, side: lane.lateral >= 0 ? 1 : -1, s };
+        const pt: FrontagePoint = { x: t.x - t.tz * lateral, z: t.z + t.tx * lateral, yaw, segment: id, side: lateral >= 0 ? 1 : -1, s };
         planVehicle(ctx, item, pt, subSeed(o.seed, 'v', k++), o.policy, own, existing, plan);
       }
     }
@@ -522,7 +539,7 @@ export function fillBlock(ctx: CityContext, block: Block, zone: ZoneType, o: Fil
       if (s + w > s1) break;
       const mid = s + w / 2;
       const p = pointAt(line, mid);
-      const lateral = side * (sideWidth(seg.profile, side > 0 ? 'right' : 'left') + o.setback + d / 2);
+      const lateral = side * (outerEdge(n, seg, mid, side) + o.setback + d / 2);
       const pt: FrontagePoint = { x: p.x - p.tz * lateral, z: p.z + p.tx * lateral, yaw: Math.atan2(side * p.tz, -side * p.tx), segment: seg.id, side, s: mid };
       // Only inside the block (deep buildings on short sides would cross the far road).
       if (pointInPolygon(block.polygon, pt.x, pt.z)) planAt(ctx, { type: 'building', building: design }, [pt], subSeed(o.seed, block.id, k), o.slopeLimit, o.policy, own, existing, plan, 'fill');

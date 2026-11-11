@@ -8,7 +8,8 @@ import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { centerlineOf, minRadius, resample, type Centerline, type P2 } from '@/roads/curve';
 import { degree, drawRoad, findNode, findSegment, moveControl, moveNode, segmentLine, SNAP_NODE, SNAP_SEGMENT } from '@/roads/network';
 import { blockAt, blocksOf } from '@/roads/blocks';
-import type { RoadNetwork, RoadProfile } from '@/roads/types';
+import { sectionAt } from '@/roads/crossSection';
+import type { RoadNetwork, RoadSegment } from '@/roads/types';
 import { deleteRoadSegments, finishDraft, moveRoadControl, moveRoadNode, placeNeighborhood, splitRoadAt } from '@/app/roadActions';
 import { useRoadStore, EMPTY_SELECTION } from '../roadStore';
 import { GroundCatcher, groundHitOf } from './shared';
@@ -26,12 +27,16 @@ const COLORS = {
 
 type Snap = { x: number; z: number; kind: 'node' | 'road' | 'free'; id?: string };
 
-/** Snap a ground point: existing node > point on a road > grid > free. */
-function snapPoint(n: RoadNetwork, x: number, z: number, grid: number): Snap {
+/**
+ * Snap a ground point: existing node > point on a road > grid > free. Drawing uses the commit's own rule (drawRoad splits
+ * a road within SNAP_SEGMENT of its edge), so the hover label never says 'free' where the click will split; a dragged
+ * node keeps the tighter 0.5 m band (moving a node never splits).
+ */
+function snapPoint(n: RoadNetwork, x: number, z: number, grid: number, roadBand = SNAP_SEGMENT): Snap {
   const node = findNode(n, x, z, SNAP_NODE);
   if (node) return { x: node.x, z: node.z, kind: 'node', id: node.id };
   const hit = findSegment(n, x, z, SNAP_SEGMENT);
-  if (hit && hit.dist <= hit.segment.profile.width / 2 + 0.5) return { x: hit.x, z: hit.z, kind: 'road', id: hit.segment.id };
+  if (hit && hit.dist <= hit.segment.profile.width / 2 + roadBand) return { x: hit.x, z: hit.z, kind: 'road', id: hit.segment.id };
   if (grid > 0) return { x: Math.round(x / grid) * grid, z: Math.round(z / grid) * grid, kind: 'free' };
   return { x, z, kind: 'free' };
 }
@@ -54,12 +59,13 @@ function drapedPositions(pts: readonly P2[], sampler: TerrainSampler, lift = LIF
   return out;
 }
 
-/** Left / right edges of a centerline at ±half (with fold-over protection like the mesh). */
-function edges(line: Centerline, half: number): [P2[], P2[]] {
+/** Left / right edges of a centerline at ±half(s) (Phase 36: the section's half width, which narrows in a taper). */
+function edges(line: Centerline, half: (s: number) => number): [P2[], P2[]] {
   const L: P2[] = [], R: P2[] = [];
   for (const p of line.samples) {
-    L.push([p.x + p.tz * half, p.z - p.tx * half]);
-    R.push([p.x - p.tz * half, p.z + p.tx * half]);
+    const h = half(p.s);
+    L.push([p.x + p.tz * h, p.z - p.tx * h]);
+    R.push([p.x - p.tz * h, p.z + p.tx * h]);
   }
   return [L, R];
 }
@@ -91,9 +97,10 @@ export class PreviewLines {
     for (let i = 0; i < 32; i++) pts.push([x + Math.cos((i / 32) * Math.PI * 2) * r, z + Math.sin((i / 32) * Math.PI * 2) * r]);
     this.line(pts, color, sampler, true);
   }
-  /** Road outline: both edges + centerline. */
-  road(line: Centerline, p: RoadProfile, color: string, sampler: TerrainSampler) {
-    const [L, R] = edges(line, p.width / 2);
+  /** Road outline of a segment of a network: both curbs (the width at each station) + centerline. */
+  road(n: RoadNetwork, s: RoadSegment, color: string, sampler: TerrainSampler) {
+    const line = segmentLine(n, s);
+    const [L, R] = edges(line, (q) => sectionAt(n, s, q).w);
     this.line(L, color, sampler);
     this.line(R, color, sampler);
     this.line(line.samples.map((s) => [s.x, s.z] as P2), color, sampler);
@@ -114,7 +121,7 @@ export function RoadOutlines({ network, segments, color = COLORS.ok }: { network
     lines.clear();
     for (const id of segments) {
       const s = network.segments[id];
-      if (s) lines.road(segmentLine(network, s), s.profile, color, sampler);
+      if (s) lines.road(network, s, color, sampler);
     }
   }, [lines, network, segments, color, terrain]);
   return <primitive object={lines.root} />;
@@ -222,18 +229,18 @@ export function RoadTool() {
     // Selected roads + handles' context.
     for (const id of selection.segments) {
       const s = roads.segments[id];
-      if (s) lines.road(segmentLine(roads, s), s.profile, COLORS.sel, sampler);
+      if (s) lines.road(roads, s, COLORS.sel, sampler);
     }
     if (dragged) {
       const affected = new Set<string>();
       if (drag?.kind === 'node') for (const s of Object.values(dragged.segments)) { if (s.a === drag.id || s.b === drag.id) affected.add(s.id); }
       else if (drag) affected.add(drag.seg);
-      for (const id of affected) lines.road(segmentLine(dragged, dragged.segments[id]), dragged.segments[id].profile, COLORS.ok, sampler);
+      for (const id of affected) lines.road(dragged, dragged.segments[id], COLORS.ok, sampler);
     }
     if (preview?.net) {
       for (const id of preview.segments) {
         const s = preview.net.segments[id];
-        if (s) lines.road(segmentLine(preview.net, s), s.profile, COLORS.ok, sampler);
+        if (s) lines.road(preview.net, s, COLORS.ok, sampler);
       }
       for (const id of Object.keys(preview.net.nodes)) {
         if (!roads.nodes[id] && degree(preview.net, id) >= 3) lines.ring(preview.net.nodes[id].x, preview.net.nodes[id].z, 1.5, COLORS.node, sampler);
@@ -267,7 +274,7 @@ export function RoadTool() {
     if (!h) return setHover(null);
     if (drag) {
       // A dragged node snaps to other nodes / roads, never to itself or its own roads.
-      const sn = drag.kind === 'node' ? snapPoint(withoutNode(roads, drag.id), h[0], h[2], grid) : { x: h[0], z: h[2] };
+      const sn = drag.kind === 'node' ? snapPoint(withoutNode(roads, drag.id), h[0], h[2], grid, 0.5) : { x: h[0], z: h[2] };
       setDrag({ ...drag, x: Math.round(sn.x * 100) / 100, z: Math.round(sn.z * 100) / 100 });
       return;
     }

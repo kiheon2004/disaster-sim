@@ -31,6 +31,7 @@ import { enVehiclePresets } from './en.vehiclePresets';
 import { enDynamicObjects } from './en.dynamicObjects';
 import { enUx355 } from './en.ux355';
 import { enP36Editor } from './en.p36editor';
+import { enP36Roads } from './en.p36roads';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -638,4 +639,5 @@ export const en: Record<MessageKey, string> = {
   ...enDynamicObjects,
   ...enUx355,
   ...enP36Editor,
+  ...enP36Roads,
 };
