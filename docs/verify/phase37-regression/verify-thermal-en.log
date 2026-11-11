@@ -1,0 +1,31 @@
+PASS 1 heat-source phenomenon added from the Experiment tab (default: point source, 500 kW, constant 300 s) {"event":"heatSource","kind":"point","position":[0,0],"height":1.5,"radius":2,"input":"power","power":500000,"profile":"constant","duration":300}
+PASS 2 source type chosen; only the fields of that type are shown (radius for an area, radiative share for a point) {"fieldsArea":["kind","power","duration","x","z","height","radius","input","profile"],"fieldsPoint":["kind","power","duration","x","z","height","input","radiativeFraction","profile"]}
+PASS 3 position picked on the map with a click [-14,-6]
+PASS 4 heat output entered (kW → W stored) 1500000
+PASS 5 time profile set (ramp shows its ramp time; an impossible pulse is rejected with the reason) {"invalid5":"⚠ Pulse width must be > 0 and shorter than the period"}
+PASS 6 preview: source position, coverage (reach), expected flux map from the run's model, limitations listed {"out6":{"n":4904,"reach":100,"inside":false},"sum6":"Position (-14.0, -6.0), 1.5 m above the groundPeak output 1.50 MW, total 435.00 MJ, 300 sMax absorbe"}
+PASS 7 ground heated under the source; the change stays local (active tiles only) {"T0":296.65318942192926,"T1":288.1626297417209,"Tref":288.15,"air":302.16841685038327,"tiles":69}
+PASS 8 objects heated by the source radiation (car, tree; received energy recorded); the car behind the house is shaded [{"type":"building","x":0,"T":15.01511628682357,"src":735104.581482194},{"type":"car","x":-14,"T":15.37929481809772,"src":133271.5680775109},{"type":"tree","x":-24,"T":15.99156122786718,"src":954295.9624629718},{"type":"car","x":14,"T":15.000000000055934,"src":0}]
+PASS 9 conduction: heat moved down into the ground (second layer warmer than ambient) {"T1":15.0126297417209,"cond":113236.58822181061}
+PASS 10 convection: the air above warmed, convective transfer booked {"air":29.01841685038329}
+PASS 11 radiation: source radiation absorbed by surfaces, surface radiation to the surroundings booked {"sky":33172.894967076434,"car":133271.5680775109}
+PASS 20 temperature heatmap drawn with a fixed, labelled °C legend {"grid20":312,"legend20":"0 °C150 °C300 °CFixed range — never rescaled to the current min / max. Within ±0.5 K of the ambient: clear."}
+PASS 21 inspector: ground column at the clicked point, the car's temperatures / capacity / flows / source share, a person's exposure {"probe":"Point(-14.0, -6.0)Depth 0–2 cm23.5 °CDepth 2–8 cm15.0 °CDept","obj":"Surface temperature15.4 °C (+0.4 K)Interior temperature15.1 ","hum":{"airT":288.1500635287654,"radiant":799.5817264027582,"peakAirT":288.1500635287654,"peakRadiant":799.5822408618963}}
+PASS 22 timeline: heat source activation and heat-flux milestones recorded (temperature milestones: scenario 18) ["heatSource","heatFlux","heatFlux"]
+PASS 23 energy ledger: added = held + lost (+ round-off), shown in the HUD and the results {"rel":9.589099274022764e-16,"added":74999999.99999684,"held":17912651.096607506,"lost":57087348.90338921}
+PASS 25a leaving the simulation leaves the original world untouched (fingerprint) 
+PASS 12 wind carries warm air downstream (air advection booked; no forces from the thermal system) {"down":289.20933187955814,"up":288.15,"adv":10817387.67658098,"Tref":288.15,"dup":0}
+PASS 13 water temperature rises (heat carried by the water, ledger closed) {"water":15.263021379987379,"rel":1.3280228501853682e-14}
+PASS 14 building member temperatures tracked per member (a structural member above 400 °C, the room heated) {"hottest":"sl0-0-0","type":"slab","T":614.6318976175909,"minF":0.43488344571778187,"strain":0.0027596880681812763,"rooms":[48.877812930428206,180.9903295183807,39.391066063090875,15.00122795765293,15.000000000044963,15],"col":1,"colT":15.194032244742516}
+PASS 15 thermal expansion of the hot member (free strain > 0) 0.0027596880681812763
+PASS 14b member colors by temperature; the picked member's thermal state (factors, expansion, restraint, force) shown Surface temperature614.6 °C (+599.6 K)Interior temperature33.6 °C (+18.6 K)Initial temperature15.0 °CHighest reached614.
+PASS 17 strength reduced with temperature (EN factors applied through the structural engine) 0.43488344571778187
+PASS 18 structural failure from load vs reduced capacity (first cause mechanical, hazard heat), partial collapse; failure and temperature milestones {"level":"partial","recs":[["bending","thermal",842.8],["impact","thermal",842.8],["impact","thermal",842.8],["impact","thermal",842.8]],"n":111,"thermalRecs":111}
+PASS 19 debris keeps its heat: rubble heaps hold the merged members' energy (ledger closed) {"heaps":1,"E":26624174371.351418,"rel":1.8343901769196975e-15}
+PASS 16 restrained expansion produces thermal force (and earlier failure); free expansion produces none {"free16":{"N":0,"u":0,"fails":[]},"full16":{"N":17320972.81720004,"u":1.3643965628231005,"fails":[]}}
+PASS 24 heat source and thermal settings saved and reloaded (schema 7) {"ok":true,"version":7,"thermal":{"ambient":298.15,"airLayerHeight":10,"restraint":"frame"},"spec":{"event":"heatSource","kind":"point","position":[5,5],"height":2,"radius":2,"input":"energy","energy":50000000,"profile":"pulse","duration":30,"pulseWidth":2,"period":6}}
+PASS 25 reset clears every thermal state (no thermal runtime at t = 0) and the document is unchanged {"rt":true,"t":0}
+PASS 26 the same conditions reproduce the same thermal state at the same step {"h1":"68|169|4.018000550687e+6|4.000000000000e+7","h2":"68|169|4.018000550687e+6|4.000000000000e+7"}
+{"heap0":40.6,"heap1":67,"geo0":21,"geo1":8,"crashed":false}
+
+28/28 passed; 0 page errors; heap 40.6 → 67 MB; geometries 21 → 8; crashed false

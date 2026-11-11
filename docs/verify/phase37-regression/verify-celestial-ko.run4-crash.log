@@ -1,0 +1,59 @@
+PASS 1 black hole tool: a celestial experiment added from the Experiment tab (preset, scale, window, source position, log₁₀ M, μ, educational target, ε, capture, influence, mass policy, motion, probes) ["scenario","duration","scale","end","tidal","limitPolicy","disc","lensing","particles","addSource","s0.kind","s0.x","s0.y","s0.z","s0.log10m","s0.mu","s0.refAccel","s0.refRadius","s0.softening","s0.capture","s0.influence","s0.massPolicy","s0.motion","s0.start","s0.end","s0.ramp","addProbe"]
+PASS 2 mass and μ: μ = 8·10⁴ m³/s² stores M = μ/G = 1.2·10¹⁵ kg; log₁₀ M = 15 stores 10¹⁵ kg (consistent conversion, G unchanged) {"m2":1198627571430712,"m2b":1000000000000000}
+PASS 3 educational target: |g| = 20 m/s² at 40 m gives the mass that produces it (closed form) {"g3":20,"mass":481250093175003.6}
+PASS 4 softening: a 5 cm core resolved down to a 10 cm capture radius needs more substeps than the cap — rejected with its reason (raise ε / capture or lower M) 
+PASS 5 capture radius: editable for a black hole (2.5 m stored), hidden for a compact mass (no capture) 
+PASS 6 scale modes: a solar mass is rejected in the educational mode (μ range), accepted in the physical SI mode with its regime (beyond the cap / above 0.1 c) and the stop policy {"lim6":"stop"}
+PASS 7 presets: 20 listed with expected phenomenon / initial conditions / time scale / result / scope / failure; model support; the scaled label {"pres7":20}
+PASS 9 orbit initial conditions: a circular probe (position, multiple, direction, mass, radius) with its predicted period 시험체 1: 타원 궤도 · v₀ 49.63 m/s · 근점 19.4 m · 원점 20.0 m · 주기 2.46 s · 근사 (연화·균일장·복수 중력원·이동)
+PASS 8 preview: the source (core, capture, softening spheres) and the probe's predicted orbit {"lines":1,"spheres":3}
+PASS 10 probe modes: hyperbolic (1.3 × escape) and custom velocity probes added 
+PASS 11 motion and several sources: velocity fields; at most 4 sources (a fifth is refused) {"n":4}
+PASS 12 demo loader: "Circular Orbit Laboratory" loads its world with the zero-gravity companion experiment ["gravity","celestial"]
+PASS 14 circular orbit (r = 30 m): radius within 0.2 %, period 4.62 s (Plummer closed form), ΔE/E < 10⁻³ {"rMin":29.999975810035142,"rMax":30.002116707633892,"T":4.620833333333363,"dE":0.000006362537806475743}
+PASS 13 HUD: source mass, μ, r_s (reference), ε, capture radius, max |g|, tide, bodies, integrator, limit state, scaled label; text not cut {"hud":" 극한 중력원22.0 sScaled Educational Gravity — Not a Real Astrophysical Black Hole중력원M 7.49e+14 kg · μ 5.00e+4 m³/s²반경ε 1.00 · r_c 1.00 · r_s 1.11e-12 m물체 최대 |g|55.4","clip13":[]}
+PASS 47 performance readout: the celestial runtime cost (ms) in the HUD 
+PASS 21 probe diagnostics in the inspector: distance range, speed, energy / angular-momentum errors, period; point field (|g|, Φ, v_esc, tide) 가장 가까운 중력원까지60.67 m국소 |g|13.58 m/s²퍼텐셜 Φ-824.00 J/kg탈출 속도 (중력원 장)40.60 m/s조석 늘림λ₁ 0.447 s⁻² · (0.16, -0.97, 0.16)probe-0
+PASS 15 elliptical orbit: 0.7 × circular at 40 m reaches periapsis 13.0 m (vis-viva), apoapsis 40 m {"e0":-943.6463514870168,"e":-943.6446485733677,"maxErr":0.00007468485944530013,"l0":[0,-989.4857836930423,0],"lErr":0.000004565644907456127,"r":20.648466624784568,"rMin":13.036773699056713,"rMax":40,"v":54.31404836128551,"a":116.86064083739464,"revs":1,"tFirst":5.916666666666651,"period":3.866666666666748,"conserved":true,"private_angle":-1.5540477353181952}
+PASS 16 escape velocity: 0.9 × v_esc stays bound (apoapsis 84.7 m), 1.05 and 1.3 × v_esc leave the world (booked) [["orbit",85.4],["left",1009.1],["left",867]]
+PASS 17 hyperbolic flyby: the probe flies the predicted hyperbola (|e| kept to 1 %, deflection 2·asin(1/e) ≈ 125°; the softened core turns the conic by a few degrees) {"em0":1.126165017492639,"em1":1.1261454431201678,"tilt":3.122020244953287,"defl":125.2421919764522}
+PASS 18 tidal overlay: λ₁ of the computed gradient tensor on the slice (fixed log legend, s⁻²) and principal stretch axes {"axes18":576}
+PASS 19 overlays: |g| (m/s², 9.81 marked), |Φ| (J/kg), escape speed (m/s), model zones (far / core / capture / beyond cap) {}
+PASS 56 model-limit zones: the zones legend names all four regions 
+PASS 20 object inspector: distance, |g|, escape speed, tidal stretch along the long axis, bar tension (reference), energy / angular momentum 가장 가까운 중력원까지10.89 m · r_c 1.00 · ε 2.00 m국소 |g|23.88 m/s² · 2.43 g₀탈출 속도 (중력원 장)23.18 m/s조석 늘림λ₁ 4.171 s⁻² · 긴 축 방향 -2.193 s⁻²조석 인장 (균일 막대 m
+PASS 59 vehicles: a car pulled off the ground and turned by the field (rigid body; no internal model) {"p":[-2.314439535140991,10.73902702331543,5.999906539916992],"captured":true}
+PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_8e03b1ec3z","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
+PASS 22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone {"n":40,"hidden22":12}
+PASS 23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported {"mass":18903.298095703125}
+PASS 54 timeline: celestial start and capture milestones recorded once each kind ["capture","capture","capture","capture","capture","capture","capture","capture"]
+PASS 24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included {"grown":18903.298095703125,"dM":18518.25,"dCaptured":18518.248107910156,"records":40,"each24":true,"afterLastSample":385.04998779296875}
+PASS 27b accretion particles: placed = flying + captured + landed + left (residual 0) {"placed":600000,"flying":0,"captured":0,"landed":600000,"left":0,"dissipated":877141487.8268613,"residual":0}
+file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/common/CallbackRegistry.js:88
+            this._reject(callback, new TargetCloseError('Target closed'));
+                                   ^
+
+TargetCloseError: Protocol error (Runtime.callFunctionOn): Target closed
+    at CallbackRegistry.clear (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/common/CallbackRegistry.js:88:36)
+    at CdpCDPSession.onClosed (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/CdpSession.js:121:25)
+    at #onClose (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/Connection.js:217:21)
+    at WebSocket.<anonymous> (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/node/NodeWebSocketTransport.js:54:30)
+    at callListener (~/projects/disaster-sim/node_modules/ws/lib/event-target.js:290:14)
+    at WebSocket.onClose (~/projects/disaster-sim/node_modules/ws/lib/event-target.js:220:9)
+    at WebSocket.emit (node:events:514:28)
+    at WebSocket.emitClose (~/projects/disaster-sim/node_modules/ws/lib/websocket.js:292:10)
+    at Socket.socketOnClose (~/projects/disaster-sim/node_modules/ws/lib/websocket.js:1374:15)
+    at Socket.emit (node:events:514:28) {
+  cause: ProtocolError
+      at <instance_members_initializer> (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/common/CallbackRegistry.js:108:14)
+      at new Callback (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/common/CallbackRegistry.js:112:16)
+      at CallbackRegistry.create (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/common/CallbackRegistry.js:27:26)
+      at Connection._rawSend (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/Connection.js:125:26)
+      at CdpCDPSession.send (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/CdpSession.js:72:14)
+      at #evaluate (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:374:50)
+      at ExecutionContext.evaluate (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:288:36)
+      at IsolatedWorld.evaluate (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/cdp/IsolatedWorld.js:104:30)
+      at CdpFrame.evaluate (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:364:43)
+      at CdpFrame.<anonymous> (file://~/projects/disaster-sim/node_modules/puppeteer-core/lib/puppeteer/util/decorators.js:101:27)
+}
+
+Node.js v24.21.0

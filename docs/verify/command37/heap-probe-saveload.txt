@@ -1,0 +1,29 @@
+Phase 37 §17 — heap of the editor's save → load cycle (scripts/probe-selection-heap.mjs OP=saveLoad SCENE=500, build 31d9018 app code, 2026-11-11 ~14:20,
+load average 39–75 from another session; heap after 3 forced collections)
+
+NET growth per class over 150 cycles (snapshot B − snapshot A): 1142.4 KB = 7.62 KB / cycle (nodes 973,824 → 978,188)
+   579.8 KB   +281  code: system / InstructionStream        (V8 optimised machine code)
+   253.6 KB   +691  code: system / TrustedByteArray
+   108.1 KB   +279  code: system / ProtectedFixedArray
+    53.5 KB   +433  native: system / WeakArrayList
+    32.7 KB  +1699  code: (constant elements)    [−32.7 KB −1699 code:(object elements): the same arrays, re-typed]
+    25.3 KB   +147  native: PerformanceLongAnimationFrameTiming   (browser performance timeline: one entry per long frame)
+    19.8 KB   +281  code: system / Code
+    19.7 KB   +148  native: blink::ScriptTimingInfo
+    17.3 KB   +148  native: PerformanceScriptTiming
+    14.3 KB   +122  native: TaskAttributionTiming
+    12.4 KB   +122  native: PerformanceLongTaskTiming
+    11.7 KB   +279  code: system / TrustedWeakFixedArray
+   …application classes (object:Object, object:Array, typed arrays, closures): no net growth.
+
+Retained heap at checkpoints (SERIES=1):
+   cycles    0   53.45 MB
+   cycles  200   54.47 MB    0 → 200:    5.22 KB / cycle
+   cycles  400   54.68 MB  200 → 400:    1.08 KB / cycle
+   cycles  800   55.05 MB  400 → 800:    0.95 KB / cycle
+   cycles 1200   54.88 MB  800 → 1200:  −0.44 KB / cycle
+
+Per operation alone, 100 laps, 500-object scene (scripts/bench-command37.mjs MODE=leak LEAK_OPS=<op>; KB per lap, laps 10–50 / 50–100 / 70–100):
+   objects 39.3 / 6.2 / 7.9 · terrain 17.1 / 5.8 / −5.6 · road 97.0 / 11.5 / 17.9 · disaster 21.0 / 3.4 / 8.1 · simSwitch 20.5 / 4.3 / 3.3
+   saveLoad 16.8 / 17.5 / 19.2 · bar 11.8 / 2.3 / −2.8 · plan 15.0 / 11.8 / 5.8 · confirm 22.9 / −3.6 / −0.2
+   geometries, textures, programs, scene objects, preview objects, window / document listeners: 0 change in every run.

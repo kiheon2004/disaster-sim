@@ -1,0 +1,1518 @@
+{
+ "lang": "en",
+ "results": [
+  {
+   "name": "S1-1 \"/\" from the viewport focuses the command input",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S1-2 W / E / G typed in the bar are text — the editing shortcuts rest",
+   "ok": true,
+   "detail": {
+    "value": "weg",
+    "before": {
+     "tool": "select",
+     "snap": null,
+     "mode": "translate"
+    },
+    "afterKeys": {
+     "tool": "select",
+     "snap": null,
+     "mode": "translate"
+    }
+   }
+  },
+  {
+   "name": "S1-3 Esc with nothing open leaves the input",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S1-4 Ctrl+K focuses it again",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S1-5 Enter on an edit opens a plan with a ghost — the document is not changed",
+   "ok": true,
+   "detail": {
+    "state": "plan",
+    "d": {
+     "ghosts": 1,
+     "warned": 1,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": null,
+     "roads": 0,
+     "pins": 0,
+     "snaps": 0,
+     "highlight": 0,
+     "sceneObjects": 9,
+     "armed": true,
+     "key": "5bd08a708751e030@1",
+     "builds": 1,
+     "layers": 1
+    }
+   }
+  },
+  {
+   "name": "S1-6 the first Esc cancels the plan (the input keeps the focus, no ghost is left)",
+   "ok": true,
+   "detail": {
+    "plan": null,
+    "d": {
+     "ghosts": 0,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": null,
+     "roads": 0,
+     "pins": 0,
+     "snaps": 0,
+     "highlight": 0,
+     "sceneObjects": 0,
+     "armed": null,
+     "key": null,
+     "builds": 1,
+     "layers": 1
+    }
+   }
+  },
+  {
+   "name": "S1-7 the second Esc leaves the input",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S1-8 Esc in the viewport cancels an open plan first",
+   "ok": true,
+   "detail": {
+    "plan": null
+   }
+  },
+  {
+   "name": "S1-9 \"/\" focuses the bar while a simulation runs",
+   "ok": true,
+   "detail": {
+    "st": "running"
+   }
+  },
+  {
+   "name": "S2-1 the composition is real: compositionstart fired, not ended, and the Enter key event carries isComposing",
+   "ok": true,
+   "detail": {
+    "starts": 1,
+    "ends": 0,
+    "keys": [
+     {
+      "key": "Enter",
+      "keyCode": 13,
+      "composing": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "S2-2 Enter during the composition does not submit (selection, history and feedback as before, no plan, the text is kept)",
+   "ok": true,
+   "detail": {
+    "value": "나무 선택",
+    "fb": [
+     "done",
+     "done"
+    ],
+    "history": [
+     2,
+     2
+    ],
+    "sel": [
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "S2-3 after the composition ended Enter submits \"나무 선택\" (every tree selected)",
+   "ok": true,
+   "detail": {
+    "value": "나무 선택",
+    "ends": 1,
+    "selected": 24,
+    "trees": 24
+   }
+  },
+  {
+   "name": "S3-1 the road sentence is understood as its canonical command and previewed (document unchanged)",
+   "ok": true,
+   "detail": {
+    "understood": [
+     "road -60,0 -> 60,0"
+    ],
+    "d": {
+     "ghosts": 0,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": {
+      "up": 0.07999999821186066,
+      "down": 0.05999999865889549,
+      "area": 1573
+     },
+     "roads": 1,
+     "pins": 0,
+     "snaps": 0,
+     "highlight": 2,
+     "sceneObjects": 4,
+     "armed": true,
+     "key": "c2d52cd7273a699a@1",
+     "builds": 1,
+     "layers": 1
+    }
+   }
+  },
+  {
+   "name": "S3-2 Enter draws it: n1 (−60, 0) → n2 (60, 0), one segment, one undo step",
+   "ok": true,
+   "detail": {
+    "nodes": [
+     [
+      "n1",
+      -60,
+      0
+     ],
+     [
+      "n2",
+      60,
+      0
+     ]
+    ],
+    "segs": [
+     [
+      "s3",
+      "n1",
+      "n2"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "S4-1 \"three houses north of the road, 2 m apart\" → the canonical command, 3 ghosts, 3 frontage snaps, nothing placed yet",
+   "ok": true,
+   "detail": {
+    "understood": [
+     "place building:house count=3 along=road:any side=north gap=2"
+    ],
+    "d": {
+     "ghosts": 3,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": null,
+     "roads": 0,
+     "pins": 0,
+     "snaps": 3,
+     "highlight": 0,
+     "sceneObjects": 15,
+     "armed": true,
+     "key": "9e0bd9ce49cf145d@2",
+     "builds": 2,
+     "layers": 1
+    },
+    "items": [
+     {
+      "status": "ok",
+      "snap": "roadFront",
+      "reasons": []
+     },
+     {
+      "status": "ok",
+      "snap": "roadFront",
+      "reasons": []
+     },
+     {
+      "status": "ok",
+      "snap": "roadFront",
+      "reasons": []
+     }
+    ]
+   }
+  },
+  {
+   "name": "S4-2b the middle house stands exactly where the mouse's snap engine puts a house at that spot (roadFront)",
+   "ok": true,
+   "detail": {
+    "mouse": {
+     "x": -45.4,
+     "z": -10.45,
+     "kind": "roadFront"
+    },
+    "z": -10.45
+   }
+  },
+  {
+   "name": "S4-2 Enter places 3 houses north of the road (−z), in one row, 2 m between footprints, fronts facing the road",
+   "ok": true,
+   "detail": {
+    "geo": [
+     {
+      "x": -55.8,
+      "z": -10.45,
+      "hx": 4.2,
+      "hz": 3.95,
+      "front": [
+       0,
+       1
+      ]
+     },
+     {
+      "x": -45.4,
+      "z": -10.45,
+      "hx": 4.2,
+      "hz": 3.95,
+      "front": [
+       0,
+       1
+      ]
+     },
+     {
+      "x": -35,
+      "z": -10.45,
+      "hx": 4.2,
+      "hz": 3.95,
+      "front": [
+       0,
+       1
+      ]
+     }
+    ],
+    "gaps": [
+     1.999999999999993,
+     1.999999999999993
+    ],
+    "mouse": {
+     "x": -45.4,
+     "z": -10.45,
+     "kind": "roadFront"
+    }
+   }
+  },
+  {
+   "name": "S4-3 the front edge is 1 m behind the outer edge of the sidewalk (the snap engine's frontage setback)",
+   "ok": true,
+   "detail": {
+    "half": 5.5,
+    "frontEdge": 6.499999999999999,
+    "expected": 6.5
+   }
+  },
+  {
+   "name": "S4-4 ONE undo removes all three",
+   "ok": true,
+   "detail": {
+    "left": 0
+   }
+  },
+  {
+   "name": "S5-1 ten houses on a 20 m street: the plan shows the ones that fit and says how many of ten",
+   "ok": true,
+   "detail": {
+    "fit": 2,
+    "warnings": [
+     "cmd37.warn.room"
+    ],
+    "roomWarn": "Placed 2 of 10 — not enough road for more.",
+    "shown": "◆ Plan — nothing has changed yet+2 newConfirm (Enter)Cancel (Esc)place building:house count=10 along=road:nearest(-50,60) side=north gap=2 +2 new! Placed 2 of 10 — not enough road for more.· The neare"
+   }
+  },
+  {
+   "name": "S5-2 Enter places exactly those",
+   "ok": true,
+   "detail": {
+    "placed": 2,
+    "fit": 2
+   }
+  },
+  {
+   "name": "S5-3 two undo steps: the houses, then the short street",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S6-1 \"group the ones I just made, named …\": the three houses are one group with that name, shown in the outliner, ONE undo step",
+   "ok": true,
+   "detail": {
+    "houses": 3,
+    "grp": {
+     "groups": [
+      "grp_c17rm8k6"
+     ],
+     "names": [
+      "North block"
+     ]
+    },
+    "understood": [
+     "group last name=\"North block\""
+    ],
+    "fb": "done"
+   }
+  },
+  {
+   "name": "S6-2 one undo: the group and its name are gone, the houses stay",
+   "ok": true,
+   "detail": {
+    "grouped": 0,
+    "names": 0,
+    "buildings": 3
+   }
+  },
+  {
+   "name": "S7-1 \"select all trees\" selects every tree at once (no plan, no undo step)",
+   "ok": true,
+   "detail": {
+    "selected": 24,
+    "trees": 24
+   }
+  },
+  {
+   "name": "S7-2 \"buildings within 30 m of n4\": exactly the buildings whose centre is within 30 m of that node",
+   "ok": true,
+   "detail": {
+    "selected": 5,
+    "expected": 5
+   }
+  },
+  {
+   "name": "S7-3 \"trees on slopes over 20°\": exactly the trees standing on ground steeper than 20°",
+   "ok": true,
+   "detail": {
+    "selected": 8,
+    "expected": 8,
+    "fb": "done",
+    "keys": [],
+    "text": "",
+    "mound": {
+     "profile": [
+      [
+       0,
+       12
+      ],
+      [
+       8,
+       12
+      ],
+      [
+       11,
+       12
+      ],
+      [
+       12,
+       8.89
+      ],
+      [
+       13,
+       3.11
+      ],
+      [
+       14,
+       0
+      ],
+      [
+       15,
+       0
+      ],
+      [
+       16,
+       0
+      ]
+     ],
+     "slopes": [
+      0,
+      80,
+      72,
+      0,
+      80,
+      76,
+      0,
+      80,
+      72,
+      0,
+      80,
+      76
+     ]
+    }
+   }
+  },
+  {
+   "name": "S7-4 \"delete type:tree\": locked trees and the hidden one are left out and reported; a delete is always previewed",
+   "ok": true,
+   "detail": {
+    "remove": 33,
+    "allTrees": 36,
+    "notes": [
+     "cmd37.note.lockedSkipped",
+     "cmd37.note.hiddenSkipped"
+    ],
+    "marked": [
+     "tree_98b6f79fa",
+     "tree_827faeabb",
+     "tree_b8ebb0e4c"
+    ],
+    "fb": "none",
+    "keys": [],
+    "understood": [
+     "delete type:tree"
+    ],
+    "flags": [
+     [
+      true,
+      false
+     ],
+     [
+      true,
+      false
+     ],
+     [
+      false,
+      true
+     ]
+    ]
+   }
+  },
+  {
+   "name": "S7-5 a hidden object named by its filter is included",
+   "ok": true,
+   "detail": {
+    "sel": [
+     "tree_b8ebb0e4c"
+    ],
+    "fb": "done",
+    "keys": [],
+    "understood": [
+     "select type:tree where hidden"
+    ]
+   }
+  },
+  {
+   "name": "S8-1 \"set x to 10 for the selection\": the three cars are at x = 10, one undo step",
+   "ok": true,
+   "detail": {
+    "byCommand": [
+     {
+      "id": "car_3b75ae781e",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "car_ea579cc51f",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "car_c05db8fa1g",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     }
+    ],
+    "fb": "done",
+    "keys": [],
+    "understood": [
+     "set selection x=10"
+    ],
+    "plan": null,
+    "selBefore": 3,
+    "selNow": 3
+   }
+  },
+  {
+   "name": "S8-2 the multi-selection inspector's common X field gives exactly the same objects",
+   "ok": true,
+   "detail": {
+    "byPanel": [
+     {
+      "id": "car_3b75ae781e",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "car_ea579cc51f",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "car_c05db8fa1g",
+      "p": [
+       10,
+       0,
+       -4.2
+      ],
+      "r": [
+       0,
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "S9-1 \"flatten a 10 m circle here\": \"here\" is the ground point under the pointer; the preview is a height-change heat map (and the house that will rise with the ground), the document is unchanged",
+   "ok": true,
+   "detail": {
+    "cursor": [
+     52,
+     55
+    ],
+    "d": {
+     "ghosts": 1,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 1,
+     "removed": 0,
+     "changed": 0,
+     "terrain": {
+      "up": 5,
+      "down": 0,
+      "area": 154
+     },
+     "roads": 0,
+     "pins": 0,
+     "snaps": 0,
+     "highlight": 1,
+     "sceneObjects": 17,
+     "armed": true,
+     "key": "2d1151227e7c6082@3",
+     "builds": 3,
+     "layers": 1
+    },
+    "diff": {
+     "added": 0,
+     "removed": 0,
+     "moved": 1,
+     "changed": 0,
+     "terrain": {
+      "up": 5,
+      "down": 0,
+      "area": 154
+     },
+     "roads": 0,
+     "instances": 0
+    }
+   }
+  },
+  {
+   "name": "S9-2 Enter flattens it (the circle is level at the height under the pointer) and the house has risen with the ground; one undo step",
+   "ok": true,
+   "detail": {
+    "seated": {
+     "y": 5,
+     "ground": 5,
+     "centre": 5,
+     "east": 5,
+     "west": 5,
+     "outside": 0
+    },
+    "houseBefore": [
+     58,
+     3.9680000305175636,
+     55
+    ]
+   }
+  },
+  {
+   "name": "S9-3 undo is bit-identical (document and every terrain / layer array)",
+   "ok": true,
+   "detail": {
+    "h0": {
+     "raw": "80e708bfb75c1f37",
+     "canonical": "33ce017f50069473",
+     "terrain": "0452d2ed6a59cdbf:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}"
+    },
+    "h2": {
+     "raw": "80e708bfb75c1f37",
+     "canonical": "33ce017f50069473",
+     "terrain": "0452d2ed6a59cdbf:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}"
+    }
+   }
+  },
+  {
+   "name": "S9-4 redo is bit-identical to the confirmed state",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S9-5 flattening ground that is level already changes nothing: no undo step, the same document bit for bit",
+   "ok": true,
+   "detail": {
+    "plan": null,
+    "depth": 0
+   }
+  },
+  {
+   "name": "S10-1 the forest plan shows its trees as ghosts and says in words why spots were rejected (road, building …)",
+   "ok": true,
+   "detail": {
+    "ghosts": 35,
+    "why": [
+     "cmd37.forest.ground",
+     "cmd37.forest.placement"
+    ],
+    "whyText": [
+     "2 spots on paved ground or rock.",
+     "9 spots too steep or occupied."
+    ],
+    "notes": [
+     "cmd37.note.forest"
+    ]
+   }
+  },
+  {
+   "name": "S10-2 undo removes the forest",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S10-3 the same command again plants the same trees (places and seeds)",
+   "ok": true,
+   "detail": {
+    "n": 35
+   }
+  },
+  {
+   "name": "S11-1 the explosion sentence → its canonical command, one ghost pin, nothing placed yet",
+   "ok": true,
+   "detail": {
+    "understood": [
+     "disaster blast at=junction energy=1.8e9 start=5"
+    ],
+    "d": {
+     "ghosts": 0,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": null,
+     "roads": 0,
+     "pins": 1,
+     "snaps": 0,
+     "highlight": 1,
+     "sceneObjects": 7,
+     "armed": true,
+     "key": "92f3f2064ad3ebc6@1",
+     "builds": 1,
+     "layers": 1
+    }
+   }
+  },
+  {
+   "name": "S11-2 Enter places a blast instance at the junction: 1.8e9 J, starting at 5 s — every other value is what the mouse placement gives",
+   "ok": true,
+   "detail": {
+    "blast": {
+     "id": "p1",
+     "type": "blast",
+     "spec": {
+      "event": "blast",
+      "position": [
+       -23,
+       0
+      ],
+      "height": 1,
+      "energy": 1800000000,
+      "model": "weakShock",
+      "waveform": "nWave"
+     },
+     "enabled": true,
+     "start": {
+      "at": 5
+     },
+     "visualize": true
+    },
+    "byMouse": {
+     "id": "p2",
+     "type": "blast",
+     "spec": {
+      "event": "blast",
+      "position": [
+       -23,
+       0
+      ],
+      "height": 1,
+      "energy": 100000000,
+      "model": "weakShock",
+      "waveform": "nWave"
+     },
+     "enabled": true,
+     "start": {
+      "at": 0
+     },
+     "visualize": true
+    }
+   }
+  },
+  {
+   "name": "S11-3 \"a magnitude 7 earthquake here\": an earthquake instance, M 7, epicentre at the pointer",
+   "ok": true,
+   "detail": {
+    "quake": {
+     "id": "p2",
+     "type": "earthquake",
+     "spec": {
+      "event": "earthquake",
+      "magnitude": 7,
+      "pga": 0.3,
+      "duration": 25,
+      "epicenter": [
+       30,
+       -40
+      ]
+     },
+     "enabled": true,
+     "start": {
+      "at": 0
+     },
+     "visualize": true
+    }
+   }
+  },
+  {
+   "name": "S11-4 \"a fire at #<id> after 12 seconds\": a fire instance at that building, starting at 12 s",
+   "ok": true,
+   "detail": {
+    "f": {
+     "id": "p3",
+     "type": "fire",
+     "spec": {
+      "event": "fire",
+      "position": [
+       -34,
+       -15
+      ],
+      "height": 1,
+      "radius": 1,
+      "duration": 600
+     },
+     "enabled": true,
+     "start": {
+      "at": 12
+     },
+     "visualize": true
+    },
+    "target": [
+     -34,
+     0,
+     -15
+    ],
+    "text": "a fire at #building_d002a1b01 after 12 seconds",
+    "fb": "done",
+    "keys": [],
+    "understood": [
+     "disaster fire at=#building_d002a1b01 start=12"
+    ],
+    "plan": null
+   }
+  },
+  {
+   "name": "S11-5 three commands = three undo steps; the pins are in the scene",
+   "ok": true,
+   "detail": {
+    "depth": 3,
+    "n": 3
+   }
+  },
+  {
+   "name": "S12-1 \"run\" starts the simulation",
+   "ok": true,
+   "detail": {
+    "st": "running"
+   }
+  },
+  {
+   "name": "S12-2 \"pause\" pauses it",
+   "ok": true,
+   "detail": {
+    "st": "paused"
+   }
+  },
+  {
+   "name": "S12-3 an editing command during a run is refused with the reason, nothing is changed",
+   "ok": true,
+   "detail": {
+    "fb": "error",
+    "keys": [
+     "cmd37.err.simulating"
+    ],
+    "simMsg": "A simulation is running on this world: editing commands wait until you return to the editor (queries, the camera, run control and disasters work)."
+   }
+  },
+  {
+   "name": "S12-4 \"stop the rain\" stops that instance (the others go on)",
+   "ok": true,
+   "detail": {
+    "rain": [
+     {
+      "key": "p4",
+      "status": "stopped",
+      "end": 9.250000000000039
+     }
+    ],
+    "fb": "done",
+    "keys": [],
+    "all": [
+     [
+      "p2",
+      "earthquake",
+      "active"
+     ],
+     [
+      "p4",
+      "rain",
+      "stopped"
+     ],
+     [
+      "p1",
+      "blast",
+      "active"
+     ],
+     [
+      "p3",
+      "fire",
+      "pending"
+     ],
+     [
+      "p5",
+      "blast",
+      "pending"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "S12-5 \"pause p<k>\" on an explosion is refused with the reason (an explosion cannot be paused) — said, not done",
+   "ok": true,
+   "detail": {
+    "fb": "error",
+    "keys": [
+     "cmd37.err.unsupportedControl"
+    ],
+    "understood": [
+     "disaster p5 pause"
+    ],
+    "lateNow": [
+     "pending"
+    ]
+   }
+  },
+  {
+   "name": "S12-6 \"reset\" puts the run back to its start (as the reset button does: every disaster pending again); the document was never changed",
+   "ok": true,
+   "detail": {
+    "st": {
+     "status": "paused",
+     "mode": "simulation",
+     "time": 0,
+     "instances": [
+      "pending",
+      "pending",
+      "pending",
+      "pending",
+      "pending"
+     ]
+    }
+   }
+  },
+  {
+   "name": "S12-7 back in the editor the document is the one from before the run, bit for bit",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S13-1 \"how many buildings?\" answers with a table (the count is right); no plan, no undo step, the document untouched",
+   "ok": true,
+   "detail": {
+    "nb": 9,
+    "done": [
+     {
+      "canonical": "count type:building",
+      "table": {
+       "rows": 5,
+       "title": {
+        "key": "cmd37.sum.count",
+        "params": {
+         "count": 9
+        }
+       },
+       "ids": 9
+      },
+      "notes": [],
+      "added": 0
+     }
+    ],
+    "tableText": "9 objects.KindCountbuilding4building:apartment1building:house2building:office1building:warehouse1"
+   }
+  },
+  {
+   "name": "S13-2 \"show me the tallest building\" moves the camera to it; selection, history and document unchanged",
+   "ok": true,
+   "detail": {
+    "cam0": [
+     0,
+     0,
+     0
+    ],
+    "cam1": [
+     35,
+     14.239840000000001,
+     -17.5
+    ],
+    "tall": [
+     35,
+     0,
+     -17.5
+    ]
+   }
+  },
+  {
+   "name": "S14-1 with two junctions \"at the junction\" asks which one: two options, nothing placed",
+   "ok": true,
+   "detail": {
+    "options": [
+     "disaster blast at=node:n4 energy=1.8e9 start=5",
+     "disaster blast at=node:n9 energy=1.8e9 start=5"
+    ],
+    "nOpts": 2,
+    "state": "question"
+   }
+  },
+  {
+   "name": "S14-2 pointing at an option highlights it in the viewport; choosing it opens the plan of exactly that command",
+   "ok": true,
+   "detail": {
+    "hl": {
+     "ghosts": 0,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 0,
+     "removed": 0,
+     "changed": 0,
+     "terrain": null,
+     "roads": 0,
+     "pins": 0,
+     "snaps": 0,
+     "highlight": 1,
+     "sceneObjects": 1,
+     "armed": null,
+     "key": null,
+     "builds": 1,
+     "layers": 1
+    },
+    "canonical": [
+     "disaster blast at=node:n9 energy=1.8e9 start=5"
+    ],
+    "second": "disaster blast at=node:n9 energy=1.8e9 start=5"
+   }
+  },
+  {
+   "name": "S14-3 Enter places it at the chosen junction, one undo step",
+   "ok": true,
+   "detail": {
+    "placed": [
+     20,
+     0
+    ],
+    "node": [
+     20,
+     0
+    ]
+   }
+  },
+  {
+   "name": "S15-1 a sentence that is not understood runs nothing: \"not understood\" with 1–3 nearest commands and the help",
+   "ok": true,
+   "detail": {
+    "fb": "unknown",
+    "suggestions": [
+     "paint circle cursor r=10 ground=grass",
+     "place tree at=cursor",
+     "hide type:tree"
+    ],
+    "sug": [
+     "paint circle cursor r=10 ground=grass",
+     "place tree at=cursor",
+     "hide type:tree"
+    ]
+   }
+  },
+  {
+   "name": "S16-1 a 12-line script is planned as a whole: one preview of everything (ghosts, heat map, road, pins), the document unchanged",
+   "ok": true,
+   "detail": {
+    "lines": 12,
+    "d": {
+     "ghosts": 23,
+     "warned": 0,
+     "rejected": 0,
+     "moved": 14,
+     "removed": 0,
+     "changed": 5,
+     "terrain": {
+      "up": 3,
+      "down": 0.07999999821186066,
+      "area": 909
+     },
+     "roads": 4,
+     "pins": 2,
+     "snaps": 6,
+     "highlight": 11,
+     "sceneObjects": 40,
+     "armed": true,
+     "key": "77c27d98dbfa28b9@1",
+     "builds": 1,
+     "layers": 1
+    }
+   }
+  },
+  {
+   "name": "S16-2 confirming applies all of it as ONE undo step",
+   "ok": true,
+   "detail": {
+    "depth": 1
+   }
+  },
+  {
+   "name": "S16-3 one undo gives the start back bit for bit",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S16-4 one failing line (outside the world) cancels the whole script: the line is named, nothing is changed, no undo step",
+   "ok": true,
+   "detail": {
+    "fb": "error",
+    "keys": [
+     "cmd37.err.nothingPlaced"
+    ]
+   }
+  },
+  {
+   "name": "S22-1 the Korean and the English script are understood as the same canonical commands",
+   "ok": true,
+   "detail": {
+    "ko": [
+     "place building:house count=3 along=road:main side=north gap=2 floors=2",
+     "group last name=\"블록\"",
+     "terrain raise circle 60,60 r=12 by=3",
+     "forest circle 30,30 r=25 density=0.4 seed=7",
+     "disaster blast at=junction energy=1.8e9 start=5",
+     "select type:tree"
+    ],
+    "en": [
+     "place building:house count=3 along=road:main side=north gap=2 floors=2",
+     "group last name=\"블록\"",
+     "terrain raise circle 60,60 r=12 by=3",
+     "forest circle 30,30 r=25 density=0.4 seed=7",
+     "disaster blast at=junction energy=1.8e9 start=5",
+     "select type:tree"
+    ]
+   }
+  },
+  {
+   "name": "S22-2 …and give the same document (canonical hash and terrain bits), each as one undo step",
+   "ok": true,
+   "detail": {
+    "ko": {
+     "canonical": [
+      "place building:house count=3 along=road:main side=north gap=2 floors=2",
+      "group last name=\"블록\"",
+      "terrain raise circle 60,60 r=12 by=3",
+      "forest circle 30,30 r=25 density=0.4 seed=7",
+      "disaster blast at=junction energy=1.8e9 start=5",
+      "select type:tree"
+     ],
+     "hash": "c2b979451a3332f4",
+     "terrain": "0e55543d9486c975:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}",
+     "steps": 1,
+     "objects": 77
+    },
+    "en": {
+     "canonical": [
+      "place building:house count=3 along=road:main side=north gap=2 floors=2",
+      "group last name=\"블록\"",
+      "terrain raise circle 60,60 r=12 by=3",
+      "forest circle 30,30 r=25 density=0.4 seed=7",
+      "disaster blast at=junction energy=1.8e9 start=5",
+      "select type:tree"
+     ],
+     "hash": "c2b979451a3332f4",
+     "terrain": "0e55543d9486c975:{\"preset\":\"flat\",\"seed\":1,\"waterLevel\":null}",
+     "steps": 1,
+     "objects": 77
+    }
+   }
+  },
+  {
+   "name": "S17-1 a right click (no drag) on the ground opens the context menu with \"place here\" / \"disaster here\" entries",
+   "ok": true,
+   "detail": {
+    "items": [
+     "Small house (timber) building:house",
+     "Broadleaf tree:broadleaf",
+     "Sedan car:sedan",
+     "Atmospheric pressure wave (blast) blast",
+     "Fire fire",
+     "Earthquake earthquake"
+    ],
+    "disabled": 0
+   }
+  },
+  {
+   "name": "S17-2 choosing an entry puts a command with that position into the bar and drafts it — nothing is placed",
+   "ok": true,
+   "detail": {
+    "text": "place building:house at=40,60"
+   }
+  },
+  {
+   "name": "S17-3 Enter, Enter: placed there through the same plan path",
+   "ok": true,
+   "detail": {
+    "text": "place building:house at=40,60"
+   }
+  },
+  {
+   "name": "S17-4 a right drag pans the camera and opens no menu",
+   "ok": true,
+   "detail": {
+    "cam0": [
+     40,
+     0,
+     60
+    ],
+    "cam1": [
+     32.24753256445749,
+     0,
+     56.12376628222874
+    ]
+   }
+  },
+  {
+   "name": "S18-1 Ctrl+D of two cars + a person + a tree: both copies have their car's settings, in the SAME undo step",
+   "ok": true,
+   "detail": {
+    "newCars": [
+     "car_878569b92z",
+     "car_342c395c30"
+    ],
+    "gears": [
+     "D",
+     "R"
+    ],
+    "depth": 1
+   }
+  },
+  {
+   "name": "S18-2 passengers: the person copied along is the copy's passenger (new id), the one left behind is not carried over",
+   "ok": true,
+   "detail": {
+    "occupants": [
+     {
+      "human": "human_eb4b690a31",
+      "seat": 0,
+      "restrained": true
+     }
+    ],
+    "newPeople": [
+     "human_eb4b690a31"
+    ],
+    "original": [
+     "human_0cc0a1de1n",
+     "human_0cc200331o"
+    ]
+   }
+  },
+  {
+   "name": "S18-3 one undo removes the copies and their settings",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S18-4 \"duplicate selection\" does the same",
+   "ok": true,
+   "detail": {
+    "n": 4
+   }
+  },
+  {
+   "name": "S18-5 copy / paste (Ctrl+C, Ctrl+V, click) carries the settings too",
+   "ok": true,
+   "detail": {
+    "n": 4,
+    "objects": 4
+   }
+  },
+  {
+   "name": "S19-1 click a row, Shift+click another: the range between them is selected",
+   "ok": true,
+   "detail": {
+    "sel": [
+     "building_e30fdb512",
+     "building_4a3ca13e3",
+     "building_475a81af4",
+     "building_f6655ed45"
+    ],
+    "rows": [
+     "building_e30fdb512",
+     "building_4a3ca13e3",
+     "building_475a81af4",
+     "building_f6655ed45"
+    ]
+   }
+  },
+  {
+   "name": "S19-2 ↓ moves the selection to the next row, Shift+↓ extends it",
+   "ok": true,
+   "detail": {
+    "down": [
+     "building_475a81af4"
+    ],
+    "sel": [
+     "building_475a81af4",
+     "building_f6655ed45"
+    ]
+   }
+  },
+  {
+   "name": "S19-3 the list says its keys (Shift = range differs from the viewport's Shift = add)",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "S20-1920x1080 with the result area open (a plan, the help): 3D view ≥ 35 %, nothing over it, no horizontal scroll, no clipped button",
+   "ok": true,
+   "detail": {
+    "plan": {
+     "share": 0.51,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 160,
+     "bar": 214
+    },
+    "help": {
+     "share": 0.51,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 160,
+     "bar": 214
+    }
+   }
+  },
+  {
+   "name": "S20-1440x900 with the result area open (a plan, the help): 3D view ≥ 35 %, nothing over it, no horizontal scroll, no clipped button",
+   "ok": true,
+   "detail": {
+    "plan": {
+     "share": 0.406,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 160,
+     "bar": 214
+    },
+    "help": {
+     "share": 0.406,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 160,
+     "bar": 214
+    }
+   }
+  },
+  {
+   "name": "S20-1366x768 with the result area open (a plan, the help): 3D view ≥ 35 %, nothing over it, no horizontal scroll, no clipped button",
+   "ok": true,
+   "detail": {
+    "plan": {
+     "share": 0.401,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 128,
+     "bar": 182
+    },
+    "help": {
+     "share": 0.401,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 128,
+     "bar": 182
+    }
+   }
+  },
+  {
+   "name": "S20-1280x720 with the result area open (a plan, the help): 3D view ≥ 35 %, nothing over it, no horizontal scroll, no clipped button",
+   "ok": true,
+   "detail": {
+    "plan": {
+     "share": 0.41,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 80,
+     "bar": 134
+    },
+    "help": {
+     "share": 0.41,
+     "barOverCanvas": 0,
+     "rightOverCanvas": 0,
+     "clipped": [],
+     "hscroll": false,
+     "results": 80,
+     "bar": 134
+    }
+   }
+  },
+  {
+   "name": "S21 an open plan is cancelled when a tool is armed (B = brush): no plan, no ghost in the scene",
+   "ok": true,
+   "detail": {
+    "was": true,
+    "g": {
+     "plan": null,
+     "scene": 0,
+     "state": "draft"
+    }
+   }
+  },
+  {
+   "name": "S21 an open plan is cancelled when a palette placement is armed: no plan, no ghost in the scene",
+   "ok": true,
+   "detail": {
+    "was": true,
+    "g": {
+     "plan": null,
+     "scene": 0,
+     "state": "draft"
+    }
+   }
+  },
+  {
+   "name": "S21 an open plan is cancelled when a disaster placement is armed: no plan, no ghost in the scene",
+   "ok": true,
+   "detail": {
+    "was": true,
+    "g": {
+     "plan": null,
+     "scene": 0,
+     "state": "draft"
+    }
+   }
+  },
+  {
+   "name": "S21 an open plan is cancelled when the document is replaced: no plan, no ghost in the scene",
+   "ok": true,
+   "detail": {
+    "was": true,
+    "g": {
+     "plan": null,
+     "scene": 0,
+     "state": "draft"
+    }
+   }
+  },
+  {
+   "name": "S21 an open plan is cancelled when the mode switches (the top bar's Simulation button): no plan, no ghost in the scene",
+   "ok": true,
+   "detail": {
+    "was": true,
+    "g": {
+     "plan": null,
+     "scene": 0,
+     "state": "draft"
+    }
+   }
+  },
+  {
+   "name": "S21 20 plans opened and cancelled leave no geometry / texture behind",
+   "ok": true,
+   "detail": {
+    "base": {
+     "geometries": 22,
+     "textures": 15
+    },
+    "g0": {
+     "geometries": 22,
+     "textures": 15
+    },
+    "g1": {
+     "geometries": 22,
+     "textures": 15
+    }
+   }
+  }
+ ],
+ "errors": [],
+ "gl": {
+  "geometries": 22,
+  "textures": 15
+ }
+}

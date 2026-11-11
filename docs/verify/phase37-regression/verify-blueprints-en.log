@@ -1,0 +1,26 @@
+PASS 1 building blueprint (rectangle capture → library) {"C":{"counts":{"objects":2,"buildings":1,"vegetation":0,"roads":1,"features":0,"water":0},"deps":[["roadExternal","clipped",1],["sharedDesign","copied",1]],"mask":false,"category":"mixed"},"L":[{"id":"bp_d0b00290a2","name":"Houses / 주택","kind":"blueprint","category":"residential","counts":{"objects":2,"buildings":1,"vegetation":0,"roads":1,"features":0,"water":0},"favorite":false}]}
+PASS 2 road district blueprint (junction, cut road ends recorded) {"counts":{"objects":10,"buildings":4,"vegetation":0,"roads":4,"features":0,"water":0},"deps":[["roadExternal","clipped",4],["objectCrossesBoundary","kept",4],["sharedDesign","copied",3],["foundationSupport","info",4]],"mask":false,"category":"mixed"}
+PASS 3 nature blueprint (polygon capture: hill + forest, terrain mask) {"counts":{"objects":4,"buildings":3,"vegetation":64,"roads":1,"features":1,"water":0},"deps":[["roadExternal","clipped",1],["objectCrossesBoundary","kept",10],["sharedDesign","copied",1],["landformPartial","kept",1],["foundationSupport","info",2]],"mask":true,"category":"mixed"}
+PASS 4 city + nature blueprint (roads, buildings, river, lake) {"counts":{"objects":39,"buildings":16,"vegetation":30,"roads":7,"features":2,"water":2},"deps":[["roadExternal","clipped",4],["objectCrossesBoundary","kept",4],["sharedDesign","copied",4],["riverInflowOutside","clipped",1],["riverOutletOutside","clipped",1],["lakePartial","kept",1]],"mask":false,"category":"mixed"}
+PASS 5 library search (by name) ["bp_813c68f4a4"]
+PASS 6 favorites (star → favorites filter) ["bp_813c68f4a4"]
+PASS 7 preview (ghost, nothing written to the world) {"ghost":10,"d":{"objects":0,"roads":1,"features":0,"past":1,"name":""}}
+PASS 8 rotation (R = 90°, T = fine step) and position (pin, re-pin) {"pinned":[25,0],"yaw":1.832595714594046,"options":{"terrain":"offset","blendWidth":8,"roads":"separate","terrainSnap":true,"heightOffset":0,"preserveRelative":false,"include":{"buildings":true,"objects":true,"vegetation":true,"roads":true,"landforms":true,"water":true,"waterState":true,"terrain":true}},"report":{"errors":[],"warnings":["roadExternal"],"terrain":"offset","snapped":0,"connections":1,"counts":{"objects":10,"vegetation":0,"roads":4,"features":0}}}
+PASS 9 terrain merge policy selection (apply / blend / offset) {"pinned":[25,0],"yaw":0,"options":{"terrain":"apply","blendWidth":8,"roads":"separate","terrainSnap":true,"heightOffset":0,"preserveRelative":false,"include":{"buildings":true,"objects":true,"vegetation":true,"roads":true,"landforms":true,"water":true,"waterState":true,"terrain":true}},"report":{"errors":[],"warnings":["roadExternal"],"terrain":"apply","snapped":0,"connections":1,"counts":{"objects":10,"vegetation":0,"roads":4,"features":0}}}
+PASS 10 road connection (snap endpoints, connection preview) {"errors":[],"warnings":["roadSplits","roadExternal"],"terrain":"offset","snapped":1,"connections":1,"counts":{"objects":10,"vegetation":0,"roads":4,"features":0}}
+PASS 11 blueprint placed (roads + objects, ONE undo step) {"objects":10,"roads":6,"features":0,"past":2,"name":""}
+PASS 12 undo restores the world exactly; redo restores the placement 
+PASS 13 export (file downloaded, format v2, local ids) Junction_교차로.blueprint.json
+PASS 14 import (validated preview, duplicate handled as a copy; broken references refused) The file cannot be imported. — invalid internal references (ids)roads.segments[0]: missing node n999
+PASS 15 world template saved (library, Complete Worlds) [{"id":"tpl_f3d22d22mx","name":"Junction world","kind":"world","category":"world","counts":{"objects":10,"buildings":4,"trees":0,"roads":6,"features":0},"favorite":false}]
+PASS 16 world created from a template (wizard → build mode) {"d16":{"objects":78,"roads":1,"features":4,"past":0,"name":"Wizard Valley"},"mode16":["editor","select"]}
+PASS 17 save / load round trip (fingerprint identical) 
+PASS 18 typhoon on a template world {"events":541,"by":{"wind":541,"earthquake":0,"flood":0},"water":3022,"err":5.502442945726216e-11}
+PASS 19 earthquake {"events":295,"by":{"wind":0,"earthquake":295,"flood":0},"water":3026,"err":4.5929482439532876e-11}
+PASS 20 flood (river water + rain, mass budget closed) {"events":1,"by":{"wind":0,"earthquake":0,"flood":1},"water":3056,"err":8.230927051045e-11}
+PASS 21 multi-hazard (wind + earthquake + rain) {"events":337,"by":{"wind":76,"earthquake":260,"flood":1},"water":3032,"err":1.4097167877480388e-11}
+PASS 22 original world restored after every run 
+{
+ "errors": []
+}
+22/22 passed

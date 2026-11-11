@@ -1,0 +1,25 @@
+PASS palette thumbnails rendered — 38 images
+PASS palette search — tree.conifer
+PASS brush stroke places many objects — 26 trees
+PASS brush stroke = one undo step
+PASS undo removes the whole stroke
+PASS redo restores the stroke
+PASS line placement (8 m spacing, 60 m path) — 9 lamps
+PASS area preview shown before applying — 미리보기: 30개 배치 · 0개 제외배치하기 (Enter)취소 (Esc)
+PASS area fill applied (grid) — 30 cars
+PASS Shift+drag box selection — 30 selected
+PASS selection inspector for multi-selection
+PASS Ctrl+G groups the selection
+PASS click on a group member selects the group — 30
+PASS group rotation keeps relative distances
+PASS paste places a copy with new unique ids — 30 pasted
+PASS pasted copy forms its own group
+PASS Ctrl+A selects all
+PASS Delete removes the whole selection
+PASS one undo brings everything back
+PASS editor draw calls stay low — 15 draw calls for 95 objects
+PASS original-world badge in simulation
+PASS world edits refused while simulating
+PASS editor shows the original world after the experiment
+PASS place ghost warns about overlap — ⚠ 다른 오브젝트와 겹칩니다
+no page errors

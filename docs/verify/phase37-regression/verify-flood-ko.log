@@ -1,0 +1,135 @@
+{
+  "samples": [
+    {
+      "t": 20.8,
+      "flood": {
+        "volume": 991.8,
+        "area": 3670,
+        "maxDepth": 0.402,
+        "maxSpeed": 1.69,
+        "rain": 120,
+        "relErr": 1.5851501885239106e-15,
+        "substeps": 1
+      },
+      "floodEvents": {
+        "INUNDATED": 2
+      }
+    },
+    {
+      "t": 69.1,
+      "flood": {
+        "volume": 14611.1,
+        "area": 18267,
+        "maxDepth": 1.098,
+        "maxSpeed": 2.66,
+        "rain": 120,
+        "relErr": 9.29073830958886e-15,
+        "substeps": 1
+      },
+      "floodEvents": {
+        "INUNDATED": 9
+      }
+    },
+    {
+      "t": 121.4,
+      "flood": {
+        "volume": 28572.3,
+        "area": 33845,
+        "maxDepth": 1.098,
+        "maxSpeed": 2.99,
+        "rain": 120,
+        "relErr": 1.5000792723735624e-14,
+        "substeps": 1
+      },
+      "floodEvents": {
+        "INUNDATED": 40,
+        "FALLEN": 11,
+        "FLOATED": 9,
+        "MOVED": 9,
+        "IMPACT": 13
+      }
+    }
+  ],
+  "flood": {
+    "duration": 150.48333333334523,
+    "floodedArea": 39172,
+    "peakFloodedArea": 39172,
+    "maxDepth": 1.1369275311900522,
+    "maxDepthAt": [
+      -16.5,
+      92.5
+    ],
+    "averageDepth": 0.8263518588589255,
+    "maxFlowSpeed": 3.1269542848084635,
+    "totalVolume": 32369.85501522183,
+    "budget": {
+      "initial": 0,
+      "rain": 200.66666666666552,
+      "sources": 1203.999999999966,
+      "boundaryIn": 45733.455291614286,
+      "boundaryOut": 14709.947894731322,
+      "infiltration": 56.7237483107032,
+      "drainage": 1.595300017736104,
+      "melt": 0,
+      "frozen": 0,
+      "evaporated": 0,
+      "condensed": 0,
+      "current": 32369.85501522183,
+      "error": 6.766640581190586e-10
+    },
+    "relativeError": 1.435492187656379e-14,
+    "floodedBuildings": 8,
+    "affectedVehicles": 9,
+    "floatedVehicles": 9,
+    "fallenHumans": 11,
+    "roadsInundated": 2,
+    "infrastructureFailed": 0,
+    "floodDamageEvents": 82,
+    "maxObject": "building_1bee031937"
+  },
+  "hazards": [
+    "flood"
+  ],
+  "perfA": {
+    "drawCalls": 10,
+    "waterRender": {
+      "updates": 0,
+      "ms": 0,
+      "vertices": 40401
+    }
+  },
+  "probe": {
+    "x": -0.10558643664638723,
+    "z": 16.321950852665065
+  },
+  "inspectorOk": true,
+  "resultsOk": true,
+  "summaryB": {
+    "t": 151,
+    "flood": {
+      "volume": 5996,
+      "area": 4117,
+      "maxDepth": 2.855,
+      "maxSpeed": 3.98,
+      "rain": 80,
+      "relErr": 5.248080764771827e-15,
+      "substeps": 2
+    },
+    "floodEvents": {
+      "INUNDATED": 1
+    }
+  },
+  "events": [
+    {
+      "type": "rain",
+      "start": 0,
+      "duration": 1800
+    },
+    {
+      "type": "risingWater",
+      "start": 0,
+      "duration": 348
+    }
+  ],
+  "errors": []
+}

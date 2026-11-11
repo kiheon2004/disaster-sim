@@ -1,0 +1,26 @@
+PASS 1 draw straight road (click, click, Enter) {"segments":1,"nodes":2,"junctions":0,"blocks":0,"past":1,"ground":3}
+PASS 2 polyline + T-junction on the road {"segments":4,"nodes":5,"junctions":1,"blocks":0,"past":2}
+PASS 3 curved road (one segment with control points) {"segments":5,"nodes":7,"junctions":1,"blocks":0,"past":3,"curved":1}
+PASS 4 crossing makes a 4-way junction {"segments":8,"nodes":10,"junctions":2,"blocks":0,"past":4,"fourWay":1}
+PASS 5a click selects a road; inspector shows it {"sel":["s8"]}
+PASS 5b drag a node handle moves it (one undo step) {"from":{"id":"n1","x":-70.1,"z":-29.94,"y":null},"to":{"id":"n1","x":-70.1,"z":-45.57,"y":null}}
+PASS 6 change surface / width of the selected road (terrain re-baked) {"g":4,"h":0}
+PASS 7 split a road by clicking {"segments":9,"nodes":11,"junctions":2,"blocks":0,"past":7}
+PASS 8 delete a road by clicking; linked objects are kept {"segments":8,"lamps":36,"lampsAfter":36}
+PASS 9 undo all → empty original ground; redo all → identical world {"steps":9,"empty9":{"seg":0,"g":0}}
+PASS 10 terrain preset: roads re-baked on the hills, symmetric crown {"left":-0.10999999940395355,"right":-0.07999999821186066,"g":4}
+PASS 11 enclosed blocks detected, zoned and filled (facing roads, none on roads) {"segments":7,"nodes":6,"junctions":2,"blocks":2,"past":2,"buildings":15,"linked":15,"onRoad":0}
+PASS 12 street furniture along roads and at junctions {"lights":48,"signs":12}
+PASS 13 vehicles placed in lanes, linked to roads {"cars":58}
+PASS 14 neighbourhood preset placed with one click (one undo step) {"seg":1,"objs":35,"past":1}
+PASS 15 linked objects follow the edited road (policy follow) {"before":[-58,-0.024999999441206455,4.3],"after":[-57.58208438011181,-0.05797470195414684,16.079156198881954]}
+PASS 16 legacy road objects converted safely (side street → T-junction) {"legacyBefore":2,"legacy":0,"segments":3,"junctions":1}
+PASS 17 copy roads (Ctrl+C) and paste with new ids {"clip":true,"before":3,"after":4}
+PASS 18 save / load round trip identical (current schema) {"ok":true,"same":true,"schema":7,"kb":72,"report":{"droppedNodes":0,"droppedSegments":0,"underlayLost":false}}
+PASS 19 flood: roads inundated, inlets active, live road section {"summary":{"total":4,"cracked":0,"severe":0,"inundated":1,"impassable":0,"scoured":0,"steep":0,"cut":0,"rubble":0},"inlets":10,"section":true}
+PASS 20 earthquake cracks roads; the original road network is unchanged {"total":4,"cracked":4,"severe":4,"inundated":0,"impassable":0,"scoured":0,"steep":0,"cut":0,"rubble":0}
+perf {"roadDrawCalls":9,"roadTriangles":1950,"chunks":3,"fps":36.2,"totalCalls":25}
+{
+ "errors": []
+}
+21/21 passed

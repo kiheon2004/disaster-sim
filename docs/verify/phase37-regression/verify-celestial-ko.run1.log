@@ -1,0 +1,65 @@
+PASS 1 black hole tool: a celestial experiment added from the Experiment tab (preset, scale, window, source position, log₁₀ M, μ, educational target, ε, capture, influence, mass policy, motion, probes) ["scenario","duration","scale","end","tidal","limitPolicy","disc","lensing","particles","addSource","s0.kind","s0.x","s0.y","s0.z","s0.log10m","s0.mu","s0.refAccel","s0.refRadius","s0.softening","s0.capture","s0.influence","s0.massPolicy","s0.motion","s0.start","s0.end","s0.ramp","addProbe"]
+PASS 2 mass and μ: μ = 8·10⁴ m³/s² stores M = μ/G = 1.2·10¹⁵ kg; log₁₀ M = 15 stores 10¹⁵ kg (consistent conversion, G unchanged) {"m2":1198627571430712,"m2b":1000000000000000}
+PASS 3 educational target: |g| = 20 m/s² at 40 m gives the mass that produces it (closed form) {"g3":20,"mass":481250093175003.6}
+PASS 4 softening: a 5 cm core resolved down to a 10 cm capture radius needs more substeps than the cap — rejected with its reason (raise ε / capture or lower M) 
+PASS 5 capture radius: editable for a black hole (2.5 m stored), hidden for a compact mass (no capture) 
+PASS 6 scale modes: a solar mass is rejected in the educational mode (μ range), accepted in the physical SI mode with its regime (beyond the cap / above 0.1 c) and the stop policy {"lim6":"stop"}
+PASS 7 presets: 20 listed with expected phenomenon / initial conditions / time scale / result / scope / failure; model support; the scaled label {"pres7":20}
+PASS 9 orbit initial conditions: a circular probe (position, multiple, direction, mass, radius) with its predicted period 시험체 1: 타원 궤도 · v₀ 49.63 m/s · 근점 19.4 m · 원점 20.0 m · 주기 2.46 s · 근사 (연화·균일장·복수 중력원·이동)
+PASS 8 preview: the source (core, capture, softening spheres) and the probe's predicted orbit {"lines":1,"spheres":3}
+PASS 10 probe modes: hyperbolic (1.3 × escape) and custom velocity probes added 
+PASS 11 motion and several sources: velocity fields; at most 4 sources (a fifth is refused) {"n":4}
+PASS 12 demo loader: "Circular Orbit Laboratory" loads its world with the zero-gravity companion experiment ["gravity","celestial"]
+PASS 14 circular orbit (r = 30 m): radius within 0.2 %, period 4.62 s (Plummer closed form), ΔE/E < 10⁻³ {"rMin":29.999975810035142,"rMax":30.002116707633892,"T":4.620833333333363,"dE":0.000006362537806475743}
+PASS 13 HUD: source mass, μ, r_s (reference), ε, capture radius, max |g|, tide, bodies, integrator, limit state, scaled label; text not cut {"hud":" 극한 중력원22.0 sScaled Educational Gravity — Not a Real Astrophysical Black Hole중력원M 7.49e+14 kg · μ 5.00e+4 m³/s²반경ε 1.00 · r_c 1.00 · r_s 1.11e-12 m물체 최대 |g|55.4","clip13":[]}
+PASS 47 performance readout: the celestial runtime cost (ms) in the HUD 
+PASS 21 probe diagnostics in the inspector: distance range, speed, energy / angular-momentum errors, period; point field (|g|, Φ, v_esc, tide) 가장 가까운 중력원까지60.67 m국소 |g|13.58 m/s²퍼텐셜 Φ-824.00 J/kg탈출 속도 (중력원 장)40.60 m/s조석 늘림λ₁ 0.447 s⁻² · (0.16, -0.97, 0.16)probe-0
+PASS 15 elliptical orbit: 0.7 × circular at 40 m reaches periapsis 13.0 m (vis-viva), apoapsis 40 m {"e0":-943.6463514870168,"e":-943.6446485733677,"maxErr":0.00007468485944530013,"l0":[0,-989.4857836930423,0],"lErr":0.000004565644907456127,"r":20.648466624784568,"rMin":13.036773699056713,"rMax":40,"v":54.31404836128551,"a":116.86064083739464,"revs":1,"tFirst":5.916666666666651,"period":3.866666666666748,"conserved":true,"private_angle":-1.5540477353181952}
+PASS 16 escape velocity: 0.9 × v_esc stays bound (apoapsis 84.7 m), 1.05 and 1.3 × v_esc leave the world (booked) [["orbit",85.4],["left",1009.1],["left",867]]
+PASS 17 hyperbolic flyby: the probe flies the predicted hyperbola (|e| kept to 1 %, deflection 2·asin(1/e) ≈ 125°; the softened core turns the conic by a few degrees) {"em0":1.126165017492639,"em1":1.1261454431201678,"tilt":3.122020244953287,"defl":125.2421919764522}
+PASS 18 tidal overlay: λ₁ of the computed gradient tensor on the slice (fixed log legend, s⁻²) and principal stretch axes {"axes18":576}
+PASS 19 overlays: |g| (m/s², 9.81 marked), |Φ| (J/kg), escape speed (m/s), model zones (far / core / capture / beyond cap) {}
+PASS 56 model-limit zones: the zones legend names all four regions 
+PASS 20 object inspector: distance, |g|, escape speed, tidal stretch along the long axis, bar tension (reference), energy / angular momentum 가장 가까운 중력원까지10.89 m · r_c 1.00 · ε 2.00 m국소 |g|23.88 m/s² · 2.43 g₀탈출 속도 (중력원 장)23.18 m/s조석 늘림λ₁ 4.171 s⁻² · 긴 축 방향 -2.193 s⁻²조석 인장 (균일 막대 m
+PASS 59 vehicles: a car pulled off the ground and turned by the field (rigid body; no internal model) {"p":[-2.314439535140991,10.73902702331543,5.999906539916992],"captured":true}
+PASS 58 people: pulled towards the source or captured (simple rigid body; physiology is Phase 34) {"id":"human_5c4f34a93z","p":[-1.7573533058166504,10.54411792755127,6.727938652038574],"q":[0,0,0,1],"captured":true,"body":null}
+PASS 22 capture: bodies entering the capture radius are removed (entities hidden, bodies freed), counted in the HUD, a capture milestone {"n":40,"hidden22":12}
+PASS 23 capture ledger: mass residual 0; fixed source → constraint impulse = −Σ m·v; unresolved energy reported {"mass":18903.298095703125}
+PASS 54 timeline: celestial start and capture milestones recorded once each kind ["capture","capture","capture","capture","capture","capture","capture","capture"]
+PASS 24 growing source: M rises by exactly the captured mass (M ← M + m, μ = G·M), particles included {"grown":18903.298095703125,"dM":18518.25,"dCaptured":18518.248107910156,"records":40,"each24":true,"afterLastSample":385.04998779296875}
+PASS 27b accretion particles: placed = flying + captured + landed + left (residual 0) {"placed":600000,"flying":0,"captured":0,"landed":600000,"left":0,"dissipated":877141487.8268613,"residual":0}
+PASS 25 moving source: the centre follows its path (x grows), the changing field does work W_field on the bodies (booked) {"x0":-81.05000000000004,"x1":-36.04999999999956,"Wf":-25855526.43339392}
+PASS 26 two external sources: both in force, probes moving in the combined field; labelled not a real binary (no N-body) [-25,25]
+PASS 27 accretion: test particles on computed orbits drawn, the visual disc drawn and labelled illustrative (no fluid / radiation) {"flying":1500,"pts27":1500,"disc27":1}
+PASS 28 lens: the illustrative lens halo is drawn only on request and labelled "Illustrative Visual Effect — Not Relativistic Ray Tracing" {"lens28":1}
+PASS 29 tidal structural failure: lateral storey loads and uplift fail members (hazard gravity), a tidal-failure milestone {"uplifted":76,"loadedUnits":1,"peakLateral":81.4715849438937,"failures":167}
+PASS 30 collapse and debris: fragments created by the pull (mass moved, not created) and fragments captured {"debris":150,"frag":{"n":18,"m":101666.09664916992}}
+PASS 31 lake: the surface rises under the source (lower downward g there), water volume conserved; the water is never captured (2-D model, limited) {"under":39.05433997636285,"edge":-1.3870217659229311,"err":3.296918293926865e-11,"init":1415.9216448674244}
+PASS 32 hill: the run goes on with the ground model unchanged by the field (no tidal terrain deformation claimed) 
+PASS 33 meteor + source: the impact happens (entry model unchanged, not extrapolated), the state stays finite {"imp33":["done"]}
+PASS 34 multi-hazard (source + earthquake + rain + wind): every pose and ledger finite 
+PASS 35 snow + uplift: the roof pulled off under its snow — climate water ledger closed, structural failures by uplift {"res":-4.842877388000488e-8,"up":46}
+PASS 36 results: celestial cards (sources, |g|, captures, impulse, unresolved energy, structures, integrator, limit) and the charts; text not cut {"charts36":4,"clip36":[]}
+PASS 37 CSV: model and scope header, sources, capture ledger and records with units, integrator, probes, bodies, history; missing values named # model: Newtonian point masses with Plummer softening (real
+PASS 38 JSON: the live celestial summary (ledger, probes, series, stats) is what the results JSON exports 
+PASS 39 stop policy: a physical-mode solar-mass hole stops the run at the model limit (speed > 0.1 c / substep cap) — never clipped below c {"status":"paused","t":0.49999999999999994,"stop":{"time":0,"reason":"accel"},"limit":"stop"}
+PASS 40 warn policy: the limit is recorded (HUD) and the run continues {"limit":"warn"}
+PASS 41 scientific comparison: outside ε the period is Kepler's (19.6 s), inside the core it is the Plummer one (0.73 s, Kepler would give 0.22 s) [19.59999999999889,0.7272988505746909]
+PASS 55 GR not computed: the real 10 M☉ comparison is computed only (r_s ≈ 29.5 km), the editor lists the unsupported GR effects {"mass":1.98847e+31,"rs":29533.393820668785,"accel20":3317911330250000000,"tidal20":331791133024999940,"vEsc20":299792458}
+PASS 42 original world: after captures the edited world is untouched (fingerprint), captured bodies back on re-entry 
+PASS 43 rerun: the same run again gives the same captures, poses and probes (hash) 
+PASS 44 save / load: the celestial experiment survives serialization (schema v7) {"sl44":1}
+PASS 45 determinism: a third run identical too 
+FAIL 46 1000-house town under a source: all structural models ready before the start (pending 0), interactive frame rate {"fps":9.8,"worst":233.3,"pend46":0}
+PASS 49 KO / EN text: the HUD and overlay show translated text (no raw keys) []
+PASS 53 field arrows with a source: logarithmic length (|g| spans decades) — no 100 m arrows {"len53":3.9670597383343216}
+PASS 51 dormant: a gravity experiment alone shows no celestial HUD or runtime (Phase 31 path unchanged) 
+PASS 52 text command: "black hole" (KO / EN) is recognized and pointed to the experiment editor (never executed from text) {"cmd52":["celestial","celestial",0,"parse.celestial.editor"]}
+PASS 57 influence radius: the field tapers to exactly 0 beyond it (educational cut), unchanged well inside {"out":0,"in":79.80838328448797}
+PASS 50 stress preset (4 sources, 16 probes, 2000 particles, town): runs without page errors; capped steps (if any) recorded, never hidden {"capped":0,"captured":85}
+PASS 60 gentle orbital field: three orbits in different planes stay circular (ΔE/E < 10⁻³ each) [0.000008203184710925025,0.000008368484288378609,0.000017472025027043438]
+PASS 48 resources: GPU geometries back to the start after all runs {"geo0":21,"geo1":9}
+PASS whole run: no page errors, the tab alive {"errors":0}
+{"heap0":40.7,"heap1":62.2,"geo0":21,"geo1":9,"crashed":false}
+
+61/62 passed; 0 page errors; heap 40.7 → 62.2 MB; geometries 21 → 9; crashed false

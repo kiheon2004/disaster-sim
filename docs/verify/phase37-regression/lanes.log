@@ -1,0 +1,57 @@
+2026-11-11 15:02:18 [1] verify-atmosphere ko rc=0 265s | 46/46 passed; 0 page errors; heap 40.1 → 70 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 15:06:02 [1] verify-atmosphere en rc=0 224s | 46/46 passed; 0 page errors; heap 40.7 → 70 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 15:07:49 [1] verify-blast ko rc=0 106s | 22/22 passed; 0 page errors; heap 40.4 → 58.8 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 15:09:16 [1] verify-blast en rc=0 87s | 22/22 passed; 0 page errors; heap 40.7 → 58.9 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 15:11:55 [1] verify-blueprints ko rc=0 158s | 22/22 passed | fails=0
+2026-11-11 15:15:06 [1] verify-blueprints en rc=0 191s | 22/22 passed | fails=0
+2026-11-11 15:16:21 [1] verify-build ko rc=0 75s |  | fails=0
+2026-11-11 15:17:39 [1] verify-build en rc=0 78s |  | fails=0
+2026-11-11 15:20:18 [1] verify-buildings ko rc=0 159s | 19/19 passed | fails=0
+2026-11-11 15:22:49 [1] verify-buildings en rc=0 151s | 19/19 passed | fails=0
+2026-11-11 15:27:07 [1] verify-celestial ko rc=1 258s | 61/62 passed; 0 page errors; heap 40.7 → 62.2 MB; geometries 21 → 9; crashed false | fails=1
+2026-11-11 15:31:23 [1] verify-celestial en rc=0 256s | 62/62 passed; 0 page errors; heap 40.4 → 62.2 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 15:49:01 [1] verify-climate ko rc=0 1057s | 45/45 passed; 0 page errors; heap 40.6 → 76.1 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:06:56 [1] verify-climate en rc=0 1075s | 45/45 passed; 0 page errors; heap 40.4 → 75.9 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:09:48 [1] verify-deformation ko rc=0 172s | 22/22 passed; 0 page errors | fails=0
+2026-11-11 16:11:57 [1] verify-deformation en rc=0 129s | 22/22 passed; 0 page errors | fails=0
+2026-11-11 16:13:00 [1] verify-earthquake ko rc=0 63s |  | fails=0
+2026-11-11 16:14:25 [1] verify-earthquake en rc=0 85s |  | fails=0
+2026-11-11 16:16:45 [1] verify-editor36 ko rc=0 140s | 42/42 passed; 0 page errors; geometries 21; textures 15 | fails=0
+2026-11-11 16:19:22 [1] verify-editor36 en rc=0 157s | 42/42 passed; 0 page errors; geometries 21; textures 15 | fails=0
+2026-11-11 16:20:30 [1] verify-fire ko rc=0 68s | 30/30 passed; 0 page errors; heap 39.9 → 70.4 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:22:16 [1] verify-fire en rc=0 106s | 30/30 passed; 0 page errors; heap 40.4 → 70.4 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:24:00 [1] verify-flood ko rc=0 104s |  | fails=0
+2026-11-11 16:25:33 [1] verify-flood en rc=0 93s |  | fails=0
+2026-11-11 16:29:53 [1] verify-gravity ko rc=0 260s | 57/57 passed; 0 page errors; heap 40.4 → 56.8 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 16:36:05 [1] verify-gravity en rc=1 372s | 56/57 passed; 0 page errors; heap 40.9 → 56.6 MB; geometries 21 → 9; crashed false | fails=1
+2026-11-11 16:40:31 [1] verify-ground ko rc=0 266s | 22/22 passed; 0 page errors | fails=0
+2026-11-11 16:43:54 [1] verify-ground en rc=0 203s | 22/22 passed; 0 page errors | fails=0
+2026-11-11 16:45:53 [1] verify-human ko rc=0 119s | 48/48 passed; 0 page errors; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:46:37 [1] verify-human en rc=0 44s | 48/48 passed; 0 page errors; geometries 21 → 8; crashed false | fails=0
+2026-11-11 16:51:18 [1] verify-impact ko rc=0 282s | 22/22 passed; 0 page errors; heap 39.9 → 62.8 MB; crashed false | fails=0
+2026-11-11 16:56:26 [1] verify-impact en rc=0 307s | 22/22 passed; 0 page errors; heap 40.8 → 63.1 MB; crashed false | fails=0
+2026-11-11 16:58:57 [1] verify-nature ko rc=0 151s | 20/20 passed | fails=0
+2026-11-11 17:01:14 [1] verify-nature en rc=0 136s | 20/20 passed | fails=0
+2026-11-11 17:02:03 [1] verify-phenomena ko rc=0 49s |  | fails=0
+2026-11-11 17:03:21 [1] verify-phenomena en rc=0 78s |  | fails=0
+2026-11-11 17:05:56 [1] verify-physiology ko rc=0 155s | 70/70 passed; 0 page errors; geometries 21 → 9; heap 82 MB; crashed false | fails=0
+2026-11-11 17:07:37 [1] verify-physiology en rc=0 100s | 70/70 passed; 0 page errors; geometries 21 → 9; heap 90 MB; crashed false | fails=0
+2026-11-11 17:09:46 [1] verify-roads ko rc=0 129s | 21/21 passed | fails=0
+2026-11-11 17:12:09 [1] verify-roads en rc=0 141s | 21/21 passed | fails=0
+2026-11-11 17:12:53 [1] verify-structure ko rc=0 44s | 25/25 passed; 0 page errors; heap 40.5 → 58.5 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:13:24 [1] verify-structure en rc=0 30s | 25/25 passed; 0 page errors; heap 40.5 → 58.3 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:14:00 [1] verify-thermal ko rc=0 36s | 28/28 passed; 0 page errors; heap 40.1 → 66.9 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:15:48 [1] verify-thermal en rc=0 108s | 28/28 passed; 0 page errors; heap 40.6 → 67 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:19:21 [1] verify-ux355 ko rc=0 213s | 26/26 passed; 0 page errors; geometries 24 | fails=0
+2026-11-11 17:22:02 [1] verify-ux355 en rc=0 161s | 26/26 passed; 0 page errors; geometries 24 | fails=0
+2026-11-11 17:23:58 [1] verify-vehicle ko rc=0 116s | 86/86 passed; 0 page errors; geometries 21 → 7; heap 61 MB; crashed false | fails=0
+2026-11-11 17:25:30 [1] verify-vehicle en rc=0 91s | 86/86 passed; 0 page errors; geometries 21 → 7; heap 67 MB; crashed false | fails=0
+2026-11-11 17:28:19 [1] verify-volcano ko rc=0 169s | 36/36 passed; 0 page errors; heap 40.1 → 104 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:33:08 [1] verify-volcano en rc=0 288s | 36/36 passed; 0 page errors; heap 40.4 → 99.8 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 17:41:19 [1] verify-command37 ko rc=0 490s | 85/85 passed; 0 page errors; geometries 22; textures 15 | fails=0
+2026-11-11 17:46:58 [1] verify-command37 en rc=0 338s | 85/85 passed; 0 page errors; geometries 22; textures 15 | fails=0
+2026-11-11 17:48:19 [1] look-command37 ko rc=0 80s |  | fails=0
+2026-11-11 17:50:36 [1] look-command37 en rc=0 137s |  | fails=0
+2026-11-11 17:54:17 [1] verify-celestial ko rc=1 221s | 61/62 passed; 0 page errors; heap 40.4 → 66.2 MB; geometries 21 → 9; crashed false | fails=1
+2026-11-11 18:01:39 [1] verify-gravity en rc=0 441s | 57/57 passed; 0 page errors; heap 40.2 → 56.2 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-11 18:01:39 [1] lane done

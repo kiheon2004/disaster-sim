@@ -1,0 +1,210 @@
+{
+  "date": "2026-11-11T12:22:56.325Z",
+  "commit": "fb60e19",
+  "build": "dist1 = 4ed406c",
+  "url": "http://localhost:4371/",
+  "mode": "leak",
+  "chrome": "Chrome/157.0.8103.40",
+  "start": {
+    "time": "2026-11-11T12:22:56.390Z",
+    "load": [
+      37.8,
+      55.6,
+      79
+    ],
+    "freePercent": 49
+  },
+  "rows": [
+    {
+      "n": 5000,
+      "laps": 100,
+      "ops": [
+        "objects",
+        "terrain",
+        "road",
+        "disaster",
+        "simSwitch",
+        "saveLoad",
+        "bar",
+        "plan",
+        "confirm"
+      ],
+      "samples": [
+        {
+          "i": 0,
+          "geometries": 62,
+          "textures": 114,
+          "programs": 14,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 0,
+          "heapKB": 55245,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 10,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 10,
+          "heapKB": 87342,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 20,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 20,
+          "heapKB": 84796,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 30,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 30,
+          "heapKB": 80656,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 40,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 40,
+          "heapKB": 80729,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 50,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 81245,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 60,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 84585,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 70,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 81199,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 80,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 81685,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 90,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 81823,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 100,
+          "geometries": 64,
+          "textures": 114,
+          "programs": 16,
+          "sceneObjects": 116,
+          "previewObjects": 0,
+          "history": 50,
+          "heapKB": 84855,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        }
+      ],
+      "growth": {
+        "heapKBPerLap_0_to_10": 3209.7,
+        "heapKBPerLap_10_to_end": -27.63,
+        "geometries": 0,
+        "textures": 0,
+        "programs": 0,
+        "sceneObjects": 0,
+        "previewObjects": 0,
+        "windowListeners": 0,
+        "documentListeners": 0
+      }
+    }
+  ],
+  "end": {
+    "time": "2026-11-11T12:36:51.747Z",
+    "load": [
+      4.3,
+      51.2,
+      77
+    ],
+    "freePercent": 56
+  }
+}

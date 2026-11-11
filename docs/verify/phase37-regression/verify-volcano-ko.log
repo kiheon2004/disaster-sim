@@ -1,0 +1,39 @@
+PASS 1 volcano scenario added from the Experiment tab (vents, material, temperature, supply, duration, profile) ["layout","rate","duration","x","z","radius","material","temperature","profile","bombFraction","ashFraction"]
+PASS 2 vent placed on the map with a click [-62,0]
+PASS 3 eruption source type: fissure chosen and its second end picked on the map (then back to a central vent) {"kind":"fissure","position":[-62,0],"end":[-62,14],"radius":2}
+PASS 4 lava material: andesite starts at its own eruption temperature; an impossible temperature is rejected with its reason {"s4":["andesite",1050],"invalid4":"⚠ 이 재료의 분출 온도 범위를 벗어났습니다"}
+PASS 5 eruption timing and supply set in the fields (8 min, 3 m³/s), ash and bomb shares {"d":480,"q":3}
+PASS 6 preview: vent, source area and potential downslope directions; slope, bearing, initial material state 분출구 1 (-62.0, 0.0) · 지면 9.7 m · 경사 6.0° (90° 방향) · 0.04 m보다 얇은 용암은 여기서 움직이지 않음분출 1440 m³ (2995 t) — 화산탄 5 %, 화산재 15 %분출 온도에서: 결정 23 % · 점성 635 Pa·s · 항복강도 95 Pa
+PASS 7 eruption starts at its start time: supply rate, eruption phase, milestone {"rate":3,"phase":"active"}
+PASS 8 lava flows downslope (+x) from the vent {"front":-37,"meanAbsZ":5.429872495446266}
+PASS 9 lava depth: HUD maximum depth, depth overlay with legend {"maxDepth":0.83477672278729}
+PASS 10 lava speed: positive, bounded; speed overlay {"maxSpeed":0.668180525302887}
+PASS 11 cooling: crust surface far below the interior temperature (milestone); interior never above the eruption temperature {"crust11":{"n":1477,"cold":1477},"maxT":1149.8720947265624}
+PASS 12 solidification: lava locked up into deposits (mass, milestone) {"solid":3534.29877181456}
+PASS 13 solidified lava and bombs become terrain: runtime heights and collider rise by the deposit; the document is untouched {"applied":0.20000000298023224,"rise":0.19999980926513672,"collider":10.5,"h":10.5}
+PASS 14 flow obstruction: lava stops at the house walls and flows around it {"inside":0,"against":0.8676744435967888}
+PASS 15 ash produced: released mass, puffs in the air {"released":280800.0000000532,"puffs":55}
+PASS 16 ash moves: airborne puffs drift from the vent {"air":10.257869516177642,"ground":1.1046591335670337}
+PASS 17 ash deposition on the ground and roofs (mass, thickness) {"dep":90480.00000002026,"roofs":0,"maxAsh":0.19967700827673718}
+PASS 18 wind and ash: the deposit lies downwind (east) of the vent {"air":10.257869516177642,"ground":1.1046591335670337}
+PASS 25 road blocked by lava / solidified lava (network unchanged) [{"status":"blocked","v":{"lava":0.755157221108841,"deposit":0.025413806264546843,"ash":0,"surfaceT":951.3118896484375,"peakLava":0.755157221108841,"peakT":1340.3197021484375,"blocked":true,"impassable":false}}]
+PASS 26 temperature overlay with its fixed °C scale 용암과 퇴적물비행 중 화산탄화산재 (덩어리·퇴적)증기 (시각 전용 — 계산 안 함)분출구 스패터 (시각 전용)오버레이끔깊이온도속도결정화산재지면 
+PASS 27 ash overlay with its legend 용암과 퇴적물비행 중 화산탄화산재 (덩어리·퇴적)증기 (시각 전용 — 계산 안 함)분출구 스패터 (시각 전용
+PASS 28 inspector: object (lava at it, contact, held) and ground probe (lava, temperatures, crystals, deposit layers) {"obj":"물체 위치의 용암0.53 m (최대 0.53 m)퇴적0.00 m용암 온도 · 표면 · 속도 · 결정1145 °C · 표면 690 °C · 0.1","probe":"지점(-55.0, 0.0)이동 용암0.61 m (최대 0.62 m)내부 온도1150 °C (최대 1150 °C)표면 (크러스트) 온도851 °C"}
+PASS 29 timeline milestones: eruption start, lava arrival, crust, solidification, ash deposition ["eruptionStart","ashDeposition","lavaArrival","peakTemperature","firstDamage","fireSpread","secondaryIgnition","ignition","strengthReduction","heatRelease","windowBreak","thermalFailure","heatRelease","strengthReduction","peakTemperature","firstDamage","fireDecay","lavaCrust","roadBlocked","peakTemperature","solidification","memberFailure","fireFailure"]
+PASS 30 mass and energy ledgers close (residuals at round-off; thermal account = heat given up); HUD, results, CSV {"m":2.5596445760654455e-13,"e":-5.543880323490405e-13,"clip30":[]}
+PASS 30b HUD and overlay text not cut []
+PASS 33 reset restores the original world; the same eruption gives the same lava, deposits and ledgers {"r33":{"v":true,"t":0},"h33a":"1586|1.731826255578e+6|1.872000000001e+6|1.839284185679e+10","h33b":"1586|1.731826255578e+6|1.872000000001e+6|1.839284185679e+10"}
+PASS 32 leaving the simulation leaves the original world (terrain, objects, roads) untouched (fingerprint) 
+PASS 19 lava and water: lava under water heats it (heat to water), water mass kept; steam drawn as a visual only {"toWater":6731629625.947623,"waterAbove100":0}
+PASS 20 lava and vegetation: trees in contact / under radiation (contact counted) {"contact":20,"buried":0,"held":0,"toppled":0,"damaged":0,"roofAsh":0,"maxAshLoad":0,"bombs":0}
+PASS 21 secondary fire: crowns lit by lava heat through the fire model (cause lava), recorded as fire with source volcano {"f20":{"ignited":20,"lava":40},"ev21":38}
+PASS 22 lava and buildings: walls heated by contact / radiation, heat effects attributed to the volcano (or to a fire it lit) {"buildings":2,"hot":81,"minF":0.008035496261624364,"hz":["fire","fire"]}
+PASS 23 structural strength reduction from member temperatures (material factor below 1 where members are hot) {"minFactor":0.008035496261624364}
+PASS 24 structural collapse: the collapse engine fails members of the lava-heated houses (earthquake on top) {"records":27}
+PASS 31 volcano scenario saved and reloaded (schema 7): vents, material, staged profile, ash share {"ok":true,"version":7,"spec":{"event":"volcano","vents":[{"kind":"fissure","position":[-60,-5],"end":[-60,12],"radius":1.5}],"material":"andesite","temperature":1060,"rate":1.5,"duration":900,"profile":"staged","stages":[0.2,1,0.4],"ashFraction":0.1}}
+PASS 34 large town (1000 houses): runs at an interactive frame rate, only the buildings the lava reaches get member detail {"fps":27.5,"worstFrameMs":116.7,"refined":0,"gl34":{"calls":23,"geometries":35,"textures":7},"volcanoMs":10.400000005960464}
+PASS whole run: no page errors, the tab alive, GPU geometries back to the start {"errors":0,"geo0":21,"geo1":8}
+{"heap0":40.1,"heap1":104,"geo0":21,"geo1":8,"crashed":false}
+
+36/36 passed; 0 page errors; heap 40.1 → 104 MB; geometries 21 → 8; crashed false

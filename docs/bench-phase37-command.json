@@ -1,0 +1,562 @@
+{
+  "date": "2026-11-11T12:37:00.153Z",
+  "commit": "fb60e19",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "load": [
+    3.9,
+    49.6,
+    76.2
+  ],
+  "objects": 5000,
+  "sceneBuildMs": 447,
+  "parser": {
+    "ko": {
+      "sentences": 899,
+      "understood": 777,
+      "perSentenceMs": {
+        "n": 899,
+        "p50": 0.056,
+        "p95": 0.107,
+        "max": 0.191,
+        "mean": 0.059
+      },
+      "slowest": [
+        {
+          "ms": 0.191,
+          "text": "이 건물들 간격 2 m로 맞춰"
+        },
+        {
+          "ms": 0.184,
+          "text": "여기 반경 10 m를 3 m로 올려"
+        },
+        {
+          "ms": 0.176,
+          "text": "n1에서 n2까지 도로 깔고 n1–n2 도로 북쪽에 주택 다섯 채 놓아"
+        }
+      ]
+    },
+    "en": {
+      "sentences": 875,
+      "understood": 757,
+      "perSentenceMs": {
+        "n": 875,
+        "p50": 0.072,
+        "p95": 0.201,
+        "max": 0.429,
+        "mean": 0.084
+      },
+      "slowest": [
+        {
+          "ms": 0.429,
+          "text": "delete the trees and the street lights"
+        },
+        {
+          "ms": 0.41,
+          "text": "delete everything except the locked ones"
+        },
+        {
+          "ms": 0.41,
+          "text": "paint a 5 m circle here with snow"
+        }
+      ]
+    },
+    "canonical": {
+      "lines": 1610,
+      "perLineMs": {
+        "n": 1610,
+        "p50": 0.005,
+        "p95": 0.014,
+        "max": 0.024,
+        "mean": 0.006
+      }
+    }
+  },
+  "queries": {
+    "target": "p95 < 50 ms",
+    "worstP95": 3.125,
+    "rows": [
+      {
+        "line": "select type:tree",
+        "n": 40,
+        "p50": 0.181,
+        "p95": 0.342,
+        "max": 3.028,
+        "mean": 0.267,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "select type:building where floors>=5",
+        "n": 40,
+        "p50": 0.121,
+        "p95": 0.214,
+        "max": 0.424,
+        "mean": 0.133,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "select type:tree where near 0,0 r=30",
+        "n": 40,
+        "p50": 0.23,
+        "p95": 0.336,
+        "max": 0.892,
+        "mean": 0.25,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "select type:building tallest",
+        "n": 40,
+        "p50": 0.204,
+        "p95": 0.4,
+        "max": 0.529,
+        "mean": 0.218,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "select type:car nearest cursor",
+        "n": 40,
+        "p50": 0.187,
+        "p95": 0.444,
+        "max": 4.03,
+        "mean": 0.295,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "select type:human nearest cursor first 10",
+        "n": 40,
+        "p50": 0.328,
+        "p95": 0.365,
+        "max": 0.585,
+        "mean": 0.337,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "count type:building",
+        "n": 40,
+        "p50": 0.201,
+        "p95": 0.301,
+        "max": 0.983,
+        "mean": 0.228,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 1"
+      },
+      {
+        "line": "count all",
+        "n": 40,
+        "p50": 2.238,
+        "p95": 3.125,
+        "max": 3.869,
+        "mean": 2.386,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 5"
+      },
+      {
+        "line": "list all where near 0,0 r=40",
+        "n": 40,
+        "p50": 0.357,
+        "p95": 0.592,
+        "max": 1.518,
+        "mean": 0.401,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 200"
+      },
+      {
+        "line": "count all where hidden",
+        "n": 40,
+        "p50": 0.066,
+        "p95": 0.098,
+        "max": 0.174,
+        "mean": 0.07,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      },
+      {
+        "line": "list type:building where floors>=8",
+        "n": 40,
+        "p50": 0.152,
+        "p95": 0.166,
+        "max": 0.217,
+        "mean": 0.154,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 161"
+      },
+      {
+        "line": "info selection",
+        "n": 40,
+        "p50": 0.419,
+        "p95": 0.927,
+        "max": 1.895,
+        "mean": 0.493,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 200"
+      },
+      {
+        "line": "measure selection",
+        "n": 40,
+        "p50": 0.494,
+        "p95": 0.97,
+        "max": 1.045,
+        "mean": 0.576,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 200"
+      },
+      {
+        "line": "focus type:building largest",
+        "n": 40,
+        "p50": 0.149,
+        "p95": 0.645,
+        "max": 1.828,
+        "mean": 0.239,
+        "info": "ops 0, items 0 (rejected 0), create 0 change 0 remove 0, result 0, rows 0"
+      }
+    ]
+  },
+  "plans": {
+    "target": "\"place 100 buildings\" < 300 ms",
+    "note": "more than 2000 objects in one command is refused (§19): \"delete type:tree\" shows the cost of that refusal",
+    "rows": [
+      {
+        "line": "place building:house count=100 at=52,52 gap=1",
+        "n": 10,
+        "p50": 4.061,
+        "p95": 12.583,
+        "max": 12.583,
+        "mean": 4.864,
+        "info": "ops 1, items 100 (rejected 79), create 21 change 0 remove 0, result 0"
+      },
+      {
+        "line": "place building:house count=20 along=road:n1-n2 side=north gap=2",
+        "n": 10,
+        "p50": 4.649,
+        "p95": 8.15,
+        "max": 8.15,
+        "mean": 5.025,
+        "info": "ops 1, items 16 (rejected 0), create 16 change 0 remove 0, result 0"
+      },
+      {
+        "line": "place tree count=1000 at=52,52 gap=0.5",
+        "n": 10,
+        "p50": 5.157,
+        "p95": 9.703,
+        "max": 9.703,
+        "mean": 5.832,
+        "info": "ops 1, items 1000 (rejected 966), create 34 change 0 remove 0, result 0"
+      },
+      {
+        "line": "place car count=40 along=road:n1-n2",
+        "n": 10,
+        "p50": 4.523,
+        "p95": 8.063,
+        "max": 8.063,
+        "mean": 4.81,
+        "info": "ops 1, items 24 (rejected 0), create 24 change 0 remove 0, result 0"
+      },
+      {
+        "line": "move selection by=3,0,0",
+        "n": 10,
+        "p50": 0.88,
+        "p95": 2.079,
+        "max": 2.079,
+        "mean": 1.058,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 200 remove 0, result 200"
+      },
+      {
+        "line": "rotate type:car by=15",
+        "n": 10,
+        "p50": 2.077,
+        "p95": 2.736,
+        "max": 2.736,
+        "mean": 2.165,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 471 remove 0, result 471"
+      },
+      {
+        "line": "align selection axis=x mode=min ref=origin",
+        "n": 10,
+        "p50": 0.815,
+        "p95": 1.401,
+        "max": 1.401,
+        "mean": 0.875,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 199 remove 0, result 199"
+      },
+      {
+        "line": "distribute selection axis=auto",
+        "n": 10,
+        "p50": 0.843,
+        "p95": 1.131,
+        "max": 1.131,
+        "mean": 0.885,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 199 remove 0, result 199"
+      },
+      {
+        "line": "delete type:car",
+        "n": 10,
+        "p50": 0.127,
+        "p95": 0.326,
+        "max": 0.326,
+        "mean": 0.145,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 0 remove 471, result 0"
+      },
+      {
+        "line": "delete type:tree",
+        "n": 10,
+        "p50": 0.152,
+        "p95": 0.233,
+        "max": 0.233,
+        "mean": 0.162,
+        "info": "stopped {\"ok\":false,\"error\":{\"key\":\"cmd37.err.tooMany\",\"params\":{\"count\":2803,\"max\":2000}},\"notes\":[]}"
+      },
+      {
+        "line": "duplicate selection offset=2,2",
+        "n": 10,
+        "p50": 6.718,
+        "p95": 18.891,
+        "max": 18.891,
+        "mean": 8.009,
+        "info": "ops 1, items 200 (rejected 0), create 200 change 0 remove 0, result 0"
+      },
+      {
+        "line": "terrain raise circle 50,50 r=30 by=2",
+        "n": 10,
+        "p50": 0.408,
+        "p95": 1.897,
+        "max": 1.897,
+        "mean": 0.527,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 0 remove 0, result 0"
+      },
+      {
+        "line": "paint circle 50,50 r=30 ground=grass",
+        "n": 10,
+        "p50": 0.265,
+        "p95": 0.764,
+        "max": 0.764,
+        "mean": 0.32,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 0 remove 0, result 0"
+      },
+      {
+        "line": "forest circle 52,52 r=40 density=high seed=2",
+        "n": 10,
+        "p50": 5.744,
+        "p95": 10.393,
+        "max": 10.393,
+        "mean": 6.537,
+        "info": "ops 1, items 104 (rejected 0), create 104 change 0 remove 0, result 0"
+      },
+      {
+        "line": "road 30,30 -> 90,90 preset=street",
+        "n": 10,
+        "p50": 1.006,
+        "p95": 3.133,
+        "max": 3.133,
+        "mean": 1.238,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 0 remove 0, result 0"
+      },
+      {
+        "line": "disaster blast at=50,50 energy=1e9",
+        "n": 10,
+        "p50": 0.064,
+        "p95": 1.459,
+        "max": 1.459,
+        "mean": 0.202,
+        "info": "ops 1, items 0 (rejected 0), create 1 change 0 remove 0, result 0"
+      },
+      {
+        "line": "duplicate selection offset=1,1  (1000 selected)",
+        "n": 10,
+        "p50": 22.128,
+        "p95": 22.886,
+        "max": 22.886,
+        "mean": 22.072,
+        "info": "ops 1, items 1000 (rejected 0), create 1000 change 0 remove 0, result 0"
+      },
+      {
+        "line": "move selection by=0,0,2  (1000 selected)",
+        "n": 10,
+        "p50": 4.031,
+        "p95": 4.541,
+        "max": 4.541,
+        "mean": 4.087,
+        "info": "ops 1, items 0 (rejected 0), create 0 change 1000 remove 0, result 1000"
+      }
+    ]
+  },
+  "drafts": {
+    "note": "previewIntents on the 5000-object document (what the live preview pays per change of the text)",
+    "rows": [
+      {
+        "line": "select type:tree",
+        "n": 8,
+        "p50": 3.468,
+        "p95": 7.65,
+        "max": 7.65,
+        "mean": 3.826,
+        "info": "added 0 removed 0 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "place building:house count=3 along=road:n1-n2 side=north gap=2",
+        "n": 8,
+        "p50": 10.938,
+        "p95": 17.764,
+        "max": 17.764,
+        "mean": 11.626,
+        "info": "added 3 removed 0 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "place building:house count=100 at=52,52 gap=1",
+        "n": 8,
+        "p50": 10.219,
+        "p95": 12.956,
+        "max": 12.956,
+        "mean": 10.604,
+        "info": "added 21 removed 0 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "place tree count=1000 at=52,52 gap=0.5",
+        "n": 8,
+        "p50": 11.109,
+        "p95": 12.434,
+        "max": 12.434,
+        "mean": 11.311,
+        "info": "added 34 removed 0 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "move selection by=3,0,0",
+        "n": 8,
+        "p50": 7.073,
+        "p95": 9.943,
+        "max": 9.943,
+        "mean": 7.618,
+        "info": "added 0 removed 0 moved 200 changed 0 rewritten 0"
+      },
+      {
+        "line": "delete type:car",
+        "n": 8,
+        "p50": 5.375,
+        "p95": 7.192,
+        "max": 7.192,
+        "mean": 5.494,
+        "info": "added 0 removed 471 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "terrain raise circle 50,50 r=30 by=2",
+        "n": 8,
+        "p50": 14.545,
+        "p95": 38.836,
+        "max": 38.836,
+        "mean": 17.665,
+        "info": "added 0 removed 0 moved 0 changed 0 rewritten 0 terrain 2801 m²"
+      },
+      {
+        "line": "forest circle 52,52 r=40 density=high seed=2",
+        "n": 8,
+        "p50": 14.475,
+        "p95": 19.139,
+        "max": 19.139,
+        "mean": 14.849,
+        "info": "added 104 removed 0 moved 0 changed 0 rewritten 0"
+      },
+      {
+        "line": "duplicate selection offset=1,1  (1000 selected → 1000 ghosts)",
+        "n": 8,
+        "p50": 230.917,
+        "p95": 232.797,
+        "max": 232.797,
+        "mean": 230.709,
+        "info": "added 1000 removed 0 moved 0 changed 0 rewritten 0"
+      }
+    ]
+  },
+  "commits": [
+    {
+      "name": "place 3 houses on the road",
+      "lines": 1,
+      "objectsAfter": 5003,
+      "commitMs": 10.6,
+      "undoMs": 0.2,
+      "redoMs": 0.1,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "place 100 houses",
+      "lines": 1,
+      "objectsAfter": 5021,
+      "commitMs": 8.1,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "place 1000 trees",
+      "lines": 1,
+      "objectsAfter": 5034,
+      "commitMs": 8.6,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "move 200 selected trees",
+      "lines": 1,
+      "objectsAfter": 5000,
+      "commitMs": 5.4,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "duplicate 1000 selected trees",
+      "lines": 1,
+      "objectsAfter": 6000,
+      "commitMs": 226.4,
+      "undoMs": 0.1,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "move 1000 selected trees",
+      "lines": 1,
+      "objectsAfter": 5000,
+      "commitMs": 16.9,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "rotate every car",
+      "lines": 1,
+      "objectsAfter": 5000,
+      "commitMs": 8.2,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "delete every car",
+      "lines": 1,
+      "objectsAfter": 4529,
+      "commitMs": 3.4,
+      "undoMs": 0,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    },
+    {
+      "name": "terrain: raise a 30 m circle",
+      "lines": 1,
+      "objectsAfter": 5000,
+      "commitMs": 12.6,
+      "undoMs": 0.3,
+      "redoMs": 0.1,
+      "undoAgainMs": 0.1
+    },
+    {
+      "name": "terrain + paint + forest",
+      "lines": 3,
+      "objectsAfter": 5042,
+      "commitMs": 34,
+      "undoMs": 0.1,
+      "redoMs": 0.1,
+      "undoAgainMs": 0.1
+    },
+    {
+      "name": "mixed script (objects, group, road, terrain, forest, disasters)",
+      "lines": 10,
+      "objectsAfter": 5019,
+      "commitMs": 76.8,
+      "undoMs": 0.1,
+      "redoMs": 0,
+      "undoAgainMs": 0
+    }
+  ]
+}

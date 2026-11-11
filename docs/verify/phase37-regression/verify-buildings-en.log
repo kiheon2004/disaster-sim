@@ -1,0 +1,20 @@
+PASS 1 create: modular building placed by clicking the viewport — 1 object(s), 485 members
+PASS 2a parameter edit is a preview until Apply — doc floors 6
+PASS 2b Apply: floors 8, width 21 m — 8 floors, 21 m
+PASS 2c Add Floor — 9 floors
+PASS 3a Building Edit Mode opens with its toolbar
+PASS 3b column, wall and window added (3 members, 3 undo steps) — 778 → 781
+PASS 3c clicking a member selects it (member inspector)
+PASS 4 material change: light cladding, lower mass — 2700 t → 2332 t
+PASS 5 placed on a slope: foundation reaches the ground (plinth, full contact) — plinth 2.90 m, contact 100 %, slope 16.1°
+PASS 6 duplicate: new id, same design — 2 → 3
+PASS 7 undo / redo of the duplicate — 2 / 3
+PASS 8 save → change → load restores the saved world exactly — 3 objects
+PASS 9 typhoon: wind damage on the buildings (envelope parts) — 295 wind events
+PASS 10 earthquake: structural response and damage — 323 events, 60 member failures, 5 collapses
+PASS 13 damage state: before / after comparison and story drifts in the inspector — 9 story bars
+PASS 11 flood: water reaches buildings (flood state, loads, interior fill) — 3 building(s) wet
+PASS 12 combined hazards run together; several hazards cause damage — 3 phenomena, hazards: earthquake, wind
+PASS 14 original world: geometry, members, materials, foundation, damage and ids unchanged
+PASS no console / page errors
+19/19 passed
