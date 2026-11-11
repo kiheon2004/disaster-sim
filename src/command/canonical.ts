@@ -9,7 +9,8 @@
  *   select <target> | add <target> | remove <target> | select none
  *   move <target> by=<dx,dy,dz> | move <target> to=<place> | rotate <target> by=<°> | scale <target> x<k>
  *   set <target> [x=<m>] [y=<m>] [z=<m>] [heading=<°>] [scale=<k>] [lift=<m>]
- *   align <target> axis=x|z mode=min|center|max ref=origin|footprint | distribute <target> axis=x|z [gaps]
+ *   align <target> axis=x|z mode=min|center|max ref=origin|footprint | align <target> edge=front|back ref=origin|footprint
+ *   distribute <target> axis=x|z|auto [gaps]
  *   match <target> heading|height|scale [to=<target>] | copy <prop,…> from=<target> to=<target>
  *   group <target> [name="…"] | ungroup <target> | rename <target> "…" | hide|show|lock|unlock <target>
  *   delete <target> | duplicate <target> [offset=<dx,dz>]
@@ -19,13 +20,14 @@
  *   run | pause | reset | speed=<k> | focus <target> | focus at=<place> | undo | redo
  *   count|list|info <target> | count|list|info disasters|groups|roads|sim | measure <target> | measure <place> <place>
  *
- *   target   = selection | last | all | #<id> | group:"…" | name:"…" | type:<type>[:<preset>]
+ *   target   = selection | last | it | all | #<id> | group:"…" | name:"…" | type:<type>[:<preset>]
  *              [where <pred> {and <pred>}] [largest | tallest | nearest <place>] [first N]
  *   pred     = floors|slope|height (>=|<=|>|<|=) <n> | near <place> r=<m> | on road [<road>] | hidden | locked | visible | unlocked | warning[=<code>]
- *   place    = <x>,<z> | node:<id> | seg:<id>[@<0…1>] | cursor | view | center | selection | last | #<id> | group:"…" | name:"…" | feature:<id>
+ *   place    = <x>,<z> | node:<id> | seg:<id>[@<0…1>] | junction | cursor | view | center | selection | last | #<id> | group:"…" | name:"…"
+ *              | feature:<id or kind>
  *              | north|south|east|west(<place>[,<m>]) | next(<place>)
- *   road     = seg:<id> | road:<node>-<node> | road:main | road:nearest(<place>)
- *   area     = rect <x0>,<z0>,<x1>,<z1> | circle <place> r=<m> | around <target> r=<m> | feature:<id>
+ *   road     = seg:<id> | road:<node>-<node> | road:main | road:any | road:nearest(<place>)
+ *   area     = rect <x0>,<z0>,<x1>,<z1> | circle <place> r=<m> | around <target> r=<m> | feature:<id or kind>
  *   instance = p<k> | <type>[#<n>] | all
  *
  * A target given as a key's value is one token, or several in parentheses: from=#id, from=(selection first 1).
@@ -33,7 +35,7 @@
  * Pure: no store, no clock, no randomness.
  */
 import {
-  ALIGN_AXES, ALIGN_MODES, ALIGN_REFS, COMPARE_OPS, COPY_PROPS, DIRECTIONS, FLAG_OPS, INSTANCE_OPS, MATCH_WHAT, QUERY_TOPICS, SIDES, TERRAIN_OPS,
+  ALIGN_AXES, ALIGN_EDGES, ALIGN_MODES, ALIGN_REFS, COMPARE_OPS, DISTRIBUTE_AXES, COPY_PROPS, DIRECTIONS, FLAG_OPS, INSTANCE_OPS, MATCH_WHAT, QUERY_TOPICS, SIDES, TERRAIN_OPS,
   intentProblem, intentSchema,
   type AreaRef, type CompareOp, type Direction, type InstanceRef, type Intent, type PlaceRef, type Predicate, type Rank, type RoadRef, type TargetBase, type TargetRef,
 } from './intent';
@@ -161,12 +163,12 @@ const PRESET = /^\w[\w.]*$/;
 
 // ── Places, roads ────────────────────────────────────────────────────────────────────
 
-const PLACE_WORDS = new Set(['cursor', 'view', 'center', 'selection', 'last']);
+const PLACE_WORDS = new Set(['cursor', 'view', 'center', 'junction', 'selection', 'last']);
 
 /** One token → a place, or null when the token is not a place. */
 export function parsePlace(tok: string): PlaceRef | null {
   const low = tok.toLowerCase();
-  if (PLACE_WORDS.has(low)) return { p: low as 'cursor' | 'view' | 'center' | 'selection' | 'last' };
+  if (PLACE_WORDS.has(low)) return { p: low as 'cursor' | 'view' | 'center' | 'junction' | 'selection' | 'last' };
   if (tok[0] === '#') return ID.test(tok.slice(1)) ? { p: 'object', id: tok.slice(1) } : null;
   // (40,60) is the same point as 40,60
   const bare = tok[0] === '(' && tok[tok.length - 1] === ')' ? tok.slice(1, -1) : tok;
@@ -234,6 +236,7 @@ export function parseRoad(tok: string): RoadRef | null {
   if (head === 'seg') return ID.test(rest) ? { r: 'seg', id: rest } : null;
   if (head !== 'road') return null;
   if (rest.toLowerCase() === 'main') return { r: 'main' };
+  if (rest.toLowerCase() === 'any') return { r: 'any' };
   const near = /^nearest\((.*)\)$/i.exec(rest);
   if (near) {
     const at = parsePlace(near[1].trim());
@@ -248,6 +251,7 @@ export function formatRoad(r: RoadRef): string {
     case 'seg': return `seg:${r.id}`;
     case 'between': return `road:${r.a}-${r.b}`;
     case 'main': return 'road:main';
+    case 'any': return 'road:any';
     case 'nearest': return `road:nearest(${formatPlace(r.at)})`;
   }
 }
@@ -291,7 +295,7 @@ function integer(tok: string | undefined, what: string): number {
 
 function parseBase(tok: string): TargetBase | null {
   const low = tok.toLowerCase();
-  if (low === 'selection' || low === 'last' || low === 'all') return { b: low };
+  if (low === 'selection' || low === 'last' || low === 'it' || low === 'all') return { b: low };
   if (tok[0] === '#') return ID.test(tok.slice(1)) ? { b: 'id', id: tok.slice(1) } : null;
   const colon = tok.indexOf(':');
   if (colon <= 0) return null;
@@ -572,15 +576,20 @@ function buildVerb(verb: Verb, c: Cursor): Intent {
     }
     case 'align': {
       const t = target(c);
-      const o = options(c, ['axis', 'mode', 'ref']);
-      return { kind: 'align', target: t, axis: oneOf(o.get('axis'), ALIGN_AXES, 'axis'), mode: oneOf(o.get('mode'), ALIGN_MODES, 'mode'), ref: o.has('ref') ? oneOf(o.get('ref'), ALIGN_REFS, 'ref') : 'origin' };
+      const o = options(c, ['axis', 'mode', 'edge', 'ref']);
+      const ref = o.has('ref') ? oneOf(o.get('ref'), ALIGN_REFS, 'ref') : 'origin';
+      if (o.has('edge')) {
+        if (o.has('axis') || o.has('mode')) return fail('expected', undefined, 'edge=… or axis=… mode=…');
+        return { kind: 'align', target: t, edge: oneOf(o.get('edge'), ALIGN_EDGES, 'edge'), ref };
+      }
+      return { kind: 'align', target: t, axis: oneOf(o.get('axis'), ALIGN_AXES, 'axis'), mode: oneOf(o.get('mode'), ALIGN_MODES, 'mode'), ref };
     }
     case 'distribute': {
       const t = target(c);
       let gaps = false;
       if (c.toks[c.toks.length - 1].toLowerCase() === 'gaps') { gaps = true; c.toks.pop(); }
       const o = options(c, ['axis']);
-      return { kind: 'distribute', target: t, axis: oneOf(o.get('axis'), ALIGN_AXES, 'axis'), gaps };
+      return { kind: 'distribute', target: t, axis: o.has('axis') ? oneOf(o.get('axis'), DISTRIBUTE_AXES, 'axis') : 'auto', gaps };
     }
     case 'match': {
       const t = target(c);
@@ -758,7 +767,7 @@ export function formatCanonical(i: Intent): string {
     case 'scale': return `scale ${formatTarget(i.target)} x${formatNumber(i.factor)}`;
     case 'set':
       return ['set', formatTarget(i.target), ...kv('x', n(i.x)), ...kv('y', n(i.y)), ...kv('z', n(i.z)), ...kv('heading', n(i.heading)), ...kv('scale', n(i.scale)), ...kv('lift', n(i.lift))].join(' ');
-    case 'align': return `align ${formatTarget(i.target)} axis=${i.axis} mode=${i.mode} ref=${i.ref}`;
+    case 'align': return i.edge ? `align ${formatTarget(i.target)} edge=${i.edge} ref=${i.ref}` : `align ${formatTarget(i.target)} axis=${i.axis} mode=${i.mode} ref=${i.ref}`;
     case 'distribute': return `distribute ${formatTarget(i.target)} axis=${i.axis}${i.gaps ? ' gaps' : ''}`;
     case 'match': return `match ${formatTarget(i.target)} ${i.what}${i.to ? ` to=${formatTargetValue(i.to)}` : ''}`;
     case 'copy': return `copy ${i.props.join(',')} from=${formatTargetValue(i.from)} to=${formatTargetValue(i.target)}`;

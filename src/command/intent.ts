@@ -28,13 +28,16 @@ export type PlaceRef =
   | { p: 'view' }
   /** The middle of the map. */
   | { p: 'center' }
+  /** "The junction": the node where three or more roads meet (a choice when there are several). */
+  | { p: 'junction' }
   | { p: 'object'; id: string }
   /** The pivot of the current selection / of the last result set. */
   | { p: 'selection' }
   | { p: 'last' }
   | { p: 'group'; name: string }
+  /** An object or a group by its name (object names first; a choice when several match). */
   | { p: 'name'; name: string }
-  /** A terrain feature (hill, lake …) — its centre. */
+  /** A terrain feature — its centre: by id (f3), or by kind (hill, lake …; a choice when there are several). */
   | { p: 'feature'; id: string }
   /** `dist` m (default: just clear of it) to the north / south / east / west of another place. */
   | { p: 'dir'; dir: Direction; of: PlaceRef; dist?: number }
@@ -49,6 +52,7 @@ export const placeRefSchema: z.ZodType<PlaceRef> = z.lazy(() =>
     z.object({ p: z.literal('cursor') }).strict(),
     z.object({ p: z.literal('view') }).strict(),
     z.object({ p: z.literal('center') }).strict(),
+    z.object({ p: z.literal('junction') }).strict(),
     z.object({ p: z.literal('object'), id: z.string().min(1) }).strict(),
     z.object({ p: z.literal('selection') }).strict(),
     z.object({ p: z.literal('last') }).strict(),
@@ -69,6 +73,8 @@ export type RoadRef =
   | { r: 'between'; a: string; b: string }
   /** "The main road": the widest road of the map (a choice when there are several). */
   | { r: 'main' }
+  /** "The road", when the sentence names none: the only road of the map (a choice when there are several). */
+  | { r: 'any' }
   /** The road nearest a place. */
   | { r: 'nearest'; at: PlaceRef };
 
@@ -76,6 +82,7 @@ export const roadRefSchema: z.ZodType<RoadRef> = z.union([
   z.object({ r: z.literal('seg'), id: z.string().min(1) }).strict(),
   z.object({ r: z.literal('between'), a: z.string().min(1), b: z.string().min(1) }).strict(),
   z.object({ r: z.literal('main') }).strict(),
+  z.object({ r: z.literal('any') }).strict(),
   z.object({ r: z.literal('nearest'), at: placeRefSchema }).strict(),
 ]);
 
@@ -88,9 +95,12 @@ export type TargetBase =
   | { b: 'selection' }
   /** What the last confirmed command made or changed. */
   | { b: 'last' }
+  /** "Them", with nothing named: the selection when there is one, else the last result set. */
+  | { b: 'it' }
   | { b: 'all' }
   | { b: 'id'; id: string }
   | { b: 'group'; name: string }
+  /** Objects or a group by name (object names first; a choice when several match). */
   | { b: 'name'; name: string }
   /** Every object of a kind (`preset`: a palette preset of that kind, e.g. building:house). */
   | { b: 'type'; type: string; preset?: string };
@@ -118,6 +128,7 @@ export interface TargetRef {
 const targetBaseSchema: z.ZodType<TargetBase> = z.union([
   z.object({ b: z.literal('selection') }).strict(),
   z.object({ b: z.literal('last') }).strict(),
+  z.object({ b: z.literal('it') }).strict(),
   z.object({ b: z.literal('all') }).strict(),
   z.object({ b: z.literal('id'), id: z.string().min(1) }).strict(),
   z.object({ b: z.literal('group'), name: z.string().min(1) }).strict(),
@@ -181,6 +192,10 @@ export const SIDES = ['left', 'right', ...DIRECTIONS] as const;
 export type Side = (typeof SIDES)[number];
 export const TERRAIN_OPS = ['raise', 'lower', 'flatten', 'smooth'] as const;
 export const ALIGN_AXES = ['x', 'z'] as const;
+/** Align by the side the objects face instead of a world axis (decided from their headings when planned). */
+export const ALIGN_EDGES = ['front', 'back'] as const;
+/** `auto`: the axis along which the objects are spread out more. */
+export const DISTRIBUTE_AXES = ['x', 'z', 'auto'] as const;
 export const ALIGN_MODES = ['min', 'center', 'max'] as const;
 export const ALIGN_REFS = ['origin', 'footprint'] as const;
 export const MATCH_WHAT = ['heading', 'height', 'scale'] as const;
@@ -207,14 +222,14 @@ export const intentSchema = z.discriminatedUnion('kind', [
     /** Clear distance between neighbours (m). */
     gap: num.nonnegative().optional(),
     floors: z.number().int().positive().optional(),
-    /** Compass heading the object faces (°, clockwise from north). */
+    /** Heading (°): the Inspector's "Y heading" — counter-clockwise seen from above, 0 = the object's local +x points east. */
     heading: num.optional(),
   }).strict(),
   z.object({ kind: z.literal('select'), mode: z.enum(['set', 'add', 'remove']), target: targetRefSchema }).strict(),
   z.object({ kind: z.literal('deselect') }).strict(),
   /** Rigid move: by an offset (east, up, south — the document's x, y, z) or with the pivot to a place. */
   z.object({ kind: z.literal('move'), target: targetRefSchema, by: z.tuple([num, num, num]).optional(), to: placeRefSchema.optional() }).strict(),
-  /** Turn about the pivot (°, clockwise seen from above). */
+  /** Turn about the pivot (°, counter-clockwise seen from above — the sign of the Inspector's Y heading). */
   z.object({ kind: z.literal('rotate'), target: targetRefSchema, by: num }).strict(),
   z.object({ kind: z.literal('scale'), target: targetRefSchema, factor: num.positive() }).strict(),
   /** Write the same value into a transform field of every object (the multi-inspector's common fields). */
@@ -226,8 +241,13 @@ export const intentSchema = z.discriminatedUnion('kind', [
     /** Height above the ground under each object (m). */
     lift: num.optional(),
   }).strict(),
-  z.object({ kind: z.literal('align'), target: targetRefSchema, axis: z.enum(ALIGN_AXES), mode: z.enum(ALIGN_MODES), ref: z.enum(ALIGN_REFS) }).strict(),
-  z.object({ kind: z.literal('distribute'), target: targetRefSchema, axis: z.enum(ALIGN_AXES), gaps: z.boolean() }).strict(),
+  /** Line objects up on a world axis (x: west ↔ east, z: north ↔ south) — or by the side they face (`edge`). */
+  z.object({
+    kind: z.literal('align'), target: targetRefSchema,
+    axis: z.enum(ALIGN_AXES).optional(), mode: z.enum(ALIGN_MODES).optional(), edge: z.enum(ALIGN_EDGES).optional(),
+    ref: z.enum(ALIGN_REFS),
+  }).strict(),
+  z.object({ kind: z.literal('distribute'), target: targetRefSchema, axis: z.enum(DISTRIBUTE_AXES), gaps: z.boolean() }).strict(),
   z.object({ kind: z.literal('match'), target: targetRefSchema, what: z.enum(MATCH_WHAT), to: targetRefSchema.optional() }).strict(),
   z.object({ kind: z.literal('copy'), props: z.array(z.enum(COPY_PROPS)).min(1), from: targetRefSchema, target: targetRefSchema }).strict(),
   z.object({ kind: z.literal('group'), target: targetRefSchema, name: z.string().min(1).max(80).optional() }).strict(),
@@ -294,6 +314,9 @@ export function intentProblem(i: Intent): string | null {
       if (i.side && !i.along) return 'place: side needs along';
       return null;
     case 'move': return (i.by === undefined) === (i.to === undefined) ? 'move: exactly one of by / to' : null;
+    case 'align':
+      if (i.edge !== undefined) return i.axis !== undefined || i.mode !== undefined ? 'align: edge excludes axis / mode' : null;
+      return i.axis === undefined || i.mode === undefined ? 'align: axis and mode, or edge' : null;
     case 'set': return [i.x, i.y, i.z, i.heading, i.scale, i.lift].every((v) => v === undefined) ? 'set: no field' : i.y !== undefined && i.lift !== undefined ? 'set: y and lift exclude each other' : null;
     case 'terrain': return i.to !== undefined && i.op !== 'flatten' ? 'terrain: to is for flatten' : null;
     case 'instance': return (i.op === 'move') !== (i.to !== undefined) ? 'disaster move: to=<place> (only for move)' : null;
