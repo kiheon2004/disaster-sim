@@ -131,7 +131,9 @@ function BrushSettingsSection({ editing }: { editing: boolean }) {
         <div className={styles.note} data-testid="stroke-delta">{t('nature.strokeDelta', { up: delta.up.toFixed(2), down: (-delta.down).toFixed(2), area: Math.round(delta.area) })}</div>
       )}
       {s.brushPreview && (
-        <div className={styles.note} data-testid="brush-preview">{t('terrain.preview', { up: s.brushPreview.up.toFixed(2), down: (-s.brushPreview.down).toFixed(2), area: Math.round(s.brushPreview.area) })}</div>
+        <div className={styles.note} data-testid="brush-preview">{s.terrainTool === 'paint' || s.terrainTool === 'soil'
+          ? t('terrain.previewPaint', { area: Math.round(s.brushPreview.area) }) // painting moves no ground: only the painted area
+          : t('terrain.preview', { up: s.brushPreview.up.toFixed(2), down: (-s.brushPreview.down).toFixed(2), area: Math.round(s.brushPreview.area) })}</div>
       )}
       <div className={styles.note}>{t('terrain.follow.note')}</div>
       {s.terrainTool === 'erode' && <div className={styles.note}>{t('nature.erode.note')}</div>}

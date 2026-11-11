@@ -28,6 +28,7 @@ const LEAK_N = Number(process.env.LEAK_N ?? 100);
 const SAMPLE_EVERY = Number(process.env.SAMPLE_EVERY ?? 10);
 const IDLE_MS = Number(process.env.IDLE_MS ?? 3000);
 const ORBIT_MS = Number(process.env.ORBIT_MS ?? 3000);
+const SELECT_N = Number(process.env.SELECT_N ?? 5);
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: true,
@@ -106,32 +107,40 @@ async function scaleRow(n) {
   row.idle = await page.evaluate((ms) => window.__measure(ms, false), IDLE_MS);
   row.orbit = await page.evaluate((ms) => window.__measure(ms, true), ORBIT_MS);
 
-  // Select latency: a real click on the roof of the building nearest the map centre, seen from above.
-  const pick = await page.evaluate(() => {
+  // Select latency: real clicks on the roofs of the SELECT_N buildings nearest the map centre, each seen from above. The
+  // first click also pays for the inspector's first mount, so the row keeps it apart (selectFirstMs) from the median of the rest.
+  const picks = await page.evaluate((k) => {
     const objs = Object.values(window.__ds.world.getState().doc.objects).filter((o) => o.type === 'building');
     objs.sort((a, b) => Math.hypot(a.transform.position[0], a.transform.position[2]) - Math.hypot(b.transform.position[0], b.transform.position[2]));
-    const o = objs[0];
-    if (!o) return null;
-    const [x, y, z] = o.transform.position;
-    window.__view(x, z, y + 80, 0.5);
-    return { id: o.id, x, y, z };
-  });
-  if (pick) {
+    return objs.slice(0, k).map((o) => ({ id: o.id, x: o.transform.position[0], y: o.transform.position[1], z: o.transform.position[2] }));
+  }, SELECT_N);
+  const pick = picks[0] ?? null;
+  const selectTimes = [];
+  for (const p of picks) {
+    await page.evaluate(({ x, y, z }) => { window.__ds.editor.getState().select(null); window.__view(x, z, y + 80, 0.5); }, p);
     await wait(600);
     const [sx, sy] = await page.evaluate(({ x, y, z }) => {
       const st = window.__r3f.get(), r = st.gl.domElement.getBoundingClientRect();
       const v = st.camera.position.clone().set(x, y + 1, z).project(st.camera);
       return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
-    }, pick);
+    }, p);
     await page.mouse.move(sx - 10, sy - 6);
     await page.mouse.move(sx, sy, { steps: 3 });
     await wait(200);
     const t0 = performance.now();
     await page.mouse.click(sx, sy);
-    const ok = await page.waitForFunction((id) => window.__ds.editor.getState().selectedIds.includes(id), { timeout: 10_000 }, pick.id).then(() => true, () => false);
+    const ok = await page.waitForFunction((id) => window.__ds.editor.getState().selectedIds.includes(id), { timeout: 10_000 }, p.id).then(() => true, () => false);
     await page.evaluate(() => window.__frames());
-    row.selectMs = ok ? +(performance.now() - t0).toFixed(1) : null;
-
+    selectTimes.push(ok ? +(performance.now() - t0).toFixed(1) : null);
+    await wait(1600); // past the 1.5 s overlap-cycling window, so the next click is a fresh pick
+  }
+  const rest = selectTimes.slice(1).filter((t) => t != null).sort((a, b) => a - b);
+  row.selectFirstMs = selectTimes[0] ?? null;
+  row.selectMs = rest.length ? rest[Math.floor((rest.length - 1) / 2)] : row.selectFirstMs; // median of the clicks after the first
+  row.selectTimes = selectTimes;
+  if (pick) {
+    await page.evaluate(({ id, x, y, z }) => { window.__ds.editor.getState().select(id); window.__view(x, z, y + 80, 0.5); }, pick);
+    await wait(600);
     // Drag latency: the gizmo's write path (transaction + a transform per frame, history off), 90 frames.
     Object.assign(row, await page.evaluate(async (id) => {
       const w = window.__ds.world;
