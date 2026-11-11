@@ -18,7 +18,7 @@ import type { TerrainData } from '@/core/model';
 import { HEIGHT_QUANTUM, type GridRect } from '@/terrain/TerrainData';
 import { nearest, pointAt, type Centerline } from './curve';
 import { ROAD_MATERIAL_PROPS, SIDEWALK_GROUND } from './materials';
-import { intersectionsOf, type Intersection } from './intersections';
+import { intersectionsOf, mitresOf, type Intersection } from './intersections';
 import { nominalSection, sectionAt, sectionExtent, taperParts, transitionsOf } from './crossSection';
 import { segmentLine } from './network';
 import type { RoadNetwork, RoadNode, RoadSegment } from './types';
@@ -27,6 +27,8 @@ export const GRADE_WINDOW = 16;
 export const MAX_BLEND = 8;
 /** Extra half width so a carriageway edge between two vertices still claims them (m). */
 const EDGE_MARGIN = 0.35;
+/** Arc length from a mitred end within which the mitre line cuts the claims (m; the slide is ≤ ~1.3 m at the reach). */
+const MITRE_ZONE = 2;
 
 /** Natural terrain (underlay where a road covers it). */
 export interface Natural {
@@ -193,6 +195,7 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
   };
   const segs = Object.values(n.segments).sort((a, b) => (a.id < b.id ? -1 : 1));
   const ints = intersectionsOf(n);
+  const mitres = mitresOf(n);
   for (const s of segs) {
     const [bx0, bz0, bx1, bz1] = segmentBounds(n, s);
     const bx = rectOf(t, bx0, bz0, bx1, bz1);
@@ -209,6 +212,15 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
     const g = ROAD_MATERIAL_PROPS[p.material].ground;
     const trimA = ints.get(s.a)?.trim.get(s.id) ?? 0;
     const trimB = ints.get(s.b)?.trim.get(s.id) ?? 0;
+    // Phase 36: a mitred end (near-collinear joint) is cut on the mitre line through the node, oriented into this road.
+    const cut = (atStart: boolean) => {
+      const T = mitres.get(atStart ? s.a : s.b);
+      if (!T) return null;
+      const p = pointAt(line, atStart ? 0 : line.length);
+      const into = Math.sign((p.tx * T.tx + p.tz * T.tz) * (atStart ? 1 : -1));
+      return { x: p.x, z: p.z, tx: T.tx * into, tz: T.tz * into };
+    };
+    const cutA = cut(true), cutB = cut(false);
     // Every vertex of the segment's reach box inside the rectangle, once.
     const r0 = rectOf(t, bx0, bz0, bx1, bz1)!;
     const zA = Math.max(r0.z0, rect.z0), zB = Math.min(r0.z1, rect.z1);
@@ -222,7 +234,10 @@ export function claims(t: TerrainData, nat: Natural, n: RoadNetwork, rect: GridR
         if (hit.dist > R) continue;
         // Beyond the trimmed ends: the intersection polygon decides (or nothing at free ends).
         const atEndA = hit.s <= 1e-6, atEndB = hit.s >= line.length - 1e-6;
-        if ((atEndA && endBeyond(line, 0, x, z)) || (atEndB && endBeyond(line, line.length, x, z))) continue;
+        if ((atEndA && !cutA && endBeyond(line, 0, x, z)) || (atEndB && !cutB && endBeyond(line, line.length, x, z))) continue;
+        // A mitred end claims its half of the outer wedge (beyond its own end plane) and leaves the other road's half.
+        if (cutA && hit.s <= MITRE_ZONE && (x - cutA.x) * cutA.tx + (z - cutA.z) * cutA.tz < -0.01) continue;
+        if (cutB && hit.s >= line.length - MITRE_ZONE && (x - cutB.x) * cutB.tx + (z - cutB.z) * cutB.tz < -0.01) continue;
         if (hit.s < trimA - 0.5 || hit.s > line.length - trimB + 0.5) continue;
         const hc = prof ? profileAt(line, prof, hit.s) : NaN;
         const sec = tapered ? sectionAt(n, s, hit.s) : own;
@@ -431,6 +446,16 @@ export function dirtyRect(t: TerrainData, a: RoadNetwork, b: RoadNetwork): GridR
       if (Number.isFinite(x0)) boxes.push([x0 - r, z0 - r, x1 + r, z1 + r]);
     }
     boxes.push(...transitionBoxes(n, junctions));
+    // Phase 36: a mitre cut depends on both roads' directions: re-bake around the node at the wider road's reach.
+    const mitres = mitresOf(n);
+    for (const id of junctions) {
+      const node = n.nodes[id];
+      if (!node || !mitres.has(id)) continue;
+      let r = 0;
+      for (const s of Object.values(n.segments)) if (s.a === id || s.b === id) r = Math.max(r, reach(s, n));
+      r += MITRE_ZONE;
+      boxes.push([node.x - r, node.z - r, node.x + r, node.z + r]);
+    }
   }
   if (!boxes.length) return null;
   let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;

@@ -18,6 +18,7 @@ import { parseDocument, serializeDocument } from '@/world/serialization';
 import { BUILTIN_TEMPLATES, buildTemplate } from '@/templates/builtin';
 import { buildEnvironment, ENVIRONMENT_PRESETS } from '@/landscape/presets';
 import { transitionsOf } from './crossSection';
+import { mitresOf } from './intersections';
 
 const NOW = '2026-10-11T00:00:00.000Z';
 
@@ -79,6 +80,7 @@ describe('Phase 36 roads: identity of every network without a width joint', { ti
   const got: Record<string, { terrain: string; objects: string }> = {};
   const check = (name: string, doc: WorldDocument, objects: string) => {
     expect(transitionsOf(doc.roads).size, `${name} has no straight width joint`).toBe(0);
+    expect(mitresOf(doc.roads).size, `${name} has no near-collinear (mitred) joint`).toBe(0);
     got[name] = { terrain: terrainHash(doc.terrain), objects };
     // The saved document reloads (v7: recompose + re-bake with the current code) to the same terrain.
     const r = parseDocument(serializeDocument(doc));

@@ -15,7 +15,7 @@ import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { pointAt, type Centerline } from './curve';
 import { naturalOf, profileAt, segmentProfile } from './bake';
 import { sectionAt, taperStations, type MarkLine, type RoadSection } from './crossSection';
-import { intersectionsOf, type Intersection } from './intersections';
+import { intersectionsOf, mitreAxis, mitresOf, type Intersection } from './intersections';
 import { CURB_COLOR, ROAD_MATERIAL_PROPS, SIDEWALK_COLOR } from './materials';
 import { degree, segmentLine } from './network';
 import type { RoadNetwork, RoadSegment } from './types';
@@ -113,7 +113,24 @@ export function segmentPiece(ctx: MeshContext, seg: RoadSegment): RoadPiece {
   if (s1 - s0 < 0.2) return out;
   const p = seg.profile;
   const prof = segmentProfile(terrain, naturalOf(terrain, n), n, seg, line);
-  const S = sections(line, s0, s1, taperStations(n, seg)).map((s) => frame(line, s));
+  // Phase 36: an end at a near-collinear joint is mitred — its cross-section lies on the mitre line (shared with the
+  // next road). The slide along the road is at most (w + sidewalk)·tan(turn / 2), ≤ 0.65 m; stations closer than that
+  // to the end are dropped so the edges never fold back.
+  const mitres = mitresOf(n);
+  const mitre = (atStart: boolean) => {
+    const T = mitres.get(atStart ? seg.a : seg.b);
+    if (!T) return null;
+    const f = frame(line, atStart ? s0 : s1);
+    const sec = sectionAt(n, seg, f.s);
+    const axis = mitreAxis(f.rx, f.rz, f.tx, f.tz, T);
+    return { ...axis, reach: Math.abs(axis.k) * (sec.w + Math.max(sec.swL, sec.swR)) + 0.05 };
+  };
+  const mA = mitre(true), mB = mitre(false);
+  let stations = sections(line, s0, s1, taperStations(n, seg));
+  if (mA || mB) stations = stations.filter((s, i) => i === 0 || i === stations.length - 1 || ((!mA || s > s0 + mA.reach) && (!mB || s < s1 - mB.reach)));
+  const S = stations.map((s) => frame(line, s));
+  if (mA) S[0] = { ...S[0], rx: mA.rx, rz: mA.rz };
+  if (mB) S[S.length - 1] = { ...S[S.length - 1], rx: mB.rx, rz: mB.rz };
   // Phase 36: the cross-section of every station (the profile's own, except inside a width taper).
   const X = S.map((f) => sectionAt(n, seg, f.s));
   const height = (x: number, z: number, cx: number, cz: number, s: number, k: number) => {

@@ -72,6 +72,50 @@ export function intersectionsOf(n: RoadNetwork): Map<string, Intersection> {
   return m;
 }
 
+/**
+ * Phase 36: below this turn (rad) a straight joint stays a plain butt joint — its wedge is narrower than 1 cm, and roads
+ * that continue exactly straight (split roads, the default world) keep their geometry bit for bit.
+ */
+export const MITRE_MIN_TURN = 1e-3;
+
+const mitreCache = new WeakMap<RoadNetwork, Map<string, { tx: number; tz: number }>>();
+
+/**
+ * Mitre joins (Phase 36): two roads meeting almost straight (a turn too small for a bend patch, < ~9.9°) both end on the
+ * bisector line through the node instead of each on its own perpendicular end plane, so the outer side has no wedge
+ * gap and the inner side no overlapping (z-fighting) surfaces — in the mesh and in the bake. Value per node: the unit
+ * through-direction T; the mitre line is perpendicular to it. Cached per network object.
+ */
+export function mitresOf(n: RoadNetwork): Map<string, { tx: number; tz: number }> {
+  let m = mitreCache.get(n);
+  if (m) return m;
+  m = new Map();
+  const ints = intersectionsOf(n);
+  for (const id of Object.keys(n.nodes).sort()) {
+    if (ints.has(id)) continue;
+    const d = nodeDirections(n, id);
+    if (d.length !== 2 || d[0].segment === d[1].segment) continue;
+    // Turn = angle between road 1 leaving the node and road 0 arriving at it (−d0).
+    const turn = Math.atan2(Math.abs(d[0].dx * d[1].dz - d[0].dz * d[1].dx), -(d[0].dx * d[1].dx + d[0].dz * d[1].dz));
+    if (turn < MITRE_MIN_TURN) continue;
+    const tx = d[1].dx - d[0].dx, tz = d[1].dz - d[0].dz, l = Math.hypot(tx, tz);
+    m.set(id, { tx: tx / l, tz: tz / l });
+  }
+  mitreCache.set(n, m);
+  return m;
+}
+
+/**
+ * Lateral axis of a segment's mitred end: the cross-section point at lateral o is end + o·(rx, rz), on the mitre line.
+ * (r, t) = the right normal and tangent of the segment at that end; T = the node's mitre; k = slide per metre of lateral.
+ * Both roads map lateral o to the same point (r'·r = 1 for each), so their sections meet exactly.
+ */
+export function mitreAxis(rx: number, rz: number, tx: number, tz: number, T: { tx: number; tz: number }): { rx: number; rz: number; k: number } {
+  // Slide along the tangent until the point lies on the line ⟂ T: (r + k·t)·T = 0.
+  const k = -(rx * T.tx + rz * T.tz) / (tx * T.tx + tz * T.tz);
+  return { rx: rx + k * tx, rz: rz + k * tz, k };
+}
+
 function sideHasWalk(s: RoadSegment, side: 'left' | 'right') {
   return s.profile.sidewalk === 'both' || s.profile.sidewalk === side;
 }
