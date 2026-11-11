@@ -38,6 +38,7 @@ import { koP36Roads } from './ko.p36roads';
 import { koP36Struct } from './ko.p36struct';
 import { koP36Terrain } from './ko.p36terrain';
 import { koP37Cmd } from './ko.p37cmd';
+import { koP37Nl } from './ko.p37nl';
 import { koP37Ui } from './ko.p37ui';
 import { koP37Left } from './ko.p37left';
 
@@ -651,6 +652,7 @@ export const ko = {
   ...koP36Struct,
   ...koP36Terrain,
   ...koP37Cmd,
+  ...koP37Nl,
   ...koP37Ui,
   ...koP37Left,
 } as const;

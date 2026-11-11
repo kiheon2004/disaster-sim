@@ -35,6 +35,7 @@ import { enP36Roads } from './en.p36roads';
 import { enP36Struct } from './en.p36struct';
 import { enP36Terrain } from './en.p36terrain';
 import { enP37Cmd } from './en.p37cmd';
+import { enP37Nl } from './en.p37nl';
 import { enP37Ui } from './en.p37ui';
 import { enP37Left } from './en.p37left';
 
@@ -648,6 +649,7 @@ export const en: Record<MessageKey, string> = {
   ...enP36Struct,
   ...enP36Terrain,
   ...enP37Cmd,
+  ...enP37Nl,
   ...enP37Ui,
   ...enP37Left,
 };
