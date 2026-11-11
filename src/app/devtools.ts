@@ -107,6 +107,7 @@ import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 import * as placementActions from './placementActions';
 import * as commandActions from './commandActions';
 import { useCommandSession } from '@/ui/Command/commandSession';
+import { previewStats } from '@/rendering/command/previewStats';
 import { interpret } from '@/command/interpret';
 import { formatCanonical, parseCanonical } from '@/command/canonical';
 import { planIntent } from '@/command/plan';
@@ -159,6 +160,11 @@ export function installDevtools() {
       actions: commandActions,
       context: commandActions.commandContext,
       lib: { interpret, parseCanonical, formatCanonical, planIntent, previewIntents, envOf, KINDS },
+      /**
+       * What the viewport's preview layer draws right now (counts by kind, from the layer's own report) and how many
+       * three.js objects it has in the scene (`sceneObjects`, counted from the scene graph; 0 = no leftover ghosts).
+       */
+      preview: previewStats,
     },
     /**
      * Phase 37 document hashes: `raw` = the serialized document (ids included), `canonical` = the same with object and

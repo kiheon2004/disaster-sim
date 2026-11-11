@@ -5,9 +5,10 @@ import type { Vec3 } from '@/core/types';
 import { WORLD_SIZE } from '@/core/units';
 import { useWorldStore } from '@/world/worldStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
-import { dabPath, paintCore, previewDab, type DabOptions, type DabPreview, type TerrainBrushOp } from '@/terrain/TerrainEditor';
+import { dabPath, paintCore, previewDab, type DabOptions, type TerrainBrushOp } from '@/terrain/TerrainEditor';
 import { groundMaterial } from '@/terrain/GroundMaterials';
 import { markTerrainDirty } from '@/rendering/terrain/terrainDirty';
+import { HeightPreviewMesh } from '@/rendering/terrain/HeightPreviewMesh';
 import { unionRect, type GridRect } from '@/terrain/TerrainData';
 import { beginGesture, type Gesture } from '../input/gesture';
 import { useEditorStore, type TerrainToolId } from '../editorStore';
@@ -73,60 +74,6 @@ function setOutline(line: THREE.Line, cx: number, cz: number, r: number, square:
   line.visible = true;
 }
 
-/**
- * Draped preview of a dab (Phase 36, §22): one vertex per terrain vertex of the predicted rectangle, coloured by the
- * predicted height change of 1 s of brush time (warm = raise, cool = lower, stronger = more), or by the paint colour
- * where a paint brush would paint. Alpha 0 where nothing changes.
- */
-class PreviewMesh {
-  readonly mesh: THREE.Mesh;
-  private size = { w: 0, h: 0 };
-  constructor() {
-    const g = new THREE.BufferGeometry();
-    const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
-    this.mesh = new THREE.Mesh(g, m);
-    this.mesh.renderOrder = 9;
-    this.mesh.frustumCulled = false;
-    this.mesh.visible = false;
-    this.mesh.raycast = () => {};
-  }
-
-  show(p: DabPreview, t: { nx: number; cellSize: number; originX: number; originZ: number; heights: Float32Array }, paintColor: THREE.Color | null) {
-    const w = p.rect.x1 - p.rect.x0 + 1, h = p.rect.z1 - p.rect.z0 + 1, n = w * h;
-    const g = this.mesh.geometry;
-    if (w !== this.size.w || h !== this.size.h) {
-      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
-      const idx: number[] = [];
-      for (let z = 0; z < h - 1; z++) for (let x = 0; x < w - 1; x++) {
-        const a = z * w + x;
-        idx.push(a, a + w, a + 1, a + 1, a + w, a + w + 1);
-      }
-      g.setIndex(idx);
-      this.size = { w, h };
-    }
-    const pos = g.attributes.position as THREE.BufferAttribute, col = g.attributes.color as THREE.BufferAttribute;
-    const scale = Math.max(p.up, -p.down, 1e-6);
-    for (let k = 0; k < n; k++) {
-      const ix = p.rect.x0 + (k % w), iz = p.rect.z0 + Math.floor(k / w);
-      const d = p.dh[k];
-      pos.setXYZ(k, t.originX + ix * t.cellSize, t.heights[iz * t.nx + ix] + Math.max(0, d) + 0.06, t.originZ + iz * t.cellSize);
-      if (paintColor) col.setXYZW(k, paintColor.r, paintColor.g, paintColor.b, p.painted[k] ? 0.55 : 0);
-      else if (d > 0) col.setXYZW(k, 1, 0.55, 0.2, 0.18 + 0.6 * (d / scale));
-      else if (d < 0) col.setXYZW(k, 0.25, 0.6, 1, 0.18 + 0.6 * (-d / scale));
-      else col.setXYZW(k, 0, 0, 0, 0);
-    }
-    pos.needsUpdate = true;
-    col.needsUpdate = true;
-    this.mesh.visible = true;
-  }
-
-  dispose() {
-    this.mesh.geometry.dispose();
-    (this.mesh.material as THREE.Material).dispose();
-  }
-}
-
 /** Dab options of the current tool settings at (x, z) (shared by the stroke and the preview). */
 function dabOptions(op: TerrainBrushOp, x: number, z: number, dt: number, target: number): DabOptions {
   const ed = useEditorStore.getState();
@@ -156,7 +103,7 @@ export function TerrainTool() {
   const ring = useMemo(() => guideLine(RING_SEGMENTS + 1, TOOL_COLORS[tool]), []); // eslint-disable-line react-hooks/exhaustive-deps
   const level = useMemo(() => guideLine(RING_SEGMENTS + 1, '#fff3c4', 11), []);
   const ramp = useMemo(() => guideLine(2, '#fff3c4', 11), []);
-  const preview = useMemo(() => new PreviewMesh(), []);
+  const preview = useMemo(() => new HeightPreviewMesh(), []);
   (ring.material as THREE.LineBasicMaterial).color.set(TOOL_COLORS[tool]);
 
   const hitFrom = (e: ThreeEvent<PointerEvent | MouseEvent>): Vec3 | null => {

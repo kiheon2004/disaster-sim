@@ -22,6 +22,8 @@ import { StaticWaterLayer } from '@/rendering/landscape/StaticWaterLayer';
 import { DeformationPicker, DeformationPreview } from '@/rendering/deformation/DeformationTools';
 import { GroundPicker, GroundPreview } from '@/rendering/ground/GroundTools';
 import { PlacementLayer } from '@/rendering/placement/PlacementLayer';
+import { CursorTracker } from '@/rendering/command/CursorTracker';
+import { CommandPreviewLayer } from '@/rendering/command/CommandPreviewLayer';
 import { RoadTool } from './tools/RoadTool';
 import { AreaTool, BrushTool, LineTool } from './tools/BulkTools';
 import { PasteTool } from './tools/PasteTool';
@@ -217,6 +219,7 @@ export function EditorScene() {
       <GroundPreview />
       <GroundPicker />
       <PlacementLayer />
+      <CursorTracker />
       {live.map((o) => (
         <EditorEntity
           key={o.id}
@@ -240,6 +243,8 @@ export function EditorScene() {
       {tool === 'blueprint' && <BlueprintTool />}
       {editingBuilding && <BuildingEditor />}
       <SnapMarker />
+      {/* Phase 37: what the command bar's plan would do (ghosts, markings, heat map, pins) — never the document. */}
+      <CommandPreviewLayer />
       {interactive && single && <TransformGizmo />}
       {multi && <GroupSelection ids={selectedIds} />}
     </>

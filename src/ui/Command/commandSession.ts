@@ -7,7 +7,7 @@
  */
 import { create } from 'zustand';
 import type { EntityId } from '@/core/types';
-import type { Msg } from '@/command/context';
+import type { Highlight, Msg } from '@/command/context';
 import type { Intent } from '@/command/intent';
 import type { PlanClarifyOption } from '@/command/planTypes';
 import type { LineOutcome, Preview } from '@/command/run';
@@ -96,6 +96,9 @@ interface CommandSessionState {
   setSettings: (patch: Partial<CommandSettings>) => void;
   /** Drop the open plan (mode switch, document replaced, a tool or a disaster placement armed, Esc). */
   cancelPlan: () => void;
+  /** What the clarify option under the pointer / keyboard focus points at (the viewport emphasises it); null = none. */
+  hover: Highlight | null;
+  setHover: (hover: Highlight | null) => void;
 }
 
 export const useCommandSession = create<CommandSessionState>((set, get) => ({
@@ -134,4 +137,6 @@ export const useCommandSession = create<CommandSessionState>((set, get) => ({
   cancelPlan: () => {
     if (get().plan) set({ plan: null });
   },
+  hover: null,
+  setHover: (hover) => set({ hover }),
 }));

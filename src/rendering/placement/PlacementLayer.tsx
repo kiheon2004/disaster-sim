@@ -9,6 +9,10 @@
  *    of the running simulation cannot be moved (their pin turns orange).
  *
  * Render-only + UI state: the document changes only through the placement actions.
+ *
+ * Phase 37: commands show pins too (rendering/command/previewModel.ts `commandPins`) — every pin while a plan with
+ * disasters is open (the ones it removes marked), and the pins of the disaster a command has just placed / a plan or a
+ * question points at, whatever tab is open. Nothing is selected for that (the object selection stays as it is).
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -28,17 +32,18 @@ import { beginGesture, type Gesture } from '@/editor/input/gesture';
 import { useT } from '@/i18n/i18n';
 import type { EventSpec } from '@/events/specs';
 import type { PhenomenonInstance } from '@/phenomena/types';
+import { useCommandPins } from '../command/useCommandPins';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const ground = () => samplerFor(currentDeformation()?.terrain ?? useWorldStore.getState().doc.terrain);
-const PIN_H = 7;
-const COLORS: Record<string, string> = { weather: '#5aa9ff', geology: '#c08a4a', hydrology: '#3fc6d8', fireHeat: '#ff6a3d', impactBlast: '#ffb238', spaceGravity: '#b48cff', atmosphere: '#9fd36b' };
+export const PIN_H = 7;
+export const COLORS: Record<string, string> = { weather: '#5aa9ff', geology: '#c08a4a', hydrology: '#3fc6d8', fireHeat: '#ff6a3d', impactBlast: '#ffb238', spaceGravity: '#b48cff', atmosphere: '#9fd36b' };
 
 /**
  * A text label drawn as a screen-sized sprite (canvas texture) — no extra React roots (drei <Html> roots unmounted during a
  * scene switch log React warnings). Disposed with the component.
  */
-function Label({ text, position, strong = false }: { text: string; position: [number, number, number]; strong?: boolean }) {
+export function Label({ text, position, strong = false }: { text: string; position: [number, number, number]; strong?: boolean }) {
   const sprite = useMemo(() => {
     const px = 2, font = `600 ${12 * px}px system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif`;
     const c = document.createElement('canvas');
@@ -69,12 +74,12 @@ function Label({ text, position, strong = false }: { text: string; position: [nu
   return <primitive object={sprite} position={position} />;
 }
 
-function Ring({ x, z, fp, color }: { x: number; z: number; fp: Footprint; color: string }) {
+export function Ring({ x, z, fp, color }: { x: number; z: number; fp: Footprint; color: string }) {
   const pts = useMemo(() => circlePts(x, z, fp.radius, 96), [x, z, fp.radius]);
   return <GroundLine pts={pts} color={color} dashed={fp.reference} />;
 }
 
-function Pin({ x, z, color, selected }: { x: number; z: number; color: string; selected: boolean }) {
+export function Pin({ x, z, color, selected }: { x: number; z: number; color: string; selected: boolean }) {
   // Phase 36: x / z are the user's (never moved by a terrain edit); y is drawn on the ground as it is now — subscribing
   // to the terrain object re-renders the pin after a brush commit / undo (it kept the old height before).
   useWorldStore((s) => s.doc.terrain);
@@ -122,16 +127,19 @@ export function PlacementLayer() {
   const { gl, camera } = useThree();
   const ray = useRef(new THREE.Raycaster());
 
-  const showPlaced = type !== null || selected !== null || drag !== null || (rightOpen && tab === 'phenomena');
+  // Phase 37: an open command plan with disasters shows every pin; the pins a command placed / points at show alone.
+  const cmd = useCommandPins();
+  const showPlaced = type !== null || selected !== null || drag !== null || (rightOpen && tab === 'phenomena') || cmd.all;
   const running = useMemo(() => new Map(events.map((e) => [e.key, e.status])), [events]);
   // Read through a ref: the pointer listeners must not be re-registered on every scheduler change
   // (that dropped a pin drag in progress and released its camera lock mid-drag — Phase 36).
   const runningRef = useRef(running);
   runningRef.current = running;
   const placed = useMemo<Placed[]>(() => {
-    if (!showPlaced) return [];
+    if (!showPlaced && !cmd.show.length) return [];
     const out: Placed[] = [];
     for (const inst of instances ?? []) {
+      if (!showPlaced && !cmd.show.includes(inst.id)) continue;
       const c = catalogOf(inst.type);
       if (!inst.enabled || !c) continue;
       const at = c.placement.get(inst.spec);
@@ -140,7 +148,7 @@ export function PlacementLayer() {
       out.push({ inst, at, fp: c.placement.footprint(inst.spec), color: COLORS[c.category] ?? '#fff', label: `${inst.id} · ${def ? t(def.labelKey) : inst.type}` });
     }
     return out;
-  }, [instances, showPlaced, t]);
+  }, [instances, showPlaced, cmd.show, t]);
   const placedRef = useRef(placed);
   placedRef.current = placed;
 
@@ -277,15 +285,19 @@ export function PlacementLayer() {
       {placed.map((p) => {
         const at = drag && drag.id === p.inst.id ? drag.p : p.at;
         const st = running.get(p.inst.id);
-        const color = st === 'active' || st === 'paused' ? '#ff8a2a' : st === 'done' || st === 'stopped' ? '#7c8794' : p.color;
+        // Phase 37: a pin the open command plan removes is red with a × before its label (a mark, not only a colour).
+        const gone = cmd.removing.includes(p.inst.id);
+        const color = gone ? '#ff5a5a' : st === 'active' || st === 'paused' ? '#ff8a2a' : st === 'done' || st === 'stopped' ? '#7c8794' : p.color;
         const sel = selected === p.inst.id;
+        // A pin a command placed or points at: its ring and full label like a selected one — but it is NOT selected.
+        const told = sel || cmd.show.includes(p.inst.id);
         const y = ground().sampleHeight(at[0], at[1]);
         const fp = p.fp;
         return (
           <group key={p.inst.id}>
             <Pin x={at[0]} z={at[1]} color={color} selected={sel} />
-            {fp && (sel || type) && <Ring x={at[0]} z={at[1]} fp={fp} color={color} />}
-            <Label position={[at[0], y + PIN_H + 1.4, at[1]]} strong={sel} text={`${p.label}${sel && fp ? ` · ${fp.radius.toFixed(0)} m${fp.reference ? ` (${t('lib.reference')})` : ''}` : ''}`} />
+            {fp && (told || type) && <Ring x={at[0]} z={at[1]} fp={fp} color={color} />}
+            <Label position={[at[0], y + PIN_H + 1.4, at[1]]} strong={told} text={`${gone ? '× ' : ''}${p.label}${told && fp ? ` · ${fp.radius.toFixed(0)} m${fp.reference ? ` (${t('lib.reference')})` : ''}` : ''}`} />
           </group>
         );
       })}

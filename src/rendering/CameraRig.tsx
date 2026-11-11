@@ -7,12 +7,18 @@ import { useViewStore } from './viewStore';
 import { radToDeg } from '@/core/math';
 import { simulationController } from '@/simulation/SimulationController';
 import { attachCameraLock } from '@/editor/input/cameraLock';
+import { registerViewPoint } from '@/app/commandActions';
+import { liveGround } from './terrain/liveGround';
+import { viewPoint } from './command/pointMath';
 
 const followDelta = new THREE.Vector3();
+const viewOrigin = new THREE.Vector3();
+const viewDir = new THREE.Vector3();
 
 /**
  * Free orbit camera: left-drag orbit, right-drag pan, wheel zoom.
  * Also services focus requests and publishes the azimuth for the compass overlay.
+ * Phase 37: answers "where does the middle of the view meet the ground?" for commands ("there", `view`).
  */
 export function CameraRig() {
   const controls = useRef<OrbitControlsImpl>(null);
@@ -23,6 +29,19 @@ export function CameraRig() {
   const defaultControls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
   // Phase 36: `enabled` comes from the camera lock registry (owned locks, input/cameraLock.ts).
   useEffect(() => attachCameraLock(defaultControls), [defaultControls]);
+
+  // Phase 37 (audit U5): the view point is read on request (when a command is planned), never per frame — the ray
+  // through the screen centre against the ground as it is drawn; the orbit target's (x, z) when it meets none.
+  useEffect(() => {
+    registerViewPoint(() => {
+      camera.updateMatrixWorld();
+      camera.getWorldPosition(viewOrigin);
+      camera.getWorldDirection(viewDir);
+      const t = controls.current?.target;
+      return viewPoint(liveGround(), [viewOrigin.x, viewOrigin.y, viewOrigin.z], [viewDir.x, viewDir.y, viewDir.z], t ? [t.x, t.z] : null);
+    });
+    return () => registerViewPoint(null);
+  }, [camera]);
 
   useEffect(() => {
     if (!focusRequest || !controls.current) return;

@@ -35,6 +35,8 @@ import { PhysiologyLayer } from '../physiology/PhysiologyLayer';
 import { VehicleLayer } from '../vehicle/VehicleLayer';
 import { GroundPicker, GroundPreview } from '../ground/GroundTools';
 import { PlacementLayer } from '@/rendering/placement/PlacementLayer';
+import { CursorTracker } from '@/rendering/command/CursorTracker';
+import { CommandPreviewLayer } from '@/rendering/command/CommandPreviewLayer';
 import { useViewStore } from '../viewStore';
 import type { Vec3 } from '@/core/types';
 
@@ -114,6 +116,8 @@ export function SimulationScene() {
       <GroundPreview />
       <GroundPicker />
       <PlacementLayer />
+      <CursorTracker />
+      <CommandPreviewLayer scope="pins" />
       <GroundMotionLayer />
       <EpicenterMarker />
       <CameraShake />

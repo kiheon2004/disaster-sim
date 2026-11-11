@@ -63,9 +63,24 @@ export function ghostMaterial(invalid: boolean): THREE.Material {
   return invalid ? ghostInvalid : ghostValid;
 }
 
-/** Ghost material for a material mode ('normal' → the valid ghost). */
-export function ghostFor(mode: MaterialMode): THREE.Material {
-  return mode === 'ghostInvalid' ? ghostInvalid : mode === 'ghostWarn' ? ghostWarn : ghostValid;
+/** Opacity of a faint ghost relative to the ordinary one (Phase 37: a command's draft while typing). */
+export const FAINT_GHOST = 0.6;
+const faintGhosts = new Map<THREE.Material, THREE.Material>();
+
+/**
+ * Ghost material for a material mode ('normal' → the valid ghost). `faint` (Phase 37): the same material at a lower
+ * opacity — a command's draft plan while typing; the open plan and the placement tools use the ordinary one.
+ */
+export function ghostFor(mode: MaterialMode, faint = false): THREE.Material {
+  const m = mode === 'ghostInvalid' ? ghostInvalid : mode === 'ghostWarn' ? ghostWarn : ghostValid;
+  if (!faint) return m;
+  let f = faintGhosts.get(m);
+  if (!f) {
+    f = m.clone();
+    f.opacity = m.opacity * FAINT_GHOST;
+    faintGhosts.set(m, f);
+  }
+  return f;
 }
 
 /** Hook used by every view: resolves a color to the right material for the current mode. */

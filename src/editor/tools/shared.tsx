@@ -76,7 +76,7 @@ export function GroundCatcher(props: {
 }
 
 /** Ghost objects (one batched adapter per material mode); rebuilt when `objects` changes. */
-function GhostBatch({ objects, mode }: { objects: WorldObject[]; mode: MaterialMode }) {
+function GhostBatch({ objects, mode, faint }: { objects: WorldObject[]; mode: MaterialMode; faint: boolean }) {
   const [adapter, setAdapter] = useState<SimRenderAdapter | null>(null);
   const camera = useThree((s) => s.camera);
   const terrain = useSampler();
@@ -87,20 +87,25 @@ function GhostBatch({ objects, mode }: { objects: WorldObject[]; mode: MaterialM
     }
     const a = new SimRenderAdapter(staticRuntime(objects), terrain);
     a.update(camera, 0, 0);
-    a.setMaterialOverride(ghostFor(mode));
+    a.setMaterialOverride(ghostFor(mode, faint));
     a.cullEmpty();
     a.root.traverse((o) => (o.raycast = () => {}));
     setAdapter(a);
     return () => a.dispose();
   }, [objects, mode, terrain]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Phase 37: faint ⇄ ordinary is a change of material only — the batches are kept.
+  useEffect(() => {
+    adapter?.setMaterialOverride(ghostFor(mode, faint));
+  }, [adapter, mode, faint]);
   return adapter ? <primitive object={adapter.root} /> : null;
 }
 
 /**
  * Preview of a placement plan: placeable objects as blue ghosts, ones with warnings orange,
  * rejected ones red. Append-only growth (brush strokes) only builds the new tail.
+ * `faint` (Phase 37): drawn at a lower opacity — a command's draft plan while typing.
  */
-export function PlanPreview({ plan, showRejected = true }: { plan: readonly PlannedObject[]; showRejected?: boolean }) {
+export function PlanPreview({ plan, showRejected = true, faint = false }: { plan: readonly PlannedObject[]; showRejected?: boolean; faint?: boolean }) {
   // Segments of the plan already turned into ghost batches (prefix-stable while growing).
   const segs = useRef<{ start: number; end: number; first: PlannedObject | undefined; groups: Record<MaterialMode, WorldObject[]> }[]>([]);
   const segments = useMemo(() => {
@@ -129,7 +134,7 @@ export function PlanPreview({ plan, showRejected = true }: { plan: readonly Plan
     <>
       {segments.map((s) => (
         <group key={`${s.start}`}>
-          {(['ghost', 'ghostWarn', 'ghostInvalid'] as const).map((m) => (s.groups[m].length ? <GhostBatch key={m} objects={s.groups[m]} mode={m} /> : null))}
+          {(['ghost', 'ghostWarn', 'ghostInvalid'] as const).map((m) => (s.groups[m].length ? <GhostBatch key={m} objects={s.groups[m]} mode={m} faint={faint} /> : null))}
         </group>
       ))}
     </>
