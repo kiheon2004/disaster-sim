@@ -145,7 +145,7 @@ await esc();
 await type(KO ? '건물 몇 채야?' : 'how many buildings?');
 await enter();
 await shot('query-count');
-await type(KO ? '3층 이상 건물 목록' : 'list buildings with 3 or more floors');
+await type(KO ? '3층 이상 건물 목록' : 'list buildings with at least 3 floors');
 await enter();
 await shot('query-list');
 await page.click('[data-testid="command-help"]').catch(() => null);

@@ -181,7 +181,7 @@ export const enP37Ui = {
   'cmd37.ui.script.perLine.title': 'Off: the whole script is one undo step. Either way a line that fails cancels the whole script.',
   'cmd37.ui.script.applySmall': 'Apply small edits at once',
   'cmd37.ui.script.applySmall.title': 'Single commands that touch at most {max} objects skip the preview. Deletes, terrain, roads and larger edits are always previewed.',
-  'cmd37.ui.script.placeholder': '# one command per line; lines starting with # are comments\nplace building:house count=3 along=road:main side=north gap=2\ngroup last name="North block"',
+  'cmd37.ui.script.placeholder': '# one command per line; a line starting with "# " (hash and a space) is a comment\nplace building:house count=3 along=road:main side=north gap=2\ngroup last name="North block"',
   'cmd37.ui.script.count': '{count} commands (at most {max}). Ctrl/⌘+Enter runs. Kept in this browser, not in the world file.',
   'cmd37.ui.script.tooLong': '{count} commands — more than a script may have ({max}).',
   'cmd37.ui.script.loaded': 'Loaded {name}.',

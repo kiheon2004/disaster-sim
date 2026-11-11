@@ -183,7 +183,7 @@ export const koP37Ui: Record<keyof typeof enP37Ui, string> = {
   'cmd37.ui.script.perLine.title': '끔: 스크립트 전체가 실행 취소 한 단계. 어느 쪽이든 한 줄이 실패하면 스크립트 전체를 취소합니다.',
   'cmd37.ui.script.applySmall': '작은 편집은 바로 적용',
   'cmd37.ui.script.applySmall.title': '객체 {max}개 이하를 건드리는 한 줄 명령은 미리보기를 건너뜁니다. 삭제·지형·도로·더 큰 편집은 항상 미리보기합니다.',
-  'cmd37.ui.script.placeholder': '# 한 줄에 명령 하나. #로 시작하는 줄은 주석입니다\nplace building:house count=3 along=road:main side=north gap=2\ngroup last name="북쪽 블록"',
+  'cmd37.ui.script.placeholder': '# 한 줄에 명령 하나. "# "(#과 한 칸)로 시작하는 줄은 주석입니다\nplace building:house count=3 along=road:main side=north gap=2\ngroup last name="북쪽 블록"',
   'cmd37.ui.script.count': '명령 {count}개(최대 {max}개). Ctrl/⌘+Enter로 실행. 이 브라우저에만 보관하고 월드 파일에는 저장하지 않습니다.',
   'cmd37.ui.script.tooLong': '명령 {count}개 — 스크립트 한도({max}개)를 넘습니다.',
   'cmd37.ui.script.loaded': '{name}을(를) 불러왔습니다.',

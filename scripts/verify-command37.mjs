@@ -792,10 +792,12 @@ if (want('left')) {
   await ev((ids) => window.__ds.editor.getState().setSelection(ids, ids[0]), made.ids);
   await ev(() => window.__r3f.get().gl.domElement.focus?.());
   await chord('KeyC', 'Control');
-  await chord('KeyV', 'Control');
-  await wait(600);
+  await chord('KeyV', 'Control'); // arms the paste: the next click places it
+  await above(60, 70, 80);
+  { const [px, py] = await screen(60, 70); await page.mouse.move(px - 8, py - 5); await page.mouse.move(px, py, { steps: 3 }); await wait(250); await page.mouse.click(px, py); }
+  await wait(700);
   const after3 = await carsOf();
-  check('S18-5 copy / paste carries the settings too', Object.keys(after3).length === Object.keys(before).length + 2, { n: Object.keys(after3).length });
+  check('S18-5 copy / paste (Ctrl+C, Ctrl+V, click) carries the settings too', Object.keys(after3).length === Object.keys(before).length + 2 && (await objects()).length === ids0.size + 4, { n: Object.keys(after3).length, objects: (await objects()).length - ids0.size });
   await undoKey();
 
   // S19 — outliner: Shift = range, ↑ / ↓ move
@@ -864,7 +866,7 @@ if (want('life')) {
     ['a palette placement is armed', async () => { await ev(() => window.__ds.editor.getState().setPlacing?.({ type: 'tree' }) ?? window.__ds.editor.getState().setTool('place')); }],
     ['a disaster placement is armed', async () => { await ev(() => window.__ds.placement.armPlacement('blast')); }],
     ['the document is replaced', async () => { await ev(() => window.__ds.actions.loadSampleTown()); }],
-    ['the mode switches (simulation starts)', async () => { await leaveBarKeepPlan(); await page.keyboard.press('Space'); }],
+    ['the mode switches (the top bar\'s Simulation button)', async () => { const label = await tr('mode.simulation'); const [mx, my] = await ev((l) => { const b = [...document.querySelectorAll('button, [role="radio"], [role="tab"]')].find((x) => x.textContent.trim() === l); const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, label); await page.mouse.click(mx, my); await wait(1500); }],
   ];
   /** Blur the input without Esc (Esc would cancel the plan itself). */
   async function leaveBarKeepPlan() { await ev(() => document.activeElement?.blur()); await wait(100); }
