@@ -125,8 +125,17 @@ export function presetIsExact(kind: Kind): boolean {
   return tagsOf(kind.item).length > 0;
 }
 
+/** Per type, the kinds an object can be recognised as (palette order) — built once: counting 5000 objects asks 5000 times. */
+const EXACT_KINDS = new Map<ObjectType, Kind[]>();
+for (const k of KINDS) {
+  if (k.preset === undefined || !presetIsExact(k)) continue;
+  const list = EXACT_KINDS.get(k.type);
+  if (list) list.push(k);
+  else EXACT_KINDS.set(k.type, [k]);
+}
+
 /** The kind an object is shown as: the most specific exact kind it matches, else its bare type. */
 export function kindOfObject(o: WorldObject): string {
-  const hit = KINDS.find((k) => k.preset !== undefined && presetIsExact(k) && isOfKind(o, k));
+  const hit = EXACT_KINDS.get(o.type)?.find((k) => isOfKind(o, k));
   return hit ? hit.key : o.type;
 }

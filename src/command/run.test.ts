@@ -14,6 +14,7 @@ import { scratchWorld } from '@/world/worldStore';
 import { parseCanonical } from './canonical';
 import { emptyContext, type CommandContext } from './context';
 import type { Intent } from './intent';
+import { samePose } from './diff';
 import { previewIntents, runIntents, type RunResult } from './run';
 
 const intents = (...lines: string[]): Intent[] =>
@@ -247,6 +248,38 @@ describe('preview', () => {
     expect(terrainBitsHash(fork.getState().doc)).toBe(terrainBitsHash(S().doc));
     // (the plain fingerprint differs: object ids are random)
     expect(worldFingerprint(fork.getState().doc)).not.toBe(worldFingerprint(S().doc));
+  });
+
+  it('a terrain edit away from every object reports no moved object (their ground did not change)', () => {
+    // The store re-seats grounded objects within 40 m of a terrain change and writes their heading back in (−π, π]
+    // through a quaternion: objects stored with another number for the same heading are written again without moving.
+    // (Found by the bench: "terrain raise" in an empty quarter of a 5000-object scene reported 736 moved objects.)
+    const st = scratchWorld(createEmptyDocument());
+    const at = (x: number, z: number, yaw: number) => ({ position: [x, 0, z] as [number, number, number], rotation: [0, yaw, 0] as [number, number, number], scale: [1, 1, 1] as [number, number, number] });
+    const [far1, far2, far3, under] = st.getState().addObjects([
+      { type: 'car', transform: at(-10, -10, 5.5) },
+      { type: 'human', transform: at(-10, -20, 4) },
+      { type: 'tree', transform: at(-5, -30, 1) },
+      { type: 'human', transform: at(22, 20, 5.5) },
+    ]);
+    const doc = st.getState().doc;
+    const p = previewIntents(doc, intents('terrain raise circle 20,20 r=8 by=2'), emptyContext());
+    const d = p.diff!;
+    expect(d.terrain!.up).toBe(2);
+    // Only the person standing on the raised ground moved (up, same heading); nothing else is reported.
+    expect(d.moved.map((m) => m.after.id)).toEqual([under]);
+    expect(d.moved[0].after.transform.position[1]).toBeGreaterThan(0.5);
+    expect(d.changed).toEqual([]);
+    expect(d.added).toEqual([]);
+    // The far objects the store wrote again (the car and the person: headings 5.5 and 4 rad are not in (−π, π]) are
+    // counted apart, not as changes; the tree (1 rad) was not touched.
+    expect(d.rewritten).toBe(2);
+    // Confirming does the same: on the document those objects have the same pose as before, bit-equal or not.
+    okRun(runIntents(st, intents('terrain raise circle 20,20 r=8 by=2'), emptyContext()));
+    const after = st.getState().doc;
+    for (const id of [far1, far2, far3]) expect(samePose(doc.objects[id], after.objects[id])).toBe(true);
+    expect(after.objects[far3]).toBe(doc.objects[far3]);
+    expect(samePose(doc.objects[under], after.objects[under])).toBe(false);
   });
 
   it('moved and removed objects, and a failed preview', () => {

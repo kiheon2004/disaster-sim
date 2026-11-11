@@ -63,6 +63,17 @@ export function quatFromEuler([x, y, z]: Vec3): Quat {
   ];
 }
 
+/**
+ * Whether two XYZ Euler rotations are the same orientation: a full turn more, the other Euler form of the same pose, or
+ * a last-bit difference from a quaternion round trip all count as the same (compared as quaternions, sign-aligned).
+ */
+export function sameOrientation(a: Vec3, b: Vec3, eps = 1e-9): boolean {
+  if (a[0] === b[0] && a[1] === b[1] && a[2] === b[2]) return true;
+  const p = quatFromEuler(a), q = quatFromEuler(b);
+  const s = p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3] < 0 ? -1 : 1;
+  return Math.abs(p[0] - s * q[0]) <= eps && Math.abs(p[1] - s * q[1]) <= eps && Math.abs(p[2] - s * q[2]) <= eps && Math.abs(p[3] - s * q[3]) <= eps;
+}
+
 export function qMul(a: Quat, b: Quat): Quat {
   const [ax, ay, az, aw] = a;
   const [bx, by, bz, bw] = b;

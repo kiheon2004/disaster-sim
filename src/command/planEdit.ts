@@ -32,8 +32,8 @@ import { footprintBounds, resolvePlace, resolveTarget, tieQuestion, type TargetS
 type Compass = 'north' | 'south' | 'east' | 'west';
 
 /** A target's objects; a rank that ended in a tie is a question for editing commands (`askTie`) and "all of them" otherwise. */
-export function targetOf(ref: TargetRef, env: Env, d: Draft, askTie: boolean): TargetSet {
-  const set = need(resolveTarget(ref, env), d.notes);
+export function targetOf(ref: TargetRef, env: Env, d: Draft, askTie: boolean, allowEmpty = false): TargetSet {
+  const set = need(resolveTarget(ref, env, { allowEmpty }), d.notes);
   if (set.tie && askTie) throw new PlanStop({ clarify: tieQuestion(ref, set.tie) });
   if (set.tie) d.notes.push(msg('cmd37.note.tie', { count: set.tie.length }));
   return set;

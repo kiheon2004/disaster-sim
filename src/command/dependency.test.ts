@@ -13,6 +13,8 @@ import path from 'node:path';
 const SRC = path.resolve(__dirname, '..');
 /** Directories that may know the command layer: itself, the app glue, the panels, the viewport layers, the editor. */
 const UI_SIDE = new Set(['command', 'app', 'ui', 'rendering', 'editor']);
+/** …and the benchmark that measures the command layer (a test file: nothing a run executes). */
+const BENCH = 'bench/command37.bench.test.ts';
 
 function sources(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -58,7 +60,7 @@ describe('command layer — dependency direction', () => {
     const offenders: string[] = [];
     for (const f of all) {
       const r = rel(f);
-      if (UI_SIDE.has(r.split('/')[0])) continue;
+      if (UI_SIDE.has(r.split('/')[0]) || r === BENCH) continue;
       for (const s of specifiers(fs.readFileSync(f, 'utf8'))) if (isCommandLayer(target(f, s))) offenders.push(`${r} → ${s}`);
     }
     expect(offenders).toEqual([]);

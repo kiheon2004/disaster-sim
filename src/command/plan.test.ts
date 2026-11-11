@@ -658,3 +658,26 @@ describe('queries and the camera', () => {
     expect(ok(doc, 'focus at=node:n1').effects).toEqual([{ fx: 'focusAt', x: -56, z: 0 }]);
   });
 });
+
+describe('questions about nothing', () => {
+  it('"how many …?" answers 0 and "which …?" an empty list when nothing matches; editing nothing is still refused', () => {
+    const doc = town().getState().doc;
+    const none = ok(doc, 'count type:barrel');
+    expect(none.table!.title).toEqual({ key: 'cmd37.sum.count', params: { count: 0 } });
+    expect(none.table!.rows).toEqual([]);
+    expect(none.ops).toEqual([]);
+    expect(ok(doc, 'count all where hidden').table!.title).toEqual({ key: 'cmd37.sum.count', params: { count: 0 } });
+    const list = ok(doc, 'list type:barrel');
+    expect(list.table!.title).toEqual({ key: 'cmd37.sum.list', params: { count: 0 } });
+    expect(list.table!.rows).toEqual([]);
+    // (a count of something that exists is unchanged)
+    expect(ok(doc, 'count type:tree').table!.title).toEqual({ key: 'cmd37.sum.count', params: { count: 24 } });
+    // Commands that act on the set still stop: nothing to select, delete, measure or describe.
+    expect(errorKey(plan(doc, 'select type:barrel'))).toBe('cmd37.err.noMatch');
+    expect(errorKey(plan(doc, 'delete type:barrel'))).toBe('cmd37.err.noMatch');
+    expect(errorKey(plan(doc, 'measure type:barrel'))).toBe('cmd37.err.noMatch');
+    expect(errorKey(plan(doc, 'info type:barrel'))).toBe('cmd37.err.noMatch');
+    // "How many are selected?" with no selection says so (there is no set to count).
+    expect(errorKey(plan(doc, 'count selection'))).toBe('cmd37.err.noSelection');
+  });
+});

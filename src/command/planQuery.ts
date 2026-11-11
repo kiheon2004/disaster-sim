@@ -140,7 +140,8 @@ export function planQuery(i: IntentOf<'query'>, env: Env, d: Draft): void {
     d.highlight = { points: [[a.x, a.z], [b.x, b.z]] };
     return;
   }
-  const set = targetOf(i.target!, env, d, false);
+  // "How many …?" and "which …?" have an answer when nothing matches: 0 / an empty list (not an error).
+  const set = targetOf(i.target!, env, d, false, i.op === 'count' || i.op === 'list');
   const objs = set.objects;
   const ids = objs.map((o) => o.id);
   d.highlight = { ids };

@@ -591,8 +591,11 @@ export interface TargetSet {
   tie: WorldObject[] | null;
 }
 
-/** A target → its objects, in command order (context.ts). Empty sets are errors: a command about nothing does not run. */
-export function resolveTarget(ref: TargetRef, env: Env): Resolved<TargetSet> {
+/**
+ * A target → its objects, in command order (context.ts). Empty sets are errors: a command about nothing does not run —
+ * except for the questions "how many …?" / "which …?" (`allowEmpty`), whose answer is then 0 / an empty list.
+ */
+export function resolveTarget(ref: TargetRef, env: Env, opts: { allowEmpty?: boolean } = {}): Resolved<TargetSet> {
   const { doc, ctx } = env;
   const notes: Msg[] = [];
   let objs: WorldObject[];
@@ -684,7 +687,7 @@ export function resolveTarget(ref: TargetRef, env: Env): Resolved<TargetSet> {
     } else objs = scored.map((x) => x.o);
   }
   if (ref.first !== undefined) objs = objs.slice(0, ref.first);
-  if (!objs.length) return err(msg('cmd37.err.noMatch'));
+  if (!objs.length && !opts.allowEmpty) return err(msg('cmd37.err.noMatch'));
   return ok({ objects: objs, explicit, tie }, notes);
 }
 

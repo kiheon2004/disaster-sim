@@ -6,8 +6,10 @@
  */
 import type { EntityId } from '@/core/types';
 import type { WorldDocument, WorldObject } from '@/core/model';
+import { sameOrientation } from '@/core/math';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import { changedRect, type GridRect } from '@/terrain/TerrainData';
+import { sameObjectValue } from '@/world/sameObject';
 
 export interface TerrainDiff {
   rect: GridRect;
@@ -24,10 +26,12 @@ export interface TerrainDiff {
 export interface DocDiff {
   added: WorldObject[];
   removed: WorldObject[];
-  /** Objects whose transform changed. */
+  /** Objects whose pose changed (place, orientation or size — not merely the numbers it is written with, see samePose). */
   moved: { before: WorldObject; after: WorldObject }[];
   /** Objects that changed in another way (name, group, flags, parameters …). */
   changed: { before: WorldObject; after: WorldObject }[];
+  /** Objects written again with the same pose and content (not shown, not counted as a change). */
+  rewritten: number;
   terrain: TerrainDiff | null;
   roads: { added: string[]; removed: string[]; network: WorldDocument['roads'] } | null;
   instances: { added: PhenomenonInstance[]; removed: PhenomenonInstance[]; changed: PhenomenonInstance[] };
@@ -37,19 +41,36 @@ export interface DocDiff {
   any: boolean;
 }
 
-const sameTransform = (a: WorldObject, b: WorldObject) =>
-  a.transform === b.transform || (a.transform.position.every((v, i) => v === b.transform.position[i]) && a.transform.rotation.every((v, i) => v === b.transform.rotation[i]) && a.transform.scale.every((v, i) => v === b.transform.scale[i]));
+/** Below this a position (m) / orientation (quaternion component) difference is numerical noise, not a move. */
+const POSE_EPS = 1e-9;
+
+/**
+ * The same POSE: the same place, size and orientation. The numbers may differ — a heading written back as −0.78 rad
+ * for 5.5 rad, the other Euler form of the same orientation, or a last bit off after a quaternion round trip. The store
+ * re-seats grounded objects within 40 m of a terrain change and writes their heading back that way even when the ground
+ * under them did not change; such an object has not moved and must not be shown or counted as moved.
+ */
+export const samePose = (a: WorldObject, b: WorldObject) =>
+  a.transform === b.transform ||
+  (a.transform.position.every((v, i) => Math.abs(v - b.transform.position[i]) <= POSE_EPS) &&
+    a.transform.scale.every((v, i) => v === b.transform.scale[i]) &&
+    sameOrientation(a.transform.rotation, b.transform.rotation, POSE_EPS));
 
 const byOrder = (a: WorldObject, b: WorldObject) => (a.type < b.type ? -1 : a.type > b.type ? 1 : 0) || a.serial - b.serial || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 export function diffDocuments(before: WorldDocument, after: WorldDocument): DocDiff {
   const added: WorldObject[] = [], removed: WorldObject[] = [];
   const moved: DocDiff['moved'] = [], changed: DocDiff['changed'] = [];
+  let rewritten = 0;
   if (before.objects !== after.objects) {
     for (const id of Object.keys(after.objects) as EntityId[]) {
       const a = before.objects[id], b = after.objects[id];
       if (!a) added.push(b);
-      else if (a !== b) (sameTransform(a, b) ? changed : moved).push({ before: a, after: b });
+      else if (a === b) continue;
+      else if (!samePose(a, b)) moved.push({ before: a, after: b });
+      // The same pose: changed only if something else differs (an object written again with equal content is not).
+      else if (sameObjectValue(a, a.transform === b.transform ? b : { ...b, transform: a.transform })) rewritten++;
+      else changed.push({ before: a, after: b });
     }
     for (const id of Object.keys(before.objects) as EntityId[]) if (!after.objects[id]) removed.push(before.objects[id]);
     added.sort(byOrder);
@@ -103,5 +124,5 @@ export function diffDocuments(before: WorldDocument, after: WorldDocument): DocD
   const groupNames = JSON.stringify(before.groups ?? null) !== JSON.stringify(after.groups ?? null);
   const settings = before.settings !== after.settings && JSON.stringify(before.settings) !== JSON.stringify(after.settings);
   const any = added.length + removed.length + moved.length + changed.length + instances.added.length + instances.removed.length + instances.changed.length > 0 || !!terrain || !!roads || groupNames || settings;
-  return { added, removed, moved, changed, terrain, roads, instances, groupNames, settings, any };
+  return { added, removed, moved, changed, rewritten, terrain, roads, instances, groupNames, settings, any };
 }
