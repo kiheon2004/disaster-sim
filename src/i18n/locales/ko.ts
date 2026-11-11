@@ -33,6 +33,7 @@ import { koVehicleUi } from './ko.vehicleUi';
 import { koVehiclePresets } from './ko.vehiclePresets';
 import { koDynamicObjects } from './ko.dynamicObjects';
 import { koUx355 } from './ko.ux355';
+import { koP36Editor } from './ko.p36editor';
 
 export const ko = {
   // App
@@ -639,6 +640,7 @@ export const ko = {
   ...koVehiclePresets,
   ...koDynamicObjects,
   ...koUx355,
+  ...koP36Editor,
 } as const;
 
 export type MessageKey = keyof typeof ko;

@@ -13,6 +13,7 @@ import { graphOf, MT_WINDOW } from '@/structure/graph';
 import { CONTENTS_FIRE, CROWN_DENSITY, E_O2, FUEL_MATERIALS, FM, MOISTURE_EXTINCTION, Y_O2_AIR, Y_O2_LIMIT } from './materials';
 import { ventInflow } from './relations';
 import type { FireSettings, FireSpec } from './types';
+import { yawOf } from '@/terrain/groundPlacement';
 
 const MATERIAL_KEYS = Object.keys(MATERIALS) as (keyof typeof MATERIALS)[];
 
@@ -65,7 +66,8 @@ interface Box { x: number; z: number; hx: number; hz: number; c: number; s: numb
 function boxOf(o: WorldObject): Box {
   const d = getDefinition(o.type).getDimensions(o.params);
   const [sx, sy, sz] = o.transform.scale;
-  const yaw = o.transform.rotation[1];
+  // Heading from the whole rotation (Phase 36): a turn past 90° is stored as (π, 180° − θ, π) in XYZ Euler angles.
+  const yaw = yawOf(o.transform.rotation);
   return { x: o.transform.position[0], z: o.transform.position[2], hx: (d[0] * sx) / 2, hz: (d[2] * sz) / 2, c: Math.cos(yaw), s: Math.sin(yaw), top: o.transform.position[1] + d[1] * sy, base: o.transform.position[1] };
 }
 

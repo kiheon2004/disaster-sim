@@ -12,7 +12,8 @@ import { CastShadowContext, castsShadow } from '@/rendering/materials';
 import { EditorBatches } from '@/rendering/editor/EditorBatches';
 import { setEditorBatches } from '@/rendering/editor/editorRenderStats';
 import { samplerFor } from '@/terrain/TerrainSampler';
-import { clickSelect } from '@/app/buildActions';
+import { selectFromHits } from '@/app/buildActions';
+import { clickMods, clickScreen, hitIds, setBatchPicker } from './pick';
 import { useEditorStore } from './editorStore';
 import { PlaceTool } from './tools/PlaceTool';
 import { TerrainTool, isBrushTool } from './tools/TerrainTool';
@@ -31,7 +32,7 @@ import { MarqueeSelect } from './MarqueeSelect';
 import { BuildingEditor } from './BuildingEditor';
 import { useBuildingDraft } from './buildingDraft';
 
-const mods = (e: ThreeEvent<MouseEvent>) => ({ shift: e.nativeEvent.shiftKey, alt: e.nativeEvent.altKey });
+const mods = clickMods;
 
 /**
  * One object drawn as its own React view: roads (few, textured, ground layer) and the single
@@ -56,7 +57,7 @@ const EditorEntity = memo(function EditorEntity({
         onClick: (e: ThreeEvent<MouseEvent>) => {
           e.stopPropagation();
           if (e.delta > 5 || useEditorStore.getState().dragging) return;
-          clickSelect(obj.id, mods(e));
+          selectFromHits(hitIds(e), mods(e), clickScreen(e));
         },
         onPointerOver: (e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
@@ -106,14 +107,19 @@ function EditorBatchLayer({ hide, interactive }: { hide: ReadonlySet<EntityId>; 
     batches.sync(objects, hide, camera);
   }, [batches, objects, terrain, hide, camera]);
   useFrame(({ camera: cam }) => batches?.updateLod(cam));
+  // The hit list of any click (entity / batch / group proxy) resolves batched objects through this layer.
+  useEffect(() => {
+    if (!batches) return;
+    setBatchPicker((o, id) => batches.pick(o, id));
+    return () => setBatchPicker(null);
+  }, [batches]);
 
   const handlers = useMemo(
     () => ({
       onClick: (e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation();
         if (e.delta > 5 || useEditorStore.getState().dragging) return;
-        const id = batches?.pick(e.object, e.batchId ?? e.instanceId);
-        if (id) clickSelect(id, mods(e));
+        selectFromHits(hitIds(e), mods(e), clickScreen(e));
       },
       onPointerMove: (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
@@ -183,15 +189,18 @@ export function EditorScene() {
   // Selected objects leave the batches while selected: the single one is a React view (gizmo),
   // a multi-selection is drawn by GroupSelection (rigid group drag without batch rebuilds).
   // Building Edit Mode (Phase 17): the edited building is drawn by the BuildingEditor.
-  const hide = useMemo(
-    () => (editingBuilding ? new Set([editingBuilding]) : interactive && selectedIds.length ? new Set(selectedIds) : EMPTY),
-    [interactive, selectedIds, editingBuilding],
-  );
+  // Phase 36: hidden objects are not drawn in the editor view (they still exist and are simulated).
+  const hiddenIds = useMemo(() => Object.values(objects).filter((o) => o.hidden).map((o) => o.id), [objects]);
+  const hide = useMemo(() => {
+    const base = editingBuilding ? [editingBuilding] : interactive && selectedIds.length ? selectedIds : [];
+    return base.length || hiddenIds.length ? new Set([...base, ...hiddenIds]) : EMPTY;
+  }, [interactive, selectedIds, editingBuilding, hiddenIds]);
   const live = useMemo(() => {
     const out: WorldObject[] = [];
     // (Roads of a multi-selection move with the group drawing.) A Building Creator draft is
     // drawn in place of the selected building while its parameters are being edited.
     for (const o of Object.values(objects)) {
+      if (o.hidden) continue;
       if ((o.type === 'road' && !(multi && hide.has(o.id))) || o.id === single) out.push(draft && draft.id === o.id ? draft : o);
     }
     return out;

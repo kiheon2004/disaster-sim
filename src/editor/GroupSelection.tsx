@@ -13,7 +13,8 @@ import { RoadView } from '@/rendering/views/InfrastructureViews';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { yawOf } from '@/terrain/groundPlacement';
 import { selectionPivot } from './build/groupTransform';
-import { transformSelection } from '@/app/buildActions';
+import { selectFromHits, transformSelection } from '@/app/buildActions';
+import { clickMods, clickScreen, hitIds, setGroupPicker } from './pick';
 import { useEditorStore } from './editorStore';
 import { gridStep, useBuildStore } from './buildStore';
 
@@ -72,9 +73,14 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
     a.update(camera, 0, 0);
     a.cullEmpty();
     a.root.position.set(-pivot.x, -pivot.y, -pivot.z);
-    a.root.traverse((o) => (o.raycast = () => {}));
+    // Phase 36: the selected objects stay clickable (Shift / Ctrl+click removes one, a click picks one) — before, the
+    // proxy ignored rays and a click on a selected object fell through to the ground and cleared the selection.
+    setGroupPicker((o, id) => a.pick(o, id));
     setAdapter(a);
-    return () => a.dispose();
+    return () => {
+      setGroupPicker(null);
+      a.dispose();
+    };
   }, [objs, terrain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset the pivot whenever the selection data changes (after a commit or undo).
@@ -104,7 +110,11 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
 
   return (
     <>
-      <group ref={setPivotObj}>
+      <group ref={setPivotObj} onClick={(e) => {
+        e.stopPropagation();
+        if (e.delta > 5 || useEditorStore.getState().dragging) return;
+        selectFromHits(hitIds(e), clickMods(e), clickScreen(e));
+      }}>
         {adapter && <primitive object={adapter.root} />}
         <lineSegments geometry={edges} renderOrder={10} raycast={() => null}>
           <lineBasicMaterial color="#4f8cff" depthTest={false} transparent />
@@ -115,7 +125,7 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
           </group>
         ))}
       </group>
-      {pivotObj && (
+      {pivotObj && !objs.some((o) => o.locked) && (
         <TransformControls
           object={pivotObj}
           mode={mode}

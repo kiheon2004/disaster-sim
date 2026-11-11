@@ -27,7 +27,7 @@ import { preserveOnTerrainEdit, releasePlinth } from '@/buildings/foundation';
 import type { RoadNetwork } from '@/roads/types';
 import { assertValid } from '@/roads/network';
 import { bakeRegion, dirtyRect } from '@/roads/bake';
-import { followRoads } from '@/roads/links';
+import { followRoads, relinkMoved } from '@/roads/links';
 import type { Feature } from '@/landscape/types';
 import { NO_PAINT } from '@/landscape/types';
 import { featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
@@ -160,8 +160,12 @@ export interface WorldState {
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
   updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null; vehicles?: NonNullable<WorldDocument['settings']['simulation']['vehicles']> | null; structure?: NonNullable<WorldDocument['settings']['simulation']['structure']> | null }) => void;
-  /** The experiment plan (Phase 15). Not an undo step (like settings). */
-  setExperiment: (patch: Partial<ExperimentSettings>) => void;
+  /**
+   * The experiment plan (Phase 15). Phase 36: ONE undo step per edit (placed / moved / deleted
+   * disasters, experiment-panel changes) in the same history as the geometry — except while a
+   * simulation runs on the document (locked: applied, not recorded) or with `history: false`.
+   */
+  setExperiment: (patch: Partial<ExperimentSettings>, opts?: MutationOptions) => void;
   /** Structural / foundation properties of an object (earthquake). */
   updateSeismic: (id: EntityId, patch: { structure?: Partial<StructuralSpec>; foundation?: Partial<FoundationSpec> }, opts?: MutationOptions) => void;
   /** The earthquake saved with the project (null = none). Not an undo step (like settings). */
@@ -472,7 +476,9 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       }
       for (const o of edit.update ?? []) {
         if (!objects[o.id]) continue;
-        objects[o.id] = o;
+        // Phase 36: an object edit that moves a road-linked object re-measures its link (road edits move linked
+        // objects themselves, through followRoads, and are left alone here).
+        objects[o.id] = edit.roads ? o : relinkMoved(objects[o.id], o, get().doc.roads);
         changed = true;
       }
       const ids: EntityId[] = [];
@@ -519,7 +525,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     const objects = get().doc.objects;
     const obj = objects[id];
     if (!obj) return;
-    commit({ ...objects, [id]: fn(obj) }, opts);
+    commit({ ...objects, [id]: relinkMoved(obj, fn(obj), get().doc.roads) }, opts);
   };
 
   return {
@@ -594,7 +600,9 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
         copy.transform.position = p.position;
         copy.transform.rotation = p.rotation;
       }
-      commit({ ...objects, [copy.id]: copy });
+      // Phase 36: the copy is not locked (it is meant to be moved) and its road link is measured where it is.
+      delete copy.locked;
+      commit({ ...objects, [copy.id]: relinkMoved(src, copy, get().doc.roads) });
       return copy.id;
     },
 
@@ -647,10 +655,16 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       set({ doc: { ...doc, scenario: { ...doc.scenario, earthquake: spec ? { ...spec } : null }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
     },
 
-    setExperiment: (patch) => {
-      const doc = get().doc;
+    setExperiment: (patch, opts) => {
+      const { doc, past, locked } = get();
       const experiment = { ...(doc.scenario.experiment ?? defaultExperiment()), ...structuredClone(patch) };
-      set({ doc: { ...doc, scenario: { ...doc.scenario, experiment }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
+      const next = { ...doc, scenario: { ...doc.scenario, experiment }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } };
+      if (locked || opts?.history === false) {
+        set({ doc: next });
+        return;
+      }
+      const entry: HistoryEntry = { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null), config: { settings: doc.settings, scenario: doc.scenario } };
+      set({ doc: next, past: [...past, entry].slice(-HISTORY_LIMIT), future: [] });
     },
 
     setFloodScenario: (patch) => {

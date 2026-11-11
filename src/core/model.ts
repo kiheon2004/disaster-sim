@@ -107,6 +107,14 @@ export interface WorldObject {
    * follows road edits (src/roads/links.ts). Absent = not linked.
    */
   roadLink?: import('@/roads/types').RoadLink;
+  /**
+   * Phase 36 editor flags (absent = false; never stored as false, so older documents stay byte-identical).
+   * `locked`: not picked in the viewport / box selection, not moved, rotated or deleted (selectable in the outliner).
+   * `hidden`: not drawn in the EDITOR view and not pickable there — it still exists: it is built, simulated and drawn
+   * in the simulation like any other object (hiding is not deleting).
+   */
+  locked?: boolean;
+  hidden?: boolean;
 }
 
 // ── Earthquake: structure & foundation (approximate model parameters) ─────────
@@ -386,4 +394,9 @@ export interface WorldDocument {
    * features. `terrain` = roads baked on the composition of these layers (landscape/types.ts).
    */
   landscape: import('@/landscape/types').Landscape;
+  /**
+   * Phase 36: names of editing groups (objects keep the group id in `WorldObject.group`). Absent = no names (groups
+   * show as "Group 1, 2 …"). Editor metadata only — nothing in the simulation reads it.
+   */
+  groups?: Record<string, { name: string }>;
 }

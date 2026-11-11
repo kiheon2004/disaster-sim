@@ -1,21 +1,15 @@
 /**
  * Disaster placement mode (Phase 35.5) — UI state only: what is being placed, how, the selected placed instance, the
- * pointer, the placement undo stack, favourites / recent disasters. Placed disasters themselves are ordinary experiment
+ * pointer, favourites / recent disasters (Phase 36: placement edits are undone in the WORLD history, one stack for
+ * everything — this store no longer keeps its own). Placed disasters themselves are ordinary experiment
  * instances in the world document (doc.scenario.experiment); nothing here changes a simulation result.
  *
  *   inactive ──arm(type)──► preview (pointer over the map) ──click──► placed (continuous: stays armed) ──Esc / Done──► inactive
  */
 import { create } from 'zustand';
 import type { EventSpec } from '@/events/specs';
-import type { PhenomenonInstance } from '@/phenomena/types';
 
 export type RunMode = 'now' | 'plan';
-
-/** One undoable placement edit (before the instance runs). */
-export type PlacementOp =
-  | { kind: 'add'; inst: PhenomenonInstance }
-  | { kind: 'remove'; inst: PhenomenonInstance; index: number }
-  | { kind: 'move'; id: string; from: EventSpec; to: EventSpec };
 
 const FAV = 'ds.disasterFavorites';
 const RECENT = 'ds.disasterRecent';
@@ -50,8 +44,6 @@ interface PlacementState {
   hover: [number, number] | null;
   /** Instance being dragged and its current point. */
   drag: { id: string; p: [number, number] } | null;
-  undo: PlacementOp[];
-  redo: PlacementOp[];
   favorites: string[];
   recent: string[];
   arm: (type: string, template: EventSpec) => void;
@@ -62,10 +54,8 @@ interface PlacementState {
   select: (id: string | null) => void;
   setHover: (p: [number, number] | null) => void;
   setDrag: (d: { id: string; p: [number, number] } | null) => void;
-  record: (op: PlacementOp) => void;
   toggleFavorite: (type: string) => void;
   noteRecent: (type: string) => void;
-  clearHistory: () => void;
 }
 
 const prefs = load<{ runMode?: RunMode; continuous?: boolean }>(PREFS, {});
@@ -78,8 +68,6 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
   selected: null,
   hover: null,
   drag: null,
-  undo: [],
-  redo: [],
   favorites: load<string[]>(FAV, []),
   recent: load<string[]>(RECENT, []),
   arm: (type, template) => set({ type, template, hover: null }),
@@ -96,7 +84,6 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
   select: (selected) => set({ selected }),
   setHover: (hover) => set({ hover }),
   setDrag: (drag) => set({ drag }),
-  record: (op) => set((s) => ({ undo: [...s.undo.slice(-99), op], redo: [] })),
   toggleFavorite: (type) => {
     const cur = get().favorites;
     const favorites = cur.includes(type) ? cur.filter((t) => t !== type) : [...cur, type];
@@ -108,5 +95,4 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
     set({ recent });
     save(RECENT, recent);
   },
-  clearHistory: () => set({ undo: [], redo: [] }),
 }));

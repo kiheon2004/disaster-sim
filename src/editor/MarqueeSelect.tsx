@@ -23,6 +23,8 @@ export function objectsInRect(objs: Iterable<WorldObject>, camera: THREE.Camera,
   const out: EntityId[] = [];
   camera.updateMatrixWorld();
   for (const o of objs) {
+    // Phase 36: locked and hidden objects are not picked up by a box (select them in the outliner).
+    if (o.locked || o.hidden) continue;
     const d = getDefinition(o.type).getDimensions(o.params);
     const p = o.transform.position;
     v.set(p[0], p[1] + (d[1] * o.transform.scale[1]) / 2, p[2]).project(camera);
@@ -34,7 +36,7 @@ export function objectsInRect(objs: Iterable<WorldObject>, camera: THREE.Camera,
 
 /**
  * Shift + left-drag in the Select tool draws a selection box (instead of panning the camera);
- * releasing adds the objects inside it to the selection. A Shift-click without dragging is an
+ * releasing adds the objects inside it to the selection (with Ctrl/⌘ also held: removes them). A Shift-click without dragging is an
  * ordinary click (toggles the object under the cursor). Phase 36: the box is a gesture — Esc /
  * pointercancel drop it without selecting, the camera lock is owned and always released.
  */
@@ -60,6 +62,8 @@ export function MarqueeSelect() {
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !e.shiftKey) return;
       const start = rel(e);
+      // Shift+drag adds the boxed objects; Shift+Ctrl/⌘+drag removes them (Phase 36).
+      const subtract = e.ctrlKey || e.metaKey;
       let dragging = false;
       let last = start;
       // OrbitControls would pan with Shift+left-drag: hand the gesture to the selection box.
@@ -88,7 +92,7 @@ export function MarqueeSelect() {
           const p = last;
           const ndc = (x: number, y: number): [number, number] => [(x / p.w) * 2 - 1, -(y / p.h) * 2 + 1];
           const ids = objectsInRect(Object.values(useWorldStore.getState().doc.objects), camera, ndc(start.x, start.y), ndc(p.x, p.y));
-          boxSelect(ids, true);
+          boxSelect(ids, subtract ? 'subtract' : 'add');
         },
       }, { lockCamera: true });
     };

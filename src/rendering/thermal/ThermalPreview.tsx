@@ -20,6 +20,7 @@ import { groundReceivers, receiverFlux, sourceReach, type GroundReceiver } from 
 import { STANDARD_AMBIENT } from '@/thermal/units';
 import { AimMarker, circlePts, GroundLine } from '../ground/GroundTools';
 import { fluxColor } from './thermalColors';
+import { yawOf } from '@/terrain/groundPlacement';
 
 export interface ThermalOutlook {
   receivers: GroundReceiver[];
@@ -41,7 +42,8 @@ function footprints(objects: Record<string, WorldObject> | undefined): Footprint
     if (o.type !== 'building') continue;
     const d = getDefinition(o.type).getDimensions(o.params);
     const [sx, sy, sz] = o.transform.scale;
-    const yaw = o.transform.rotation[1];
+    // Heading from the whole rotation (Phase 36): a turn past 90° is stored as (π, 180° − θ, π) in XYZ Euler angles.
+    const yaw = yawOf(o.transform.rotation);
     out.push({ x: o.transform.position[0], z: o.transform.position[2], hx: (d[0] * sx) / 2, hz: (d[2] * sz) / 2, c: Math.cos(yaw), s: Math.sin(yaw), top: o.transform.position[1] + d[1] * sy });
   }
   return out;

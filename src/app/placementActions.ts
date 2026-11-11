@@ -12,7 +12,7 @@ import type { EventSpec } from '@/events/specs';
 import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
 import { simulationController } from '@/simulation/SimulationController';
-import { usePlacementStore, type PlacementOp } from '@/ui/placement/placementStore';
+import { usePlacementStore } from '@/ui/placement/placementStore';
 import { useUiStore } from '@/ui/uiStore';
 import { useViewStore } from '@/rendering/viewStore';
 import { toast } from '@/ui/common/toast';
@@ -47,7 +47,6 @@ export function armPlacement(type: string): void {
   if (!placeable(type, spec)) {
     const id = addPhenomenon(type, spec);
     if (id) {
-      P().record({ kind: 'add', inst: find(id)! });
       P().select(id);
       if (P().runMode === 'now') void runInstance(id);
     }
@@ -68,8 +67,6 @@ export function placeAt(p: [number, number]): string | null {
   const spec = entry.placement.set(template, p, mapHalf());
   const id = addPhenomenon(type, spec, { quiet: true });
   if (!id) return null;
-  const inst = find(id)!;
-  P().record({ kind: 'add', inst });
   P().select(id);
   toast('info', { key: 'place.placed', params: { name: t(phenomena.get(type)!.labelKey), id, x: Math.round(p[0]), z: Math.round(p[1]) } });
   if (runMode === 'now') void runInstance(id);
@@ -93,8 +90,6 @@ export async function runInstance(id: string): Promise<void> {
     for (const issue of sched.issues) toast('warn', { key: `exp.issue.${issue.problem}`, params: { id: issue.id } });
     return;
   }
-  // Undo of placements covers edits before a run only.
-  P().clearHistory();
   await runSimulation([sched.items[0].spec], [id]);
 }
 
@@ -108,7 +103,6 @@ export function moveInstance(id: string, p: [number, number]): boolean {
     return false;
   }
   const to = entry.placement.set(inst.spec, p, mapHalf());
-  P().record({ kind: 'move', id, from: inst.spec, to });
   updatePhenomenon(id, { spec: to });
   return true;
 }
@@ -123,7 +117,6 @@ export function deleteInstance(id: string): void {
     if (st?.status === 'pending') simulationController.controlEvent(id, 'cancel');
     else if ((st?.status === 'active' || st?.status === 'paused') && st.stop) simulationController.controlEvent(id, 'stop');
   }
-  P().record({ kind: 'remove', inst: all[index], index });
   removePhenomenon(id);
   if (P().selected === id) P().select(null);
 }
@@ -136,68 +129,26 @@ export function duplicateInstance(id: string): string | null {
   const at = entry?.placement.get(inst.spec);
   const spec = at && entry ? entry.placement.set(inst.spec, [at[0] + 6, at[1]], mapHalf()) : inst.spec;
   const nid = addPhenomenon(inst.type, { ...spec, startTime: 'at' in inst.start ? inst.start.at : 0 } as EventSpec, { quiet: true });
-  if (nid) {
-    P().record({ kind: 'add', inst: find(nid)! });
-    P().select(nid);
-  }
+  if (nid) P().select(nid);
   return nid;
 }
 
-function setInstances(list: PhenomenonInstance[]) {
-  useWorldStore.getState().setExperiment({ instances: list });
-}
-
-function invert(op: PlacementOp): PlacementOp {
-  if (op.kind === 'add') return { kind: 'remove', inst: op.inst, index: instances().findIndex((i) => i.id === op.inst.id) };
-  if (op.kind === 'remove') return { kind: 'add', inst: op.inst };
-  return { kind: 'move', id: op.id, from: op.to, to: op.from };
-}
-
-function applyOp(op: PlacementOp): boolean {
-  const list = instances();
-  if (op.kind === 'add') {
-    if (list.some((i) => i.id === op.inst.id)) return false;
-    setInstances([...list, op.inst]);
-    return true;
-  }
-  if (op.kind === 'remove') {
-    if (runningKeys().has(op.inst.id)) return false;
-    setInstances(list.filter((i) => i.id !== op.inst.id));
-    if (P().selected === op.inst.id) P().select(null);
-    return true;
-  }
-  if (!list.some((i) => i.id === op.id) || runningKeys().has(op.id)) return false;
-  updatePhenomenon(op.id, { spec: op.to });
-  return true;
-}
-
-/** Ctrl/⌘+Z on placements (before they run). */
+/**
+ * Undo / redo of placements (PlacementBar buttons). Phase 36: placement edits are ordinary steps of the WORLD history
+ * (doc.scenario travels in the step), so this is the world's undo — the same stack as Ctrl+Z, in a predictable order
+ * with the geometry edits. Not during a run (the document is locked; nothing of the run is undone).
+ */
 export function undoPlacement(): boolean {
-  const { undo, redo } = P();
-  const op = undo[undo.length - 1];
-  if (!op) return false;
-  const inv = invert(op);
-  // Re-inserting a removed instance keeps its place in the list.
-  if (op.kind === 'remove') {
-    const list = instances();
-    if (list.some((i) => i.id === op.inst.id)) return false;
-    const next = [...list];
-    next.splice(Math.min(op.index, next.length), 0, op.inst);
-    setInstances(next);
-  } else if (!applyOp(inv)) {
-    toast('warn', { key: 'place.undoBlocked' });
-    return false;
-  }
-  usePlacementStore.setState({ undo: undo.slice(0, -1), redo: [...redo, op] });
-  return true;
+  const w = useWorldStore.getState();
+  const n = w.past.length;
+  w.undo();
+  return useWorldStore.getState().past.length < n;
 }
 
 /** Ctrl/⌘+Shift+Z. */
 export function redoPlacement(): boolean {
-  const { undo, redo } = P();
-  const op = redo[redo.length - 1];
-  if (!op) return false;
-  if (!applyOp(op.kind === 'remove' ? { kind: 'remove', inst: op.inst, index: op.index } : op)) return false;
-  usePlacementStore.setState({ undo: [...undo, op], redo: redo.slice(0, -1) });
-  return true;
+  const w = useWorldStore.getState();
+  const n = w.future.length;
+  w.redo();
+  return useWorldStore.getState().future.length < n;
 }

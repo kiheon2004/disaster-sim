@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { useUiStore } from '@/ui/uiStore';
 import { usePlacementStore } from '@/ui/placement/placementStore';
-import { deleteInstance, disarmPlacement, redoPlacement, undoPlacement } from './placementActions';
+import { deleteInstance, disarmPlacement } from './placementActions';
 import { useWorldStore } from '@/world/worldStore';
 import { focusObject, togglePlay } from '@/app/actions';
 import { clearSelection, copySelection, deleteSelection, duplicateSelection, groupSelection, selectAll, startPaste, ungroupSelection } from '@/app/buildActions';
@@ -195,8 +194,7 @@ function blueprintKeys(e: KeyboardEvent, key: string): boolean {
  * Disaster placement keys (Phase 35.5), before every other shortcut:
  *  - Esc: leave placement mode, otherwise deselect the selected disaster pin;
  *  - Delete / Backspace: remove the selected disaster (cancel / stop it when it is in the run);
- *  - Ctrl/⌘+Z, Ctrl/⌘+Shift+Z: undo / redo PLACEMENTS — while placing, or on the disasters tab with placement history;
- *    otherwise the world's undo as before (placements and world edits keep separate histories).
+ *  (Undo / redo: one world history for geometry and placements since Phase 36 — no tab-dependent routing.)
  */
 function placementKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
   const st = usePlacementStore.getState();
@@ -210,15 +208,7 @@ function placementKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
     deleteInstance(st.selected);
     return true;
   }
-  if (mod && key === 'z') {
-    const focus = st.type !== null || useUiStore.getState().rightTab === 'phenomena';
-    if (!focus) return false;
-    if (e.shiftKey ? st.redo.length === 0 : st.undo.length === 0) return false;
-    e.preventDefault();
-    if (e.shiftKey) redoPlacement();
-    else undoPlacement();
-    return true;
-  }
+  // (Ctrl/⌘+Z: Phase 36 — placements are steps of the world history; the editor's undo below handles them.)
   return false;
 }
 

@@ -13,6 +13,7 @@ import { fireOutlook } from '@/fire/outlook';
 import { defaultFireSettings, type FireSpec } from '@/fire/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import { AimMarker, GroundLine, circlePts } from '../ground/GroundTools';
+import { yawOf } from '@/terrain/groundPlacement';
 
 export function FirePreview({ inst }: { inst: PhenomenonInstance }) {
   const terrain = useWorldStore((s) => s.doc.terrain);
@@ -31,7 +32,7 @@ export function FirePreview({ inst }: { inst: PhenomenonInstance }) {
     let y0 = room.transform.position[1];
     for (let k = 0; k < out.room.story; k++) y0 += (k === 0 ? sp.groundFloorHeight ?? sp.floorHeight : sp.floorHeight) * sy;
     const h = (out.room.story === 0 ? sp.groundFloorHeight ?? sp.floorHeight : sp.floorHeight) * sy;
-    roomBox = { p: [room.transform.position[0], y0 + h / 2, room.transform.position[2]], size: [d[0] * room.transform.scale[0] + 0.2, h, d[2] * room.transform.scale[2] + 0.2], yaw: room.transform.rotation[1] };
+    roomBox = { p: [room.transform.position[0], y0 + h / 2, room.transform.position[2]], size: [d[0] * room.transform.scale[0] + 0.2, h, d[2] * room.transform.scale[2] + 0.2], yaw: yawOf(room.transform.rotation) };
   }
   return (
     <group name="fire-preview">

@@ -57,6 +57,9 @@ const objectSchema = z.object({
   terrainAlign: z.number().min(0).max(1).optional().catch(undefined),
   // Phase 18: link to a road segment (validated by roads/schema; dangling links are dropped).
   roadLink: z.unknown().optional(),
+  // Phase 36: editor flags (optional, still schema v7 — older readers drop them; only `true` is stored).
+  locked: z.boolean().optional().catch(undefined),
+  hidden: z.boolean().optional().catch(undefined),
 });
 
 const terrainSchema = z.union([
@@ -182,6 +185,8 @@ const documentSchema = z.object({
   designs: z.record(z.string(), z.unknown()).optional(),
   // Phase 19 (v7): terrain layers and natural features.
   landscape: z.unknown().optional(),
+  // Phase 36: editing group names (optional; unknown / malformed entries are dropped).
+  groups: z.record(z.string().min(1).max(80), z.object({ name: z.string().max(80) })).optional().catch(undefined),
 });
 
 /**
@@ -306,7 +311,7 @@ export function parseDocument(json: string): LoadResult {
     }
     const def = getDefinition(o.type);
     const params = { ...def.defaultParams, ...o.params };
-    const { seismic: rawSeismic, group, building: rawBuilding, terrainAlign, roadLink: rawLink, ...rest } = o;
+    const { seismic: rawSeismic, group, building: rawBuilding, terrainAlign, roadLink: rawLink, locked, hidden, ...rest } = o;
     const obj: WorldObject = {
       ...rest,
       id,
@@ -318,6 +323,8 @@ export function parseDocument(json: string): LoadResult {
     if (seismic) obj.seismic = seismic;
     if (group) obj.group = group;
     if (terrainAlign !== undefined) obj.terrainAlign = terrainAlign;
+    if (locked) obj.locked = true;
+    if (hidden) obj.hidden = true;
     const link = rawLink === undefined ? undefined : parseLink(rawLink);
     if (rawBuilding !== undefined && o.type === 'building') {
       const refKey = rawBuilding && typeof rawBuilding === 'object' && DESIGN_REF in rawBuilding ? String((rawBuilding as Record<string, unknown>)[DESIGN_REF]) : null;
@@ -408,11 +415,18 @@ export function parseDocument(json: string): LoadResult {
     net = { ...net, underlay: r.underlay };
     for (let i = 0; i < saved.h.length; i++) if (saved.h[i] !== terrain.heights[i] || saved.g[i] !== terrain.ground[i]) recomposedVertices++;
   }
-  const { designs: _table, roads: _rawRoads, landscape: _rawLand, ...data } = res.data;
+  const { designs: _table, roads: _rawRoads, landscape: _rawLand, groups: rawGroups, ...data } = res.data;
   void _table;
   void _rawRoads;
   void _rawLand;
-  return { ok: true, doc: { ...data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario, roads: net, landscape }, skipped, designs, roads, landscape: { ...lrep, recomposedVertices } };
+  const doc: WorldDocument = { ...data, schemaVersion: SCHEMA_VERSION, settings, terrain, objects, scenario, roads: net, landscape };
+  // Phase 36: group names, only for groups that still have members (absent when there are none).
+  if (rawGroups) {
+    const used = new Set(Object.values(objects).map((o) => o.group).filter((g): g is string => !!g));
+    const kept = Object.fromEntries(Object.entries(rawGroups).filter(([id, g]) => used.has(id) && g.name.trim()));
+    if (Object.keys(kept).length) doc.groups = kept;
+  }
+  return { ok: true, doc, skipped, designs, roads, landscape: { ...lrep, recomposedVertices } };
 }
 
 const SAVE_KEY = 'ds.project';

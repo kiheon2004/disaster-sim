@@ -25,6 +25,8 @@ export interface NumberInputProps {
   /** live = true while scrubbing (no undo step per tick). */
   onChange: (v: number, live: boolean) => void;
   onScrubStart?: () => void;
+  /** The scrub ended (pointer released / cancelled) — Phase 36: closes the edit's transaction. */
+  onScrubEnd?: () => void;
   min?: number;
   max?: number;
   step?: number;
@@ -52,7 +54,14 @@ function useScrub(p: NumberInputProps) {
       p.onChange(clamp(raw, p.min ?? -Infinity, p.max ?? Infinity), true);
     },
     onPointerUp: () => {
+      if (!start.current) return;
       start.current = null;
+      p.onScrubEnd?.();
+    },
+    onPointerCancel: () => {
+      if (!start.current) return;
+      start.current = null;
+      p.onScrubEnd?.();
     },
   };
 }
@@ -140,6 +149,7 @@ export function Vec3Field(p: {
   value: Vec3;
   onChange: (v: Vec3, live: boolean) => void;
   onScrubStart?: () => void;
+  onScrubEnd?: () => void;
   step?: number;
   precision?: number;
   min?: number;
@@ -160,6 +170,7 @@ export function Vec3Field(p: {
             max={p.max}
             disabled={p.disabled}
             onScrubStart={p.onScrubStart}
+            onScrubEnd={p.onScrubEnd}
             ariaLabel={`${typeof p.label === 'string' ? p.label : ''} ${'XYZ'[i]}`}
             onChange={(v, live) => {
               const next: Vec3 = [...p.value];

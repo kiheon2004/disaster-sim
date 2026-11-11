@@ -9,6 +9,7 @@ import { catalogOf } from '@/phenomena/catalog';
 import { disarmPlacement, mapHalf, redoPlacement, undoPlacement } from '@/app/placementActions';
 import { previewDescription, previewText } from '@/rendering/placement/PlacementLayer';
 import { usePlacementStore } from '@/ui/placement/placementStore';
+import { useWorldStore } from '@/world/worldStore';
 import { Segmented } from '@/ui/common/Segmented';
 import { Toggle } from '@/ui/common/fields';
 import { Icon } from '@/ui/common/Icon';
@@ -21,8 +22,9 @@ export function PlacementBar() {
   const template = usePlacementStore((st) => st.template);
   const runMode = usePlacementStore((st) => st.runMode);
   const continuous = usePlacementStore((st) => st.continuous);
-  const undo = usePlacementStore((st) => st.undo.length);
-  const redo = usePlacementStore((st) => st.redo.length);
+  // Phase 36: one history for the world and its placed disasters (the buttons are the world's undo / redo).
+  const undo = useWorldStore((st) => st.past.length);
+  const redo = useWorldStore((st) => st.future.length);
   const def = type ? phenomena.implemented(type) : undefined;
   const c = type ? catalogOf(type) : undefined;
   if (!type || !template || !def || !c) return null;

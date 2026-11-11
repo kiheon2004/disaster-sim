@@ -20,7 +20,8 @@ export function TransformGizmo() {
   const mode = useEditorStore((s) => s.transformMode);
   const snap = useEditorStore((s) => s.snap);
   const snapping = useBuildStore((s) => s.snapping);
-  const exists = useWorldStore((s) => (selectedId ? !!s.doc.objects[selectedId] : false));
+  // Phase 36: no gizmo on a locked object (it cannot be moved; unlock it in the outliner / inspector).
+  const exists = useWorldStore((s) => (selectedId ? !!s.doc.objects[selectedId] && !s.doc.objects[selectedId].locked : false));
   const scene = useThree((s) => s.scene);
   const [target, setTarget] = useState<THREE.Object3D | null>(null);
   /** The object stood on the ground when the drag began → it keeps standing on it. */

@@ -42,12 +42,12 @@ export function expandGroups(ids: readonly EntityId[]): EntityId[] {
 
 /**
  * Viewport click on an object. Plain click: select it (its whole group if grouped).
- * Shift: add / remove it (and its group). Alt: just this object, ignoring its group.
+ * Shift or Ctrl/⌘ (Phase 36): add / remove it (and its group). Alt: just this object, ignoring its group.
  */
-export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean } = {}) {
+export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean; toggle?: boolean } = {}) {
   const ed = editor();
   const unit = mods.alt ? [id] : expandGroups([id]);
-  if (mods.shift) {
+  if (mods.shift || mods.toggle) {
     const cur = new Set(ed.selectedIds);
     const remove = unit.every((u) => cur.has(u));
     for (const u of unit) (remove ? cur.delete(u) : cur.add(u));
@@ -55,11 +55,60 @@ export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean
   } else ed.setSelection(unit, id);
 }
 
-/** Box selection result (Shift+drag). `add` keeps the current selection. */
-export function boxSelect(ids: EntityId[], add: boolean) {
+/**
+ * Box selection result (Shift+drag). `add` (true / 'add') keeps the current selection; 'subtract' (Phase 36:
+ * Shift+Ctrl/⌘+drag) removes the boxed objects (and their groups) from it; false / 'replace' replaces it.
+ */
+export function boxSelect(ids: EntityId[], add: boolean | 'add' | 'subtract' | 'replace') {
   const ed = editor();
   const unit = expandGroups(ids);
-  ed.setSelection(add ? [...ed.selectedIds, ...unit] : unit, ed.selectedId && add ? ed.selectedId : unit[unit.length - 1] ?? null);
+  if (add === 'subtract') {
+    const drop = new Set(unit);
+    const kept = ed.selectedIds.filter((i) => !drop.has(i));
+    ed.setSelection(kept, ed.selectedId && kept.includes(ed.selectedId) ? ed.selectedId : undefined);
+    return;
+  }
+  const keep = add === true || add === 'add';
+  ed.setSelection(keep ? [...ed.selectedIds, ...unit] : unit, ed.selectedId && keep ? ed.selectedId : unit[unit.length - 1] ?? null);
+}
+
+/**
+ * Objects of the same kind as the primary selection (Phase 36 §10): the same object type, and for buildings the same
+ * modular preset (or legacy box buildings together). Hidden / locked objects are not picked up.
+ */
+export function selectSameType(): number {
+  const ed = editor();
+  const objs = world().doc.objects;
+  const ref = ed.selectedId ? objs[ed.selectedId] : undefined;
+  if (!ref) return 0;
+  const kind = (o: WorldObject) => (o.type === 'building' ? `building:${o.building ? o.building.preset ?? 'custom' : 'legacy'}` : o.type);
+  const k = kind(ref);
+  const ids = Object.values(objs).filter((o) => kind(o) === k && !o.hidden && !o.locked).map((o) => o.id);
+  ed.setSelection(ids, ref.id);
+  return ids.length;
+}
+
+let lastPick: { x: number; y: number; ids: string; at: number } | null = null;
+
+/**
+ * Click on overlapping objects (Phase 36 §10): `hits` = the objects under the cursor, nearest first. A click picks the
+ * nearest one; clicking AGAIN at the same spot (≤ 5 px, within 1.5 s) picks the next one under the cursor, cycling —
+ * so an object behind a tree or inside another can be selected without moving the camera.
+ */
+export function selectFromHits(hits: readonly EntityId[], mods: { shift?: boolean; alt?: boolean; toggle?: boolean }, screen: [number, number]): EntityId | null {
+  const objs = world().doc.objects;
+  const list = hits.filter((id, i) => objs[id] && !objs[id].locked && !objs[id].hidden && hits.indexOf(id) === i);
+  if (!list.length) return null;
+  const key = list.join(',');
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  let pick = list[0];
+  const cur = editor().selectedId;
+  if (!mods.shift && !mods.toggle && lastPick && lastPick.ids === key && Math.hypot(lastPick.x - screen[0], lastPick.y - screen[1]) <= 5 && now - lastPick.at < 1500 && cur && list.includes(cur)) {
+    pick = list[(list.indexOf(cur) + 1) % list.length];
+  }
+  lastPick = { x: screen[0], y: screen[1], ids: key, at: now };
+  clickSelect(pick, mods);
+  return pick;
 }
 
 export function selectAll(category?: ObjectCategory) {
@@ -73,12 +122,21 @@ export function clearSelection() {
 
 // ── Group editing ────────────────────────────────────────────────────────
 
+/** Selected objects that may be moved / deleted (Phase 36: locked ones are skipped, with a note). */
+function unlockedSelection(): WorldObject[] {
+  const objs = selectedObjects();
+  const free = objs.filter((o) => !o.locked);
+  if (free.length < objs.length) toast('info', { key: 'ed36.lockedSkipped', params: { count: objs.length - free.length } });
+  return free;
+}
+
 export function deleteSelection() {
   if (!editable()) return;
-  const ids = editor().selectedIds;
-  if (!ids.length) return;
-  world().applyEdit({ remove: ids });
-  editor().setSelection([]);
+  const free = unlockedSelection();
+  if (!free.length) return;
+  world().applyEdit({ remove: free.map((o) => o.id) });
+  const gone = new Set(free.map((o) => o.id));
+  editor().setSelection(editor().selectedIds.filter((id) => !gone.has(id)));
 }
 
 /** Copies 2 m south-east of the originals, groups preserved as new groups, one undo step. */
@@ -102,7 +160,7 @@ export function duplicateSelection() {
 /** Move / rotate the selection as one rigid unit about its pivot (one undo step). */
 export function transformSelection(d: RigidDelta, pivot?: { x: number; z: number }) {
   if (!editable()) return;
-  const objs = selectedObjects();
+  const objs = unlockedSelection();
   if (!objs.length) return;
   const terrain = samplerFor(world().doc.terrain);
   world().applyEdit({ update: transformObjects(objs, pivot ?? selectionPivot(objs), d, terrain) });
@@ -110,14 +168,14 @@ export function transformSelection(d: RigidDelta, pivot?: { x: number; z: number
 
 export function alignSelection(axis: AlignAxis, mode: AlignMode) {
   if (!editable()) return;
-  const objs = selectedObjects();
+  const objs = unlockedSelection();
   if (objs.length < 2) return;
   world().applyEdit({ update: alignObjects(objs, axis, mode, samplerFor(world().doc.terrain)) });
 }
 
 export function distributeSelection(axis: AlignAxis) {
   if (!editable()) return;
-  const objs = selectedObjects();
+  const objs = unlockedSelection();
   if (objs.length < 3) return;
   world().applyEdit({ update: distributeObjects(objs, axis, samplerFor(world().doc.terrain)) });
 }

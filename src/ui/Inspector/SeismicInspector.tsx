@@ -18,6 +18,8 @@ import { fmt } from '@/ui/format';
 import styles from './Inspector.module.css';
 
 const store = () => useWorldStore.getState();
+/** Label scrub = one transaction (Phase 36): one undo step on release, none when nothing changed. */
+const scrubTx = { onScrubStart: () => store().beginTransaction(), onScrubEnd: () => { store().commitTransaction(); } };
 
 /** Structural system + foundation of a building (earthquake model parameters). */
 export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly: boolean }) {
@@ -35,7 +37,6 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
   const soil = samplerFor(terrain).sampleSoil(obj.transform.position[0], obj.transform.position[2]);
   const setS = (patch: Partial<typeof s.structure>, live = false) => store().updateSeismic(obj.id, { structure: patch }, { history: !live });
   const setF = (patch: Partial<typeof s.foundation>, live = false) => store().updateSeismic(obj.id, { foundation: patch }, { history: !live });
-  const scrub = () => store().checkpoint();
   const st = s.structure;
   const f = s.foundation;
   return (
@@ -44,10 +45,10 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
         <SelectField<StructuralSystem> label={t('struct.system')} value={st.system} disabled={readOnly || !!modular}
           options={STRUCTURAL_SYSTEM_IDS.map((v) => ({ value: v, label: t(`struct.system.${v}` as MessageKey) }))}
           onChange={(v) => setS({ system: v, dampingRatio: STRUCTURAL_SYSTEMS[v].damping })} />
-        <NumberField label={t('struct.damping')} value={st.dampingRatio} min={0.005} max={0.3} step={0.005} precision={3} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ dampingRatio: v }, live)} />
-        <NumberField label={t('struct.stiffness')} value={st.stiffnessFactor} min={0.1} max={10} step={0.05} precision={2} unit="×" disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ stiffnessFactor: v }, live)} />
-        <NumberField label={t('struct.strength')} value={st.strengthFactor} min={0.1} max={10} step={0.05} precision={2} unit="×" disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ strengthFactor: v }, live)} />
-        <NumberField label={t('struct.period')} value={st.periodOverride} min={0} max={10} step={0.05} precision={2} unit="s" hint={t('struct.period.hint')} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setS({ periodOverride: v }, live)} />
+        <NumberField label={t('struct.damping')} value={st.dampingRatio} min={0.005} max={0.3} step={0.005} precision={3} disabled={readOnly} {...scrubTx} onChange={(v, live) => setS({ dampingRatio: v }, live)} />
+        <NumberField label={t('struct.stiffness')} value={st.stiffnessFactor} min={0.1} max={10} step={0.05} precision={2} unit="×" disabled={readOnly} {...scrubTx} onChange={(v, live) => setS({ stiffnessFactor: v }, live)} />
+        <NumberField label={t('struct.strength')} value={st.strengthFactor} min={0.1} max={10} step={0.05} precision={2} unit="×" disabled={readOnly} {...scrubTx} onChange={(v, live) => setS({ strengthFactor: v }, live)} />
+        <NumberField label={t('struct.period')} value={st.periodOverride} min={0} max={10} step={0.05} precision={2} unit="s" hint={t('struct.period.hint')} disabled={readOnly} {...scrubTx} onChange={(v, live) => setS({ periodOverride: v }, live)} />
         <div className={styles.note}>{t('struct.period.estimated', { t: fmt(st.periodOverride > 0 ? st.periodOverride : T, 2), cy: fmt(cy, 2) })}</div>
         <div className={styles.note}>{t(modular ? 'struct.modularNote' : 'struct.note')}</div>
       </Section>
@@ -55,11 +56,11 @@ export function SeismicSections({ obj, readOnly }: { obj: WorldObject; readOnly:
         <SelectField<FoundationType> label={t('found.type')} value={f.type} disabled={readOnly}
           options={FOUNDATION_TYPE_IDS.map((v) => ({ value: v, label: t(`found.type.${v}` as MessageKey) }))}
           onChange={(v) => setF({ type: v })} />
-        <NumberField label={t('found.stiffness')} value={f.stiffness} min={0.05} max={20} step={0.05} precision={2} unit="×" disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setF({ stiffness: v }, live)} />
-        <NumberField label={t('found.damping')} value={f.damping} min={0} max={0.5} step={0.01} precision={2} hint={t('found.damping.hint')} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setF({ damping: v }, live)} />
-        <NumberField label={t('found.anchorage')} value={f.anchorage} min={0.05} max={5} step={0.05} precision={2} unit="×W" hint={t('found.anchorage.hint')} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setF({ anchorage: v }, live)} />
-        <NumberField label={t('found.groundContact')} value={f.groundContact} min={0.2} max={1} step={0.05} precision={2} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setF({ groundContact: v }, live)} />
-        <NumberField label={t('found.failure')} value={f.failureThreshold} min={0.1} max={20} step={0.1} precision={1} unit="°" hint={t('found.failure.hint')} disabled={readOnly} onScrubStart={scrub} onChange={(v, live) => setF({ failureThreshold: v }, live)} />
+        <NumberField label={t('found.stiffness')} value={f.stiffness} min={0.05} max={20} step={0.05} precision={2} unit="×" disabled={readOnly} {...scrubTx} onChange={(v, live) => setF({ stiffness: v }, live)} />
+        <NumberField label={t('found.damping')} value={f.damping} min={0} max={0.5} step={0.01} precision={2} hint={t('found.damping.hint')} disabled={readOnly} {...scrubTx} onChange={(v, live) => setF({ damping: v }, live)} />
+        <NumberField label={t('found.anchorage')} value={f.anchorage} min={0.05} max={5} step={0.05} precision={2} unit="×W" hint={t('found.anchorage.hint')} disabled={readOnly} {...scrubTx} onChange={(v, live) => setF({ anchorage: v }, live)} />
+        <NumberField label={t('found.groundContact')} value={f.groundContact} min={0.2} max={1} step={0.05} precision={2} disabled={readOnly} {...scrubTx} onChange={(v, live) => setF({ groundContact: v }, live)} />
+        <NumberField label={t('found.failure')} value={f.failureThreshold} min={0.1} max={20} step={0.1} precision={1} unit="°" hint={t('found.failure.hint')} disabled={readOnly} {...scrubTx} onChange={(v, live) => setF({ failureThreshold: v }, live)} />
         <div className={styles.note}>{t('found.soil', { soil: t(soil.labelKey) })}{plinth > 0 ? ` · ${t('found.plinth', { m: fmt(plinth, 2) })}` : ''}</div>
       </Section>
     </>

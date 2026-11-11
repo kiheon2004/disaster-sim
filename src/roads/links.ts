@@ -120,3 +120,23 @@ export function followRoads(objects: Objects, prev: RoadNetwork, next: RoadNetwo
   }
   return out ?? objects;
 }
+
+const sameVec = (a: readonly number[], b: readonly number[]) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+
+/**
+ * Phase 36: a road-linked object MOVED by an object edit (gizmo, inspector, group transform, align, duplicate) gets a link
+ * that matches where it now is — re-measured on its road (preferred) or the nearest one within reach, and dropped when
+ * there is none. Before, the old link was kept and the next edit of that road (policy 'follow') teleported the object
+ * back to its old place; a duplicate jumped onto the original's spot.
+ */
+export function relinkMoved(prev: WorldObject | undefined, next: WorldObject, n: RoadNetwork): WorldObject {
+  const link = next.roadLink;
+  if (!link) return next;
+  if (prev && sameVec(prev.transform.position, next.transform.position) && sameVec(prev.transform.rotation, next.transform.rotation)) return next;
+  const [x, , z] = next.transform.position;
+  const m = measureLink(n, x, z, yawOf(next.transform.rotation), link.policy, link.segment);
+  if (m) return { ...next, roadLink: m };
+  const { roadLink: _dropped, ...rest } = next;
+  void _dropped;
+  return rest as WorldObject;
+}
