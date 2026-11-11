@@ -139,6 +139,18 @@ for (let i = 0; i < B.count; i++) {
   growth.set(key, g);
   fresh.push(i);
 }
+// NET growth per class (B − A): the cycle may REPLACE state (a loaded document is all new nodes), so "new nodes" alone
+// says little there — what counts is which classes hold more after the cycles than before.
+{
+  const sum = (S) => { const m = new Map(); let total = 0; for (let i = 0; i < S.count; i++) { const key = `${S.type[i]}:${S.name[i]}`.slice(0, 90); const g = m.get(key) ?? { n: 0, bytes: 0 }; g.n++; g.bytes += S.size[i]; m.set(key, g); total += S.size[i]; } return { m, total }; };
+  const a = sum(A), b = sum(B);
+  const net = [...b.m.entries()].map(([k, g]) => ({ k, dn: g.n - (a.m.get(k)?.n ?? 0), db: g.bytes - (a.m.get(k)?.bytes ?? 0) })).filter((x) => x.db !== 0).sort((x, y) => y.db - x.db);
+  console.log(`NET heap growth over ${N} cycles: ${((b.total - a.total) / 1024).toFixed(1)} KB = ${((b.total - a.total) / 1024 / N).toFixed(2)} KB / cycle (nodes ${A.count} → ${B.count})`);
+  for (const x of net.slice(0, 22)) console.log(`${(x.db / 1024).toFixed(1).padStart(8)} KB  ${String(x.dn).padStart(7)}  ${x.k}`);
+  console.log('  …shrunk most:');
+  for (const x of net.slice(-5)) console.log(`${(x.db / 1024).toFixed(1).padStart(8)} KB  ${String(x.dn).padStart(7)}  ${x.k}`);
+  console.log('');
+}
 const top = [...growth.entries()].sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 25);
 console.log(`new nodes after ${N} cycles: ${fresh.length}, bytes ${(fresh.reduce((a, i) => a + B.size[i], 0) / 1024).toFixed(1)} KB`);
 for (const [k, g] of top) console.log(`${(g.bytes / 1024).toFixed(1).padStart(8)} KB  ${String(g.n).padStart(6)}  ${k}`);
