@@ -63,4 +63,9 @@ export const enP36Editor = {
   'ed36.copy.structure': 'Structure (buildings: materials / earthquake properties)',
   'ed36.copy.apply': 'Apply to the others',
   'ed36.copy.done': 'Properties applied: {applied}; skipped as not compatible: {skipped}.',
+  'warn.wheelContact': 'A wheel is off the ground (uneven terrain under the car)',
+  'warn.steep': 'Too steep to stand / park safely (slides or tips)',
+  'warn.inWater': 'Under water (below the sea level)',
+  'warn.offRoad': 'Not on a road',
+  'ed36.paste.outside': 'Not pasted: part of the copy would be outside the world.',
 } as const;

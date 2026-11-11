@@ -5,7 +5,7 @@
  */
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { useWorldStore } from '@/world/worldStore';
-import { createEmptyDocument } from '@/world/WorldDocument';
+import { createEmptyDocument, createWorldObject } from '@/world/WorldDocument';
 import { parseDocument, serializeDocument } from '@/world/serialization';
 import { identityTransform, type Vec3 } from '@/core/types';
 import { useEditorStore } from '@/editor/editorStore';
@@ -298,5 +298,52 @@ describe('property copy (§20)', () => {
     expect(w2n.params.length).toBe(9);
     expect(w2n.transform.scale).toEqual([2, 1, 1]);
     expect(r.objects.find((x) => x.id === h)!.params).toEqual(o[h].params);
+  });
+});
+
+import { checkPlacement } from '@/editor/build/placementCheck';
+import { getDefinition } from '@/objects/registry';
+import { groundPose } from '@/terrain/groundPlacement';
+
+describe('placement checks for vehicles and people (§16, §19)', () => {
+  it('wheel off the ground on a ridge, steep slope, off-road, under water', () => {
+    const doc = createEmptyDocument();
+    const t = doc.terrain;
+    const car = createWorldObject({ type: 'car', transform: identityTransform() }, 1);
+    const d = getDefinition('car').getDimensions(car.params);
+    const wx = (d[0] / 2) * 0.78, wz = (d[2] / 2) * 0.85;
+    // A bump under ONE wheel (front right): the plane through the footprint corners leaves that wheel off it. Plus a
+    // steep slope beyond x = 60.
+    for (let iz = 0; iz < t.nz; iz++) for (let ix = 0; ix < t.nx; ix++) {
+      const x = t.originX + ix * t.cellSize, z = t.originZ + iz * t.cellSize;
+      t.heights[iz * t.nx + ix] = Math.max(0, 0.9 - Math.hypot(x - wx, z - wz) * 0.6) + Math.max(0, x - 60) * 0.7;
+    }
+    t.revision++;
+    const s = samplerFor(t);
+    const seat = groundPose(car, 0, 0, 0, s);
+    const onRidge = checkPlacement({ ...car, transform: { ...car.transform, ...seat } }, s);
+    expect(onRidge.warnings).toContain('wheelContact');
+    expect(onRidge.warnings).toContain('offRoad');
+    const flatSeat = groundPose(car, -50, 40, 0, s);
+    expect(checkPlacement({ ...car, transform: { ...car.transform, ...flatSeat } }, s).warnings).not.toContain('wheelContact');
+    const human = createWorldObject({ type: 'human', transform: identityTransform() }, 1);
+    const steepSeat = groundPose(human, 80, 40, 0, s);
+    expect(checkPlacement({ ...human, transform: { ...human.transform, ...steepSeat } }, s).warnings).toContain('steep');
+    t.settings = { ...t.settings, waterLevel: 0.5 };
+    t.revision++;
+    const wet = groundPose(human, -50, 40, 0, samplerFor(t));
+    expect(checkPlacement({ ...human, transform: { ...human.transform, ...wet } }, samplerFor(t)).warnings).toContain('inWater');
+  });
+});
+
+import { checkStamp } from '@/editor/build/placementCheck';
+
+describe('paste stamps are checked (§16)', () => {
+  it('outside the world refuses the stamp; overlaps are warnings', () => {
+    const inside = [{ type: 'wall' as const, transform: at(0, 0) }, { type: 'wall' as const, transform: at(0.2, 0) }];
+    const r = checkStamp(inside, null);
+    expect(r.ok).toBe(true);
+    expect(r.items[1].warnings).toContain('overlap');
+    expect(checkStamp([{ type: 'wall', transform: at(99.9, 0) }], null).ok).toBe(false);
   });
 });

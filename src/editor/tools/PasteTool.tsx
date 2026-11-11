@@ -10,6 +10,8 @@ import { useWorldStore } from '@/world/worldStore';
 import { pasteRoads } from '@/roads/blueprintRoads';
 import { RoadOutlines } from './RoadTool';
 import { GroundCatcher, PlanPreview, groundHitOf, useSampler } from './shared';
+import { checkStamp } from '../build/placementCheck';
+import { FootprintIndex } from '../build/footprint';
 
 /**
  * Paste: the clipboard (a blueprint) follows the cursor as a ghost, anchored at the center of
@@ -25,10 +27,15 @@ export function PasteTool() {
   const [at, setAt] = useState<Vec2 | null>(null);
   const step = gridStep(grid, 3);
 
+  const objects = useWorldStore((s) => s.doc.objects);
+  const existing = useMemo(() => FootprintIndex.fromObjects(Object.values(objects)), [objects]);
+  // Phase 36 §16: the stamp is checked like a placement — outside the world refused (red), overlaps warned (orange).
   const plan = useMemo((): PlannedObject[] => {
     if (!clipboard || !at) return [];
-    return instantiateBlueprint(clipboard, at[0], at[1], yaw, sampler).map((input) => ({ input, ok: true, warnings: [] }));
-  }, [clipboard, at, yaw, sampler]);
+    const inputs = instantiateBlueprint(clipboard, at[0], at[1], yaw, sampler);
+    const check = checkStamp(inputs, existing);
+    return inputs.map((input, i) => ({ input, ok: check.items[i].ok, warnings: check.items[i].warnings }));
+  }, [clipboard, at, yaw, sampler, existing]);
 
   const policy = useBuildStore((s) => s.roadPaste);
   const roads = useWorldStore((s) => s.doc.roads);

@@ -65,4 +65,9 @@ export const koP36Editor: Record<keyof typeof enP36Editor, string> = {
   'ed36.copy.structure': '구조(건물: 재료·지진 특성)',
   'ed36.copy.apply': '나머지에 적용',
   'ed36.copy.done': '속성 적용 {applied}건, 맞지 않아 건너뜀 {skipped}건.',
+  'warn.wheelContact': '바퀴 하나가 지면에서 떠 있습니다(차 아래 지면이 고르지 않음)',
+  'warn.steep': '서 있거나 주차하기에 너무 가파릅니다(미끄러지거나 넘어짐)',
+  'warn.inWater': '물속입니다(해수면 아래)',
+  'warn.offRoad': '도로 위가 아닙니다',
+  'ed36.paste.outside': '붙여넣지 않았습니다: 복사본 일부가 월드 밖으로 나갑니다.',
 };

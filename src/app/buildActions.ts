@@ -18,6 +18,7 @@ import { pasteRoads } from '@/roads/blueprintRoads';
 import { measureLink } from '@/roads/links';
 import { yawOf } from '@/terrain/groundPlacement';
 import { copyProperties, type CopyProp } from '@/editor/build/propertyCopy';
+import { checkStamp } from '@/editor/build/placementCheck';
 import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type AlignRef, type MatchWhat, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
 import { toast } from '@/ui/common/toast';
@@ -300,6 +301,11 @@ export function pasteAt(x: number, z: number): EntityId[] {
   if (!editable() || !b.clipboard) return [];
   const terrain = samplerFor(world().doc.terrain);
   const inputs = instantiateBlueprint(b.clipboard, x, z, b.pasteYaw, terrain);
+  // Phase 36 §16: a stamp reaching outside the world is refused (as single placement is); overlaps are allowed.
+  if (!checkStamp(inputs, null).ok) {
+    toast('warn', { key: 'ed36.paste.outside' });
+    return [];
+  }
   if (!b.clipboard.roads) {
     const ids = world().applyEdit({ add: inputs });
     editor().setSelection(ids);
