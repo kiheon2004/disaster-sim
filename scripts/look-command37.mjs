@@ -53,10 +53,10 @@ const screen = (x, z) => ev(([x, z]) => {
 }, [x, z]);
 async function pointAt(x, z) { const [sx, sy] = await screen(x, z); await page.mouse.move(sx - 8, sy - 5); await page.mouse.move(sx, sy, { steps: 4 }); await wait(250); }
 const INPUT = '[data-testid="command-input"]';
-const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 async function type(text) {
   await page.focus(INPUT);
-  await page.keyboard.down(mod); await page.keyboard.press('KeyA'); await page.keyboard.up(mod);
+  // (the text is selected through the DOM: ⌘/Ctrl+A sent by puppeteer does not select in headless Chrome)
+  await ev((sel) => document.querySelector(sel).select(), INPUT);
   await page.keyboard.press('Backspace');
   await page.keyboard.type(text, { delay: 3 });
   await wait(500);
@@ -96,9 +96,11 @@ await shot('plan-delete');
 await esc();
 
 // 4 — terrain: a typed flatten "here" → the height-change heat map
+// (a typed raise makes a plateau with a steep rim: the flatten is typed with the pointer near the rim, so its circle
+// covers plateau, rim and low ground)
 await run('terrain raise circle 45,55 r=16 by=5');
-await view(45, 55, 80, 55);
-await pointAt(45, 55);
+await view(52, 55, 70, 50);
+await pointAt(57, 55);
 await type(KO ? '여기 반경 10 m 평평하게' : 'flatten a 10 m circle here');
 await enter();
 await shot('plan-flatten-heatmap');
@@ -110,7 +112,7 @@ await type(KO ? 'n4에서 (40, 60)까지 2차로 도로' : 'a two-lane road from
 await enter();
 await shot('plan-road');
 await esc();
-await type(KO ? '(30, 30) 반경 25 m에 숲, 밀도 0.4, 시드 7' : 'a forest within 25 m of (30, 30), density 0.4, seed 7');
+await type(KO ? '(30, 30) 반경 25 m에 숲, 밀도 5, 시드 7' : 'a forest within 25 m of (30, 30), density 5, seed 7');
 await enter();
 await shot('plan-forest');
 await esc();
