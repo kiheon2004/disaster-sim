@@ -62,6 +62,8 @@ interface EditorState {
   brushMax: number | null;
   /** Height change of the current / last stroke (m): max raise, max lowering, touched area (m²). */
   strokeDelta: { up: number; down: number; area: number } | null;
+  /** Phase 36: predicted change of 1 s of the brush at the cursor (before pressing), same shape as strokeDelta. */
+  brushPreview: { up: number; down: number; area: number } | null;
   /** Building Edit Mode (Phase 17): the modular building whose members are being edited. */
   buildingId: EntityId | null;
 
@@ -88,6 +90,7 @@ interface EditorState {
   setBrush: (patch: { radius?: number; strength?: number }) => void;
   setBrushOptions: (patch: Partial<Pick<EditorState, 'brushFalloff' | 'brushShape' | 'brushSeed' | 'brushMin' | 'brushMax'>>) => void;
   setStrokeDelta: (d: EditorState['strokeDelta']) => void;
+  setBrushPreview: (d: EditorState['brushPreview']) => void;
   setPaintType: (t: GroundTypeId) => void;
   setSoilType: (t: SoilProfileId) => void;
   setTerrainProbe: (p: { x: number; z: number } | null) => void;
@@ -119,6 +122,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   brushMin: null,
   brushMax: null,
   strokeDelta: null,
+  brushPreview: null,
   buildingId: null,
 
   setMode: (mode) => set({ mode, tool: 'select', placeItemId: null, hoveredId: null, buildingId: null }),
@@ -154,6 +158,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPaintType: (paintType) => set({ paintType }),
   setBrushOptions: (patch) => set(patch),
   setStrokeDelta: (strokeDelta) => set({ strokeDelta }),
+  setBrushPreview: (brushPreview) => set({ brushPreview }),
   setSoilType: (soilType) => set({ soilType }),
   setTerrainProbe: (terrainProbe) => set({ terrainProbe }),
   setRoadEdit: (on) =>

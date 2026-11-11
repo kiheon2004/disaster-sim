@@ -63,6 +63,36 @@ interface Chunk {
   adapter: SimRenderAdapter;
   /** Object references the chunk was built from (identity = unchanged). */
   built: Map<EntityId, WorldObject>;
+  /** Phase 36: the terrain under one of its buildings changed (its foundation plinth must be rebuilt). */
+  dirty?: boolean;
+}
+
+/** World box of the vertices whose height differs from `prev` (null = none). */
+function changedBox(t: TerrainSampler['data'], prev: Float32Array): [number, number, number, number] | null {
+  const h = t.heights;
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (let i = 0; i < h.length; i++) {
+    if (h[i] === prev[i]) continue;
+    const ix = i % t.nx, iz = (i - ix) / t.nx;
+    const x = t.originX + ix * t.cellSize, z = t.originZ + iz * t.cellSize;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (z < z0) z0 = z;
+    if (z > z1) z1 = z;
+  }
+  return Number.isFinite(x0) ? [x0, z0, x1, z1] : null;
+}
+
+/** A building of the chunk whose footprint (+ a cell of the plinth scan) reaches into the box. */
+function buildingIn(chunk: Chunk, box: [number, number, number, number], cell: number): boolean {
+  for (const o of chunk.built.values()) {
+    if (o.type !== 'building') continue;
+    const d = getDefinition(o.type).getDimensions(o.params), k = o.transform.scale;
+    const r = Math.hypot(d[0] * k[0], d[2] * k[2]) / 2 + cell;
+    const [x, , z] = o.transform.position;
+    if (x + r >= box[0] && x - r <= box[2] && z + r >= box[1] && z - r <= box[3]) return true;
+  }
+  return false;
 }
 
 export interface EditorBatchStats {
@@ -80,14 +110,48 @@ export class EditorBatches {
   private hidden = new Set<EntityId>();
   stats: EditorBatchStats = { chunks: 0, rebuilds: 0, lastRebuildMs: 0, instances: 0 };
 
+  /** Phase 36: heights / grid / flatness at the last terrain the batches were built on. */
+  private heights: Float32Array;
+  private shape: string;
+  private flat: boolean;
+
   constructor(private terrain: TerrainSampler) {
     this.root.name = 'editor-batches';
+    this.heights = terrain.data.heights.slice();
+    this.shape = EditorBatches.shapeOf(terrain);
+    this.flat = terrain.flat;
   }
 
-  /** New terrain: every chunk is rebuilt on the next sync (foundation plinths depend on it). */
+  private static shapeOf(t: TerrainSampler) {
+    const d = t.data;
+    return `${d.nx},${d.nz},${d.originX},${d.originZ},${d.cellSize}`;
+  }
+
+  /**
+   * New terrain. Only foundation plinths depend on it (SimRenderAdapter), so Phase 36 rebuilds only the chunks with a
+   * building over the heights that changed (every chunk before: a brush stroke rebuilt the whole world's batches); a
+   * new grid or a flat ↔ relief change still rebuilds everything. Moved objects are new objects: their chunks rebuild
+   * through `sync` anyway.
+   */
   setTerrain(t: TerrainSampler) {
     if (t === this.terrain) return;
     this.terrain = t;
+    const shape = EditorBatches.shapeOf(t);
+    const same = shape === this.shape && t.flat === this.flat && this.heights.length === t.data.heights.length;
+    const box = same ? changedBox(t.data, this.heights) : null;
+    if (same) this.heights.set(t.data.heights);
+    else this.heights = t.data.heights.slice();
+    this.shape = shape;
+    this.flat = t.flat;
+    if (!same) {
+      this.disposeChunks();
+      return;
+    }
+    if (box) for (const c of this.chunks) if (c && buildingIn(c, box, t.data.cellSize)) c.dirty = true;
+  }
+
+  /** Rebuild every chunk on the next sync (the pre-Phase-36 terrain behaviour; benchmarks). */
+  invalidateAll() {
     this.disposeChunks();
   }
 
@@ -119,7 +183,7 @@ export class EditorBatches {
   }
 
   private stale(chunk: Chunk, m: WorldObject[], hide: ReadonlySet<EntityId>): boolean {
-    if (chunk.built.size !== m.length) return true;
+    if (chunk.dirty || chunk.built.size !== m.length) return true;
     for (const o of m) {
       const b = chunk.built.get(o.id);
       if (!b) return true;

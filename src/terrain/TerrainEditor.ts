@@ -74,6 +74,9 @@ export interface DabOptions {
 
 /** Scratch copy of the heights used by 'smooth' so the result is independent of visit order. */
 let smoothScratch = new Float32Array(0);
+/** Scratch source / result heights of 'erode' (reused: one erosion step per dab). */
+let erodeSrc = new Float64Array(0);
+let erodeOut = new Float64Array(0);
 
 const noises = new Map<number, ValueNoise>();
 function noiseFor(seed: number) {
@@ -97,13 +100,13 @@ export function applyDab(t: TerrainData, o: DabOptions): GridRect | null {
   if (o.op === 'paint' || o.op === 'paintSoil') {
     const layer = o.op === 'paint' ? t.ground : t.soil;
     const type = o.op === 'paint' ? (o.groundType ?? 0) : (o.soilType ?? 1);
-    // Paint the inner part of the bell so edges stay crisp; strength widens the core.
-    const core = 0.35 + 0.6 * strength;
+    // Paint the inner part of the bell so edges stay crisp; strength widens the core (paintCore: the preview draws it).
+    const core = paintCore(radius, strength);
     let touched = false;
     for (let iz = rect.z0; iz <= rect.z1; iz++) {
       for (let ix = rect.x0; ix <= rect.x1; ix++) {
         const d = dist(originX + ix * cs - o.x, originZ + iz * cs - o.z);
-        if (d <= radius * core) {
+        if (d <= core) {
           layer[iz * nx + ix] = type;
           touched = true;
         }
@@ -206,9 +209,12 @@ function erodeDab(t: TerrainData, o: DabOptions, rect: GridRect, fall: (dx: numb
   const k = Math.min(0.5, 4 * strength * o.dt);
   const x0 = Math.max(0, rect.x0 - 1), x1 = Math.min(nx - 1, rect.x1 + 1), z0 = Math.max(0, rect.z0 - 1), z1 = Math.min(nz - 1, rect.z1 + 1);
   const w = x1 - x0 + 1;
-  const src = new Float64Array(w * (z1 - z0 + 1));
+  const n = w * (z1 - z0 + 1);
+  // Phase 36: scratch buffers reused across dabs (two (2r + 3)² arrays per frame were allocated before).
+  if (erodeSrc.length < n) { erodeSrc = new Float64Array(n); erodeOut = new Float64Array(n); }
+  const src = erodeSrc, out = erodeOut;
   for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) src[(iz - z0) * w + (ix - x0)] = h[iz * nx + ix];
-  const out = Float64Array.from(src);
+  out.set(src.subarray(0, n));
   for (let iz = rect.z0; iz <= rect.z1; iz++) {
     for (let ix = rect.x0; ix <= rect.x1; ix++) {
       const f = fall(originX + ix * cs - o.x, originZ + iz * cs - o.z);
@@ -231,4 +237,75 @@ function erodeDab(t: TerrainData, o: DabOptions, rect: GridRect, fall: (dx: numb
   for (let iz = z0; iz <= z1; iz++) for (let ix = x0; ix <= x1; ix++) h[iz * nx + ix] = quantizeHeight(out[(iz - z0) * w + (ix - x0)]);
   t.revision++;
   return { x0, z0, x1, z1 };
+}
+
+// ── Phase 36: preview before applying, stroke interpolation ─────────────────────────────────────────────────────────
+
+/** What one second of holding the brush still would do (vertex rectangle of the full grid, row-major per vertex). */
+export interface DabPreview {
+  rect: GridRect;
+  /** Predicted height change (m) per vertex of `rect`. */
+  dh: Float64Array;
+  /** 1 where the ground (paint) or soil (paintSoil) type would change. */
+  painted: Uint8Array;
+  /** Largest raise / lowering (m, down ≤ 0) and the changed area (m²). */
+  up: number;
+  down: number;
+  area: number;
+}
+
+/**
+ * Predict a dab without touching the terrain: the brush rectangle (+ the 1-vertex border smooth / erode read and write,
+ * clamped like the real grid) is copied into a scratch grid and the REAL `applyDab` runs on it — same falloff, shape,
+ * strength, limits and seeds — for `seconds` of brush time in frame-sized steps (relaxing brushes are not linear in
+ * time). Paint brushes act once. The document is never written.
+ */
+export function previewDab(t: TerrainData, o: DabOptions, seconds = 1, step = 1 / 20): DabPreview | null {
+  const brush = rectForCircle(t, o.x, o.z, o.brush.radius);
+  if (!brush) return null;
+  const rect = { x0: Math.max(0, brush.x0 - 1), z0: Math.max(0, brush.z0 - 1), x1: Math.min(t.nx - 1, brush.x1 + 1), z1: Math.min(t.nz - 1, brush.z1 + 1) };
+  const w = rect.x1 - rect.x0 + 1, n = w * (rect.z1 - rect.z0 + 1);
+  const s: TerrainData = {
+    ...t, nx: w, nz: rect.z1 - rect.z0 + 1, originX: t.originX + rect.x0 * t.cellSize, originZ: t.originZ + rect.z0 * t.cellSize,
+    heights: new Float32Array(n), ground: new Uint8Array(n), soil: new Uint8Array(n), revision: 0,
+  };
+  for (let iz = rect.z0; iz <= rect.z1; iz++) {
+    const a = iz * t.nx + rect.x0, b = a + w, k = (iz - rect.z0) * w;
+    s.heights.set(t.heights.subarray(a, b), k);
+    s.ground.set(t.ground.subarray(a, b), k);
+    s.soil.set(t.soil.subarray(a, b), k);
+  }
+  const paint = o.op === 'paint' || o.op === 'paintSoil';
+  const steps = paint ? 1 : Math.max(1, Math.round(seconds / step));
+  for (let k = 0; k < steps; k++) applyDab(s, { ...o, dt: paint ? o.dt : seconds / steps });
+  const dh = new Float64Array(n), painted = new Uint8Array(n);
+  let up = 0, down = 0, changed = 0;
+  for (let iz = rect.z0; iz <= rect.z1; iz++) {
+    for (let ix = rect.x0; ix <= rect.x1; ix++) {
+      const i = iz * t.nx + ix, k = (iz - rect.z0) * w + (ix - rect.x0);
+      const d = s.heights[k] - t.heights[i];
+      dh[k] = d;
+      if (d > up) up = d;
+      if (d < down) down = d;
+      if (o.op === 'paint' ? s.ground[k] !== t.ground[i] : o.op === 'paintSoil' ? s.soil[k] !== t.soil[i] : false) painted[k] = 1;
+      if (d !== 0 || painted[k]) changed++;
+    }
+  }
+  return { rect, dh, painted, up, down, area: changed * t.cellSize * t.cellSize };
+}
+
+/** Paint brushes paint the inner part of the bell: the core radius actually painted (m). */
+export function paintCore(radius: number, strength: number): number {
+  return radius * (0.35 + 0.6 * Math.max(0, Math.min(1, strength)));
+}
+
+/**
+ * Dab centres from the previous dab to the cursor (Phase 36 stroke interpolation): spaced at most a quarter of the
+ * radius (at least half a cell), the cursor last, at most `max` dabs. A fast drag no longer leaves gaps between frames;
+ * the frame's brush time is shared by the dabs, so the deposit per second is unchanged.
+ */
+export function dabPath(ax: number, az: number, bx: number, bz: number, radius: number, cellSize: number, max = 64): [number, number][] {
+  const d = Math.hypot(bx - ax, bz - az);
+  const n = Math.min(max, Math.max(1, Math.ceil(d / Math.max(cellSize * 0.5, radius * 0.25))));
+  return Array.from({ length: n }, (_, k) => [ax + ((bx - ax) * (k + 1)) / n, az + ((bz - az) * (k + 1)) / n] as [number, number]);
 }

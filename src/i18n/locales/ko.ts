@@ -36,6 +36,7 @@ import { koUx355 } from './ko.ux355';
 import { koP36Editor } from './ko.p36editor';
 import { koP36Roads } from './ko.p36roads';
 import { koP36Struct } from './ko.p36struct';
+import { koP36Terrain } from './ko.p36terrain';
 
 export const ko = {
   // App
@@ -645,6 +646,7 @@ export const ko = {
   ...koP36Editor,
   ...koP36Roads,
   ...koP36Struct,
+  ...koP36Terrain,
 } as const;
 
 export type MessageKey = keyof typeof ko;

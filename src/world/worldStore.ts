@@ -21,7 +21,7 @@ import { applyPatch, makePatch, snapshotLayers, unionRect, type GridRect, type T
 import { applyDab, type DabOptions } from '@/terrain/TerrainEditor';
 import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
-import { groundPose, isGrounded, reseat, yawOf } from '@/terrain/groundPlacement';
+import { groundFollowOf, groundPose, isGrounded, reseat, yawOf } from '@/terrain/groundPlacement';
 import { terrainStats } from '@/terrain/terrainStats';
 import { preserveOnTerrainEdit, releasePlinth } from '@/buildings/foundation';
 import type { RoadNetwork } from '@/roads/types';
@@ -30,11 +30,17 @@ import { bakeRegion, dirtyRect } from '@/roads/bake';
 import { followRoads, relinkMoved } from '@/roads/links';
 import type { Feature } from '@/landscape/types';
 import { NO_PAINT } from '@/landscape/types';
-import { featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
-import { adoptTerrain, applyLayerPatch, makeLayerPatch, naturalProvider, recompose, snapshotLandscape, type LayerPatch, type LayerSnapshot } from '@/landscape/apply';
+import { expandForRivers, featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
+import { adoptTerrain, applyLayerPatch, makeLayerPatch, makeLayerPatchFromRect, naturalProvider, recompose, snapshotLandscape, snapshotLandscapeRect, type LayerPatch, type LayerSnapshot, type RectLayerSnapshot } from '@/landscape/apply';
 import { roadStats } from '@/roads/stats';
 
 const HISTORY_LIMIT = 100;
+/**
+ * Phase 36 (§23): the history is bounded by memory as well as by count. A terrain step holds its before / after patch
+ * (12 B per vertex of the changed rectangle, + 30 B per vertex of recomposed layers); a full-map step on a 1 km map is
+ * ~42 MB, so 100 such steps would not fit in a browser tab. The oldest steps are dropped beyond this many bytes.
+ */
+export const HISTORY_BYTES = 64 * 1024 * 1024;
 
 type Objects = WorldDocument['objects'];
 
@@ -63,6 +69,34 @@ export interface LandscapeEntry {
   features: Feature[];
   next: number;
   patch: LayerPatch | null;
+}
+
+const entryBytes = new WeakMap<HistoryEntry, number>();
+
+/**
+ * Bytes a history entry holds on its own: its terrain and layer patch arrays. Objects, roads and features are immutable
+ * values shared with the document and the neighbouring steps, so they are not counted.
+ */
+export function historyEntryBytes(e: HistoryEntry): number {
+  const hit = entryBytes.get(e);
+  if (hit !== undefined) return hit;
+  let b = 0;
+  const p = e.terrain;
+  if (p) b += p.heightsBefore.byteLength + p.heightsAfter.byteLength + p.groundBefore.byteLength + p.groundAfter.byteLength + p.soilBefore.byteLength + p.soilAfter.byteLength;
+  for (const l of e.landscape.patch?.layers ?? []) b += l.before.byteLength + l.after.byteLength;
+  entryBytes.set(e, b);
+  return b;
+}
+
+/** Append an undo step, keeping at most `limit` steps and `bytes` of patches (the newest step is always kept). */
+export function pushHistory(past: readonly HistoryEntry[], entry: HistoryEntry, limit = HISTORY_LIMIT, bytes = HISTORY_BYTES): HistoryEntry[] {
+  const out = [...past, entry].slice(-limit);
+  let total = 0;
+  for (let i = out.length - 1; i >= 0; i--) {
+    total += historyEntryBytes(out[i]);
+    if (total > bytes && i < out.length - 1) return out.slice(i + 1);
+  }
+  return out;
 }
 
 /** Landscape part of a WorldEdit (Phase 19). */
@@ -189,6 +223,8 @@ export interface WorldState {
   cancelTerrainStroke: () => GridRect | null;
   /** Height change of the stroke in progress: max raise / lowering (m) and changed area (m²). */
   strokeDelta: () => { up: number; down: number; area: number } | null;
+  /** Phase 36: the heights at the start of the open stroke (read-only view of its snapshot; null = no stroke). */
+  strokeHeights: () => Float32Array | null;
   applyTerrainPreset: (preset: TerrainPresetId, seed: number) => void;
   setWaterLevel: (level: number | null) => void;
   /** Replace the natural features (one undo step; the terrain is recomposed locally). */
@@ -227,9 +263,11 @@ function followTerrain(objects: Objects, before: TerrainSampler, after: TerrainS
       const [x, , z] = o.transform.position;
       if (x < area[0] - 40 || x > area[2] + 40 || z < area[1] - 40 || z > area[3] + 40) continue;
     }
-    if (!isGrounded(o, before)) continue;
+    // Phase 36: the explicit per-category policy (groundPlacement.ts); lifted objects keep their absolute height.
+    const policy = groundFollowOf(o, before);
+    if (policy === 'keep') continue;
     // Phase 17 foundation policy 'preserve': keep the world transform, freeze the plinth.
-    if (o.building?.options.foundationPolicy === 'preserve') {
+    if (policy === 'preserve') {
       const kept = preserveOnTerrainEdit(o, before);
       if (kept !== o) {
         out ??= { ...objects };
@@ -298,7 +336,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     if (opts?.history === false) {
       set({ doc: touch(doc, next) });
     } else {
-      set({ doc: touch(doc, next), past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
+      set({ doc: touch(doc, next), past: pushHistory(past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
     }
   };
 
@@ -312,7 +350,10 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     // (Terrain arrays are edited in place: callers check `locked` before touching them.)
     const t = doc.terrain;
     const land = doc.landscape;
-    const lb = snapshotLandscape(land);
+    // Phase 36: before-copies of the layers in the rectangle the commit changes (the stroke grown by the rivers that
+    // recompose re-flows), not of the whole map.
+    const layerRect = unionRects(rect, expandForRivers(land, t, rect))!;
+    const lb = snapshotLandscapeRect(land, t.nx, layerRect);
     for (let iz = rect.z0; iz <= rect.z1; iz++) {
       for (let ix = rect.x0; ix <= rect.x1; ix++) {
         const i = iz * t.nx + ix;
@@ -324,25 +365,26 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     }
     const r = recompose(t, land, doc.roads, rect, seaLevel(t));
     const finalRect = unionRects(rect, r.final)!;
-    finishLayered(doc, past, before, lb, finalRect, unionRects(rect, r.natural)!, r.roads, doc.objects);
+    // (recompose re-flows exactly expandForRivers(rect): the snapshot covers its natural rectangle.)
+    finishLayered(doc, past, before, lb, finalRect, layerRect, r.roads, doc.objects);
   };
 
   /** Commit after the terrain / layers were changed in place: patches, objects follow, history. */
   const finishLayered = (
-    doc: WorldDocument, past: HistoryEntry[], before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | null,
+    doc: WorldDocument, past: HistoryEntry[], before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | RectLayerSnapshot | null,
     finalRect: GridRect, layerRect: GridRect | null, roads: RoadNetwork, objects: Objects, featuresBefore = doc.landscape.features, nextBefore = doc.landscape.next, seat?: Seater,
   ) => {
     const t = doc.terrain;
     const land = doc.landscape;
     const patch = makePatch(t, before, finalRect);
-    const lpatch = lb && layerRect ? makeLayerPatch(land, t.nx, lb, layerRect) : null;
+    const lpatch = lb && layerRect ? ('kind' in lb && lb.kind === 'rect' ? makeLayerPatchFromRect(land, t.nx, lb as RectLayerSnapshot) : makeLayerPatch(land, t.nx, lb as LayerSnapshot, layerRect)) : null;
     const area = rectArea(t, finalRect);
     let out = followTerrain(objects, samplerOver(t, before), samplerFor(t), area);
     if (seat) out = seat(out, samplerFor(t));
     set({
       doc: { ...touch(doc, out), terrain: { ...t }, roads, landscape: { ...land } },
       terrainRect: finalRect,
-      past: [...past, { objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }].slice(-HISTORY_LIMIT),
+      past: pushHistory(past, { objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }),
       future: [],
     });
   };
@@ -517,7 +559,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
           doc: { ...touch(doc, r.objects), terrain: r.patch ? { ...doc.terrain } : doc.terrain, roads: r.roads },
           // Always an undo step: the terrain patch and the network must travel together
           // (road tools preview drags without committing and commit once on release).
-          past: [...get().past, entry].slice(-HISTORY_LIMIT),
+          past: pushHistory(get().past, entry),
           future: [],
         });
         return ids;
@@ -561,7 +603,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const last = past[past.length - 1];
       const nextPast = last && last !== lastBefore
         ? [...past.slice(0, -1), { ...last, config }]
-        : [...past, { objects: d.objects, terrain: null, roads: d.roads, landscape: landEntry(d, null), config }].slice(-HISTORY_LIMIT);
+        : pushHistory(past, { objects: d.objects, terrain: null, roads: d.roads, landscape: landEntry(d, null), config });
       set({ doc, past: nextPast, future: [] });
       return ids;
     },
@@ -673,7 +715,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const next: WorldDocument = { ...doc, meta: { ...doc.meta, updatedAt: new Date().toISOString() } };
       if (Object.keys(groups).length) next.groups = groups;
       else delete next.groups;
-      set({ doc: next, past: [...past, entry].slice(-HISTORY_LIMIT), future: [] });
+      set({ doc: next, past: pushHistory(past, entry), future: [] });
     },
 
     setExperiment: (patch, opts) => {
@@ -685,7 +727,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
         return;
       }
       const entry: HistoryEntry = { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null), config: { settings: doc.settings, scenario: doc.scenario } };
-      set({ doc: next, past: [...past, entry].slice(-HISTORY_LIMIT), future: [] });
+      set({ doc: next, past: pushHistory(past, entry), future: [] });
     },
 
     setFloodScenario: (patch) => {
@@ -743,6 +785,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       return { up, down, area: n * t.cellSize * t.cellSize };
     },
 
+    strokeHeights: () => stroke?.before.heights ?? null,
+
     endTerrainStroke: () => {
       const s = stroke;
       stroke = null;
@@ -793,7 +837,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     checkpoint: () => {
       const { doc, past, locked } = get();
       if (locked) return;
-      set({ past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
+      set({ past: pushHistory(past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
     },
 
     beginTransaction: () => {
@@ -809,7 +853,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (!t0 || locked || t0.docVersion !== docVersion) return false;
       if (doc.objects === t0.objects) return false;
       // The step restores the objects from before the gesture (object transactions edit nothing else).
-      set({ past: [...past, { objects: t0.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
+      set({ past: pushHistory(past, { objects: t0.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
       return true;
     },
 

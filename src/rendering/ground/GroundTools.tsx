@@ -84,6 +84,9 @@ export function areaOutline(a: GroundArea): [number, number][] {
 }
 
 export function GroundLine({ pts, closed = true, color, dashed = false }: { pts: [number, number][]; closed?: boolean; color: string; dashed?: boolean }) {
+  // Phase 36: re-drape when the editor terrain changes (a committed brush stroke / undo): the line was memoised on its
+  // points only and kept the old ground heights. (A new TerrainData object per terrain commit.)
+  const terrain = useWorldStore((s) => s.doc.terrain);
   const line = useMemo(() => {
     const geo = new THREE.BufferGeometry().setFromPoints(draped(pts, closed));
     const mat = dashed
@@ -94,7 +97,7 @@ export function GroundLine({ pts, closed = true, color, dashed = false }: { pts:
     l.renderOrder = 7;
     l.raycast = () => {};
     return l;
-  }, [pts, closed, color, dashed]);
+  }, [pts, closed, color, dashed, terrain]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => {
     line.geometry.dispose();
     (line.material as THREE.Material).dispose();

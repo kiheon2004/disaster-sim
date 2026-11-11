@@ -125,6 +125,29 @@ export function reseat(obj: Placeable, terrain: TerrainSampler, x = obj.transfor
   return groundPose(obj, x, z, yawOf(obj.transform.rotation), terrain);
 }
 
+/**
+ * Ground-follow policy (Phase 36, §24): what an object does when the ground under it changes — brush release, feature
+ * or preset edit, road re-bake, and their undo. Decided per object from its category and how it stands:
+ *
+ *   category (terrainFit)            standing on the ground before the edit        lifted (> 5 cm above its seat)
+ *   building ('foundation')          follow: re-seated level, plinth regrown       keep: absolute height
+ *     foundation policy 'preserve'   preserve: transform kept, plinth frozen       keep
+ *   vehicle ('mean', align 1)        follow: plane through the 4 wheel corners     keep
+ *   person ('center', level)         follow: on the ground under its centre        keep
+ *   tree ('center', 30 % tilt)       follow: at the trunk                          keep
+ *   wall / pole / sign ('min')       follow: on the lowest footprint corner        keep
+ *   legacy road object ('center')    follow (draped on the terrain at render)      keep
+ *
+ * Heading is always kept. Nothing moves during a brush stroke, only at its release (one undo step). Disaster pins are
+ * not objects: their x / z stay where the user put them and they are drawn on the ground at render.
+ */
+export type GroundFollow = 'follow' | 'preserve' | 'keep';
+
+export function groundFollowOf(obj: Placeable, before: TerrainSampler): GroundFollow {
+  if (!isGrounded(obj, before)) return 'keep';
+  return obj.building?.options.foundationPolicy === 'preserve' ? 'preserve' : 'follow';
+}
+
 /** Whether the object currently stands on the ground (rather than being lifted on purpose). */
 export function isGrounded(obj: Placeable, terrain: TerrainSampler): boolean {
   if (Math.abs(obj.transform.position[1] - reseat(obj, terrain).position[1]) <= GROUNDED_TOLERANCE) return true;

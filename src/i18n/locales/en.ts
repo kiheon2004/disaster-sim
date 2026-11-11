@@ -33,6 +33,7 @@ import { enUx355 } from './en.ux355';
 import { enP36Editor } from './en.p36editor';
 import { enP36Roads } from './en.p36roads';
 import { enP36Struct } from './en.p36struct';
+import { enP36Terrain } from './en.p36terrain';
 
 export const en: Record<MessageKey, string> = {
   // App
@@ -642,4 +643,5 @@ export const en: Record<MessageKey, string> = {
   ...enP36Editor,
   ...enP36Roads,
   ...enP36Struct,
+  ...enP36Terrain,
 };

@@ -112,6 +112,26 @@ export function makeLayerPatch(land: Landscape, nx: number, before: LayerSnapsho
   };
 }
 
+/**
+ * Before-copies of the layers inside one rectangle only (Phase 36, §23): a brush commit used to copy all six layers of
+ * the whole map (606 KB at 200 m, 15 MB at 1 km) to keep the rectangle it then patched. The rectangle must cover what
+ * the edit changes (callers know it in advance: the stroke rectangle grown by the rivers, like `recompose`).
+ */
+export interface RectLayerSnapshot {
+  kind: 'rect';
+  rect: GridRect;
+  layers: { name: LayerName; before: Float32Array | Uint8Array }[];
+}
+
+export function snapshotLandscapeRect(land: Landscape, nx: number, rect: GridRect, names: LayerName[] = ['sculpt', 'paint', 'naturalHeights', 'naturalGround', 'naturalCulvert', 'naturalRoadBase']): RectLayerSnapshot {
+  return { kind: 'rect', rect, layers: names.map((name) => ({ name, before: copyRect(layer(land, name), nx, rect) })) };
+}
+
+/** The patch of a rectangle snapshot: its before-copies + the layers now. */
+export function makeLayerPatchFromRect(land: Landscape, nx: number, snap: RectLayerSnapshot): LayerPatch {
+  return { rect: snap.rect, layers: snap.layers.map(({ name, before }) => ({ name, before, after: copyRect(layer(land, name), nx, snap.rect) })) };
+}
+
 export function applyLayerPatch(land: Landscape, nx: number, p: LayerPatch, side: 'before' | 'after') {
   const w = p.rect.x1 - p.rect.x0 + 1;
   for (const l of p.layers) {

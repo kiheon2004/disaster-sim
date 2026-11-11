@@ -75,6 +75,9 @@ function Ring({ x, z, fp, color }: { x: number; z: number; fp: Footprint; color:
 }
 
 function Pin({ x, z, color, selected }: { x: number; z: number; color: string; selected: boolean }) {
+  // Phase 36: x / z are the user's (never moved by a terrain edit); y is drawn on the ground as it is now — subscribing
+  // to the terrain object re-renders the pin after a brush commit / undo (it kept the old height before).
+  useWorldStore((s) => s.doc.terrain);
   const y = ground().sampleHeight(x, z);
   return (
     <group position={[x, y, z]} raycast={() => null}>
