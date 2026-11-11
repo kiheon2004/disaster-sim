@@ -52,6 +52,29 @@ export function focusObject(id: EntityId) {
   useViewStore.getState().requestFocus([p[0], p[1] + dims[1] * o.transform.scale[1] * 0.4, p[2]], Math.max(8, size * 2.6));
 }
 
+/**
+ * Camera to the whole selection (Phase 36: F with several objects selected fits them all and keeps the selection —
+ * before, F collapsed a multi-selection to its primary object).
+ */
+export function focusSelection() {
+  const ed = useEditorStore.getState();
+  const objs = ed.selectedIds.map((id) => useWorldStore.getState().doc.objects[id]).filter((o) => !!o);
+  if (objs.length <= 1) {
+    if (ed.selectedId) focusObject(ed.selectedId);
+    return;
+  }
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, top = -Infinity;
+  for (const o of objs) {
+    const d = getDefinition(o.type).getDimensions(o.params);
+    const r = Math.max(d[0] * o.transform.scale[0], d[2] * o.transform.scale[2]) / 2;
+    const [x, y, z] = o.transform.position;
+    x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r); z0 = Math.min(z0, z - r); z1 = Math.max(z1, z + r);
+    top = Math.max(top, y + d[1] * o.transform.scale[1]);
+  }
+  useViewStore.getState().setFollow(null);
+  useViewStore.getState().requestFocus([(x0 + x1) / 2, top * 0.4, (z0 + z1) / 2], Math.max(12, Math.hypot(x1 - x0, z1 - z0) * 1.2));
+}
+
 /** Camera to a world position (e.g. a damage event), optionally selecting the object. */
 export function focusPosition(pos: [number, number, number], id?: EntityId) {
   if (id && useWorldStore.getState().doc.objects[id]) useEditorStore.getState().select(id);

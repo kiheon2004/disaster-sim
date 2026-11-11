@@ -56,6 +56,30 @@ export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean
 }
 
 /**
+ * Lock / unlock, hide / show objects (Phase 36 §44) — one undo step. Only `true` is stored (unlocking / showing
+ * removes the key), so a document that never used the flags stays byte-identical.
+ */
+export function setObjectFlags(ids: readonly EntityId[], flags: { locked?: boolean; hidden?: boolean }): void {
+  if (!editable()) return;
+  const objs = world().doc.objects;
+  const update: WorldObject[] = [];
+  for (const id of ids) {
+    const o = objs[id];
+    if (!o) continue;
+    const next: WorldObject = { ...o };
+    for (const k of ['locked', 'hidden'] as const) {
+      if (flags[k] === undefined) continue;
+      if (flags[k]) next[k] = true;
+      else delete next[k];
+    }
+    if (next.locked !== o.locked || next.hidden !== o.hidden) update.push(next);
+  }
+  if (update.length) world().applyEdit({ update });
+  // A hidden object leaves the viewport selection (it cannot be seen / dragged there).
+  if (flags.hidden) editor().setSelection(editor().selectedIds.filter((id) => !ids.includes(id)));
+}
+
+/**
  * Box selection result (Shift+drag). `add` (true / 'add') keeps the current selection; 'subtract' (Phase 36:
  * Shift+Ctrl/⌘+drag) removes the boxed objects (and their groups) from it; false / 'replace' replaces it.
  */

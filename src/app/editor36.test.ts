@@ -261,3 +261,21 @@ describe('group names', () => {
     expect(W().doc.groups).toBeUndefined();
   });
 });
+
+import { setObjectFlags } from './buildActions';
+
+describe('outliner flags', () => {
+  it('lock / hide store only true; showing / unlocking removes the key; hiding drops the selection', () => {
+    const [a, b] = W().addObjects([{ type: 'wall', transform: at(0, 0) }, { type: 'wall', transform: at(3, 0) }]);
+    ED().setSelection([a, b]);
+    setObjectFlags([a], { hidden: true, locked: true });
+    expect(W().doc.objects[a]).toMatchObject({ hidden: true, locked: true });
+    expect(ED().selectedIds).toEqual([b]);
+    const steps = W().past.length;
+    setObjectFlags([a], { hidden: false, locked: false });
+    expect('hidden' in W().doc.objects[a] || 'locked' in W().doc.objects[a]).toBe(false);
+    expect(W().past.length).toBe(steps + 1);
+    setObjectFlags([a], { hidden: false }); // no change: no step
+    expect(W().past.length).toBe(steps + 1);
+  });
+});

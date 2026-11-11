@@ -1,26 +1,22 @@
 import { countRender } from '@/utils/renderCounter';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { ObjectCategory } from '@/core/types';
 import { translate, useLocale, useT } from '@/i18n/i18n';
 import { CATEGORY_ORDER, PALETTE, getPaletteItem, type PaletteItem } from '@/objects/palette';
 import { getDefinition, hasDefinition } from '@/objects/registry';
 import { STATIC_VIEWS } from '@/rendering/views';
 import { useBuildStore } from '@/editor/buildStore';
-import { clearSelection, clickSelect, selectAll } from '@/app/buildActions';
 import { renderThumbnails, subscribeThumbnails, thumbnail } from './thumbnails';
 import { ToolOptions } from './ToolOptions';
 import { itemParams } from '@/editor/build/itemDesign';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
-import { focusObject } from '@/app/actions';
 import { Icon, type IconName } from '@/ui/common/Icon';
-import { displayName } from '@/ui/format';
-import { StateDot } from '@/ui/common/StateBadge';
-import { useEntityStates } from '@/ui/useEntityStates';
 import { TerrainPanel } from '@/ui/Terrain/TerrainPanel';
 import { BuildingPanel } from '@/ui/Building/BuildingPanel';
 import { RoadPanel } from '@/ui/Roads/RoadPanel';
 import { BlueprintPanel } from '@/ui/Blueprints/BlueprintPanel';
+import { Outliner } from './Outliner';
 import styles from './ObjectPalette.module.css';
 
 type Tab = 'objects' | 'building' | 'terrain' | 'roads' | 'blueprints' | 'scene';
@@ -70,7 +66,7 @@ export function ObjectPalette() {
           {t('panel.scene')} ({count})
         </button>
       </div>
-      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : shown === 'roads' ? <RoadPanel /> : shown === 'blueprints' ? <BlueprintPanel /> : <OutlinerTab />}
+      {shown === 'objects' ? <PaletteTab /> : shown === 'building' ? <BuildingPanel /> : shown === 'terrain' ? <TerrainPanel /> : shown === 'roads' ? <RoadPanel /> : shown === 'blueprints' ? <BlueprintPanel /> : <Outliner />}
     </div>
   );
 }
@@ -204,46 +200,3 @@ function ArmedCard() {
   );
 }
 
-function OutlinerTab() {
-  const t = useT();
-  const objects = useWorldStore((s) => s.doc.objects);
-  const selectedIds = useEditorStore((s) => s.selectedIds);
-  const editing = useEditorStore((s) => s.mode) === 'editor';
-  const states = useEntityStates();
-  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const list = useMemo(
-    () => Object.values(objects).sort((a, b) => a.type.localeCompare(b.type) || a.serial - b.serial),
-    [objects],
-  );
-  const cats = useMemo(() => CATEGORY_ORDER.filter((c) => list.some((o) => getDefinition(o.type).category === c)), [list]);
-  if (!list.length) return <div className={styles.empty}>{t('outliner.empty')}</div>;
-  return (
-    <>
-      {editing && (
-        <div className={styles.chips} aria-label={t('outliner.selectCategory')} data-testid="select-category">
-          <button className={styles.chip} onClick={() => selectAll()}>{t('outliner.selectAll')}</button>
-          {cats.map((c) => (
-            <button key={c} className={styles.chip} title={t('outliner.selectCategory')} onClick={() => selectAll(c)}>{t(`category.${c}`)}</button>
-          ))}
-          <button className={styles.chip} disabled={!selectedIds.length} onClick={clearSelection}>{t('outliner.clear')}</button>
-        </div>
-      )}
-      <div className={`${styles.scroll} ${styles.list}`}>
-        {list.map((o) => (
-          <button
-            key={o.id}
-            className={`${styles.item} ${selected.has(o.id) ? styles.sel : ''}`}
-            onClick={(e) => (editing ? clickSelect(o.id, { shift: e.shiftKey, alt: e.altKey }) : useEditorStore.getState().select(o.id))}
-            onDoubleClick={() => focusObject(o.id)}
-            title={t('outliner.doubleClickFocus')}
-          >
-            <Icon name={getDefinition(o.type).icon as IconName} size={14} />
-            <span className={styles.itemName}>{displayName(o, t)}</span>
-            {o.group && <Icon name="group" size={12} aria-label={t('object.group')} />}
-            {states && states[o.id] !== undefined && <StateDot state={states[o.id]} />}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}

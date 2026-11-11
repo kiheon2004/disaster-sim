@@ -63,3 +63,17 @@
 .pair { display: flex; flex-direction: column; gap: 4px; }
 .seedRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; align-items: center; }
 .iconBtn { width: 26px; height: 25px; padding: 0; display: grid; place-items: center; }
+/* Phase 36 outliner: search / filter bar, group rows, row buttons (show / lock / rename), rename field. */
+.outlinerBar { display: flex; gap: 6px; padding: 8px 10px 0; flex-shrink: 0; }
+.search { flex: 1; min-width: 0; font-size: 12px; padding: 4px 8px; }
+.filter { font-size: 12px; padding: 3px 4px; max-width: 46%; }
+.list .item { box-sizing: border-box; gap: 6px; padding: 0 6px; }
+.groupRow { font-weight: 600; color: var(--text-0); }
+.count { color: var(--text-3); font-weight: 400; }
+.dim .itemName { opacity: 0.55; font-style: italic; }
+.rowBtn { padding: 2px 4px; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-3); line-height: 1; display: grid; place-items: center; }
+.rowBtn:hover:not(:disabled) { color: var(--text-0); background: var(--bg-3); border-color: var(--line-strong); }
+.rowBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rowBtnOn { color: var(--warn); }
+.renameInput { flex: 1; min-width: 0; font-size: 12px; padding: 1px 4px; }
+.note { padding: 6px 10px 8px; font-size: 11px; color: var(--text-3); line-height: 1.45; flex-shrink: 0; }

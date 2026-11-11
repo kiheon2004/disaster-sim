@@ -86,6 +86,10 @@ const paths = {
   group: 'M3 3h7v7H3zM14 14h7v7h-7zM10 7h4v7',
   star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
   search: 'M11 18a7 7 0 100-14 7 7 0 000 14zM21 21l-5-5',
+  // Phase 36 (outliner): lock / unlock / rename.
+  lock: 'M6 11h12v10H6zM8.5 11V7.5a3.5 3.5 0 017 0V11',
+  unlock: 'M6 11h12v10H6zM8.5 11V7.5a3.5 3.5 0 016.8-1.2',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   dice: 'M4 4h16v16H4zM8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01',
   alignStart: 'M4 3v18M8 7h10v4H8zM8 14h6v4H8z',
   alignCenter: 'M12 3v18M6 7h12v4H6zM8 14h8v4H8z',

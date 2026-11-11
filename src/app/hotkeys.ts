@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 import { deleteInstance, disarmPlacement } from './placementActions';
 import { useWorldStore } from '@/world/worldStore';
-import { focusObject, togglePlay } from '@/app/actions';
+import { focusObject, focusSelection, togglePlay } from '@/app/actions';
 import { clearSelection, copySelection, deleteSelection, duplicateSelection, groupSelection, selectAll, startPaste, ungroupSelection } from '@/app/buildActions';
 import { useEditorStore } from '@/editor/editorStore';
 import { useBuildStore } from '@/editor/buildStore';
@@ -245,7 +245,8 @@ export function useEditorHotkeys() {
 
       // Camera focus works in every mode.
       if (key === 'f' && !mod && ed.selectedId) {
-        focusObject(ed.selectedId);
+        if (ed.selectedIds.length > 1) focusSelection();
+        else focusObject(ed.selectedId);
         return;
       }
 
