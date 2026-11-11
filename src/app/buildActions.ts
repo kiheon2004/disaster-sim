@@ -17,7 +17,7 @@ import { useRoadStore } from '@/editor/roadStore';
 import { pasteRoads } from '@/roads/blueprintRoads';
 import { measureLink } from '@/roads/links';
 import { yawOf } from '@/terrain/groundPlacement';
-import { alignObjects, distributeObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type RigidDelta } from '@/editor/build/groupTransform';
+import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type AlignRef, type MatchWhat, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
 import { toast } from '@/ui/common/toast';
 
@@ -166,11 +166,28 @@ export function transformSelection(d: RigidDelta, pivot?: { x: number; z: number
   world().applyEdit({ update: transformObjects(objs, pivot ?? selectionPivot(objs), d, terrain) });
 }
 
-export function alignSelection(axis: AlignAxis, mode: AlignMode) {
+export function alignSelection(axis: AlignAxis, mode: AlignMode, ref: AlignRef = 'origin') {
   if (!editable()) return;
   const objs = unlockedSelection();
   if (objs.length < 2) return;
-  world().applyEdit({ update: alignObjects(objs, axis, mode, samplerFor(world().doc.terrain)) });
+  world().applyEdit({ update: alignObjects(objs, axis, mode, samplerFor(world().doc.terrain), ref) });
+}
+
+/** Equal gaps between footprints along an axis (Phase 36), one undo step. */
+export function distributeGapsSelection(axis: AlignAxis) {
+  if (!editable()) return;
+  const objs = unlockedSelection();
+  if (objs.length < 3) return;
+  world().applyEdit({ update: distributeGaps(objs, axis, samplerFor(world().doc.terrain)) });
+}
+
+/** Same heading / height above ground / scale as the primary selected object (Phase 36), one undo step. */
+export function matchSelection(what: MatchWhat) {
+  if (!editable()) return;
+  const ref = editor().selectedId ? world().doc.objects[editor().selectedId!] : undefined;
+  const objs = unlockedSelection();
+  if (!ref || objs.length < 1) return;
+  world().applyEdit({ update: matchObjects(objs, ref, what, samplerFor(world().doc.terrain)) });
 }
 
 export function distributeSelection(axis: AlignAxis) {

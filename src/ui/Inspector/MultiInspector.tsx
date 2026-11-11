@@ -1,12 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useT, type MessageKey } from '@/i18n/i18n';
 import type { WorldObject } from '@/core/model';
 import { getDefinition } from '@/objects/registry';
 import { useEditorStore } from '@/editor/editorStore';
 import { useWorldStore } from '@/world/worldStore';
 import {
-  alignSelection, copySelection, deleteSelection, distributeSelection, duplicateSelection, groupSelection, transformSelection, ungroupSelection,
+  alignSelection, copySelection, deleteSelection, distributeGapsSelection, distributeSelection, duplicateSelection, groupSelection, matchSelection, selectSameType,
+  transformSelection, ungroupSelection,
 } from '@/app/buildActions';
+import type { AlignRef } from '@/editor/build/groupTransform';
+import { Segmented } from '@/ui/common/Segmented';
+import { displayName } from '@/ui/format';
 import { focusPosition } from '@/app/actions';
 import { selectionPivot } from '@/editor/build/groupTransform';
 import { Icon, type IconName } from '@/ui/common/Icon';
@@ -28,14 +32,18 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
   const oneGroup = groups.size === 1 && !groups.has('');
   const anyGroup = objs.some((o) => o.group);
   const pivot = selectionPivot(objs);
+  const primaryId = useEditorStore((s) => s.selectedId);
+  const primary = primaryId ? objects[primaryId] : undefined;
+  // Phase 36 §14: alignment states what it lines up — origins (pivots, as before) or footprints (bounds).
+  const [ref, setRef] = useState<AlignRef>('origin');
 
   const align: [IconName, MessageKey, () => void][] = [
-    ['alignStart', 'multi.align.xmin', () => alignSelection('x', 'min')],
-    ['alignCenter', 'multi.align.xcenter', () => alignSelection('x', 'center')],
-    ['alignEnd', 'multi.align.xmax', () => alignSelection('x', 'max')],
-    ['alignStart', 'multi.align.zmin', () => alignSelection('z', 'min')],
-    ['alignCenter', 'multi.align.zcenter', () => alignSelection('z', 'center')],
-    ['alignEnd', 'multi.align.zmax', () => alignSelection('z', 'max')],
+    ['alignStart', 'multi.align.xmin', () => alignSelection('x', 'min', ref)],
+    ['alignCenter', 'multi.align.xcenter', () => alignSelection('x', 'center', ref)],
+    ['alignEnd', 'multi.align.xmax', () => alignSelection('x', 'max', ref)],
+    ['alignStart', 'multi.align.zmin', () => alignSelection('z', 'min', ref)],
+    ['alignCenter', 'multi.align.zcenter', () => alignSelection('z', 'center', ref)],
+    ['alignEnd', 'multi.align.zmax', () => alignSelection('z', 'max', ref)],
   ];
 
   return (
@@ -77,7 +85,9 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
             <div className={styles.note} style={{ marginTop: 6 }}>{t('multi.physicsNote')}</div>
           </Section>
           <Section title={t('multi.align')}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+            <Segmented<AlignRef> size="small" ariaLabel={t('ed36.align.ref')} value={ref} onChange={setRef}
+              options={[{ value: 'origin', label: t('ed36.align.origin') }, { value: 'bounds', label: t('ed36.align.bounds') }]} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginTop: 6 }}>
               {align.map(([icon, key, fn], i) => (
                 <button key={key} className={styles.smallBtn} title={t(key)} aria-label={t(key)} onClick={fn} disabled={objs.length < 2}>
                   <Icon name={icon} size={13} style={i >= 3 ? { transform: 'rotate(90deg)' } : undefined} /> {i < 3 ? 'X' : 'Z'}
@@ -85,6 +95,18 @@ export function MultiInspector({ ids, readOnly }: { ids: string[]; readOnly: boo
               ))}
               <button className={styles.smallBtn} onClick={() => distributeSelection('x')} disabled={objs.length < 3} title={t('multi.distribute.x')}><Icon name="distribute" size={13} /> X</button>
               <button className={styles.smallBtn} onClick={() => distributeSelection('z')} disabled={objs.length < 3} title={t('multi.distribute.z')}><Icon name="distribute" size={13} style={{ transform: 'rotate(90deg)' }} /> Z</button>
+              <button className={styles.smallBtn} onClick={() => distributeGapsSelection('x')} disabled={objs.length < 3} title={t('ed36.gaps.x')} data-testid="gaps-x">{t('ed36.gaps')} X</button>
+              <button className={styles.smallBtn} onClick={() => distributeGapsSelection('z')} disabled={objs.length < 3} title={t('ed36.gaps.z')} data-testid="gaps-z">{t('ed36.gaps')} Z</button>
+            </div>
+            <div className={styles.note} style={{ marginTop: 6 }}>{t(ref === 'bounds' ? 'ed36.align.bounds.note' : 'ed36.align.origin.note')}</div>
+          </Section>
+          <Section title={t('ed36.match')}>
+            <div className={styles.note}>{t('ed36.match.ref', { name: primary ? displayName(primary, t) : '—' })}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              <button className={styles.smallBtn} disabled={!primary} onClick={() => matchSelection('rotation')} data-testid="match-rotation">{t('ed36.match.rotation')}</button>
+              <button className={styles.smallBtn} disabled={!primary} onClick={() => matchSelection('height')} data-testid="match-height">{t('ed36.match.height')}</button>
+              <button className={styles.smallBtn} disabled={!primary} onClick={() => matchSelection('scale')} data-testid="match-scale">{t('ed36.match.scale')}</button>
+              <button className={styles.smallBtn} disabled={!primary} onClick={() => selectSameType()} data-testid="select-same">{t('ed36.sameType')}</button>
             </div>
           </Section>
           <Section title={t('multi.rotate')}>

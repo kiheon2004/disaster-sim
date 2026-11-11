@@ -200,3 +200,46 @@ describe('save format of the editor metadata', () => {
     expect(r.doc.groups).toEqual({ g1: { name: 'Block A' } }); // names of groups without members are dropped
   });
 });
+
+import { alignObjects, distributeGaps, footprintHalf, matchObjects } from '@/editor/build/groupTransform';
+import { yawOf } from '@/terrain/groundPlacement';
+
+describe('alignment (§14)', () => {
+  const flat = () => samplerFor(createEmptyDocument().terrain);
+  const wall = (id: string, x: number, z: number, len: number, yawDeg = 0) => ({
+    ...createEmptyDocument().objects, id, type: 'wall', name: '', serial: 1, seed: 1, components: [],
+    params: { length: len, height: 2, thickness: 0.3 },
+    physics: { mass: 1, windResistance: 1, durability: 1, breakThreshold: 1, dragCoefficient: 1, friction: 0.5, restitution: 0, anchored: true },
+    transform: { position: [x, 0, z] as Vec3, rotation: [0, (yawDeg * Math.PI) / 180, 0] as Vec3, scale: [1, 1, 1] as Vec3 },
+  }) as never as import('@/core/model').WorldObject;
+
+  it('footprint edges flush (bounds) vs origins; rotation counted in the footprint', () => {
+    const a = wall('a', 0, 0, 4), b = wall('b', 10, 3, 8);
+    expect(footprintHalf(a, 0)).toBeCloseTo(2, 6);
+    expect(footprintHalf(wall('r', 0, 0, 4, 90), 0)).toBeCloseTo(0.15, 6);
+    const byOrigin = alignObjects([a, b], 'x', 'min', flat(), 'origin');
+    expect(byOrigin.map((o) => o.transform.position[0])).toEqual([0, 0]);
+    const byBounds = alignObjects([a, b], 'x', 'min', flat(), 'bounds');
+    // Left edges at −2: a stays (centre 0), b moves to −2 + 4 = 2.
+    expect(byBounds.map((o) => o.transform.position[0])).toEqual([0, 2]);
+  });
+
+  it('equal gaps between footprints of different sizes', () => {
+    const objs = [wall('a', 0, 0, 2), wall('b', 3, 0, 6), wall('c', 20, 0, 4)];
+    const out = distributeGaps(objs, 'x', flat());
+    const xs = out.map((o) => o.transform.position[0]);
+    const gap1 = xs[1] - 3 - (xs[0] + 1), gap2 = xs[2] - 2 - (xs[1] + 3);
+    expect(gap1).toBeCloseTo(gap2, 9);
+    expect(xs[0]).toBe(0);
+    expect(xs[2]).toBe(20);
+  });
+
+  it('same heading / height / scale as the reference', () => {
+    const ref = { ...wall('r', 0, 0, 4, 120), transform: { ...wall('r', 0, 0, 4, 120).transform, position: [0, 3, 0] as Vec3, scale: [2, 1, 1] as Vec3 } };
+    const o = wall('o', 10, 0, 4, 10);
+    const [, rot] = matchObjects([ref, o], ref, 'rotation', flat());
+    expect((yawOf(rot.transform.rotation) * 180) / Math.PI).toBeCloseTo(120, 6);
+    expect(matchObjects([ref, o], ref, 'height', flat())[1].transform.position[1]).toBeCloseTo(3, 6);
+    expect(matchObjects([ref, o], ref, 'scale', flat())[1].transform.scale).toEqual([2, 1, 1]);
+  });
+});

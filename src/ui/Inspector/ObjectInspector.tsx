@@ -5,6 +5,7 @@ import { useT } from '@/i18n/i18n';
 import { getDefinition } from '@/objects/registry';
 import { useWorldStore } from '@/world/worldStore';
 import { deleteSelected, duplicateSelected, focusObject } from '@/app/actions';
+import { selectSameType } from '@/app/buildActions';
 import { estimateCriticalSpeeds } from '@/simulation/damage/windLoad';
 import { Icon, type IconName } from '@/ui/common/Icon';
 import { Section } from '@/ui/common/Panel';
@@ -45,6 +46,7 @@ export function ObjectInspector({ obj, readOnly = false }: { obj: WorldObject; r
         </div>
         <div className={styles.actions}>
           <button className={styles.iconBtn} title={t('inspector.focus')} onClick={() => focusObject(id)}><Icon name="focus" size={15} /></button>
+          <button className={styles.iconBtn} title={t('ed36.sameType')} aria-label={t('ed36.sameType')} data-testid="select-same" onClick={() => selectSameType()}><Icon name="group" size={15} /></button>
           {!readOnly && (
             <>
               <button className={styles.iconBtn} title={t('inspector.duplicate')} onClick={duplicateSelected}><Icon name="copy" size={15} /></button>

@@ -8,7 +8,8 @@ import type { Quat, Vec3 } from '@/core/types';
 import type { WorldObject } from '@/core/model';
 import { eulerFromQuat, qMul, quatFromAxisAngle, quatFromEuler } from '@/core/math';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
-import { groundPose, isGrounded, yawOf } from '@/terrain/groundPlacement';
+import { groundPose, isGrounded, reseat, yawOf } from '@/terrain/groundPlacement';
+import { getDefinition } from '@/objects/registry';
 import { releasePlinth } from '@/buildings/foundation';
 
 export interface RigidDelta {
@@ -75,14 +76,80 @@ export function transformObjects(objs: readonly WorldObject[], pivot: { x: numbe
 
 export type AlignAxis = 'x' | 'z';
 export type AlignMode = 'min' | 'center' | 'max';
+/**
+ * What alignment lines up (Phase 36 §14 — shown in the panel): 'origin' = the objects' origins (pivots), as since
+ * Phase 16; 'bounds' = their footprints (the rotated box of each object on the ground): min = left / near edges
+ * flush, center = footprint centres, max = right / far edges flush.
+ */
+export type AlignRef = 'origin' | 'bounds';
 
-/** Line the objects' positions up on one axis (to the smallest, middle or largest value). */
-export function alignObjects(objs: readonly WorldObject[], axis: AlignAxis, mode: AlignMode, terrain: TerrainSampler): WorldObject[] {
+/** Half extent of an object's footprint along world x (k = 0) or z (k = 2), rotation included. */
+export function footprintHalf(o: WorldObject, k: 0 | 2): number {
+  const d = getDefinition(o.type).getDimensions(o.params);
+  const hx = (d[0] * o.transform.scale[0]) / 2, hz = (d[2] * o.transform.scale[2]) / 2;
+  const yaw = yawOf(o.transform.rotation);
+  const c = Math.abs(Math.cos(yaw)), s = Math.abs(Math.sin(yaw));
+  return k === 0 ? c * hx + s * hz : s * hx + c * hz;
+}
+
+/** Line the objects up on one axis (to the smallest, middle or largest value of their origins or footprints). */
+export function alignObjects(objs: readonly WorldObject[], axis: AlignAxis, mode: AlignMode, terrain: TerrainSampler, ref: AlignRef = 'origin'): WorldObject[] {
   if (objs.length < 2) return [...objs];
   const k = axis === 'x' ? 0 : 2;
-  const vals = objs.map((o) => o.transform.position[k]);
-  const target = mode === 'min' ? Math.min(...vals) : mode === 'max' ? Math.max(...vals) : (Math.min(...vals) + Math.max(...vals)) / 2;
-  return objs.map((o) => moveTo(o, k === 0 ? target : o.transform.position[0], k === 2 ? target : o.transform.position[2], terrain));
+  const half = (o: WorldObject) => (ref === 'bounds' ? footprintHalf(o, k) : 0);
+  const lo = Math.min(...objs.map((o) => o.transform.position[k] - half(o)));
+  const hi = Math.max(...objs.map((o) => o.transform.position[k] + half(o)));
+  const mid = (lo + hi) / 2;
+  return objs.map((o) => {
+    const v = mode === 'min' ? lo + half(o) : mode === 'max' ? hi - half(o) : mid;
+    return moveTo(o, k === 0 ? v : o.transform.position[0], k === 2 ? v : o.transform.position[2], terrain);
+  });
+}
+
+/**
+ * Equal GAPS between footprints along an axis (Phase 36 §14), between the first and the last object (both stay):
+ * objects of different sizes end up evenly spaced edge to edge, unlike distributeObjects (equal origin steps).
+ */
+export function distributeGaps(objs: readonly WorldObject[], axis: AlignAxis, terrain: TerrainSampler): WorldObject[] {
+  if (objs.length < 3) return [...objs];
+  const k = axis === 'x' ? 0 : 2;
+  const sorted = [...objs].sort((a, b) => a.transform.position[k] - b.transform.position[k] || a.id.localeCompare(b.id));
+  const halves = sorted.map((o) => footprintHalf(o, k));
+  const lo = sorted[0].transform.position[k] - halves[0];
+  const hi = sorted[sorted.length - 1].transform.position[k] + halves[halves.length - 1];
+  const gap = (hi - lo - halves.reduce((s, h) => s + 2 * h, 0)) / (sorted.length - 1);
+  const target = new Map<string, number>();
+  let cursor = lo;
+  sorted.forEach((o, i) => { target.set(o.id, cursor + halves[i]); cursor += 2 * halves[i] + gap; });
+  return objs.map((o) => {
+    const v = target.get(o.id)!;
+    return moveTo(o, k === 0 ? v : o.transform.position[0], k === 2 ? v : o.transform.position[2], terrain);
+  });
+}
+
+export type MatchWhat = 'rotation' | 'height' | 'scale';
+
+/**
+ * Give the objects the same heading / height above the ground / scale as `ref` (Phase 36 §14 "same rotation /
+ * height / size"). Objects standing on the ground stay on it (a new heading is re-seated on the slope); height copies
+ * the reference's height ABOVE ITS GROUND, so objects on different terrain keep their relation to the ground.
+ */
+export function matchObjects(objs: readonly WorldObject[], ref: WorldObject, what: MatchWhat, terrain: TerrainSampler): WorldObject[] {
+  const refYaw = yawOf(ref.transform.rotation);
+  const refLift = ref.transform.position[1] - reseat(ref, terrain).position[1];
+  return objs.map((o) => {
+    if (o.id === ref.id) return o;
+    const t = o.transform;
+    if (what === 'scale') return { ...o, transform: { ...t, scale: [...ref.transform.scale] as Vec3 } };
+    if (what === 'height') {
+      const seat = reseat(o, terrain).position[1];
+      return releasePlinth({ ...o, transform: { ...t, position: [t.position[0], seat + refLift, t.position[2]] as Vec3 } });
+    }
+    const turned = { ...o, transform: { ...t, rotation: yawRotate(t.rotation, refYaw - yawOf(t.rotation)) } };
+    if (!isGrounded(o, terrain) || terrain.flat) return turned;
+    const pose = groundPose(turned, t.position[0], t.position[2], refYaw, terrain);
+    return releasePlinth({ ...turned, transform: { ...turned.transform, position: pose.position, rotation: pose.rotation } });
+  });
 }
 
 /** Spread the objects evenly between the first and last along an axis (order kept). */
