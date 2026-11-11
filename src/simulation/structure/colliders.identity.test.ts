@@ -133,6 +133,35 @@ const PARTICLES: Record<string, string> = {
   "v2 street quake 1.1 g": "9383c7f980d3bd11:163",
 };
 
+/**
+ * Phase 36 (structure 2, braces): designs WITHOUT braces must not move — steel frames (the system braces go into), v1 and
+ * v2, partial collapse included. Recorded on 3b58a5c (main with the cell colliders, before any brace code) with the same
+ * P36_RECORD command; these hashes cover the v2 cell-collider behaviour as it is now.
+ */
+export const BRACE_SCENES: IdentityScene[] = [
+  { name: 'v1 steel office quake 0.7 g', kind: 'v1', doc: () => doc([P('office', 0, 0, 1), P('house', 24, 0, 2), car(-14, 12, 20)], false), events: [quake(0.7, 4)], seconds: 10 },
+  { name: 'v2 steel office quake 0.7 g', kind: 'v2-partial', doc: () => doc([P('office', 0, 0, 1), P('house', 24, 0, 2), car(-14, 12, 20)], true), events: [quake(0.7, 4)], seconds: 10 },
+  { name: 'v2 steel warehouse + town quake 0.9 g', kind: 'v2-partial', doc: () => doc([P('warehouse', 0, 0, 1), B(rc({ width: 12, depth: 10, floors: 5 }), undefined, 0, 22, 2), P('house', 26, 0, 3)], true), events: [quake(0.9, 6)], seconds: 10 },
+  { name: 'v2 street quake 1.1 g (now)', kind: 'v2-partial', doc: () => doc([P('apartment', 0, 0, 1), P('house', 18, 0, 2), car(-10, 10, 20), car(-4, 10, 21), car(2, 10, 22)], true), events: [quake(1.1)], seconds: 14 },
+];
+const EXPECTED_BRACE: Record<string, string> = {
+  "v1 steel office quake 0.7 g": "02a13b1a22eea51ba19995c73706dc0afcdf430422b34f6163c38935796ebe7f/fec35a6d4962a890:1557", // {"partial":1,"structuralFailures":374,"fragments":67,"debris":67,"cellRebuilds":0}
+  "v2 steel office quake 0.7 g": "ba0c1cefd060afc1740b7f4262a460fbe4e5c68ac3580e4aba06e7d32cabb4dc/616b3eadb67e86c6:1598", // {"partial":2,"structuralFailures":505,"fragments":68,"debris":68,"cellRebuilds":8}
+  "v2 steel warehouse + town quake 0.9 g": "0ea17d915b8c8b0202a71a766be773ed79944975ba562073c60ddeb147e84dac/f8941f156058d580:185", // {"partial":1,"structuralFailures":165,"fragments":32,"debris":32,"cellRebuilds":3}
+  "v2 street quake 1.1 g (now)": "5002337bbcc66b54ffdb9c9516b7b44b74c524e45402c238daa981b35da1ffdf/04496fce3461cea5:163", // {"partial":2,"structuralFailures":272,"fragments":64,"debris":64,"cellRebuilds":5}
+};
+
+describe('Phase 36 structure 2: designs without braces are bit-identical to main before the brace model', { timeout: 900_000 }, () => {
+  it.each(BRACE_SCENES)('$name', async (sc) => {
+    const { hash, particles, summary } = await fingerprint(sc);
+    if (process.env.P36_RECORD) {
+      fs.appendFileSync(`${process.env.P36_RECORD}.brace`, `  ${JSON.stringify(sc.name)}: ${JSON.stringify(`${hash}/${particles}`)}, // ${JSON.stringify(summary)}\n`);
+      return;
+    }
+    expect(`${hash}/${particles}`).toBe(EXPECTED_BRACE[sc.name]);
+  });
+});
+
 describe('Phase 36 structure: v1 and intact-v2 runs are bit-identical to the base code', { timeout: 900_000 }, () => {
   it.each(SCENES)('$name', async (sc) => {
     const { hash, particles, summary } = await fingerprint(sc);

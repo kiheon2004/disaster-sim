@@ -30,11 +30,14 @@ import { hashString, seededRandom } from '@/core/math';
 import { GRAVITY } from '@/core/units';
 import { analyzeBuilding, type BuildingAnalysis } from '@/buildings/analysis';
 import { MS, type FailCause } from '@/structure/types';
+import { MT_BRACE } from '@/structure/graph';
+import type { CollapseModel } from '@/structure/collapse';
 import { activate, kinematics, structureOf, type StructureState } from '../structure/state';
 import { analysisOf } from '@/buildings/design';
 import { MATERIALS, material } from '@/buildings/materials';
 import { lumpStories, type ModularUnit } from '@/buildings/structuralAdapter';
 import { torsionDemand } from './structureV2';
+import { BUCKLED_DAMAGE } from '@/buildings/brace';
 import { isLateralRole, type BuildingDesign } from '@/buildings/types';
 import type { SystemContext } from '../systems/SimulationSystem';
 import type { RuntimeEntity } from '../SimulationRuntime';
@@ -128,6 +131,8 @@ export interface ModularRuntime {
   memberOfComp: Int32Array;
   /** Phase 35.5 (structure v2): staged failure per hazard (face stages, storey backstop stages) and the last stage time. */
   v2Stage?: Record<string, number>;
+  /** Phase 36: storey drift at which each brace buckles (0 = not a brace); absent when the design has no brace. */
+  buckle?: Float64Array;
 }
 
 const scatterOf = (seed: number, id: string) => 1 + (seededRandom((seed ^ hashString(`member:${id}`)) >>> 0)() * 2 - 1) * SCATTER;
@@ -148,6 +153,7 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
   const storyMembers: number[][] = Array.from({ length: floors }, () => []);
   const pending: number[] = [];
   const memberOfComp = new Int32Array(o.components.length).fill(-1);
+  let buckle: Float64Array | undefined;
   design.members.forEach((m, i) => {
     comp[i] = byComp.get(m.id) ?? -1;
     if (comp[i] >= 0) memberOfComp[comp[i]] = i;
@@ -159,7 +165,9 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
       return;
     }
     const a = initial.members[i];
-    const lateral = (m.type === 'column' || m.type === 'wall') && isLateralRole(m.role) && a.driftCapacity > 0;
+    // Phase 36: a brace fails at its fracture drift and buckles (damage stage) at its buckling drift (buildings/brace.ts).
+    const lateral = (m.type === 'column' || m.type === 'wall' || m.type === 'brace') && isLateralRole(m.role) && a.driftCapacity > 0;
+    if (m.type === 'brace' && a.buckleDrift) (buckle ??= new Float64Array(n))[i] = a.buckleDrift * scatterOf(o.seed, m.id);
     const beam = m.type === 'beam' && m.role === 'primary' && material(m.material).structural;
     if ((lateral || beam) && m.level >= 0 && m.level < floors) {
       const base = lateral ? a.driftCapacity : material(m.material).driftCapacity.column * 1.2;
@@ -174,6 +182,7 @@ export function createModularRuntime(o: Readonly<WorldObject>): ModularRuntime {
     storyDrift: new Float64Array(floors), storyPeak: new Float64Array(floors), storyPeakAxis: new Float64Array(2 * floors), evalPeak: new Float64Array(floors),
     unit: null, unitIndex: -1, modelK: new Float64Array(0), modelFy: new Float64Array(0),
     collapsedFrom: Infinity, reserve: strengthReserve(initial, initial), windShare: 1, pending, rev: 0, memberOfComp,
+    ...(buckle ? { buckle } : {}),
   };
 }
 
@@ -226,7 +235,8 @@ export function updateStoryDrifts(mr: ModularRuntime, model: StructuralModel, ui
 function memberDemand(mr: ModularRuntime, i: number): number {
   const m = mr.design.members[i];
   const s = m.level;
-  if (m.type === 'wall') {
+  if (m.type === 'wall' || m.type === 'brace') {
+    // In-plane component (a brace works along its plan direction, like a wall).
     const y = m.rotation[1];
     return Math.abs(Math.cos(y)) * mr.storyPeakAxis[2 * s] + Math.abs(Math.sin(y)) * mr.storyPeakAxis[2 * s + 1];
   }
@@ -255,7 +265,10 @@ function evaluateDrift(mr: ModularRuntime, hazard: Hazard = 'earthquake', v2 = f
     for (const i of mr.storyMembers[s]) {
       if (mr.failed[i]) continue;
       // Phase 35.5 (v2): torsion-amplified demand — perimeter / corner members first.
-      const d = (v2 ? torsionDemand(mr, i) : memberDemand(mr, i)) / mr.capacity[i];
+      const dem = v2 ? torsionDemand(mr, i) : memberDemand(mr, i);
+      let d = dem / mr.capacity[i];
+      // Phase 36: a brace past its buckling drift is buckled (damage stage) before it fractures at its capacity.
+      if (mr.buckle && mr.buckle[i] > 0 && dem >= mr.buckle[i] && d < BUCKLED_DAMAGE) d = BUCKLED_DAMAGE;
       if (d > mr.damage[i] && d < 1) raiseDamage(mr, i, d, hazard);
       if (d >= 1) out.push(i);
     }
@@ -326,12 +339,22 @@ export function currentStories(mr: ModularRuntime): { kx: number[]; kz: number[]
     const L = g.level[i];
     if (L < 0 || L >= n || !(g.kx[i] || g.kz[i] || g.vx[i] || g.vz[i])) continue;
     if (model.state[i] > MS.SEVERE) continue;
+    // Phase 36: a brace stiffens its storey only while both members it is bolted to stand (it may hang on one).
+    if (g.type[i] === MT_BRACE && !braceHeld(model, i)) continue;
     // Damaged members keep less of their contribution (k·(1−0.4D), F·(1−0.3D) — as initial damage).
     const d = Math.min(1, mr.damage[i]) - Math.min(1, mr.design.members[i].initialDamage ?? 0);
     const kd = 1 - 0.4 * Math.max(0, d), vd = 1 - 0.3 * Math.max(0, d);
     out.kx[L] += g.kx[i] * kd; out.kz[L] += g.kz[i] * kd; out.vx[L] += g.vx[i] * vd; out.vz[L] += g.vz[i] * vd;
   }
   return out;
+}
+
+/** Phase 36: both end members of a brace still stand (its two gusset connections hold). */
+function braceHeld(m: CollapseModel, i: number): boolean {
+  const g = m.g;
+  if (g.eStart[i + 1] - g.eStart[i] !== 2) return false;
+  for (let e = g.eStart[i]; e < g.eStart[i + 1]; e++) if (m.state[g.eTo[e]] > MS.SEVERE) return false;
+  return true;
 }
 
 /** min over stories of the current / initial lateral strength (per axis). */

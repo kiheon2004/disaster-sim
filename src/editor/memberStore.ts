@@ -27,6 +27,9 @@ interface MemberState {
   setPreview: (p: MemberState['preview']) => void;
   /** Heading (rad) of the member being added (R turns it 90°). */
   addYaw: number;
+  /** Phase 36: first joint of the brace being placed (joint → joint), building-local; null = none picked yet. */
+  braceFrom: [number, number, number] | null;
+  setBraceFrom: (p: [number, number, number] | null) => void;
   rotateAdd: () => void;
   select: (ids: string[]) => void;
   toggle: (id: string) => void;
@@ -50,6 +53,8 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   snap: { grid: true, floor: true, structure: true },
   gridStep: 0.5,
   addYaw: 0,
+  braceFrom: null,
+  setBraceFrom: (braceFrom) => set({ braceFrom }),
   preview: null,
   setPreview: (preview) => set({ preview }),
   rotateAdd: () => set({ addYaw: (get().addYaw + Math.PI / 2) % (Math.PI * 2) }),
@@ -58,12 +63,12 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     const cur = get().selected;
     set({ selected: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
   },
-  setAdding: (adding) => set({ adding, selected: adding ? [] : get().selected }),
+  setAdding: (adding) => set({ adding, selected: adding ? [] : get().selected, braceFrom: null }),
   setGizmo: (gizmo) => set({ gizmo }),
   setXray: (xray) => set({ xray }),
   setLoadPath: (loadPath) => set({ loadPath }),
   setCut: (cut) => set({ cut }),
   setSnap: (patch) => set({ snap: { ...get().snap, ...patch } }),
   setGridStep: (gridStep) => set({ gridStep }),
-  reset: () => set({ selected: [], adding: null, cut: null, preview: null }),
+  reset: () => set({ selected: [], adding: null, cut: null, preview: null, braceFrom: null }),
 }));

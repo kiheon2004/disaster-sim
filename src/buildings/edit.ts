@@ -11,6 +11,8 @@ import { createDesign } from './design';
 import { beamSection, columnSize, generateMembers, planGrid, slabThickness, storyBase, storyHeight, wallThickness } from './generate';
 import type { MaterialId } from './materials';
 import { ROLES_BY_TYPE, type BuildingDesign, type BuildingMember, type MemberType, type StructuralRole } from './types';
+import { braceBetween, braceEnds } from './brace';
+import { material as materialOf } from './materials';
 
 const clone = (m: BuildingMember): BuildingMember => structuredClone(m);
 
@@ -149,7 +151,20 @@ export function newMember(d: BuildingDesign, type: MemberType, at: Vec3, id: str
       return { ...base, level: spec.floors, material: 'lightCladding', position: [at[0], storyBase(spec, spec.floors) + 0.05, at[2]], size: [g.bx, 0.1, g.bz] };
     case 'foundation':
       return { ...base, level: -1, material: 'reinforcedConcrete', position: [at[0], -0.45, at[2]], size: [1.5, 0.6, 1.5] };
+    case 'brace':
+      // Default: one bay diagonal of the story (the editor places braces joint → joint, braceMember).
+      return braceMember(d, id, [at[0] - g.bx / 2, y0 + 0.05, at[2]], [at[0] + g.bx / 2, y0 + h - tSlab - 0.05, at[2]]);
   }
+}
+
+/**
+ * Phase 36: a brace from joint `a` to joint `b` (building-local): story of its lower end, the structure material when it
+ * is a load-bearing one (else steel).
+ */
+export function braceMember(d: BuildingDesign, id: string, a: Vec3, b: Vec3): BuildingMember {
+  const mat = materialOf(d.spec.structureMaterial).structural ? d.spec.structureMaterial : 'structuralSteel';
+  const s = Math.min(d.spec.floors - 1, Math.max(0, storyAt(d, Math.min(a[1], b[1]) + 0.05)));
+  return braceBetween(id, a, b, s, mat);
 }
 
 export function addMembers(d: BuildingDesign, members: BuildingMember[]): BuildingDesign {
@@ -170,6 +185,8 @@ export function removeMembers(d: BuildingDesign, ids: readonly string[]): { desi
 /** Recompute the story of moved vertical / floor members from their new elevation. */
 function relevelMember(d: BuildingDesign, m: BuildingMember): number {
   if (m.type === 'foundation') return -1;
+  // A brace belongs to the story of its lower end.
+  if (m.type === 'brace') { const [p, q] = braceEnds(m); return Math.min(d.spec.floors - 1, Math.max(0, storyAt(d, Math.min(p[1], q[1]) + 0.05))); }
   if (m.type === 'roof') return m.level;
   if (m.level < 0 && m.type === 'slab' && m.position[1] < 0.1) return -1;
   const bottom = m.position[1] - m.size[1] / 2;
@@ -320,6 +337,31 @@ export function snapToStructure(d: BuildingDesign, type: MemberType, x: number, 
   for (const z of g.zs) for (let i = 0; i < g.nx; i++) consider(g.xs[i] + g.bx / 2, z);
   for (const xx of g.xs) for (let i = 0; i < g.nz; i++) consider(xx, g.zs[i] + g.bz / 2);
   if (type === 'slab' || type === 'roof') for (let i = 0; i < g.nx; i++) for (let j = 0; j < g.nz; j++) consider(g.xs[i] + g.bx / 2, g.zs[j] + g.bz / 2);
+  return best;
+}
+
+/**
+ * Phase 36: joints a brace can be placed between (building-local) — both ends of every column (just inside it, so the
+ * brace's end point lies in the column and the beams framing into it) and the middle of every beam (chevron bracing).
+ */
+export function braceJoints(d: BuildingDesign): Vec3[] {
+  const out: Vec3[] = [];
+  for (const m of d.members) {
+    if (m.type === 'column') {
+      const h = m.size[1] / 2, e = Math.min(0.05, h / 4);
+      out.push([m.position[0], m.position[1] - h + e, m.position[2]], [m.position[0], m.position[1] + h - e, m.position[2]]);
+    } else if (m.type === 'beam') out.push([m.position[0], m.position[1], m.position[2]]);
+  }
+  return out;
+}
+
+/** The brace joint nearest to `p` within `radius` (m), or null. */
+export function nearestJoint(d: BuildingDesign, p: Vec3, radius = 1.5): Vec3 | null {
+  let best: Vec3 | null = null, bd = radius;
+  for (const j of braceJoints(d)) {
+    const dist = Math.hypot(j[0] - p[0], j[1] - p[1], j[2] - p[2]);
+    if (dist < bd) { bd = dist; best = j; }
+  }
   return best;
 }
 

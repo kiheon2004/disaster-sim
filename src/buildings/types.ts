@@ -12,8 +12,9 @@ import type { MaterialId } from './materials';
 
 export const DESIGN_VERSION = 1 as const;
 
-export type MemberType = 'foundation' | 'column' | 'beam' | 'slab' | 'wall' | 'window' | 'door' | 'roof';
-export const MEMBER_TYPES: readonly MemberType[] = ['foundation', 'column', 'beam', 'slab', 'wall', 'window', 'door', 'roof'];
+/** Phase 36: 'brace' — a diagonal between two joints (axial member, buildings/brace.ts); appended last (file order kept). */
+export type MemberType = 'foundation' | 'column' | 'beam' | 'slab' | 'wall' | 'window' | 'door' | 'roof' | 'brace';
+export const MEMBER_TYPES: readonly MemberType[] = ['foundation', 'column', 'beam', 'slab', 'wall', 'window', 'door', 'roof', 'brace'];
 
 /**
  * What a member does structurally — independent of what it looks like.
@@ -39,6 +40,7 @@ export const ROLES_BY_TYPE: Record<MemberType, readonly StructuralRole[]> = {
   window: ['opening'],
   door: ['opening'],
   roof: ['roofing'],
+  brace: ['primary'],
 };
 
 export type Facade = 'n' | 's' | 'e' | 'w';

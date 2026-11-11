@@ -75,9 +75,11 @@ export const CK = {
   HOSTED: 7,
   /** non-structural wall / cladding hanging from the frame or stacked on a wall */
   ANCHOR: 8,
+  /** Phase 36: brace end → the joint member it is bolted / welded to (gusset plate); capacity ≈ 1.1·f_y·A of the brace */
+  GUSSET: 9,
 } as const;
 export type ConnectionKind = (typeof CK)[keyof typeof CK];
-export const CONNECTION_KEYS = ['beamSeat', 'beamBeam', 'splice', 'base', 'transfer', 'slab', 'roof', 'hosted', 'anchor'] as const;
+export const CONNECTION_KEYS = ['beamSeat', 'beamBeam', 'splice', 'base', 'transfer', 'slab', 'roof', 'hosted', 'anchor', 'gusset'] as const;
 
 /**
  * Immediate cause of a member failure. The hazard behind it is kept separately (attribution).

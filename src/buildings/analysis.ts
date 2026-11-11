@@ -29,6 +29,7 @@ import { STRUCTURAL_SYSTEMS } from '@/simulation/seismic/structuralProps';
 import { MATERIALS, material, type FillKind, type MaterialId } from './materials';
 import { boxVolume, lengthAxis, memberBounds, scaledSize, type Box3 } from './geometry';
 import { isLateralRole, isStructuralRole, OCCUPANCY_MASS, ROOF_SUPERIMPOSED, type BuildingDesign, type BuildingMember } from './types';
+import { braceEndMembers, braceEnds, braceProps } from './brace';
 
 export const TOL = 0.06;
 /** Vertical search window below a column / wall for what it stands on (m). */
@@ -38,7 +39,9 @@ export const NEAR_GAP = 1;
 
 export type WarningCode =
   | 'unsupported' | 'nonStructuralMaterial' | 'overloaded' | 'cantilever' | 'noLateral' | 'softStory' | 'weakStory'
-  | 'noHost' | 'noFoundation' | 'periodCalibrated' | 'torsion' | 'onSoil';
+  | 'noHost' | 'noFoundation' | 'periodCalibrated' | 'torsion' | 'onSoil'
+  // Phase 36: a brace with an end on no load-bearing member / a brace not spanning one storey (no lateral contribution).
+  | 'braceDangling' | 'braceNoLateral';
 
 export interface AnalysisWarning {
   code: WarningCode;
@@ -75,6 +78,8 @@ export interface MemberAnalysis {
   vz: number;
   /** Drift ratio at failure (lateral members). */
   driftCapacity: number;
+  /** Phase 36, braces only: storey drift at which the brace buckles (rad). */
+  buckleDrift?: number;
   /** Opening area / wall area (walls). */
   openingRatio: number;
 }
@@ -137,7 +142,7 @@ export interface BuildingAnalysis {
 }
 
 const fillKind = (t: BuildingMember['type']): FillKind =>
-  t === 'window' || t === 'door' ? 'opening' : t === 'foundation' ? 'foundation' : t === 'column' ? 'column' : t === 'beam' ? 'beam' : t === 'slab' ? 'slab' : t === 'roof' ? 'roof' : 'wall';
+  t === 'window' || t === 'door' ? 'opening' : t === 'foundation' ? 'foundation' : t === 'column' || t === 'brace' ? 'column' : t === 'beam' ? 'beam' : t === 'slab' ? 'slab' : t === 'roof' ? 'roof' : 'wall';
 
 /** Material → structural system whose damage thresholds / period formula apply. */
 export const SYSTEM_OF: Record<MaterialId, StructuralSystem> = {
@@ -224,6 +229,8 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   let na = 0;
   for (const i of order) {
     if (failed?.has(src[i].id)) continue;
+    // Phase 36: a brace's box spans its whole bay — it links by its end points (step 3), never by box contact.
+    if (src[i].type === 'brace') continue;
     const o = i * 6;
     const x0 = B[o], y0 = B[o + 1], z0 = B[o + 2], x1 = B[o + 3], y1 = B[o + 4], z1 = B[o + 5];
     let w = 0;
@@ -255,10 +262,19 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   // ── 3. Support candidates per member (type-specific) ──────────────
   const groundY = 0.02 * k[1];
   const onSoil: string[] = [];
+  /** Phase 36: end members of each brace (−1 = dangling); null when the design has none. */
+  let braceEnd: Int32Array | null = null;
   for (let i = 0; i < n; i++) {
     const m = src[i];
     const a = out[i];
     if (failed?.has(m.id)) continue;
+    if (m.type === 'brace') {
+      // Hung on the members at its two end points (gusset connections) — half of its weight each.
+      const ends = braceEndMembers(braceEnds(m, k), n, (j) => src[j].type, (j) => (j !== i && !failed?.has(src[j].id) && (out[j].bearing || src[j].type === 'foundation') ? out[j].box : null), TOL);
+      (braceEnd ??= new Int32Array(2 * n).fill(-1)).set(ends, 2 * i);
+      for (const j of new Set(ends)) if (j >= 0) a.supports.push(j);
+      continue;
+    }
     if (m.type === 'foundation' || (m.type === 'slab' && a.box.min[1] <= groundY && m.level < 0)) {
       a.ground = true;
       continue;
@@ -342,6 +358,10 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   if (onSoil.length) warnings.push({ code: 'onSoil', level: 'info', members: onSoil.slice(0, 50), value: onSoil.length });
   const orphans = src.filter((m) => (m.type === 'window' || m.type === 'door') && (!m.host || !byId.has(m.host))).map((m) => m.id);
   if (orphans.length) warnings.push({ code: 'noHost', level: 'info', members: orphans.slice(0, 50), value: orphans.length });
+  if (braceEnd) {
+    const dangling = src.filter((m, i) => m.type === 'brace' && !failed?.has(m.id) && (braceEnd![2 * i] < 0 || braceEnd![2 * i + 1] < 0 || braceEnd![2 * i] === braceEnd![2 * i + 1])).map((m) => m.id);
+    if (dangling.length) warnings.push({ code: 'braceDangling', level: 'warning', members: dangling.slice(0, 50), value: dangling.length });
+  }
 
   // ── 5. Gravity load distribution (top-down) + utilization ─────────
   const down = [...order].reverse();
@@ -399,7 +419,7 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
     if (m.type !== 'roof' && !(m.type === 'wall' && m.level >= floors)) height = Math.max(height, a.box.max[1]);
     // Lumped floor masses: vertical members split half / half between the floors they connect.
     const s = Math.min(floors - 1, storyOf(m));
-    if (m.type === 'column' || (m.type === 'wall' && m.level < floors) || m.type === 'window' || m.type === 'door') {
+    if (m.type === 'column' || (m.type === 'wall' && m.level < floors) || m.type === 'window' || m.type === 'door' || m.type === 'brace') {
       stories[s].mass += a.mass / 2;
       if (s > 0) stories[s - 1].mass += a.mass / 2;
     } else stories[s].mass += a.mass;
@@ -430,7 +450,8 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   }
 
   // ── 7. Lateral stiffness / strength ─────────────────────────────────
-  lateral(src, out, adj, stories, floors, failed);
+  const flatBraces = lateral(src, out, adj, stories, floors, failed, braceEnd, k);
+  if (flatBraces.length) warnings.push({ code: 'braceNoLateral', level: 'info', members: flatBraces.slice(0, 50), value: flatBraces.length });
   for (const st of stories) {
     let kw = 0;
     let du = 0;
@@ -473,10 +494,23 @@ export function analyzeBuilding(design: BuildingDesign, opts: AnalyzeOptions = {
   const sp = STRUCTURAL_SYSTEMS[system];
   const tCode = sp.ct * Math.pow(Math.max(2, height), sp.x);
   // Measured periods are typically 1.2–1.5 × the code formula (which is deliberately short).
-  const band: [number, number] = [0.6 * tCode, 1.6 * tCode];
-  const fit = (t: number) => (t < band[0] ? band[0] : t > band[1] ? band[1] : t);
-  const periodX = fit(rawX);
-  const periodZ = fit(rawZ);
+  let band: [number, number] = [0.6 * tCode, 1.6 * tCode];
+  const fit = (t: number, b: [number, number]) => (t < b[0] ? b[0] : t > b[1] ? b[1] : t);
+  let bandX = band, bandZ = band;
+  if (braceEnd) {
+    // Phase 36: a braced direction has its own code period — braced frames are "all other structures" in ASCE 7-16
+    // Table 12.8-2 (C_t = 0.0488, x = 0.75; EN 1998-1 §4.3.3.2.2 C_t = 0.05) instead of a moment frame's 0.0724·H^0.8.
+    // Blended by the braces' share of that direction's storey stiffness: without its own band the calibration would
+    // scale the braces' stiffness away (a braced frame's raw period lies below 0.6 × the moment-frame formula).
+    const bs = braceShare(src, out, stories);
+    const tBraced = 0.0488 * Math.pow(Math.max(2, height), 0.75);
+    const bandOf = (w: number): [number, number] => { const t = (1 - w) * tCode + w * tBraced; return [0.6 * t, 1.6 * t]; };
+    if (bs[0] > 0) bandX = bandOf(bs[0]);
+    if (bs[1] > 0) bandZ = bandOf(bs[1]);
+    band = [Math.min(bandX[0], bandZ[0]), Math.max(bandX[1], bandZ[1])];
+  }
+  const periodX = fit(rawX, bandX);
+  const periodZ = fit(rawZ, bandZ);
   const calibration: [number, number] = [(rawX / periodX) ** 2, (rawZ / periodZ) ** 2];
   if (Math.abs(calibration[0] - 1) > 1e-9 || Math.abs(calibration[1] - 1) > 1e-9) warnings.push({ code: 'periodCalibrated', level: 'info', value: Math.max(rawX / periodX, rawZ / periodZ, periodX / rawX, periodZ / rawZ) });
 
@@ -620,7 +654,8 @@ function gravityUtilization(m: BuildingMember, a: MemberAnalysis, sup: MemberAna
  * Lateral stiffness / strength of every story (see the header for the formulas).
  * Writes kx, kz, vx, vz, driftCapacity on members and sums them per story.
  */
-function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: number[][], stories: StoryAnalysis[], floors: number, failed?: ReadonlySet<string>) {
+function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: number[][], stories: StoryAnalysis[], floors: number, failed?: ReadonlySet<string>, braceEnd: Int32Array | null = null, k: Vec3 = [1, 1, 1]): string[] {
+  const flat: string[] = [];
   // Wall stacks (continuous walls over several stories) for the cantilever flexibility.
   const stackOf = wallStacks(src, out, failed);
   // Primary beams framing into each column's top joint.
@@ -723,6 +758,20 @@ function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: num
       a.vx = v * Math.abs(ax[0]);
       a.vz = v * Math.abs(ax[1]);
       a.driftCapacity = mat.driftCapacity.wall * axialPenalty(a.utilization);
+    } else if (m.type === 'brace' && braceEnd) {
+      // Phase 36: axial brace (buildings/brace.ts) — only with both ends on supported members, spanning its storey.
+      const e0 = braceEnd[2 * i], e1 = braceEnd[2 * i + 1];
+      if (e0 < 0 || e1 < 0 || e0 === e1 || !out[e0].supported || !out[e1].supported) continue;
+      const p = braceProps(m, a.size, k);
+      const hs = stories[s].height;
+      if (p.dy < 0.5 * hs || p.dy > 1.25 * hs) { flat.push(m.id); continue; }
+      const ax = lengthAxis(m);
+      a.kx = p.k * ax[0] * ax[0];
+      a.kz = p.k * ax[1] * ax[1];
+      a.vx = p.V * Math.abs(ax[0]);
+      a.vz = p.V * Math.abs(ax[1]);
+      a.driftCapacity = p.thetaU;
+      a.buckleDrift = p.thetaCr;
     } else continue;
     // Pre-existing damage degrades the member like the structural model does (k·(1−0.4D), F·(1−0.3D)).
     const d0 = m.initialDamage ?? 0;
@@ -738,6 +787,17 @@ function lateral(src: readonly BuildingMember[], out: MemberAnalysis[], adj: num
     st.vz += a.vz;
     st.lateral.push(i);
   }
+  return flat;
+}
+
+/** Phase 36: share of the storey stiffness the braces give, per direction, over all storeys ([x, z]). */
+function braceShare(src: readonly BuildingMember[], out: MemberAnalysis[], stories: StoryAnalysis[]): [number, number] {
+  let bx = 0, bz = 0, tx = 0, tz = 0;
+  for (const st of stories) {
+    tx += st.kx; tz += st.kz;
+    for (const i of st.lateral) if (src[i].type === 'brace') { bx += out[i].kx; bz += out[i].kz; }
+  }
+  return [tx > 0 ? bx / tx : 0, tz > 0 ? bz / tz : 0];
 }
 
 /** High axial load makes columns / walls less ductile. */

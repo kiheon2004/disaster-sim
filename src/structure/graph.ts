@@ -16,6 +16,7 @@
  *      slab            tier 0: beams / walls / columns right under it
  *      roof            tier 0: whatever is under its footprint   tier 1: lower touching members
  *      window / door   tier 0: host wall   tier 1: any touching wall
+ *      brace (Phase 36) tier 0: the members at its two end points (gusset) — never a support of anything
  *      foundation, slab-on-grade: on the ground (ground support factor set by the ground model)
  *  - connections: one per candidate edge, with its kind and gravity-transfer capacity;
  *  - a topological rank (supports always rank lower than what they carry);
@@ -38,8 +39,8 @@ import { isLateralRole, isStructuralRole, type BuildingDesign, type MemberType }
 import { beamCapacity, beamSeatCapacity, columnCapacity, roofPanelCapacity, slabEdgeCapacity, slabMomentPerM, wallCapacity } from './capacity';
 import { CK } from './types';
 
-export const MT: Record<MemberType, number> = { foundation: 0, column: 1, beam: 2, slab: 3, wall: 4, window: 5, door: 6, roof: 7 };
-export const MT_FOUNDATION = 0, MT_COLUMN = 1, MT_BEAM = 2, MT_SLAB = 3, MT_WALL = 4, MT_WINDOW = 5, MT_DOOR = 6, MT_ROOF = 7;
+export const MT: Record<MemberType, number> = { foundation: 0, column: 1, beam: 2, slab: 3, wall: 4, window: 5, door: 6, roof: 7, brace: 8 };
+export const MT_FOUNDATION = 0, MT_COLUMN = 1, MT_BEAM = 2, MT_SLAB = 3, MT_WALL = 4, MT_WINDOW = 5, MT_DOOR = 6, MT_ROOF = 7, MT_BRACE = 8;
 
 /** Plan grid cell size (m). */
 const CELL = 2;
@@ -150,7 +151,7 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
     type[i] = MT[m.type];
     level[i] = m.level;
     structural[i] = isStructuralRole(m.role) && mat.structural ? 1 : 0;
-    lateral[i] = isLateralRole(m.role) && mat.structural && (m.type === 'column' || m.type === 'wall') ? 1 : 0;
+    lateral[i] = isLateralRole(m.role) && mat.structural && (m.type === 'column' || m.type === 'wall' || m.type === 'brace') ? 1 : 0;
     absent[i] = (m.initialDamage ?? 0) >= 0.999 ? 1 : 0;
     matIdx[i] = Math.max(0, MATERIAL_INDEX.indexOf(m.material));
     for (let d = 0; d < 3; d++) { box[6 * i + d] = a.box.min[d]; box[6 * i + 3 + d] = a.box.max[d]; }
@@ -174,6 +175,8 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
   const below: number[][] = Array.from({ length: n }, () => []);
   const active: number[] = [];
   for (const i of order) {
+    // Phase 36: braces link by their end points (below), not by the box spanning their bay.
+    if (type[i] === MT_BRACE) continue;
     const x0 = B(i, 0), y0 = B(i, 1), z0 = B(i, 2), x1 = B(i, 3), y1 = B(i, 4), z1 = B(i, 5);
     let w = 0;
     for (let q = 0; q < active.length; q++) { const j = active[q]; if (B(j, 4) + NEAR_GAP >= y0) active[w++] = j; }
@@ -200,6 +203,11 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
     const m = src[i];
     const t = type[i];
     if (t === MT_FOUNDATION || (t === MT_SLAB && B(i, 1) <= groundY && m.level < 0)) { ground[i] = 1; continue; }
+    if (t === MT_BRACE) {
+      // The end members found by the analysis (end-point rule, buildings/brace.ts): gusset connections.
+      for (const j of A.members[i].supports) edges[i].push({ to: j, tier: 0, kind: CK.GUSSET });
+      continue;
+    }
     if (t === MT_WINDOW || t === MT_DOOR) {
       const h = m.host !== undefined ? byId.get(m.host) : undefined;
       if (h !== undefined && adj[i].includes(h)) edges[i].push({ to: h, tier: 0, kind: CK.HOSTED });
@@ -302,6 +310,11 @@ export function buildGraph(design: BuildingDesign, scale: Vec3 = [1, 1, 1]): Str
         const t = A.members[j].size[1];
         const fx = B(i, 3) - B(i, 0), fz = B(i, 5) - B(i, 2);
         eCap[e] = slabEdgeCapacity(src[j].material, t, 2 * (fx + fz) + 4 * t);
+      } else if (ed.kind === CK.GUSSET) {
+        // Gusset plate sized for the brace: ≈ 1.1 × its yield force (capacity design) — never governs its own weight.
+        const s = A.members[i].size;
+        const bm = material(mi.material);
+        eCap[e] = Math.max(1, 1.1 * bm.compressive * s[1] * s[2] * bm.fill.column);
       } else if (ed.kind === CK.SLAB) {
         const ox = Math.max(0, Math.min(B(i, 3), B(j, 3)) - Math.max(B(i, 0), B(j, 0)));
         const oz = Math.max(0, Math.min(B(i, 5), B(j, 5)) - Math.max(B(i, 2), B(j, 2)));

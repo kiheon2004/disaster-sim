@@ -12,9 +12,9 @@ import { flatSampler } from '@/terrain/TerrainSampler';
 import { yawOf } from '@/terrain/groundPlacement';
 import { analysisOf } from '@/buildings/design';
 import { rotateEuler } from '@/buildings/geometry';
-import { floorElevation, newMember, snapToGrid, snapToStructure, storyAt } from '@/buildings/edit';
+import { addMembers, braceMember, floorElevation, nearestJoint, newMember, nextUserIds, snapToGrid, snapToStructure, storyAt } from '@/buildings/edit';
 import type { BuildingDesign, BuildingMember } from '@/buildings/types';
-import { addMemberAt, moveSelectedMembers, rotateSelectedMembers } from '@/app/buildingActions';
+import { addMemberAt, commitDesign, moveSelectedMembers, rotateSelectedMembers } from '@/app/buildingActions';
 import { ManagedTransformControls } from './ManagedTransformControls';
 import { useEditorStore } from './editorStore';
 import { useMemberStore } from './memberStore';
@@ -76,6 +76,8 @@ function loadPathGeometry(design: BuildingDesign): { lines: THREE.BufferGeometry
  * turned with a gizmo (grid, floor and structural-connection snapping; one undo step per drag),
  * added by clicking with a member type armed. The load path overlay shows who rests on whom,
  * colored by utilization, and unsupported members in red.
+ * Phase 36: a brace is placed joint → joint — two clicks near structural nodes (column ends, beam middles); the first
+ * joint is kept in the member store until the second one (Esc / another tool cancels).
  */
 export function BuildingEditor() {
   const id = useEditorStore((s) => s.buildingId);
@@ -128,6 +130,17 @@ function Editor({ obj }: { obj: WorldObject }) {
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 5 || useEditorStore.getState().dragging) return;
     e.stopPropagation();
+    if (adding === 'brace') {
+      const j = nearestJoint(design, toLocal(e.point));
+      if (!j) return;
+      const from = ms.braceFrom;
+      if (!from) { ms.setBraceFrom(j); return; }
+      if (Math.hypot(j[0] - from[0], j[1] - from[1], j[2] - from[2]) < 0.5) return;
+      const [id] = nextUserIds(design, 1);
+      if (commitDesign(obj.id, addMembers(design, [braceMember(design, id, from, j)]))) ms.select([id]);
+      ms.setBraceFrom(null);
+      return;
+    }
     if (adding) {
       const at = ghostAt(design, adding, toLocal(e.point), ms);
       if (at) addMemberAt(adding, at, ms.addYaw);
@@ -148,6 +161,13 @@ function Editor({ obj }: { obj: WorldObject }) {
   const onMove = (e: ThreeEvent<PointerEvent>) => {
     if (!adding) return;
     e.stopPropagation();
+    if (adding === 'brace') {
+      // The hovered joint (a small marker), or the brace from the first joint to it.
+      const j = nearestJoint(design, toLocal(e.point));
+      if (!j) return setGhost(null);
+      const from = ms.braceFrom;
+      return setGhost(from ? braceMember(design, '~ghost', from, j) : { ...newMember(design, 'column', j, '~ghost'), position: j, rotation: [0, 0, 0], size: [0.35, 0.35, 0.35] });
+    }
     const at = ghostAt(design, adding, toLocal(e.point), ms);
     if (!at) return setGhost(null);
     const g = newMember(design, adding, at, '~ghost');

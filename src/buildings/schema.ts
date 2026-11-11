@@ -29,7 +29,7 @@ const memberSchema = z.object({
 
 const DEFAULT_MATERIAL: Record<MemberType, MaterialId> = {
   foundation: 'reinforcedConcrete', column: 'reinforcedConcrete', beam: 'reinforcedConcrete', slab: 'reinforcedConcrete',
-  wall: 'masonry', window: 'glass', door: 'timber', roof: 'lightCladding',
+  wall: 'masonry', window: 'glass', door: 'timber', roof: 'lightCladding', brace: 'structuralSteel',
 };
 
 export const designSchema = z.object({

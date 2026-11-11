@@ -65,7 +65,7 @@ export function memberRootIndex(type: string, level: number, floors: number): nu
   if (level < 0) return 0;
   if (level >= floors) return 1 + 2 * floors;
   if (type === 'beam' || type === 'slab') return 1 + floors + level;
-  if (type === 'column' || type === 'wall' || type === 'window' || type === 'door') return 1 + level;
+  if (type === 'column' || type === 'wall' || type === 'window' || type === 'door' || type === 'brace') return 1 + level;
   return 1 + 2 * floors;
 }
 

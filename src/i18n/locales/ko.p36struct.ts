@@ -4,4 +4,9 @@ export const koP36Struct = {
   'log.p36.release': '기울던 부분이 {deg}°에서 찢어져 떨어짐',
   'log.p36.releaseGround': '기울던 부분이 {deg}°에서 땅에 닿아 계속 떨어짐',
   'climate.preset.as.roofPanels': '지붕 스팬 경량 패널은 지붕 시스템 용량(1.5 × (자중 + 1 kPa))으로 검사 — 눈 2.7 kPa가 곧바로 넘음',
+  // 구조 2: 가새.
+  'member.type.brace': '가새',
+  'struct.conn.gusset': '가새 거싯',
+  'building.warn.braceDangling': '끝이 하중 부재에 닿지 않은 가새 {n}개 (매달림 — 횡강성 없음): {ids}',
+  'building.warn.braceNoLateral': '두 접합점 사이로 한 층을 잇지 않는 가새 {n}개 — 횡강성 없음: {ids}',
 };

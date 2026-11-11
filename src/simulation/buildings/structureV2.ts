@@ -56,10 +56,12 @@ export function torsionFactors(mr: ModularRuntime): Float32Array {
 export function torsionDemand(mr: ModularRuntime, i: number): number {
   const m = mr.design.members[i];
   const s = m.level;
-  if (!V2_PARTS.torsion) return m.type === 'wall' ? Math.abs(Math.cos(m.rotation[1])) * mr.storyPeakAxis[2 * s] + Math.abs(Math.sin(m.rotation[1])) * mr.storyPeakAxis[2 * s + 1] : mr.storyPeak[s];
+  // Walls and (Phase 36) braces work in their own plane.
+  const inPlane = m.type === 'wall' || m.type === 'brace';
+  if (!V2_PARTS.torsion) return inPlane ? Math.abs(Math.cos(m.rotation[1])) * mr.storyPeakAxis[2 * s] + Math.abs(Math.sin(m.rotation[1])) * mr.storyPeakAxis[2 * s + 1] : mr.storyPeak[s];
   const t = torsionFactors(mr);
   const ax = mr.storyPeakAxis[2 * s] * t[2 * i], az = mr.storyPeakAxis[2 * s + 1] * t[2 * i + 1];
-  if (m.type === 'wall') {
+  if (inPlane) {
     const y = m.rotation[1];
     return Math.abs(Math.cos(y)) * ax + Math.abs(Math.sin(y)) * az;
   }
