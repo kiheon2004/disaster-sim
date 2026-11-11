@@ -12,7 +12,7 @@ import { flatSampler } from '@/terrain/TerrainSampler';
 import { yawOf } from '@/terrain/groundPlacement';
 import { analysisOf } from '@/buildings/design';
 import { rotateEuler } from '@/buildings/geometry';
-import { addMembers, braceMember, floorElevation, nearestJoint, newMember, nextUserIds, snapToGrid, snapToStructure, storyAt } from '@/buildings/edit';
+import { addMembers, braceJoints, braceMember, floorElevation, nearestJoint, newMember, nextUserIds, snapToGrid, snapToStructure, storyAt } from '@/buildings/edit';
 import type { BuildingDesign, BuildingMember } from '@/buildings/types';
 import { addMemberAt, commitDesign, moveSelectedMembers, rotateSelectedMembers } from '@/app/buildingActions';
 import { ManagedTransformControls } from './ManagedTransformControls';
@@ -121,6 +121,28 @@ function Editor({ obj }: { obj: WorldObject }) {
   useEffect(() => () => { lp?.lines.dispose(); badEdges?.dispose(); }, [lp, badEdges]);
 
   const group = useRef<THREE.Group>(null);
+  const gl = useThree((s) => s.gl);
+  /**
+   * Phase 36: the brace joint under the POINTER — the joint whose screen position is nearest the cursor within 18 px,
+   * else the nearest to the hit point (1.5 m). Picking by the 3D hit point alone missed column tops behind a glass
+   * façade (the ray passes the glass and hits members metres behind).
+   */
+  const jointAt = (e: ThreeEvent<MouseEvent | PointerEvent>): Vec3 | null => {
+    const g = group.current;
+    if (g) {
+      const r = gl.domElement.getBoundingClientRect();
+      const v = new THREE.Vector3();
+      let best: Vec3 | null = null, bd = 18;
+      for (const j of braceJoints(design)) {
+        v.set(j[0], j[1], j[2]).applyMatrix4(g.matrixWorld).project(camera);
+        if (v.z > 1) continue;
+        const d = Math.hypot(r.left + ((v.x + 1) / 2) * r.width - e.nativeEvent.clientX, r.top + ((1 - v.y) / 2) * r.height - e.nativeEvent.clientY);
+        if (d < bd) { bd = d; best = j; }
+      }
+      if (best) return best;
+    }
+    return nearestJoint(design, toLocal(e.point));
+  };
   const toLocal = (p: THREE.Vector3): Vec3 => {
     const g = group.current!;
     const l = g.worldToLocal(p.clone());
@@ -131,7 +153,7 @@ function Editor({ obj }: { obj: WorldObject }) {
     if (e.delta > 5 || useEditorStore.getState().dragging) return;
     e.stopPropagation();
     if (adding === 'brace') {
-      const j = nearestJoint(design, toLocal(e.point));
+      const j = jointAt(e);
       if (!j) return;
       const from = ms.braceFrom;
       if (!from) { ms.setBraceFrom(j); return; }
@@ -163,7 +185,7 @@ function Editor({ obj }: { obj: WorldObject }) {
     e.stopPropagation();
     if (adding === 'brace') {
       // The hovered joint (a small marker), or the brace from the first joint to it.
-      const j = nearestJoint(design, toLocal(e.point));
+      const j = jointAt(e);
       if (!j) return setGhost(null);
       const from = ms.braceFrom;
       return setGhost(from ? braceMember(design, '~ghost', from, j) : { ...newMember(design, 'column', j, '~ghost'), position: j, rotation: [0, 0, 0], size: [0.35, 0.35, 0.35] });

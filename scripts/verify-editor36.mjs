@@ -400,6 +400,25 @@ if (want('structure')) {
   await ev(() => window.__ds.buildingActions.setSelectedType('door'));
   const mt = await ev(([id, m]) => window.__ds.world.getState().doc.objects[id].building.members.find((x) => x.id === m)?.type, [steel.id, win]);
   check('S9-3 member type change window → door (validated)', mt === 'door', { mt });
+  // S9-4: a brace drawn joint → joint with the mouse ("+ Brace", foot of one façade column, top of the next one).
+  const joints = await ev((id) => {
+    const o = window.__ds.world.getState().doc.objects[id]; const d = o.building;
+    const cols = d.members.filter((m) => m.type === 'column' && m.level === 0);
+    const zf = Math.max(...cols.map((m) => m.position[2]));
+    const front = cols.filter((m) => Math.abs(m.position[2] - zf) < 0.01).sort((a, b) => a.position[0] - b.position[0]);
+    const [c1, c2] = front;
+    const p = o.transform.position;
+    return { A: [p[0] + c1.position[0], p[1] + c1.position[1] - c1.size[1] / 2, p[2] + c1.position[2]], B: [p[0] + c2.position[0], p[1] + c2.position[1] + c2.size[1] / 2, p[2] + c2.position[2]] };
+  }, steel.id);
+  await view((joints.A[0] + joints.B[0]) / 2, joints.A[2] + 4, 9, 22);
+  const braces0 = await ev((id) => window.__ds.world.getState().doc.objects[id].building.members.filter((m) => m.type === 'brace').length, steel.id);
+  await click('[data-member="brace"]');
+  await clickWorld(joints.A[0], joints.A[2], joints.A[1]);
+  await clickWorld(joints.B[0], joints.B[2], joints.B[1]);
+  const brace = await ev((id) => { const d = window.__ds.world.getState().doc.objects[id].building; return { n: d.members.filter((m) => m.type === 'brace').length, last: d.members.filter((m) => m.type === 'brace').pop() ?? null, warn: window.__ds.buildingLib.analyzeBuilding ? null : null }; }, steel.id);
+  check('S9-4 a brace drawn joint → joint with two clicks (one undo step)', brace.n === braces0 + 1 && brace.last && brace.last.size[0] > 3, { braces0, n: brace.n, size: brace.last?.size });
+  await shot('g4-brace');
+  await click('[data-member="brace"]'); // leave the brace tool
   await ev(() => window.__ds.buildingActions.exitBuildingEdit());
   // S10: partial collapse. In Building Edit Mode the RC building's corner bay (members of its first bay in x and z, all
   // storeys) is set to 95 % initial damage (member inspector slider, here through the same action); a moderate quake then
