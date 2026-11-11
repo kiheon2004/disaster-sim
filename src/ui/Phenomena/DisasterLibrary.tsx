@@ -5,6 +5,7 @@
  * position (map-wide wind …) is added at once. Favourites and recent live in the browser only (never in the world file).
  */
 import { useMemo, useState } from 'react';
+import { isImeKey } from '@/editor/input/keys';
 import { translate, useLocale, useT, type MessageKey } from '@/i18n/i18n';
 import { phenomena } from '@/phenomena/registry';
 import { CATALOG, CATEGORIES, catalogOf, placeable, type Category } from '@/phenomena/catalog';
@@ -48,7 +49,7 @@ export function DisasterLibrary() {
         <Icon name="search" size={13} />
         <input type="search" value={query} placeholder={t('lib.search')} aria-label={t('lib.search')} data-testid="disaster-search"
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && visible.length) armPlacement(visible[0].type); if (e.key === 'Escape') setQuery(''); }} />
+          onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter' && visible.length) armPlacement(visible[0].type); if (e.key === 'Escape') setQuery(''); }} />
       </div>
       <div className={s.chips} role="tablist" aria-label={t('lib.title')}>
         {chips.map((c) => (

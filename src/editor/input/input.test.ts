@@ -4,6 +4,8 @@
  * cancel restores), terrain stroke cancel, per-store strokes, the input policy (one owner, one
  * selection focus) and layout-independent shortcut keys.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
@@ -37,7 +39,7 @@ function key(k: string, code = ''): KeyboardEvent {
 
 import { attachCameraLock, cameraLocked, cameraLockOwners, lockCamera, releaseAllCameraLocks, unlockCamera } from './cameraLock';
 import { abortGestures, activeGesture, beginGesture } from './gesture';
-import { isTyping, keyOf, opensCommandBar } from './keys';
+import { isTyping, keyOf, opensCommandBar, isImeKey } from './keys';
 
 afterEach(() => {
   abortGestures();
@@ -363,3 +365,30 @@ describe('gizmo frame and axis lock (§11)', () => {
     ed().setTransformSpace('world');
   });
 });
+
+describe('IME composition (Phase 37): Enter inside a composition is not the field\'s "done" key', () => {
+  it('isImeKey: isComposing or key code 229, on a DOM event or a React event', () => {
+    expect(isImeKey({ isComposing: true, keyCode: 13 })).toBe(true);
+    expect(isImeKey({ isComposing: false, keyCode: 229 })).toBe(true);
+    expect(isImeKey({ isComposing: false, keyCode: 13 })).toBe(false);
+    expect(isImeKey({})).toBe(false);
+    // React's synthetic event carries the DOM event as nativeEvent (its own isComposing does not exist).
+    expect(isImeKey({ nativeEvent: { isComposing: true, keyCode: 13 } })).toBe(true);
+    expect(isImeKey({ nativeEvent: { isComposing: false, keyCode: 229 } })).toBe(true);
+    expect(isImeKey({ nativeEvent: { isComposing: false, keyCode: 13 } })).toBe(false);
+  });
+
+  it('every text field outside the command bar that acts on Enter asks it first', () => {
+    // Source check: an onKeyDown that tests for Enter in these files also calls isImeKey (the bar has its own tested rule).
+    const files = ['ui/ObjectPalette/Outliner.tsx', 'ui/Inspector/ObjectInspector.tsx', 'ui/Blueprints/BlueprintDialogs.tsx', 'ui/Phenomena/DisasterLibrary.tsx', 'ui/common/fields.tsx'];
+    const offenders: string[] = [];
+    for (const f of files) {
+      const text = readFileSync(resolve(__dirname, '../..', f), 'utf8');
+      text.split('\n').forEach((line, k) => {
+        if (/onKeyDown=/.test(line) && /e\.key === 'Enter'/.test(line) && !/isImeKey\(e\)/.test(line) && !/e\.key === ' '/.test(line)) offenders.push(`${f}:${k + 1}`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+

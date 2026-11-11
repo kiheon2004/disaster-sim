@@ -4,6 +4,7 @@
  * (name → template → seed → preview → create → build mode).
  */
 import { useEffect, useMemo, useState } from 'react';
+import { isImeKey } from '@/editor/input/keys';
 import { useT, type MessageKey } from '@/i18n/i18n';
 import { useBlueprintStore } from '@/editor/blueprintStore';
 import { useEditorStore } from '@/editor/editorStore';
@@ -198,7 +199,7 @@ function WorldWizard() {
       {step === 'name' && (
         <>
           <label className={styles.stack}><span className={styles.label}>{t('wiz.name')}</span>
-            <input className={styles.input} autoFocus value={name} data-testid="wiz-name" placeholder={t('app.untitled')} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setStep('template')} /></label>
+            <input className={styles.input} autoFocus value={name} data-testid="wiz-name" placeholder={t('app.untitled')} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => !isImeKey(e) && e.key === 'Enter' && setStep('template')} /></label>
           <div className={styles.stack}><span className={styles.label}>{t('wiz.size')}</span><span>{t('wiz.size.value')}</span></div>
         </>
       )}

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { isImeKey } from '@/editor/input/keys';
 import type { Vec3 } from '@/core/types';
 import type { ComponentKind, PhysicalProperties, WorldObject } from '@/core/model';
 import { useT } from '@/i18n/i18n';
@@ -40,7 +41,7 @@ export function ObjectInspector({ obj, readOnly = false }: { obj: WorldObject; r
             disabled={readOnly}
             aria-label={t('inspector.name')}
             onBlur={(e) => e.target.value !== obj.name && store().rename(id, e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            onKeyDown={(e) => !isImeKey(e) && e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
           <span className={styles.sub}>{t(def.labelKey)} · {id}{obj.group ? ` · ${t('object.group')}` : ''}</span>
         </div>

@@ -4,6 +4,9 @@
 //
 //   npm run build && npx vite preview --port 4173 &
 //   node scripts/probe-selection-heap.mjs http://localhost:4173/ [cycles=200]
+//
+// Phase 37 (§17, the editor's ~12 KB per lap): OP=saveLoad cycles a save → load of the document instead (the one operation
+// of the Phase 36 leak lap whose heap never levels off); SCENE=<objects> sets the scene size (default 1000).
 import puppeteer from 'puppeteer-core';
 
 const [url = 'http://localhost:4173/', cyclesArg = '200'] = process.argv.slice(2);
@@ -15,7 +18,7 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1600, height: 900, deviceScaleFactor: 1 }, protocolTimeout: 900_000,
 });
 const page = await browser.newPage();
-await page.goto(url + '?devtools', { waitUntil: 'networkidle0' });
+await page.goto(url + `?devtools&scene=${process.env.SCENE ?? 1000}`, { waitUntil: 'networkidle0' });
 await page.waitForFunction(() => window.__ds && window.__r3f);
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle0' });
@@ -24,12 +27,21 @@ const cdp = await page.createCDPSession();
 await cdp.send('HeapProfiler.enable');
 await page.evaluate(async () => {
   window.__frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  window.__ds.actions.loadStressScene(1000);
+  window.__ds.actions.loadStressScene(Number(new URLSearchParams(location.search).get('scene') ?? 1000));
   await window.__frames();
 });
 await new Promise((r) => setTimeout(r, 1500));
 
-const cycle = (n) => page.evaluate(async (n) => {
+const OP = process.env.OP ?? 'select';
+const cycle = (n) => page.evaluate(async ([n, op]) => {
+  if (op === 'saveLoad') {
+    const W = window.__ds.world, L = window.__ds.buildLib;
+    for (let i = 0; i < n; i++) {
+      W.getState().replaceDocument(L.parseDocument(L.serializeDocument(W.getState().doc, false)).doc);
+      await window.__frames();
+    }
+    return;
+  }
   const ed = window.__ds.editor.getState();
   const id = Object.keys(window.__ds.world.getState().doc.objects).sort()[0];
   for (let i = 0; i < n; i++) {
@@ -38,7 +50,7 @@ const cycle = (n) => page.evaluate(async (n) => {
     ed.select(null);
     await window.__frames();
   }
-}, n);
+}, [n, OP]);
 
 async function gc() {
   for (let i = 0; i < 3; i++) {

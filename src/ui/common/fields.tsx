@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { isImeKey } from '@/editor/input/keys';
 import type { Vec3 } from '@/core/types';
 import { clamp } from '@/core/math';
 import styles from './fields.module.css';
@@ -206,7 +207,7 @@ export function ColorField(p: { label: ReactNode; value: string; onChange: (v: s
           disabled={p.disabled}
           onChange={(e) => setText(e.target.value)}
           onBlur={() => (/^#[0-9a-f]{6}$/i.test(text) ? p.onChange(text) : setText(p.value))}
-          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          onKeyDown={(e) => !isImeKey(e) && e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
       </div>
     </FieldRow>

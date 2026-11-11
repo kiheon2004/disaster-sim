@@ -13,6 +13,7 @@
  * only: during a simulation the list is not focusable, so the arrow keys stay with the live vehicle controls.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { isImeKey } from '@/editor/input/keys';
 import type { EntityId, ObjectCategory } from '@/core/types';
 import type { WorldObject } from '@/core/model';
 import { useT, type MessageKey } from '@/i18n/i18n';
@@ -188,7 +189,7 @@ export function Outliner() {
                   {renaming === `g:${r.id}` ? (
                     <input className={styles.renameInput} autoFocus defaultValue={groupNames?.[r.id]?.name ?? ''} placeholder={groupName(r)} aria-label={t('ed36.outliner.rename')}
                       onClick={(e) => e.stopPropagation()} onBlur={(e) => { useWorldStore.getState().setGroupName(r.id, e.target.value); setRenaming(null); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(null); }} />
+                      onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(null); }} />
                   ) : <span className={styles.itemName}>{groupName(r)} <span className={styles.count}>({r.members.length})</span></span>}
                   {editing && <button type="button" className={styles.rowBtn} title={t('ed36.outliner.rename')} aria-label={t('ed36.outliner.rename')} data-testid="outliner-rename-group"
                     onClick={(e) => { e.stopPropagation(); setRenaming(`g:${r.id}`); }}><Icon name="edit" size={11} /></button>}
@@ -207,7 +208,7 @@ export function Outliner() {
                 {renaming === o.id ? (
                   <input className={styles.renameInput} autoFocus defaultValue={o.name} placeholder={displayName(o, t)} aria-label={t('ed36.outliner.rename')}
                     onClick={(e) => e.stopPropagation()} onBlur={(e) => { if (e.target.value !== o.name) useWorldStore.getState().rename(o.id, e.target.value); setRenaming(null); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(null); }} />
+                    onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRenaming(null); }} />
                 ) : <span className={styles.itemName}>{displayName(o, t)}</span>}
                 {states && states[o.id] !== undefined && <StateDot state={states[o.id]} />}
                 {editing && <button type="button" className={styles.rowBtn} title={t('ed36.outliner.rename')} aria-label={t('ed36.outliner.rename')} data-testid="outliner-rename"

@@ -1,5 +1,15 @@
 /** Keyboard helpers shared by the global shortcuts and the tools' own key handlers (Phase 36). */
 
+/**
+ * The key event belongs to an input-method composition (a Korean syllable still being put together): Enter then confirms
+ * the syllable, it is not the field's "done" key. Chrome marks such events `isComposing`; a key the IME consumed arrives
+ * as key code 229. Every text field that acts on Enter asks this first (Phase 37 — the audit found no such check at all).
+ */
+export function isImeKey(e: { isComposing?: boolean; keyCode?: number; nativeEvent?: { isComposing?: boolean; keyCode?: number } }): boolean {
+  const n = e.nativeEvent ?? e;
+  return !!n.isComposing || n.keyCode === 229;
+}
+
 /** `<input>` types that are controls, not text: a slider, a switch, a colour, a button. */
 const CONTROL_INPUTS = new Set(['range', 'checkbox', 'radio', 'color', 'button', 'submit', 'reset', 'file', 'image']);
 
