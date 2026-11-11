@@ -19,6 +19,7 @@ import { defaultTownObjects, defaultTownRoads } from '@/world/defaultTown';
 import { stressScene } from '@/world/stressScene';
 import { createEmptyDocument } from '@/world/WorldDocument';
 import { toast } from '@/ui/common/toast';
+import { installAutosave, loadAutosave } from './autosave';
 import { useUiStore } from '@/ui/uiStore';
 import { t } from '@/i18n/i18n';
 import { simulationController } from '@/simulation/SimulationController';
@@ -304,18 +305,15 @@ export function bootstrapWorld() {
   useSimStore.subscribe((s, prev) => {
     if (s.status === 'finished' && prev.status !== 'finished') toast('info', { key: 'toast.finished' });
   });
-  const res = storage.loadAutosave();
-  if (res && res.ok) {
-    useWorldStore.getState().replaceDocument(res.doc);
+  // Phase 36: an unreadable autosave is backed up and reported — never silently replaced (app/autosave.ts).
+  const saved = loadAutosave();
+  if (saved.result && saved.result.ok) {
+    useWorldStore.getState().replaceDocument(saved.result.doc);
   } else {
     loadSampleTown();
+    if (saved.backedUp || saved.error) setTimeout(() => toast('warn', { key: saved.backedUp ? 'ed36.autosave.unreadable' : 'ed36.autosave.unreadableNoBackup' }), 0);
   }
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  useWorldStore.subscribe((s, prev) => {
-    if (s.doc === prev.doc) return;
-    clearTimeout(timer);
-    timer = setTimeout(() => storage.autosave(useWorldStore.getState().doc), 800);
-  });
+  installAutosave();
 }
 
 // ── Simulation actions ────────────────────────────────────────────────────

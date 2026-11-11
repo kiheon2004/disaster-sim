@@ -18,6 +18,7 @@ import { ModeSwitch } from './ModeSwitch';
 import { HelpButton } from './HelpDialog';
 import { useBlueprintStore } from '@/editor/blueprintStore';
 import styles from './TopBar.module.css';
+import { exportBackup, hasBackup } from '@/app/autosave';
 
 export function TopBar() {
   const t = useT();
@@ -102,6 +103,7 @@ function MoreMenu({ disabled }: { disabled: boolean }) {
           <div className={styles.menuSep} />
           <button role="menuitem" onClick={run(exportProject)}><Icon name="save" size={14} /> {t('topbar.export')}</button>
           <button role="menuitem" onClick={run(() => void importProject())}><Icon name="folder" size={14} /> {t('topbar.import')}</button>
+          {hasBackup() && <button role="menuitem" onClick={run(() => void exportBackup())}><Icon name="save" size={14} /> {t('ed36.exportBackup')}</button>}
         </div>
       )}
     </div>

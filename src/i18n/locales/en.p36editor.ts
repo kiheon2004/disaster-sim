@@ -12,4 +12,9 @@ export const enP36Editor = {
   'ed36.clamped': 'Kept inside the world: {axes} limited to the map / elevation range.',
   'ed36.rejected': 'Not a number: {axes} unchanged.',
   'ed36.lockedSkipped': '{count} locked object(s) left as they are (unlock them to move or delete).',
+  'ed36.autosave.failed': 'Autosave failed — the browser refused the write (storage full?). Export the project to keep it.',
+  'ed36.autosave.large': 'This world is large for autosave ({mb} MB); export it as a file to be safe.',
+  'ed36.autosave.unreadable': 'The last autosave could not be opened. It was kept as a backup — ⋯ menu → "Export unreadable autosave". The sample world is open.',
+  'ed36.autosave.unreadableNoBackup': 'The last autosave could not be opened and could not be backed up (storage full). Export it from the browser storage before editing.',
+  'ed36.exportBackup': 'Export unreadable autosave',
 } as const;
