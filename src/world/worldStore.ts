@@ -55,6 +55,8 @@ export interface HistoryEntry {
    * undo / redo restore the whole world configuration together with its geometry.
    */
   config?: { settings: WorldDocument['settings']; scenario: WorldDocument['scenario'] };
+  /** Phase 36: the group names as they were — present only on steps that renamed a group. */
+  groupNames?: { value: WorldDocument['groups'] };
 }
 
 export interface LandscapeEntry {
@@ -160,6 +162,8 @@ export interface WorldState {
   duplicate: (id: EntityId) => EntityId | null;
   setProjectName: (name: string) => void;
   updateSimulationSettings: (patch: { seed?: number; wind?: Partial<WindModelSettings>; water?: Partial<WaterSettings>; interactions?: boolean; vegetation?: Partial<NonNullable<WorldDocument['settings']['simulation']['vegetation']>>; thermal?: Partial<NonNullable<WorldDocument['settings']['simulation']['thermal']>>; fire?: Partial<NonNullable<WorldDocument['settings']['simulation']['fire']>>; humans?: NonNullable<WorldDocument['settings']['simulation']['humans']> | null; physiology?: NonNullable<WorldDocument['settings']['simulation']['physiology']> | null; vehicles?: NonNullable<WorldDocument['settings']['simulation']['vehicles']> | null; structure?: NonNullable<WorldDocument['settings']['simulation']['structure']> | null }) => void;
+  /** Name an editing group (Phase 36; '' removes the name). One undo step. */
+  setGroupName: (group: string, name: string) => void;
   /**
    * The experiment plan (Phase 15). Phase 36: ONE undo step per edit (placed / moved / deleted
    * disasters, experiment-panel changes) in the same history as the geometry — except while a
@@ -349,7 +353,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     const l = entry.landscape;
     if (l.patch) applyLayerPatch(doc.landscape, doc.terrain.nx, l.patch, side);
     const landscape = { ...doc.landscape, features: l.features, next: l.next };
-    const config = entry.config ? { settings: entry.config.settings, scenario: entry.config.scenario } : {};
+    const config: Partial<WorldDocument> = entry.config ? { settings: entry.config.settings, scenario: entry.config.scenario } : {};
+    if (entry.groupNames) config.groups = entry.groupNames.value;
     if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads, landscape, ...config };
     applyPatch(doc.terrain, entry.terrain, side);
     return { ...touch(doc, entry.objects), terrain: { ...doc.terrain }, roads: entry.roads, landscape, ...config };
@@ -655,6 +660,22 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       set({ doc: { ...doc, scenario: { ...doc.scenario, earthquake: spec ? { ...spec } : null }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } } });
     },
 
+    setGroupName: (group, name) => {
+      const { doc, past, locked } = get();
+      if (locked) return;
+      const clean = name.trim().slice(0, 80);
+      const cur = doc.groups?.[group]?.name ?? '';
+      if (clean === cur) return;
+      const groups = { ...(doc.groups ?? {}) };
+      if (clean) groups[group] = { name: clean };
+      else delete groups[group];
+      const entry: HistoryEntry = { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null), groupNames: { value: doc.groups } };
+      const next: WorldDocument = { ...doc, meta: { ...doc.meta, updatedAt: new Date().toISOString() } };
+      if (Object.keys(groups).length) next.groups = groups;
+      else delete next.groups;
+      set({ doc: next, past: [...past, entry].slice(-HISTORY_LIMIT), future: [] });
+    },
+
     setExperiment: (patch, opts) => {
       const { doc, past, locked } = get();
       const experiment = { ...(doc.scenario.experiment ?? defaultExperiment()), ...structuredClone(patch) };
@@ -814,6 +835,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (!prev || stroke || tx || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
       if (prev.config) current.config = { settings: doc.settings, scenario: doc.scenario };
+      if (prev.groupNames) current.groupNames = { value: doc.groups };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future], terrainRect: prev.terrain?.rect ?? null });
     },
 
@@ -823,6 +845,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (!next || stroke || tx || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
       if (next.config) current.config = { settings: doc.settings, scenario: doc.scenario };
+      if (next.groupNames) current.groupNames = { value: doc.groups };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });
     },
   };

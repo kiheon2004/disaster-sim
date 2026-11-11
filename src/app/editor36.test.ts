@@ -243,3 +243,21 @@ describe('alignment (§14)', () => {
     expect(matchObjects([ref, o], ref, 'scale', flat())[1].transform.scale).toEqual([2, 1, 1]);
   });
 });
+
+describe('group names', () => {
+  it('naming a group is one undo step; undo / redo restore the name', () => {
+    W().addObjects([{ type: 'wall', transform: at(0, 0), group: 'g1' }, { type: 'wall', transform: at(3, 0), group: 'g1' }]);
+    const n = W().past.length;
+    W().setGroupName('g1', '  Block A  ');
+    expect(W().doc.groups).toEqual({ g1: { name: 'Block A' } });
+    expect(W().past.length).toBe(n + 1);
+    W().setGroupName('g1', 'Block A'); // unchanged: no step
+    expect(W().past.length).toBe(n + 1);
+    W().undo();
+    expect(W().doc.groups).toBeUndefined();
+    W().redo();
+    expect(W().doc.groups?.g1.name).toBe('Block A');
+    W().setGroupName('g1', '');
+    expect(W().doc.groups).toBeUndefined();
+  });
+});
