@@ -107,6 +107,7 @@ import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 import * as placementActions from './placementActions';
 import { cameraLockIgnoredWrites, cameraLockOwners, cameraLocked } from '@/editor/input/cameraLock';
 import { activeGesture } from '@/editor/input/gesture';
+import { storeyDisplacements } from '@/rendering/sim/storeyDrift';
 import { footprintHalves, snapPoint } from '@/editor/snap/snapEngine';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 
@@ -181,6 +182,16 @@ export function installDevtools() {
     members: useMemberStore,
     structureLib: {
       removalPreview, graphOf,
+      /** Phase 36: storey-top displacements (world x, z per storey) the renderer draws for a building now. */
+      storeyTops: (id: string) => {
+        const rt = simulationController.getRuntime();
+        const e = rt?.entities.get(id);
+        const st = e?.seismic;
+        if (!rt || !e?.modular || !st || !rt.seismic || st.unit < 0) return null;
+        const D = new Float64Array(2 * (e.modular.floors + 1));
+        const live = storeyDisplacements(e.modular, rt.seismic.model, st.unit, D);
+        return Array.from({ length: live }, (_, s) => [D[2 * (s + 1)], D[2 * (s + 1) + 1]]);
+      },
       /** World centre of a member of a building in the running simulation (fallen members displaced). */
       memberWorld: (id: string, i: number) => {
         const e = simulationController.getRuntime()?.entities.get(id);

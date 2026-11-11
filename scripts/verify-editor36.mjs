@@ -343,11 +343,11 @@ if (want('terrain')) {
   });
   check('S7-1 a 7 m road joined to the 10 m street: no height step across the joint (≤ 3 cm per metre)', step.segs > Object.keys(roads.segments).length && step.worst < 0.03, step);
   // S8: T and cross junctions with the road tool.
-  await above(0, 40, 140);
+  await above(10, 0, 150);
   await click('[data-testid="tab-roads"]');
   await click('[data-road-mode="draw"]');
   await wait(600);
-  await clickWorld(10, 60); await clickWorld(10, -60);
+  await clickWorld(10, 45); await clickWorld(10, -45);
   await page.keyboard.press('Enter');
   await wait(600);
   const ints = await ev(() => [...window.__ds.roadLib.intersectionsOf(window.__ds.world.getState().doc.roads).values()].filter((i) => i.junction).map((i) => i.roads.length).sort());
@@ -401,49 +401,91 @@ if (want('structure')) {
   const mt = await ev(([id, m]) => window.__ds.world.getState().doc.objects[id].building.members.find((x) => x.id === m)?.type, [steel.id, win]);
   check('S9-3 member type change window → door (validated)', mt === 'door', { mt });
   await ev(() => window.__ds.buildingActions.exitBuildingEdit());
-  // S10: a strong blast at the RC building's corner (v2 world) → the collider follows the cells that still stand.
+  // S10: partial collapse. In Building Edit Mode the RC building's corner bay (members of its first bay in x and z, all
+  // storeys) is set to 95 % initial damage (member inspector slider, here through the same action); a moderate quake then
+  // brings that bay down while the rest stands → the collider is rebuilt from the cells that still stand (v2).
   const rc = lab.find((x) => x.mat === 'reinforcedConcrete');
+  await ev((id) => window.__ds.buildingActions.enterBuildingEdit(id), rc.id);
+  await wait(400);
+  const bay = await ev((id) => {
+    const d = window.__ds.world.getState().doc.objects[id].building; const s = d.spec;
+    const nx = Math.round(s.width / s.bay), nz = Math.round(s.depth / s.bay), bx = s.width / nx, bz = s.depth / nz;
+    const ids = d.members.filter((m) => m.level >= 0 && m.position[0] <= -s.width / 2 + bx + 0.01 && m.position[2] <= -s.depth / 2 + bz + 0.01).map((m) => m.id);
+    window.__ds.members.getState().select(ids);
+    return ids.length;
+  }, rc.id);
+  await ev(() => window.__ds.buildingActions.setSelectedInitialDamage(0.95));
+  await ev(() => window.__ds.buildingActions.exitBuildingEdit());
+  await wait(300);
+  const E10 = Number(process.env.S10_E ?? 1.8e9);
   const rcObj = await ev((id) => window.__ds.world.getState().doc.objects[id], rc.id);
   const corner = [rc.p[0] - rcObj.building.spec.width / 2 + 1, rc.p[2] - rcObj.building.spec.depth / 2 + 1];
-  await ev(async (c) => {
-    await window.__ds.actions.enterSimulation();
-    window.__ds.sim.addEvent({ event: 'blast', position: [c[0], 1.5, c[1]], energy: 2.5e8, startTime: 0, name: 'corner' });
-  }, corner);
-  for (let i = 0; i < 6; i++) await ev(() => window.__ds.sim.advance(1));
-  const cells = await ev((id) => { const rt = window.__ds.sim.getRuntime(); const e = rt.entities.get(id); const st = rt.structures?.get?.(id) ?? null; return { rebuilds: rt.cellRebuilds ?? 0, boxes: rt.cellBoxes ?? 0, collapsed: !!e?.flags?.collapsed, cells: !!st?.cells }; }, rc.id);
-  check('S10-1 partial collapse rebuilds the building collider from its standing cells (v2)', cells.rebuilds > 0, cells);
+  await ev(async ([c, E]) => {
+    const def = window.__ds.deformLib.phenomena.get('blast');
+    await window.__ds.actions.runSimulation([{ ...def.defaults(), position: [c[0], c[1]], energy: E, startTime: 0 }]);
+  }, [corner, E10]);
+  for (let i = 0; i < 16; i++) await ev(() => window.__ds.sim.advance(1));
+  const cells = await ev((id) => {
+    const rt = window.__ds.sim.getRuntime(); const e = rt.entities.get(id); const S = rt.structures;
+    const m = e?.modular?.structure?.model; const design = e?.modular?.design; const byType = {};
+    if (m && design) design.members.forEach((mm, i) => { if (m.state[i] > 3) byType[mm.type] = (byType[mm.type] ?? 0) + 1; });
+    const st = S?.all?.find?.((x) => x.e?.id === id) ?? null;
+    return { rebuilds: S?.cellRebuilds ?? 0, boxes: S?.cellBoxes ?? 0, collapsed: !!e?.flags?.collapsed, failedByType: byType, t: window.__ds.sim.getTime(), bodyShapes: null, st: !!st };
+  }, rc.id);
+  // (A weaker blast — 1.2e9 J — leaves fallen members resting inside the corner cells: by the cell rule those cells stay
+  // solid until the debris settles into a rubble pile with its own collider; documented in ADVANCED_WORLD_EDITOR.md.)
+  check('S10-1 the corner gives way: the collider is rebuilt from the cells that still stand (v2) before the building goes', cells.rebuilds > 0 && cells.boxes > 1, { bay, ...cells });
   await shot('g4-collapse');
   await ev(() => window.__ds.actions.exitSimulation());
   await wait(600);
   // S11: an earthquake — the drawn sway differs per storey (render-only, from the storey model).
   await ev(async () => {
-    await window.__ds.actions.enterSimulation();
-    window.__ds.sim.addEvent({ event: 'earthquake', magnitude: 7, epicenter: [0, 0], depth: 10, duration: 20, pga: 0.6, startTime: 0 });
+    const def = window.__ds.deformLib.phenomena.get('earthquake');
+    await window.__ds.actions.runSimulation([{ ...def.defaults(), pga: 0.6, startTime: 0 }]);
   });
   for (let i = 0; i < 8; i++) await ev(() => window.__ds.sim.advance(1));
-  const drift = await ev((id) => {
-    const lib = window.__ds.structureLib;
-    const rt = window.__ds.sim.getRuntime();
-    const f = lib?.storeyTops ?? null;
-    return f ? f(rt, id) : null;
-  }, steel.id);
-  check('S11-1 per-storey displacements from the storey model (not one uniform shear)', drift === null ? null : drift.length >= 2, { drift });
+  // Sample the drawn storey tops over 3 s; a uniform shear would keep every storey's displacement ∝ its height.
+  let best = null;
+  for (let i = 0; i < 12; i++) {
+    await ev(() => window.__ds.sim.advance(0.25));
+    const tops = await ev((id) => window.__ds.structureLib.storeyTops(id), steel.id);
+    if (!tops || tops.length < 2) continue;
+    const mag = tops.map(([x, z]) => Math.hypot(x, z));
+    const ratio = mag[0] > 1e-6 ? mag[mag.length - 1] / mag[0] : 0;
+    if (!best || mag[mag.length - 1] > best.top) best = { top: mag[mag.length - 1], mag, ratio };
+  }
+  // Uniform shear: top / first = n (storey count) exactly; the storey model gives its own profile.
+  check('S11-1 the drawn sway comes per storey from the storey model (not one uniform shear)', best && best.top > 1e-4 && Math.abs(best.ratio - best.mag.length) > 0.05, best);
   await ev(() => window.__ds.actions.exitSimulation());
 }
 
 // ── G5 (S12, S13, S14): blueprint of a building group placed elsewhere; three blasts; quake + blast + fire together ─────────
 if (want('disaster')) {
   await fresh();
-  // S12: capture two buildings as a blueprint from the current selection and place it elsewhere (one undo step).
-  const bs = (await objects()).filter((o) => o.type === 'building').slice(0, 2).map((o) => o.id);
-  await ev((ids) => window.__ds.editor.getState().setSelection(ids), bs);
+  // S12: capture two buildings (the current selection) as a blueprint, save it to the library, place it elsewhere with
+  // the mouse (click pins the ghost, Enter confirms — one undo step).
+  const bs = (await objects()).filter((o) => o.type === 'building').slice(0, 2);
+  await ev((ids) => window.__ds.editor.getState().setSelection(ids), bs.map((o) => o.id));
   const n0 = await objCount();
-  const placed = await ev(async () => {
+  const entry = await ev(async () => {
     const bp = window.__ds.blueprintActions;
-    if (!bp?.captureSelectionAsBlueprint) return null;
-    return await bp.captureSelectionAsBlueprint('S12 block');
+    bp.startCapture('selection');
+    bp.recomputeCapture(0);
+    await new Promise((r) => setTimeout(r, 400));
+    const e = await bp.saveCapture();
+    if (!e) return null;
+    await bp.startPlacement(e.id);
+    return e.id;
   });
-  check('S12-1 blueprint of the selection placed at another spot', placed === null ? null : (await objCount()) > n0, { placed });
+  const target = [40, 55];
+  await above(target[0], target[1], 90);
+  await wait(400);
+  await clickWorld(target[0], target[1]);
+  await page.keyboard.press('Enter');
+  await wait(800);
+  const added = (await objects()).filter((o) => !bs.some((b) => b.id === o.id) && o.type === 'building' && Math.hypot(o.p[0] - target[0], o.p[2] - target[1]) < 30);
+  check('S12-1 a captured block (blueprint) placed at another spot with the mouse', !!entry && (await objCount()) === n0 + 2 && added.length === 2, { entry: !!entry, n0, n: await objCount(), near: added.length });
+  await ev(() => window.__ds.blueprintActions.backToLibrary());
   // S13: three blasts at three places with the library and the mouse.
   await above(0, 40, 140);
   await click('[data-tab="phenomena"]');
