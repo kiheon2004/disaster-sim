@@ -5,7 +5,8 @@ import { isMessageKey, translateMessage, useLocale, useT, type MessageKey } from
 import { phenomena } from '@/phenomena/registry';
 import { resolveSchedule } from '@/phenomena/schedule';
 import { CHANNELS } from '@/phenomena/channels';
-import type { ImplementedPhenomenon, ParamField, PhenomenonInstance } from '@/phenomena/types';
+import type { ImplementedPhenomenon, PhenomenonInstance } from '@/phenomena/types';
+import { fieldValue, setField } from '@/phenomena/fields';
 import type { EventSpec } from '@/events/specs';
 import { useWorldStore } from '@/world/worldStore';
 import { useEditorStore } from '@/editor/editorStore';
@@ -172,20 +173,6 @@ function InstanceControls({ id, ev, enabled }: { id: string; ev: TimelineEventVi
     );
   }
   return null;
-}
-
-function fieldValue(f: ParamField, spec: EventSpec): number | string | undefined {
-  const v = f.get ? f.get(spec) : (spec as unknown as Record<string, number | string | undefined>)[f.key];
-  return typeof v === 'number' ? v * (f.scale ?? 1) : v;
-}
-
-function setField(f: ParamField, spec: EventSpec, v: number | string | undefined): EventSpec {
-  const stored = typeof v === 'number' ? v / (f.scale ?? 1) : v;
-  if (f.set) return f.set(spec, stored);
-  const next = { ...spec } as unknown as Record<string, unknown>;
-  if (stored === undefined) delete next[f.key];
-  else next[f.key] = stored;
-  return next as unknown as EventSpec;
 }
 
 function InstanceEditor({ inst, def, others }: { inst: PhenomenonInstance; def: ImplementedPhenomenon<EventSpec>; others: PhenomenonInstance[] }) {

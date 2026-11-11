@@ -19,6 +19,7 @@ import { measureLink } from '@/roads/links';
 import { yawOf } from '@/terrain/groundPlacement';
 import { copyProperties, type CopyProp } from '@/editor/build/propertyCopy';
 import { checkStamp } from '@/editor/build/placementCheck';
+import { withFlags, withGroup, withoutGroup } from '@/editor/build/objectEdits';
 import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects, type AlignAxis, type AlignMode, type AlignRef, type MatchWhat, type RigidDelta } from '@/editor/build/groupTransform';
 import type { PlannedObject } from '@/editor/build/placementPlan';
 import { toast } from '@/ui/common/toast';
@@ -64,18 +65,7 @@ export function clickSelect(id: EntityId, mods: { shift?: boolean; alt?: boolean
 export function setObjectFlags(ids: readonly EntityId[], flags: { locked?: boolean; hidden?: boolean }): void {
   if (!editable()) return;
   const objs = world().doc.objects;
-  const update: WorldObject[] = [];
-  for (const id of ids) {
-    const o = objs[id];
-    if (!o) continue;
-    const next: WorldObject = { ...o };
-    for (const k of ['locked', 'hidden'] as const) {
-      if (flags[k] === undefined) continue;
-      if (flags[k]) next[k] = true;
-      else delete next[k];
-    }
-    if (next.locked !== o.locked || next.hidden !== o.hidden) update.push(next);
-  }
+  const update = withFlags(ids.map((id) => objs[id]).filter((o): o is WorldObject => !!o), flags);
   if (update.length) world().applyEdit({ update });
   // A hidden object leaves the viewport selection (it cannot be seen / dragged there).
   if (flags.hidden) editor().setSelection(editor().selectedIds.filter((id) => !ids.includes(id)));
@@ -243,8 +233,7 @@ export function groupSelection() {
   if (!editable()) return;
   const objs = selectedObjects();
   if (objs.length < 2) return;
-  const group = createId('grp');
-  world().applyEdit({ update: objs.map((o) => ({ ...o, group })) });
+  world().applyEdit({ update: withGroup(objs, createId('grp')) });
   toast('success', { key: 'build.toast.grouped', params: { count: objs.length } });
 }
 
@@ -252,12 +241,7 @@ export function ungroupSelection() {
   if (!editable()) return;
   const objs = selectedObjects().filter((o) => o.group);
   if (!objs.length) return;
-  world().applyEdit({
-    update: objs.map((o) => {
-      const { group: _drop, ...rest } = o;
-      return rest as WorldObject;
-    }),
-  });
+  world().applyEdit({ update: withoutGroup(objs) });
   toast('info', { key: 'build.toast.ungrouped', params: { count: objs.length } });
 }
 

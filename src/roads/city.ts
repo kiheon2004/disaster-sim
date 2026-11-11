@@ -17,9 +17,7 @@ import type { ObjectType } from '@/core/types';
 import { Rng } from '@/core/random';
 import type { TerrainSampler } from '@/terrain/TerrainSampler';
 import { getDefinition } from '@/objects/registry';
-import { createDesign } from '@/buildings/design';
-import { presetSpec } from '@/buildings/spec';
-import type { BuildingDesign } from '@/buildings/types';
+import { presetDesign } from '@/buildings/presetDesign';
 import { collisionFootprint, footprintOf, FootprintIndex, type Footprint } from '@/editor/build/footprint';
 import { DEFAULT_PLACEMENT, planPlacement, type PlanItem, type PlannedObject } from '@/editor/build/placementPlan';
 import { subSeed } from '@/editor/build/distribution';
@@ -153,18 +151,8 @@ export const ZONE_BUILDINGS: Record<Exclude<ZoneType, 'park'>, { preset: string;
   mixed: [{ preset: 'house', floors: [2, 3], weight: 1 }, { preset: 'apartment', floors: [3, 6], weight: 1 }, { preset: 'office', floors: [3, 6], weight: 1 }],
 };
 
-const designCache = new Map<string, BuildingDesign>();
-/** Shared immutable design of a preset with a floor count (structure sharing). */
-export function presetDesign(preset: string, floors: number): BuildingDesign | null {
-  const key = `${preset}:${floors}`;
-  let d = designCache.get(key);
-  if (d) return d;
-  const spec = presetSpec(preset);
-  if (!spec) return null;
-  d = createDesign({ ...spec, floors }, preset);
-  designCache.set(key, d);
-  return d;
-}
+// (Phase 37: `presetDesign` lives in buildings/presetDesign.ts — the command planner places "3-storey houses" with it too.)
+export { presetDesign };
 
 export interface BuildingRowOptions extends Omit<FrontageOptions, 'depth' | 'spacing'> {
   presets: { preset: string; floors: [number, number]; weight: number }[];
