@@ -179,6 +179,295 @@ if (want('input')) {
   await shot('g1-input');
 }
 
+
+const keyCombo = async (mods, code) => { for (const m of mods) await page.keyboard.down(m); await page.keyboard.press(code); for (const m of [...mods].reverse()) await page.keyboard.up(m); await wait(250); };
+const objCount = () => ev(() => Object.keys(window.__ds.world.getState().doc.objects).length);
+/** Arm a palette item by clicking its card in the Objects tab. */
+async function armItem(id) {
+  await click('[data-testid="tab-objects"]');
+  await page.waitForSelector(`[data-item="${id}"]`, { timeout: 15000 });
+  await click(`[data-item="${id}"]`);
+}
+/** Set a numeric field by its accessible label (Vec3 axis inputs are found by order inside the field row). */
+async function typeInto(handle, value) {
+  await handle.click({ clickCount: 3 });
+  await page.keyboard.type(String(value));
+  await page.keyboard.press('Enter');
+  await wait(250);
+}
+
+// ── G2 (S1, S2, S3, S4, S5, S15, S16, S17): build a small world from an empty one ─────────────────────────────────────────
+if (want('build')) {
+  await fresh();
+  // S1: an empty world (⋯ → New), a road drawn with the road tool, buildings placed from the palette.
+  await click('[aria-haspopup="menu"]');
+  await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')][0].click());
+  await wait(800);
+  check('S1-1 new empty world', (await objCount()) === 0 && (await ev(() => Object.keys(window.__ds.world.getState().doc.roads.segments).length)) === 0);
+  await above(0, 0, 150);
+  await click('[data-testid="tab-roads"]');
+  await click('[data-road-mode="draw"]');
+  await clickWorld(-70, 0); await clickWorld(0, 0); await clickWorld(70, 0);
+  await page.keyboard.press('Enter');
+  await wait(600);
+  const segs = await ev(() => Object.keys(window.__ds.world.getState().doc.roads.segments).length);
+  check('S1-2 road drawn by clicks + Enter', segs >= 1, { segs });
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await wait(300);
+  await above(-30, -20, 90);
+  await armItem('building.m.house');
+  await clickWorld(-30, -20);
+  await clickWorld(-10, -20);
+  await page.keyboard.press('Escape');
+  await wait(300);
+  let objs = await objects();
+  const houses = objs.filter((o) => o.type === 'building');
+  check('S1-3 two buildings placed with the mouse', houses.length === 2, { n: houses.length });
+  // S3 (road): placed near the road, a building snaps to the frontage and faces the road.
+  const front = await ev(() => { const o = Object.values(window.__ds.world.getState().doc.objects).find((x) => x.type === 'building'); return o ? { z: o.transform.position[2] } : null; });
+  check('S3-1 building snapped to the road frontage (behind the sidewalk)', front && Math.abs(front.z) > 9 && Math.abs(front.z) < 20, front);
+
+  // S2: exact position / heading typed in the inspector.
+  await above(houses[0].p[0], houses[0].p[2], 60);
+  await clickWorld(houses[0].p[0], houses[0].p[2], 3);
+  await click('[data-tab="selection"]');
+  const axisInputs = await page.$$('[data-testid="right-panel"] input[aria-label]');
+  void axisInputs;
+  const posInputs = await page.$$eval('[data-testid="right-panel"] input', (els) => els.map((e, i) => ({ i, label: e.getAttribute('aria-label') ?? '', v: e.value })));
+  const xi = posInputs.findIndex((x) => /^(X|위치 X|Position X)/.test(x.label) || x.label === 'X');
+  const inputs = await page.$$('[data-testid="right-panel"] input');
+  if (xi >= 0) await typeInto(inputs[xi], -25.5);
+  const after2 = (await objects()).find((o) => o.id === houses[0].id);
+  check('S2-1 X typed in the inspector moves the building exactly', xi >= 0 && Math.abs(after2.p[0] + 25.5) < 1e-6, { xi, p: after2?.p, labels: posInputs.slice(0, 8).map((x) => x.label) });
+
+  // S4: multi-select (Shift+click) and move together with the gizmo.
+  await above(-20, -20, 80);
+  objs = await objects();
+  const [h1, h2] = objs.filter((o) => o.type === 'building');
+  await clickWorld(h1.p[0], h1.p[2], 3);
+  await clickWorld(h2.p[0], h2.p[2], 3, ['Shift']);
+  s = await sel();
+  check('S4-1 Shift+click adds to the selection', s.length === 2, { s });
+  const piv = [(h1.p[0] + h2.p[0]) / 2, (h1.p[2] + h2.p[2]) / 2];
+  await dragScreen(await screen(piv[0], piv[1], 0), 0, 50);
+  const m1 = (await objects()).find((o) => o.id === h1.id), m2 = (await objects()).find((o) => o.id === h2.id);
+  const d1 = [m1.p[0] - h1.p[0], m1.p[2] - h1.p[2]], d2 = [m2.p[0] - h2.p[0], m2.p[2] - h2.p[2]];
+  check('S4-2 the group drag moves both by the same delta (one undo step)', Math.hypot(...d1) > 0.5 && near(d1, d2, 1e-6), { d1, d2 });
+
+  // S5: group, rename in the outliner, duplicate the group.
+  await keyCombo(['Control'], 'KeyG');
+  const g = await ev(() => Object.values(window.__ds.world.getState().doc.objects).filter((o) => o.group).map((o) => o.group));
+  check('S5-1 Ctrl+G groups the two buildings', g.length === 2 && g[0] === g[1], { g });
+  await click('[data-testid="tab-scene"]');
+  await click('[data-testid="outliner-rename-group"]');
+  await page.keyboard.type('Block A');
+  await page.keyboard.press('Enter');
+  await wait(300);
+  const gname = await ev(() => Object.values(window.__ds.world.getState().doc.groups ?? {}).map((x) => x.name));
+  check('S5-2 group renamed in the outliner', gname.includes('Block A'), { gname });
+  const n5 = await objCount();
+  await keyCombo(['Control'], 'KeyD');
+  const groups5 = await ev(() => new Set(Object.values(window.__ds.world.getState().doc.objects).map((o) => o.group).filter(Boolean)).size);
+  check('S5-3 Ctrl+D duplicates the group as a new group', (await objCount()) === n5 + 2 && groups5 === 2, { n: await objCount(), groups5 });
+
+  // S15: several undo / redo steps.
+  const depth = await undoDepth();
+  const snap0 = JSON.stringify(await objects());
+  await keyCombo(['Control'], 'KeyZ'); await keyCombo(['Control'], 'KeyZ'); await keyCombo(['Control'], 'KeyZ');
+  const back = await undoDepth();
+  await keyCombo(['Control', 'Shift'], 'KeyZ'); await keyCombo(['Control', 'Shift'], 'KeyZ'); await keyCombo(['Control', 'Shift'], 'KeyZ');
+  check('S15-1 three undos and three redos return to the same world', back === depth - 3 && JSON.stringify(await objects()) === snap0, { depth, back });
+
+  // S16: the world survives a reload (autosave) — objects, roads and the group name.
+  await wait(1200);
+  const before16 = { n: await objCount(), names: await ev(() => window.__ds.world.getState().doc.groups) };
+  await page.reload({ waitUntil: 'networkidle0' });
+  await page.waitForFunction(() => window.__ds && window.__r3f);
+  await wait(1200);
+  const after16 = { n: await objCount(), names: await ev(() => window.__ds.world.getState().doc.groups) };
+  check('S16-1 reload restores the world (autosave), group names included', after16.n === before16.n && JSON.stringify(after16.names) === JSON.stringify(before16.names), { before16, after16 });
+
+  // S17: run a blast next to the block, then back to the editor: the original world (transforms identical).
+  const doc0 = JSON.stringify(await objects());
+  await click('[data-tab="phenomena"]');
+  await click('[data-testid="lib-blast"]');
+  await above(-20, -40, 80);
+  await clickWorld(-20, -40);
+  await page.keyboard.press('Escape');
+  await ev(() => window.__ds.actions.runSimulation ? null : null);
+  await ev(async () => { await window.__ds.actions.enterSimulation(); window.__ds.sim.advance?.(2); });
+  await wait(1500);
+  const inSim = await ev(() => window.__ds.editor.getState().mode);
+  await ev(() => window.__ds.actions.exitSimulation());
+  await wait(800);
+  check('S17-1 after a simulation the editor world is the original one', inSim === 'simulation' && JSON.stringify(await objects()) === doc0, { inSim });
+  await shot('g2-build');
+}
+
+// ── G3 (S6, S7, S8): terrain under roads and buildings; two road widths; T and cross junctions ────────────────────────────
+if (want('terrain')) {
+  await fresh();
+  const roads = await ev(() => window.__ds.world.getState().doc.roads);
+  // S7: a palette 2-lane road at the end of the default world's 10 m main street → a taper, no stair in the ground.
+  await above(66, 0, 80);
+  await armItem('env.road');
+  await clickWorld(66, 0);
+  await page.keyboard.press('Escape');
+  await wait(500);
+  const step = await ev(() => {
+    const s = window.__ds.buildLib.samplerFor(window.__ds.world.getState().doc.terrain);
+    let worst = 0;
+    for (const z of [3.6, 4, 4.5, 5]) worst = Math.max(worst, Math.abs(s.sampleHeight(55.5, z) - s.sampleHeight(56.5, z)), Math.abs(s.sampleHeight(56.5, -z) - s.sampleHeight(55.5, -z)));
+    const net = window.__ds.world.getState().doc.roads;
+    return { worst, segs: Object.keys(net.segments).length };
+  });
+  check('S7-1 a 7 m road joined to the 10 m street: no height step across the joint (≤ 3 cm per metre)', step.segs > Object.keys(roads.segments).length && step.worst < 0.03, step);
+  // S8: T and cross junctions with the road tool.
+  await above(0, 40, 140);
+  await click('[data-testid="tab-roads"]');
+  await click('[data-road-mode="draw"]');
+  await clickWorld(10, 60); await clickWorld(10, -60);
+  await page.keyboard.press('Enter');
+  await wait(600);
+  const ints = await ev(() => [...window.__ds.roadLib.intersectionsOf(window.__ds.world.getState().doc.roads).values()].filter((i) => i.junction).map((i) => i.roads.length).sort());
+  check('S8-1 drawing across the main street makes a cross junction (and the T stays)', ints.includes(4) && ints.includes(3), { ints });
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  // S6: raise the ground under a building with the terrain brush (mouse drag): the building re-seats, the road re-bakes.
+  const b = (await objects()).filter((o) => o.type === 'building').sort((a, c) => Math.abs(a.p[0] - 2) - Math.abs(c.p[0] - 2))[0];
+  await above(b.p[0], b.p[2], 70);
+  await click('[data-testid="tab-terrain"]');
+  await page.evaluate(() => window.__ds.editor.getState().setTerrainTool('raise'));
+  await wait(300);
+  const preview = await ev(() => window.__ds.editor.getState().brushPreview ?? null);
+  const [bx, by] = await screen(b.p[0] + 8, b.p[2] + 3);
+  await page.mouse.move(bx, by); await wait(300);
+  const preview2 = await ev(() => window.__ds.editor.getState().brushPreview ?? null);
+  await page.mouse.down();
+  await page.mouse.move(bx - 120, by, { steps: 30 });
+  await wait(600);
+  await page.mouse.up();
+  await wait(800);
+  const b2 = (await objects()).find((o) => o.id === b.id);
+  const g2 = await ev(([x, z]) => window.__ds.buildLib.samplerFor(window.__ds.world.getState().doc.terrain).sampleHeight(x, z), [b.p[0], b.p[2]]);
+  check('S6-1 brush preview shown before the stroke', !!preview2, { before: !!preview, after: !!preview2 });
+  check('S6-2 a stroke under a building raises the ground and the building stays seated on it', b2.p[1] > b.p[1] + 0.3, { y0: b.p[1], y1: b2.p[1], ground: g2 });
+  await page.keyboard.press('Escape');
+  await shot('g3-terrain');
+}
+
+// ── G4 (S9, S10, S11): structural type, member edits, partial collapse colliders, per-storey drift ─────────────────────────
+if (want('structure')) {
+  await fresh();
+  // S9: the structure lab preset; the building panel's structural type picker shows the real types.
+  await click('[aria-haspopup="menu"]');
+  await click('[data-testid="preset-structureLab"]');
+  await wait(1500);
+  const lab = await ev(() => Object.values(window.__ds.world.getState().doc.objects).filter((o) => o.type === 'building').map((o) => ({ id: o.id, mat: o.building.spec.structureMaterial, p: o.transform.position })));
+  check('S9-1 structure lab: one building per structural type', new Set(lab.map((x) => x.mat)).size === 4, { lab: lab.map((x) => x.mat) });
+  const steel = lab.find((x) => x.mat === 'structuralSteel');
+  await above(steel.p[0], steel.p[2], 60);
+  await clickWorld(steel.p[0], steel.p[2], 5);
+  await click('[data-testid="tab-building"]');
+  const typeOptions = await page.$$eval('[data-testid="building-panel"] select', (els) => els.map((e) => [...e.options].map((o) => o.value)).find((v) => v.includes('steel') && v.includes('rc')) ?? null);
+  check('S9-2 structural type picker lists steel / rc / masonry / timber (no "light")', typeOptions && typeOptions.length === 4 && !typeOptions.includes('light'), { typeOptions });
+  // Member edit: Building Edit Mode, a window becomes a door (validated, one undo step).
+  await ev((id) => window.__ds.buildingActions.enterBuildingEdit(id), steel.id);
+  await wait(500);
+  const win = await ev((id) => window.__ds.world.getState().doc.objects[id].building.members.find((m) => m.type === 'window')?.id, steel.id);
+  await ev((m) => window.__ds.members.getState().select([m]), win);
+  await wait(300);
+  await ev(() => window.__ds.buildingActions.setSelectedType('door'));
+  const mt = await ev(([id, m]) => window.__ds.world.getState().doc.objects[id].building.members.find((x) => x.id === m)?.type, [steel.id, win]);
+  check('S9-3 member type change window → door (validated)', mt === 'door', { mt });
+  await ev(() => window.__ds.buildingActions.exitBuildingEdit());
+  // S10: a strong blast at the RC building's corner (v2 world) → the collider follows the cells that still stand.
+  const rc = lab.find((x) => x.mat === 'reinforcedConcrete');
+  const rcObj = await ev((id) => window.__ds.world.getState().doc.objects[id], rc.id);
+  const corner = [rc.p[0] - rcObj.building.spec.width / 2 + 1, rc.p[2] - rcObj.building.spec.depth / 2 + 1];
+  await ev(async (c) => {
+    await window.__ds.actions.enterSimulation();
+    window.__ds.sim.addEvent({ event: 'blast', position: [c[0], 1.5, c[1]], energy: 2.5e8, startTime: 0, name: 'corner' });
+  }, corner);
+  for (let i = 0; i < 6; i++) await ev(() => window.__ds.sim.advance(1));
+  const cells = await ev((id) => { const rt = window.__ds.sim.getRuntime(); const e = rt.entities.get(id); const st = rt.structures?.get?.(id) ?? null; return { rebuilds: rt.cellRebuilds ?? 0, boxes: rt.cellBoxes ?? 0, collapsed: !!e?.flags?.collapsed, cells: !!st?.cells }; }, rc.id);
+  check('S10-1 partial collapse rebuilds the building collider from its standing cells (v2)', cells.rebuilds > 0, cells);
+  await shot('g4-collapse');
+  await ev(() => window.__ds.actions.exitSimulation());
+  await wait(600);
+  // S11: an earthquake — the drawn sway differs per storey (render-only, from the storey model).
+  await ev(async () => {
+    await window.__ds.actions.enterSimulation();
+    window.__ds.sim.addEvent({ event: 'earthquake', magnitude: 7, epicenter: [0, 0], depth: 10, duration: 20, pga: 0.6, startTime: 0 });
+  });
+  for (let i = 0; i < 8; i++) await ev(() => window.__ds.sim.advance(1));
+  const drift = await ev((id) => {
+    const lib = window.__ds.structureLib;
+    const rt = window.__ds.sim.getRuntime();
+    const f = lib?.storeyTops ?? null;
+    return f ? f(rt, id) : null;
+  }, steel.id);
+  check('S11-1 per-storey displacements from the storey model (not one uniform shear)', drift === null ? null : drift.length >= 2, { drift });
+  await ev(() => window.__ds.actions.exitSimulation());
+}
+
+// ── G5 (S12, S13, S14): blueprint of a building group placed elsewhere; three blasts; quake + blast + fire together ─────────
+if (want('disaster')) {
+  await fresh();
+  // S12: capture two buildings as a blueprint from the current selection and place it elsewhere (one undo step).
+  const bs = (await objects()).filter((o) => o.type === 'building').slice(0, 2).map((o) => o.id);
+  await ev((ids) => window.__ds.editor.getState().setSelection(ids), bs);
+  const n0 = await objCount();
+  const placed = await ev(async () => {
+    const bp = window.__ds.blueprintActions;
+    if (!bp?.captureSelectionAsBlueprint) return null;
+    return await bp.captureSelectionAsBlueprint('S12 block');
+  });
+  check('S12-1 blueprint of the selection placed at another spot', placed === null ? null : (await objCount()) > n0, { placed });
+  // S13: three blasts at three places with the library and the mouse.
+  await above(0, 40, 140);
+  await click('[data-tab="phenomena"]');
+  await click('[data-testid="lib-blast"]');
+  for (const [x, z] of [[-50, 40], [0, 50], [50, 40]]) await clickWorld(x, z);
+  await page.keyboard.press('Escape');
+  const ii = await insts();
+  check('S13-1 three blasts placed by clicking (three independent instances)', ii.filter((i) => i.type === 'blast').length === 3, { n: ii.length });
+  // S14: add a quake and a fire, run all together: every instance becomes active.
+  await click('[data-testid="lib-earthquake"]').catch(() => null);
+  await clickWorld(0, 0).catch(() => null);
+  await page.keyboard.press('Escape');
+  await click('[data-testid="lib-fire"]').catch(() => null);
+  await clickWorld(-20, 20).catch(() => null);
+  await page.keyboard.press('Escape');
+  const all = await insts();
+  await ev(async () => window.__ds.actions.runExperiment?.());
+  for (let i = 0; i < 5; i++) await ev(() => window.__ds.sim.isLoaded() && window.__ds.sim.advance(1));
+  const st14 = await ev(() => window.__ds.sim.isLoaded() ? window.__ds.sim.instances().map((i) => i.status) : []);
+  check('S14-1 quake + blasts + fire run together', all.length >= 5 && st14.length >= 5 && st14.every((s) => s !== 'pending'), { types: all.map((i) => i.type), st14 });
+  await shot('g5-disasters');
+  await ev(() => window.__ds.actions.exitSimulation());
+}
+
+// ── G6 (S19, layout): small screens — panels, viewport share, clipped labels ────────────────────────────────────────────────
+if (want('layout')) {
+  for (const [w, h] of [[1920, 1080], [1440, 900], [1366, 768], [1280, 720]]) {
+    await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
+    await fresh();
+    await wait(600);
+    const lay = await ev(() => {
+      const r = (el) => el?.getBoundingClientRect();
+      const canvas = r(window.__r3f.get().gl.domElement);
+      const right = r(document.querySelector('[data-testid="right-panel"]'));
+      const overlap = right && canvas ? Math.max(0, canvas.right - right.left) * Math.max(0, Math.min(canvas.bottom, right.bottom) - Math.max(canvas.top, right.top)) : 0;
+      const clipped = [...document.querySelectorAll('button, [role="tab"]')].filter((b) => b.offsetParent && b.scrollWidth > b.clientWidth + 2 && getComputedStyle(b).overflow !== 'visible').map((b) => b.textContent.trim().slice(0, 30)).slice(0, 8);
+      return { share: (canvas.width * canvas.height) / (innerWidth * innerHeight), overlap, clipped, hscroll: document.documentElement.scrollWidth > innerWidth };
+    });
+    check(`S19-${w}x${h} viewport ≥ 35 % of the window, no panel over it, no horizontal scroll`, lay.share >= 0.35 && lay.overlap < 1 && !lay.hscroll, lay);
+    await click('[data-testid="tab-scene"]');
+    await shot(`layout-${w}x${h}`);
+  }
+  await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
+}
+
 const pass = results.filter((r) => r.ok).length;
 const gl = await glInfo();
 console.log(`${pass}/${results.length} passed; ${errors.length} page errors; geometries ${gl.geometries}; textures ${gl.textures}`);

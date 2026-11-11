@@ -47,13 +47,13 @@ export function ObjectPalette() {
   return (
     <div className={styles.wrap}>
       <div className={styles.tabs} role="tablist">
-        <button role="tab" aria-selected={shown === 'objects'} className={`${styles.tab} ${shown === 'objects' ? styles.active : ''}`} onClick={() => setTab('objects')}>
+        <button role="tab" aria-selected={shown === 'objects'} data-testid="tab-objects" className={`${styles.tab} ${shown === 'objects' ? styles.active : ''}`} onClick={() => setTab('objects')}>
           {t('panel.objects')}
         </button>
         <button role="tab" aria-selected={shown === 'building'} data-testid="tab-building" className={`${styles.tab} ${shown === 'building' ? styles.active : ''}`} onClick={() => setTab('building')}>
           {t('panel.building')}
         </button>
-        <button role="tab" aria-selected={shown === 'terrain'} className={`${styles.tab} ${shown === 'terrain' ? styles.active : ''}`} onClick={() => setTab('terrain')}>
+        <button role="tab" aria-selected={shown === 'terrain'} data-testid="tab-terrain" className={`${styles.tab} ${shown === 'terrain' ? styles.active : ''}`} onClick={() => setTab('terrain')}>
           {t('panel.terrain')}
         </button>
         <button role="tab" aria-selected={shown === 'roads'} data-testid="tab-roads" className={`${styles.tab} ${shown === 'roads' ? styles.active : ''}`} onClick={() => setTab('roads')}>
@@ -62,7 +62,7 @@ export function ObjectPalette() {
         <button role="tab" aria-selected={shown === 'blueprints'} data-testid="tab-blueprints" className={`${styles.tab} ${shown === 'blueprints' ? styles.active : ''}`} onClick={() => setTab('blueprints')}>
           {t('panel.blueprints')}
         </button>
-        <button role="tab" aria-selected={shown === 'scene'} className={`${styles.tab} ${shown === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
+        <button role="tab" aria-selected={shown === 'scene'} data-testid="tab-scene" className={`${styles.tab} ${shown === 'scene' ? styles.active : ''}`} onClick={() => setTab('scene')}>
           {t('panel.scene')} ({count})
         </button>
       </div>
