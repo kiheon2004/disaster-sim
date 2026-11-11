@@ -8,6 +8,7 @@ import { useGhostWarnings } from '@/editor/tools/PlaceTool';
 import { applyAreaSession, planArea } from '@/editor/tools/BulkTools';
 import { useWorldStore } from '@/world/worldStore';
 import { BUILD_TOOLS } from './ViewportToolbar';
+import { snapHint } from '@/editor/snap/snapHint';
 import styles from './ViewportContainer.module.css';
 
 /** Viewport hint for the Phase 16 build tools (+ the place ghost's warnings). */
@@ -17,6 +18,7 @@ export function BuildHint({ fallback }: { fallback: string }) {
   const item = getPaletteItem(useEditorStore((s) => s.placeItemId));
   const count = useEditorStore((s) => s.selectedIds.length);
   const warnings = useSyncExternalStore(useGhostWarnings.subscribe, useGhostWarnings.get);
+  const snapped = useSyncExternalStore(snapHint.subscribe, snapHint.get);
   const name = item ? t(item.labelKey) : '';
   const toolLabel = BUILD_TOOLS.find((b) => b.tool === tool)?.label;
   let text = fallback;
@@ -28,6 +30,11 @@ export function BuildHint({ fallback }: { fallback: string }) {
   return (
     <>
       {text}
+      {snapped && (
+        <span className={styles.snapTag} style={{ marginLeft: 8 }} data-testid="snap-hint" data-kind={snapped}>
+          ⌖ {t('snap.label')}: {t(`snap.kind.${snapped}` as MessageKey)}
+        </span>
+      )}
       {tool === 'place' && warnings.length > 0 && (
         <span className={styles.warn} style={{ marginLeft: 8 }} data-testid="ghost-warning">
           ⚠ {warnings.map((w) => t(`warn.${w}` as MessageKey)).join(' · ')}

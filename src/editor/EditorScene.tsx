@@ -29,6 +29,7 @@ import { BlueprintTool } from './tools/BlueprintTool';
 import { TransformGizmo } from './TransformGizmo';
 import { GroupSelection } from './GroupSelection';
 import { MarqueeSelect } from './MarqueeSelect';
+import { SnapMarker } from './snap/SnapMarker';
 import { BuildingEditor } from './BuildingEditor';
 import { useBuildingDraft } from './buildingDraft';
 
@@ -238,6 +239,7 @@ export function EditorScene() {
       {tool === 'road' && <RoadTool />}
       {tool === 'blueprint' && <BlueprintTool />}
       {editingBuilding && <BuildingEditor />}
+      <SnapMarker />
       {interactive && single && <TransformGizmo />}
       {multi && <GroupSelection ids={selectedIds} />}
     </>

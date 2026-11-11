@@ -8,7 +8,9 @@ import { useEditorStore } from './editorStore';
 import { gridStep, useBuildStore } from './buildStore';
 import { entityNodeName } from '@/rendering/objectNames';
 import { samplerFor } from '@/terrain/TerrainSampler';
-import { isGrounded, reseat } from '@/terrain/groundPlacement';
+import { isGrounded, reseat, yawOf } from '@/terrain/groundPlacement';
+import { footprintHalves, snapPoint, type SnapTarget } from './snap/snapEngine';
+import { snapHint } from './snap/snapHint';
 
 /**
  * Move / rotate / scale gizmo bound to the selected object. Writes back to the world store live
@@ -27,6 +29,7 @@ export function TransformGizmo() {
   /** The object stood on the ground when the drag began → it keeps standing on it. */
   const grounded = useRef(false);
   const controlsRef = useRef<{ axis: string | null } | null>(null);
+  const prevSnap = useRef<SnapTarget | null>(null);
 
   // Layout effect: the new node is found in the same commit that removed the old one, so the
   // controls are never attached to a node outside the scene for a rendered frame (Phase 17 —
@@ -41,6 +44,20 @@ export function TransformGizmo() {
     const world = useWorldStore.getState();
     const obj = world.doc.objects[selectedId];
     const terrain = samplerFor(world.doc.terrain);
+    // Phase 36 §13: a horizontal move snaps like placement (roads, neighbours' edges / centres, structural grid, grid),
+    // on the dragged axes only (the X arrow changes X only). The heading is not changed by a move.
+    const axis0 = controlsRef.current?.axis ?? '';
+    const horizontal = axis0 === 'XYZ' || (!!axis0 && !axis0.includes('Y'));
+    if (obj && snap && mode === 'translate' && horizontal) {
+      const t = snapPoint(
+        { x: target.position.x, z: target.position.z, yaw: yawOf([target.rotation.x, target.rotation.y, target.rotation.z]), half: footprintHalves(obj.type, obj.params, [target.scale.x, target.scale.y, target.scale.z]), type: obj.type, exclude: new Set([selectedId]) },
+        { objects: Object.values(world.doc.objects), roads: world.doc.roads, grid: gridStep(useBuildStore.getState().snapping.grid, 0), prev: prevSnap.current },
+      );
+      prevSnap.current = t;
+      if (axis0.includes('X')) target.position.x = t.x;
+      if (axis0.includes('Z')) target.position.z = t.z;
+      snapHint.set(t.kind !== 'grid' && t.kind !== 'free' ? t.kind : null, [t.x, t.z]);
+    }
     if (obj) {
       const moved = { ...obj, transform: { ...obj.transform, rotation: [target.rotation.x, target.rotation.y, target.rotation.z] as [number, number, number], scale: [target.scale.x, target.scale.y, target.scale.z] as [number, number, number] } };
       const seat = reseat(moved, terrain, target.position.x, target.position.z);
@@ -77,7 +94,8 @@ export function TransformGizmo() {
       space={mode === 'translate' ? 'world' : 'local'}
       showX={mode !== 'rotate'}
       showZ={mode !== 'rotate'}
-      translationSnap={snap ? gridStep(snapping.grid, 0) : null}
+      // (Translation snapping is done by the snap engine in write(), the grid included.)
+      translationSnap={null}
       rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
       scaleSnap={snap ? 0.1 : null}
       ref={controlsRef as never}
@@ -104,6 +122,8 @@ export function TransformGizmo() {
             target.scale.set(...o.transform.scale);
           }
         }
+        prevSnap.current = null;
+        snapHint.set(null);
         // Let the click that ends the drag pass without changing the selection.
         setTimeout(() => useEditorStore.getState().setDragging(false), 0);
       }}

@@ -31,4 +31,13 @@ export const enP36Editor = {
   'ed36.match.height': 'Same height above ground',
   'ed36.match.scale': 'Same scale',
   'ed36.sameType': 'Select same type',
+  'snap.label': 'Snap',
+  'snap.kind.roadNode': 'road node',
+  'snap.kind.roadLane': 'lane centre (heading along the lane)',
+  'snap.kind.roadFront': 'road frontage (facing the road, 1 m behind the sidewalk)',
+  'snap.kind.objectCenter': 'object centre',
+  'snap.kind.objectEdge': 'neighbour edge (flush / touching)',
+  'snap.kind.structGrid': 'structural grid of the neighbour',
+  'snap.kind.grid': 'grid',
+  'snap.kind.free': 'free',
 } as const;

@@ -33,4 +33,13 @@ export const koP36Editor: Record<keyof typeof enP36Editor, string> = {
   'ed36.match.height': '같은 지면 위 높이',
   'ed36.match.scale': '같은 크기',
   'ed36.sameType': '같은 종류 선택',
+  'snap.label': '스냅',
+  'snap.kind.roadNode': '도로 노드',
+  'snap.kind.roadLane': '차선 중심(차선 방향)',
+  'snap.kind.roadFront': '도로 접면(도로를 향해, 보도 1 m 뒤)',
+  'snap.kind.objectCenter': '객체 중심',
+  'snap.kind.objectEdge': '이웃 객체 가장자리(맞춤·맞닿음)',
+  'snap.kind.structGrid': '이웃 건물 구조 그리드',
+  'snap.kind.grid': '격자',
+  'snap.kind.free': '자유',
 };
