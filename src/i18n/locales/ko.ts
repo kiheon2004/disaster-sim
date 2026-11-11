@@ -35,6 +35,7 @@ import { koDynamicObjects } from './ko.dynamicObjects';
 import { koUx355 } from './ko.ux355';
 import { koP36Editor } from './ko.p36editor';
 import { koP36Roads } from './ko.p36roads';
+import { koP36Struct } from './ko.p36struct';
 
 export const ko = {
   // App
@@ -643,6 +644,7 @@ export const ko = {
   ...koUx355,
   ...koP36Editor,
   ...koP36Roads,
+  ...koP36Struct,
 } as const;
 
 export type MessageKey = keyof typeof ko;

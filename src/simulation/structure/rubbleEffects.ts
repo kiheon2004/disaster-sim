@@ -48,8 +48,11 @@ function bury(ctx: SystemContext, h: RubbleHeap) {
     if (f === undefined) continue;
     const p = e.pose.position;
     if (Math.abs(p[0] - h.cx) > reach || Math.abs(p[2] - h.cz) > reach) continue;
-    const { height } = S.rubble.heightAt(p[0], p[2]);
+    const { height, heap } = S.rubble.heightAt(p[0], p[2]);
     if (height < f * e.dims[1]) continue;
+    // Phase 36 (structure v2): bodies can stand above a pile now (on the part of a building still standing over a
+    // collapsed bay, falling through its opened cells): only what is under the rubble surface is buried.
+    if (ctx.runtime.structureV2 && heap && p[1] > heap.y + height) continue;
     if (e.counters.rubbleBuried) continue;
     e.counters.rubbleBuried = 1;
     if (e.body !== null && e.dynamic) {

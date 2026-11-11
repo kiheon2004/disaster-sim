@@ -169,6 +169,11 @@ export interface Particle {
   size: number;
   /** Cached local wind (refreshed every few steps — particles are visual only). */
   wind?: [number, number, number];
+  /**
+   * Phase 36: visual factor of a dust puff — the `dust` coefficient of the structural type of the members it came from
+   * (buildings/structuralType.ts; 1 = the Phase 25 look). Drawn size only; never read by the simulation.
+   */
+  k?: number;
 }
 
 export interface SimulationLogEntry {

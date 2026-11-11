@@ -1060,7 +1060,11 @@ export class CollapseModel {
       this.dz[i] = h.hz + rz - (G.box[o + 2] + G.box[o + 5]) / 2;
       const q = this.rot!;
       q[4 * i] = h.ax * qs; q[4 * i + 1] = 0; q[4 * i + 2] = h.az * qs; q[4 * i + 3] = qw;
-      if (this.bottom(i) <= 0.02) touch = true;
+      // Phase 36: ground contact from the lowest corner of the member's box TURNED by the rotation (the y row of the
+      // rotation about (ax, 0, az) is (az·sinθ, cosθ, −ax·sinθ)); the upright box let a tilted corner sink up to L/2·sinθ.
+      // The box contains the member whatever its own yaw / pitch, so the contact is never late. (Only rotating v2 blocks.)
+      const hx = (G.box[o + 3] - G.box[o]) / 2, hy = ((G.box[o + 4] - G.box[o + 1]) / 2) * this.sy[i], hz = (G.box[o + 5] - G.box[o + 2]) / 2;
+      if (this.centre(i) - (Math.abs(h.az * sn) * hx + c * hy + Math.abs(h.ax * sn) * hz) <= 0.02) touch = true;
     });
     const drop = y0 - yCom(h.theta);
     this.ledger.energy.released += h.M * g * drop;

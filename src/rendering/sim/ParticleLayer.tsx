@@ -6,6 +6,7 @@ import { simulationController } from '@/simulation/SimulationController';
 import { MAX_PARTICLES } from '@/simulation/damage/spawn';
 import { UNIT_BOX } from '../geometry/primitives';
 import { useViewStore } from '../viewStore';
+import { dustScale } from './debrisVisual';
 
 const dummy = new THREE.Object3D();
 /** Parsed colors cached by hex string (avoids re-parsing every particle every frame). */
@@ -42,8 +43,9 @@ export function ParticleLayer() {
       const s = p.size * fade;
       if (p.kind === 'leaf') dummy.scale.set(s * 1.6, s * 0.15, s);
       else if (p.kind === 'dust') {
-        // Visual only: a puff that grows as it disperses.
-        const g = p.size * (1 + 2.5 * (1 - p.life / p.maxLife)) * Math.min(1, p.life / 2) * dust;
+        // Visual only: a puff that grows as it disperses; Phase 36: thicker for masonry / concrete, thinner for steel,
+        // timber and light cladding (structural type of the members it came from).
+        const g = p.size * (1 + 2.5 * (1 - p.life / p.maxLife)) * Math.min(1, p.life / 2) * dust * dustScale(p.k);
         dummy.scale.set(g, g * 0.7, g);
       }
       else dummy.scale.set(s, s, s * 0.3);

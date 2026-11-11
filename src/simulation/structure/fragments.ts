@@ -25,6 +25,7 @@ import type { SystemContext } from '../systems/SimulationSystem';
 import { structuresOf, structureOf, toWorld, dirToWorld } from './state';
 import { memberColor } from '@/buildings/memberColor';
 import { hazardOf } from '../systems/StructuralCollapseSystem';
+import { nudgeOutOfBoxes } from './colliders';
 
 /** Fragment body budget (Physics LOD): moving bodies, all bodies. Mutable for tests / benchmarks. */
 export const FRAGMENT_LIMITS = { active: 160, total: 600 };
@@ -56,9 +57,14 @@ export function spawnFragment(ctx: SystemContext, e: RuntimeEntity, i: number, v
   const local = localCentre(e, i);
   const size: Vec3 = [g.box[o + 3] - g.box[o], (g.box[o + 4] - g.box[o + 1]) * m.sy[i], g.box[o + 5] - g.box[o + 2]];
   // Out of the building's own collider (the standing part): nudge across the nearest face of the plan.
+  // Phase 36 (structure v2): once the body follows the structural cells, only out of the live cell box the fragment
+  // overlaps (a fragment in a removed cell stays where it is — no jump across the whole plan). Until the first cell is
+  // removed the body is the original single box and the original rule applies unchanged.
   const B = m.bounds;
+  const live = ctx.runtime.structureV2 ? st.cells?.boxes : null;
+  const moved = live ? nudgeOutOfBoxes(local, [size[0] / 2, size[1] / 2, size[2] / 2], live) : null;
   const inside = local[0] > B.x0 && local[0] < B.x1 && local[2] > B.z0 && local[2] < B.z1;
-  if (inside && !e.flags.collapsed) {
+  if (moved === null && inside && !e.flags.collapsed) {
     const dx0 = local[0] - B.x0, dx1 = B.x1 - local[0], dz0 = local[2] - B.z0, dz1 = B.z1 - local[2];
     const dm = Math.min(dx0, dx1, dz0, dz1);
     if (dm === dx0) local[0] = B.x0 - size[0] / 2 - 0.02;

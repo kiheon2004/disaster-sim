@@ -207,16 +207,17 @@ export class MemberLayer {
 
   /**
    * Write a building's member matrices with `root` (static placement or the earthquake shear),
-   * hiding failed / detached members and culled interior members.
+   * hiding failed / detached members and culled interior members. Phase 36: `rootOf` gives each member its own root
+   * (the earthquake drift of its storey); `root` is then the building's unsheared root (kept as `set.root`).
    */
-  writeMatrices(set: MemberSet, root: THREE.Matrix4, gone: (i: number) => boolean, offset?: (i: number) => MemberOffset | null) {
+  writeMatrices(set: MemberSet, root: THREE.Matrix4, gone: (i: number) => boolean, offset?: (i: number) => MemberOffset | null, rootOf?: (i: number) => THREE.Matrix4) {
     set.root.copy(root);
     const ms = set.design.members;
     for (let i = 0; i < ms.length; i++) {
       const mesh = this.meshes[set.look[i]];
       if (gone(i) || (set.interior[i] && !set.revealed)) { mesh.setMatrixAt(set.inst[i], HIDDEN); continue; }
       const o = offset?.(i);
-      mesh.setMatrixAt(set.inst[i], mWorld.multiplyMatrices(root, o ? displacedMatrix(ms[i], o, mLocal) : memberMatrix(ms[i], mLocal)));
+      mesh.setMatrixAt(set.inst[i], mWorld.multiplyMatrices(rootOf ? rootOf(i) : root, o ? displacedMatrix(ms[i], o, mLocal) : memberMatrix(ms[i], mLocal)));
     }
   }
 

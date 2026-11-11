@@ -45,6 +45,7 @@ import {
 } from '../parts/objectParts';
 import { MATERIAL_LOOKS } from '@/buildings/materials';
 import { MemberLayer, interiorMask, type MemberOffset, type MemberSet } from './MemberLayer';
+import { memberRootIndex, rootAtHeight, storeyDisplacements, storeyShears } from './storeyDrift';
 import { MS, OVERLOAD } from '@/structure/types';
 import { hashString } from '@/core/math';
 import { useViewStore, type StructureColorMode } from '../viewStore';
@@ -137,6 +138,17 @@ interface EntityView {
   /** Modular building (Phase 17): its member instances and member → component index. */
   members?: MemberSet;
   memberComp?: Int32Array;
+  /**
+   * Phase 36 (render-only): per-storey earthquake roots of a modular building — the root index of each member
+   * (storeyDrift.ts memberRootIndex), the storey displacements / shears and matrices last computed, the member → root
+   * lookup, and whether the members are currently drawn with them.
+   */
+  memberRoot?: Int16Array;
+  storeyD?: Float64Array;
+  storeyShear?: Float64Array;
+  storeyRoots?: THREE.Matrix4[];
+  memberRootOf?: (i: number) => THREE.Matrix4;
+  storeyActive?: boolean;
 }
 
 /** One BatchedMesh per material variant. */
@@ -449,6 +461,8 @@ export class SimRenderAdapter {
       const comps = new Map(v.e.source.components.map((c, i) => [c.id, i]));
       v.memberComp = Int32Array.from(design.members, (m) => comps.get(m.id) ?? -1);
       v.members = this.memberLayer.add(v.e.id, design, root, interiorMask(design, (id) => comps.has(id)));
+      const F = Math.max(1, design.spec.floors);
+      v.memberRoot = Int16Array.from(design.members, (m) => memberRootIndex(m.type, m.level, F));
     }
     v.e.source.components.forEach((c, ci) => {
       if (!(FACADE_KINDS as string[]).includes(c.kind)) return;
@@ -548,8 +562,9 @@ export class SimRenderAdapter {
     };
   }
 
-  private writeMembers(v: EntityView, root: THREE.Matrix4) {
-    this.memberLayer!.writeMatrices(v.members!, root, this.memberGone(v), this.memberOffset(v));
+  /** `rootOf`: per-member roots (Phase 36 per-storey drawing) — kept while the last earthquake update used them. */
+  private writeMembers(v: EntityView, root: THREE.Matrix4, rootOf = v.storeyActive && root === v.members!.root ? v.memberRootOf : undefined) {
+    this.memberLayer!.writeMatrices(v.members!, root, this.memberGone(v), this.memberOffset(v), rootOf);
     this.memberLayer!.markDirty(false);
   }
 
@@ -781,11 +796,20 @@ export class SimRenderAdapter {
     const sx = ((st.top[0] - st.base[0]) * k) / H;
     const sz = ((st.top[1] - st.base[1]) * k) / H;
     const tilt = st.tiltMag;
+    // Phase 36: modular buildings draw each storey with its own drift (storey model dofs) instead of one linear shear.
+    const mr = e.modular;
+    const sr = this.runtime.seismic;
+    let live = 0, dKey = 0;
+    if (v.members && v.memberRoot && mr && sr && st.unit >= 0) {
+      const D = (v.storeyD ??= new Float64Array(2 * (mr.floors + 1)));
+      live = storeyDisplacements(mr, sr.model, st.unit, D);
+      for (let i = 2; i <= 2 * live + 1; i++) dKey += D[i] * (i * 17.3 + 1);
+    }
     // Stress tint: current drift / slight-damage drift → white … yellow … red.
     // (Modular buildings recolor hundreds of member instances per change: 0.05 steps.)
     const tint = q.stress ? (v.members ? Math.round(Math.min(3, st.stress) * 20) / 20 : Math.min(3, st.stress)) : 0;
     const gr = e.ground;
-    const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k + (gr ? gr.settlement * 17.3 + gr.gradient[0] * 911 + gr.gradient[1] * 577 : 0);
+    const key = gx * 7.1 + gy * 3.3 + gz * 5.7 + sx * 131 + sz * 97 + tilt * 53 + tint * 0.01 + k + (gr ? gr.settlement * 17.3 + gr.gradient[0] * 911 + gr.gradient[1] * 577 : 0) + dKey * k;
     const crackCount = Math.ceil(st.crack * CRACKS_PER_BUILDING);
     // Distant buildings refresh every ANIM_STRIDE frames (visual only).
     if (!this.isNear(v) && (this.frame + v.index) % ANIM_STRIDE !== 0) return false;
@@ -804,19 +828,26 @@ export class SimRenderAdapter {
     }
     const base = gr ? e.pose.position : t.position;
     mRoot.setPosition(base[0] + gx, base[1] + gy, base[2] + gz);
-    for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(mRoot, part.local) : mRoot);
+    // Per-storey roots (modular): the sign, rooftop units and cracks take the root of the storey at their height.
+    const roots = live > 0 ? this.storeyRootMatrices(v, live, k, base[0] + gx, base[1] + gy, base[2] + gz, tilt > 1e-6) : null;
+    const rootAt = (local: THREE.Matrix4 | null | undefined) => (roots ? roots[local ? rootAtHeight(local.elements[13] * v.scale.y, live, mr!.initial.stories, mr!.floors) : 0] : mRoot);
+    for (const part of v.parts) part.batch.mesh.setMatrixAt(part.id, part.local ? mTmp.multiplyMatrices(rootAt(part.local), part.local) : rootAt(null));
     if (v.facade && v.facadeLocal) {
       for (let f = 0; f < v.facade.length; f++) {
         const [kind, i, ci] = v.facade[f];
         if (e.components[ci].condition === 'detached') continue;
-        this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(mRoot, v.facadeLocal[f]));
+        this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(rootAt(v.facadeLocal[f]), v.facadeLocal[f]));
       }
     }
-    if (v.members) this.writeMembers(v, mRoot);
+    if (v.members) {
+      v.storeyActive = roots !== null;
+      if (roots) this.writeMembers(v, roots[0], v.memberRootOf);
+      else this.writeMembers(v, mRoot);
+    }
     if (v.cracks) {
       v.cracksShown = crackCount;
       if (crackCount > 0) this.crackMesh.visible = true;
-      v.cracks.forEach((c, n) => this.crackMesh.setMatrixAt(c.index, n < crackCount ? mTmp.multiplyMatrices(mRoot, c.local) : HIDDEN));
+      v.cracks.forEach((c, n) => this.crackMesh.setMatrixAt(c.index, n < crackCount ? mTmp.multiplyMatrices(rootAt(c.local), c.local) : HIDDEN));
     }
     if (tint !== v.tint) {
       v.tint = tint;
@@ -825,6 +856,42 @@ export class SimRenderAdapter {
       if (v.members) this.writeMemberColors(v, cTint);
     }
     return true;
+  }
+
+  /**
+   * Phase 36: the per-storey root matrices of a modular building, M_r = T(base + ground) · R(tilt) · Shear_r · R(yaw) · S
+   * with Shear_r the affine storey shear of storeyShears (displacement a + b·y, render units). `mTmp` holds R(yaw)·S and
+   * `mTilt` the tilt (when `tilted`) — as for the single-shear root. Also sets up the member → root lookup once.
+   */
+  private storeyRootMatrices(v: EntityView, live: number, k: number, px: number, py: number, pz: number, tilted: boolean): THREE.Matrix4[] {
+    const mr = v.e.modular!;
+    const F = mr.floors;
+    const sh = storeyShears(v.storeyD!, live, mr.initial.stories, F, k, (v.storeyShear ??= new Float64Array(4 * (2 * F + 2))));
+    const roots = (v.storeyRoots ??= Array.from({ length: 2 * F + 2 }, () => new THREE.Matrix4()));
+    for (let r = 0; r < roots.length; r++) {
+      const m = roots[r];
+      m.set(1, sh[4 * r + 2], 0, sh[4 * r], 0, 1, 0, 0, 0, sh[4 * r + 3], 1, sh[4 * r + 1], 0, 0, 0, 1);
+      m.multiply(mTmp);
+      if (tilted) m.premultiply(mTilt);
+      m.elements[12] += px;
+      m.elements[13] += py;
+      m.elements[14] += pz;
+    }
+    if (!v.memberRootOf) {
+      const idx = v.memberRoot!;
+      // Fallen members keep their collapse offsets on the unsheared (foundation) root; rubble at rest moves with the
+      // floor that carries it.
+      v.memberRootOf = (i: number) => {
+        const model = mr.structure?.model;
+        if (!model || model.state[i] <= MS.SEVERE) return roots[idx[i]];
+        if (model.state[i] !== MS.RESTING) return roots[0];
+        let q = model.restOn[i];
+        while (q >= 0 && model.state[q] === MS.RESTING) q = model.restOn[q];
+        const lv = q >= 0 ? model.g.level[q] : -1;
+        return roots[lv < 0 ? 0 : lv >= F ? 1 + 2 * F : 1 + F + lv];
+      };
+    }
+    return roots;
   }
 
   /**
@@ -848,7 +915,7 @@ export class SimRenderAdapter {
         this.facade.meshes[kind].setMatrixAt(i, mTmp.multiplyMatrices(root, v.facadeLocal[f]));
       }
     }
-    if (v.members) this.writeMembers(v, root);
+    if (v.members) { v.storeyActive = false; this.writeMembers(v, root); }
     return true;
   }
 

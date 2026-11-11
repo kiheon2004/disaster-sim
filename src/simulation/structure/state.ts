@@ -43,6 +43,8 @@ export interface StructureState {
   restMass?: Float64Array;
   /** Last collapse classification (logs / milestones on change). */
   level?: ReturnType<CollapseModel['collapseLevel']>;
+  /** Phase 36 (structure v2 only): the body kept equal to the structural cells (cellCollider.ts); absent in v1. */
+  cells?: import('./cellCollider').CellColliderState;
 }
 
 /** Scene-level structural destruction state (created with the first structural change). */
@@ -65,6 +67,9 @@ export interface StructuresRuntime {
   legacyRecycled: number;
   /** First-occurrence milestones. */
   milestones: Set<string>;
+  /** Phase 36 (structure v2): boxes held by the cell bodies of the scene (soft global cap) and rebuilds so far. */
+  cellBoxes?: number;
+  cellRebuilds?: number;
 }
 
 export function structuresOf(rt: SimulationRuntime): StructuresRuntime {

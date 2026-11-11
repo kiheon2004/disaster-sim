@@ -11,14 +11,16 @@
  *    road blockage);
  *  - keeps the Phase 17 views in sync: failed flags, story stiffness / strength of the lumped
  *    structural model, remaining strength, collider / wind obstacle cut at the stories that no
- *    longer stand, total collapse.
+ *    longer stand, total collapse;
+ *  - Phase 36 (structure v2): the collider follows the storey × bay cells still standing (cellCollider.ts).
  * Inactive (free) when nothing structural is happening.
  */
 import type { Vec3 } from '@/core/types';
 import { GRAVITY } from '@/core/units';
-import { MT_COLUMN, MT_DOOR, MT_WALL, MT_WINDOW } from '@/structure/graph';
+import { memberMaterial, MT_COLUMN, MT_DOOR, MT_WALL, MT_WINDOW } from '@/structure/graph';
+import { STRUCTURAL_TYPES, typeOfMaterial } from '@/buildings/structuralType';
 import { MS, type FailCause } from '@/structure/types';
-import type { CollapseEvent, CollapseRecord } from '@/structure/collapse';
+import type { CollapseEvent, CollapseModel, CollapseRecord } from '@/structure/collapse';
 import { yawOf } from '@/terrain/groundPlacement';
 import type { SimulationSystem, SystemContext } from './SimulationSystem';
 import type { RuntimeEntity } from '../SimulationRuntime';
@@ -29,6 +31,7 @@ import { EVENT_BUDGET, ORIGINAL_WORLD, syncFailed, syncModel, truncate } from '.
 import { kinematics, structuresOf, toWorld, type StructureState } from '../structure/state';
 import { spawnFragment, updateFragments } from '../structure/fragments';
 import { rubbleEffects } from '../structure/rubbleEffects';
+import { flushCellCollider, updateCellCollider } from '../structure/cellCollider';
 import type { RubbleHeap } from '../structure/rubbleField';
 import { simProfiler } from '../profiling/SimProfiler';
 
@@ -49,6 +52,20 @@ export function damageCause(c: FailCause, storyCause?: DamageCause): DamageCause
     case 'story': return storyCause ?? 'drift';
     default: return 'gravity';
   }
+}
+
+/**
+ * Phase 36 (render-only): the dust puffs just spawned (from index n0) carry the mass-weighted `dust` factor of the
+ * structural types of the members they came from (Particle.k). Set after spawnParticles: the count, the effects RNG
+ * stream and every simulated quantity stay as they were.
+ */
+function dustLook(ctx: SystemContext, n0: number, m: CollapseModel, members: readonly number[]) {
+  const ps = ctx.runtime.particles;
+  if (ps.length <= n0) return;
+  let w = 0, d = 0;
+  for (const i of members) { const mi = m.g.mass[i]; w += mi; d += mi * STRUCTURAL_TYPES[typeOfMaterial(memberMaterial(m.g, i).id)].dust; }
+  const k = w > 0 ? d / w : 1;
+  for (let q = n0; q < ps.length; q++) ps[q].k = k;
 }
 
 export class StructuralCollapseSystem implements SimulationSystem {
@@ -106,8 +123,10 @@ export class StructuralCollapseSystem implements SimulationSystem {
         e.rev++;
       }
       if (st.analysisDirty) { st.analysisDirty = false; mr.currentStale = true; mr.weakStale = true; }
+      // Phase 36 (v2): a collider change held back by the rebuild throttle; the building stays active until it is applied.
+      if (st.cells?.pending) flushCellCollider(ctx, e, st);
       simProfiler.add('struct.events', t1);
-      if (m.active) still.push(e);
+      if (m.active || st.cells?.pending) still.push(e);
     }
     S.active = still;
     const t2 = simProfiler.now();
@@ -158,7 +177,9 @@ export class StructuralCollapseSystem implements SimulationSystem {
           if (!ev.arrested) {
             ctx.milestone?.({ time: ev.time, kind: 'progressiveCollapse', hazard: hz, subject: 'building', label: { key: 'milestone.p25.progressive', params: { hazard: hz } } }, `p25:progressive:${e.id}`);
             if (!st.noted.has('progressive')) { st.noted.add('progressive'); ctx.log(e.id, 'danger', { key: 'log.struct.progressive', params: { n: ev.receivers.length } }); }
+            const n0 = ctx.runtime.particles.length;
             spawnParticles(ctx, 'dust', c, Math.min(24, 4 + Math.round(ev.mass / 20000)), [0, 0.6, 0], 1.6, '#a59c8f');
+            dustLook(ctx, n0, m, m.blocks[ev.group]?.members ?? ev.receivers);
           } else if (!st.noted.has('arrested') && ev.mass > 1000) {
             st.noted.add('arrested');
             ctx.log(e.id, 'info', { key: 'log.struct.arrested', params: { pct: Math.round(Math.min(1, ev.outcome.damage) * 100) } });
@@ -168,7 +189,9 @@ export class StructuralCollapseSystem implements SimulationSystem {
         case 'ground': {
           const pile = m.piles[ev.pile];
           const c = toWorld(e, [(pile.x0 + pile.x1) / 2, pile.y + pile.height / 2, (pile.z0 + pile.z1) / 2]);
+          const n0 = ctx.runtime.particles.length;
           spawnParticles(ctx, 'dust', c, Math.min(40, 6 + Math.round(ev.mass / 15000)), [0, 0.8, 0], Math.max(1.5, Math.min(6, (pile.x1 - pile.x0) / 3)), '#a8a091');
+          dustLook(ctx, n0, m, ev.members);
           break;
         }
         case 'exit': {
@@ -177,8 +200,25 @@ export class StructuralCollapseSystem implements SimulationSystem {
           simProfiler.add('struct.ev.spawn', tf);
           break;
         }
+        // Phase 36: toppling about a hinge (structure v2 only — v1 never emits these): into the run's log, once per building.
+        case 'hinge':
+          if (!st.noted.has('hinge')) {
+            st.noted.add('hinge');
+            ctx.log(e.id, 'warn', { key: 'log.p36.hinge', params: { lever: ev.lever.toFixed(1), deg: Math.round((ev.release * 180) / Math.PI) } });
+          }
+          break;
+        case 'release':
+          if (!st.noted.has('release')) {
+            st.noted.add('release');
+            ctx.log(e.id, 'warn', { key: ev.ground ? 'log.p36.releaseGround' : 'log.p36.release', params: { deg: Math.round((ev.theta * 180) / Math.PI) } });
+          }
+          break;
         case 'crush':
-          if ((ctx.step + ev.i) % 4 === 0) spawnParticles(ctx, 'dust', this.centre(e, st, ev.i), 2, [0, 0.4, 0], 0.8, '#aaa196');
+          if ((ctx.step + ev.i) % 4 === 0) {
+            const n0 = ctx.runtime.particles.length;
+            spawnParticles(ctx, 'dust', this.centre(e, st, ev.i), 2, [0, 0.4, 0], 0.8, '#aaa196');
+            dustLook(ctx, n0, m, [ev.i]);
+          }
           break;
         default:
           break;
@@ -325,5 +365,7 @@ export class StructuralCollapseSystem implements SimulationSystem {
       }
       if (level === 'partial' || level === 'global') e.state = Math.max(e.state, level === 'global' ? DamageState.DESTROYED : DamageState.CRITICAL) as DamageState;
     }
+    // Phase 36 (v2): the body follows the storey × bay cells that still stand (after this step's truncation / collapse).
+    if (ctx.runtime.structureV2) updateCellCollider(ctx, e, st);
   }
 }

@@ -124,9 +124,11 @@ export function climatePreset(id: ClimatePresetId): ClimatePreset {
         assumptions: ['climate.preset.as.drySoil', 'climate.preset.as.liveFloor', 'climate.preset.as.noAutoIgnition'] };
     }
     case 'snowLoadedBuilding':
+      // Phase 36: 0.8 m × 350 kg/m³ ≈ 2.7 kPa is past the spanning light roof panels' roof-system capacity (Phase 31 R1),
+      // so they fail at the first load evaluation and their snow falls with them (R2, mass kept) — the text says so.
       return { height: flat, objects: [building(0, 0, 7, 'warehouse'), building(30, 20, 8), car(-20, 18, 5)], seconds: 1800,
         events: [climate({ scenario: 'snowfall', temperature: K(-1), target: K(-1), duration: 1800, humidity: 0.95, initialSnow: 0.8, initialSnowDensity: 350, precipitation: 25, precipPhase: 'snow', solar: 'off' })],
-        assumptions: ['climate.preset.as.roofLoad', 'climate.preset.as.loadPath', 'climate.preset.as.snowKept'] };
+        assumptions: ['climate.preset.as.roofLoad', 'climate.preset.as.roofPanels', 'climate.preset.as.snowKept'] };
     case 'volcanoSnow': {
       const slope = (x: number) => round(x < 40 ? (40 - Math.max(-100, x)) * Math.tan(5 * Math.PI / 180) : 0);
       return { height: (x) => slope(x), objects: [building(30, -15, 7), conifer(10, 20, 3)], seconds: 1200,

@@ -391,7 +391,9 @@ export function truncate(e: RuntimeEntity, ctx: SystemContext, s: number) {
       c.state = DamageState.DESTROYED;
     }
   }
-  if (e.body !== null) {
+  // Phase 36: under structure v2 the body follows the structural cells (cellCollider.ts, rebuilt by the collapse system
+  // with this storey cut included) — truncate keeps cutting the dimensions, the wind obstacle and the storey model only.
+  if (e.body !== null && !ctx.runtime.structureV2) {
     ctx.physics.removeBody(e.body);
     const plinth = foundationPlinth(e.source, ctx.env.terrain);
     const shapes = [scaleShape({ type: 'box', halfExtents: [e.dims[0] / 2 / k[0], base / 2 / k[1], e.dims[2] / 2 / k[2]], offset: [0, base / 2 / k[1], 0] }, k)];

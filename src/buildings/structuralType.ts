@@ -42,7 +42,11 @@ export interface StructuralTypeProfile {
   joint: 'rigid' | 'semiRigid' | 'pinned';
   /** Typical failure modes, most likely first (i18n keys structType.mode.*). */
   modes: string[];
-  /** Debris: fragment size factor (× member size) and dust factor (relative). */
+  /**
+   * Debris: fragment size factor (× member size) and dust factor (relative). Phase 36: read by the renderer only — a
+   * fragment body is drawn as round(1 / debrisSize) pieces inside its box, dust puffs are scaled by `dust`
+   * (rendering/sim/debrisVisual.ts); the physics bodies, their masses and the particle counts do not depend on them.
+   */
   debrisSize: number;
   dust: number;
 }
