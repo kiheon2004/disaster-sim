@@ -15,7 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { WorldDocument } from '@/core/model';
 import { buildTemplate } from '@/templates/builtin';
-import { createEmptyDocument } from '@/world/WorldDocument';
+import { createEmptyDocument, SCHEMA_VERSION } from '@/world/WorldDocument';
+import { parseDocument, serializeDocument } from '@/world/serialization';
 import { defaultTownObjects, defaultTownRoads } from '@/world/defaultTown';
 import { canonicalFingerprint, terrainBitsHash, worldFingerprint } from '@/world/fingerprint';
 import { forkDocument } from '@/world/fork';
@@ -116,6 +117,28 @@ describe('golden command scripts', () => {
       expect(c.startCanon).toBe(now.start);
       expect(canonicalFingerprint(c.S().doc)).toBe(now.end);
       expect(terrainBitsHash(c.S().doc)).toBe(now.terrain);
+      // Save format (§18): the world a script made is an ordinary schema-7 document. Save → load gives the same CONTENT
+      // (the loader writes keys in schema order — a grouped building's `group`, an earthquake's `epicenter` — so the
+      // first file and the re-saved one can differ in key order; a mouse edit does the same), a second save → load →
+      // save is the same bytes, the terrain is the same bits, and nothing of the command layer is in the file.
+      const saved = serializeDocument(doc, false);
+      const loaded = parseDocument(saved);
+      expect(loaded.ok).toBe(true);
+      if (loaded.ok) {
+        const again = serializeDocument(loaded.doc, false);
+        expect(JSON.parse(again)).toEqual(JSON.parse(saved));
+        expect(terrainBitsHash(loaded.doc)).toBe(now.terrain);
+        const twice = parseDocument(again);
+        expect(twice.ok && serializeDocument(twice.doc, false)).toBe(again);
+      }
+      expect(SCHEMA_VERSION).toBe(7);
+      const file = JSON.parse(saved) as Record<string, unknown>;
+      expect(file.schemaVersion).toBe(7);
+      // (the top-level keys of the start world's file — plus only the existing optional tables: `groups` when the script
+      // named a group, `designs` when buildings share a design)
+      const startKeys = Object.keys(JSON.parse(serializeDocument(a.start, false)) as object);
+      expect(Object.keys(file).filter((k) => !startKeys.includes(k) && k !== 'groups' && k !== 'designs')).toEqual([]);
+      for (const word of ['dscmd', 'cmd37', 'canonical', 'along=', 'place building']) expect(saved.includes(word), word).toBe(false);
       // Undo gives the start back bit for bit; redo gives the result back bit for bit.
       const after = bits(doc);
       a.S().undo();
