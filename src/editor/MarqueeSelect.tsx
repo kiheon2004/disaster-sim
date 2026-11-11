@@ -7,6 +7,7 @@ import { getDefinition } from '@/objects/registry';
 import { useWorldStore } from '@/world/worldStore';
 import { boxSelect } from '@/app/buildActions';
 import { useEditorStore } from './editorStore';
+import { beginGesture, type Gesture } from './input/gesture';
 
 const v = new THREE.Vector3();
 
@@ -34,12 +35,12 @@ export function objectsInRect(objs: Iterable<WorldObject>, camera: THREE.Camera,
 /**
  * Shift + left-drag in the Select tool draws a selection box (instead of panning the camera);
  * releasing adds the objects inside it to the selection. A Shift-click without dragging is an
- * ordinary click (toggles the object under the cursor).
+ * ordinary click (toggles the object under the cursor). Phase 36: the box is a gesture — Esc /
+ * pointercancel drop it without selecting, the camera lock is owned and always released.
  */
 export function MarqueeSelect() {
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
 
   useEffect(() => {
     const el = gl.domElement;
@@ -50,8 +51,7 @@ export function MarqueeSelect() {
       position: 'absolute', border: '1px solid #4f8cff', background: 'rgba(79,140,255,0.12)', pointerEvents: 'none', display: 'none', zIndex: '5',
     });
     host.appendChild(box);
-    let start: { x: number; y: number } | null = null;
-    let dragging = false;
+    let gesture: Gesture | null = null;
 
     const rel = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
@@ -59,49 +59,45 @@ export function MarqueeSelect() {
     };
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !e.shiftKey) return;
-      start = rel(e);
-      dragging = false;
+      const start = rel(e);
+      let dragging = false;
+      let last = start;
       // OrbitControls would pan with Shift+left-drag: hand the gesture to the selection box.
-      if (controls) controls.enabled = false;
-    };
-    const move = (e: PointerEvent) => {
-      if (!start) return;
-      const p = rel(e);
-      if (!dragging && Math.hypot(p.x - start.x, p.y - start.y) < 5) return;
-      dragging = true;
-      Object.assign(box.style, {
-        display: 'block',
-        left: `${el.offsetLeft + Math.min(p.x, start.x)}px`,
-        top: `${el.offsetTop + Math.min(p.y, start.y)}px`,
-        width: `${Math.abs(p.x - start.x)}px`,
-        height: `${Math.abs(p.y - start.y)}px`,
-      });
-    };
-    const up = (e: PointerEvent) => {
-      if (!start) return;
-      const s = start;
-      start = null;
-      box.style.display = 'none';
-      if (controls) controls.enabled = true;
-      if (!dragging) return;
-      const p = rel(e);
-      const ndc = (x: number, y: number): [number, number] => [(x / p.w) * 2 - 1, -(y / p.h) * 2 + 1];
-      const ids = objectsInRect(Object.values(useWorldStore.getState().doc.objects), camera, ndc(s.x, s.y), ndc(p.x, p.y));
-      boxSelect(ids, true);
-      // Swallow the click that ends the drag (it must not clear / toggle the selection).
-      useEditorStore.getState().setDragging(true);
-      setTimeout(() => useEditorStore.getState().setDragging(false), 0);
+      gesture = beginGesture('marquee', {
+        move: (ev) => {
+          const p = rel(ev);
+          last = p;
+          if (!dragging && Math.hypot(p.x - start.x, p.y - start.y) < 5) return;
+          dragging = true;
+          Object.assign(box.style, {
+            display: 'block',
+            left: `${el.offsetLeft + Math.min(p.x, start.x)}px`,
+            top: `${el.offsetTop + Math.min(p.y, start.y)}px`,
+            width: `${Math.abs(p.x - start.x)}px`,
+            height: `${Math.abs(p.y - start.y)}px`,
+          });
+        },
+        end: (commit) => {
+          gesture = null;
+          box.style.display = 'none';
+          if (!dragging) return;
+          // The click that ends the drag must not clear / toggle the selection (also after Esc).
+          useEditorStore.getState().setDragging(true);
+          setTimeout(() => useEditorStore.getState().setDragging(false), 0);
+          if (!commit) return;
+          const p = last;
+          const ndc = (x: number, y: number): [number, number] => [(x / p.w) * 2 - 1, -(y / p.h) * 2 + 1];
+          const ids = objectsInRect(Object.values(useWorldStore.getState().doc.objects), camera, ndc(start.x, start.y), ndc(p.x, p.y));
+          boxSelect(ids, true);
+        },
+      }, { lockCamera: true });
     };
     el.addEventListener('pointerdown', down, true);
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
     return () => {
       el.removeEventListener('pointerdown', down, true);
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+      gesture?.finish(false, 'abort');
       box.remove();
-      if (controls) controls.enabled = true;
     };
-  }, [gl, camera, controls]);
+  }, [gl, camera]);
   return null;
 }

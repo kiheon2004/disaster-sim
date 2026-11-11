@@ -11,6 +11,7 @@ import { SimRenderAdapter } from '@/rendering/sim/SimRenderAdapter';
 import { staticRuntime } from '@/rendering/editor/EditorBatches';
 import { RoadView } from '@/rendering/views/InfrastructureViews';
 import { samplerFor } from '@/terrain/TerrainSampler';
+import { yawOf } from '@/terrain/groundPlacement';
 import { selectionPivot } from './build/groupTransform';
 import { transformSelection } from '@/app/buildActions';
 import { useEditorStore } from './editorStore';
@@ -91,7 +92,11 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
     const sc = [pivotObj.scale.x, pivotObj.scale.y, pivotObj.scale.z].reduce((a, b) => (Math.abs(b - 1) > Math.abs(a - 1) ? b : a), 1);
     const scale = Math.min(5, Math.max(0.2, sc));
     pivotObj.scale.set(1, 1, 1);
-    const d = { dx: pivotObj.position.x - start.current.x, dy: pivotObj.position.y - start.current.y, dz: pivotObj.position.z - start.current.z, dyaw: pivotObj.rotation.y, scale };
+    // Heading from the whole rotation: a turn past 90° is (π, 180° − θ, π) in XYZ Euler angles, so
+    // `rotation.y` alone committed 120° as 60° and 180° as nothing (Phase 36 fix).
+    const dyaw = yawOf([pivotObj.rotation.x, pivotObj.rotation.y, pivotObj.rotation.z]);
+    pivotObj.rotation.set(0, 0, 0);
+    const d = { dx: pivotObj.position.x - start.current.x, dy: pivotObj.position.y - start.current.y, dz: pivotObj.position.z - start.current.z, dyaw, scale };
     start.current = null;
     if (Math.abs(d.dx) + Math.abs(d.dy) + Math.abs(d.dz) + Math.abs(d.dyaw) + Math.abs(scale - 1) < 1e-9) return;
     transformSelection(d, { x: pivot.x, z: pivot.z });
@@ -121,12 +126,20 @@ export function GroupSelection({ ids }: { ids: EntityId[] }) {
           translationSnap={snap ? gridStep(snapping.grid, 0) : null}
           rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
           scaleSnap={snap ? 0.1 : null}
-          onMouseDown={() => {
+          owner="gizmo:group"
+          onDragStart={() => {
             start.current = { x: pivot.x, y: pivot.y, z: pivot.z };
             useEditorStore.getState().setDragging(true);
           }}
-          onMouseUp={() => {
-            commit();
+          onDragEnd={(ok) => {
+            if (ok) commit();
+            else {
+              // Cancelled: nothing was written yet (the group commits on release) — reset the proxy.
+              start.current = null;
+              pivotObj.position.set(pivot.x, pivot.y, pivot.z);
+              pivotObj.rotation.set(0, 0, 0);
+              pivotObj.scale.set(1, 1, 1);
+            }
             setTimeout(() => useEditorStore.getState().setDragging(false), 0);
           }}
         />

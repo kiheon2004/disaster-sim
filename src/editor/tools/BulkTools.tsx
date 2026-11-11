@@ -20,7 +20,9 @@ import { itemDesign } from '../build/itemDesign';
 
 /** A palette item with its building design resolved (Phase 17 modular presets). */
 const planItem = (it: PaletteItem) => ({ ...it, building: itemDesign(it) });
-import { BrushRing, DrapedLine, GroundCatcher, PlanPreview, ShapeOutline, groundHitOf, useOrbitLock, useSampler } from './shared';
+import { BrushRing, DrapedLine, GroundCatcher, PlanPreview, ShapeOutline, groundHitOf, useSampler } from './shared';
+import { beginGesture, type Gesture } from '../input/gesture';
+import { isTyping } from '../input/keys';
 
 function useArmedItem(): PaletteItem | undefined {
   return getPaletteItem(useEditorStore((s) => s.placeItemId));
@@ -51,32 +53,21 @@ export function BrushTool() {
   const settings = usePlacementSettings();
   const existing = useExistingIndex();
   const sampler = useSampler();
-  const orbit = useOrbitLock();
   const cursor = useRef<Vec3 | null>(null);
   const stroke = useRef<{ scatter: BrushScatter; plan: PlannedObject[]; planned: FootprintIndex } | null>(null);
   const [plan, setPlan] = useState<PlannedObject[]>([]);
+  // Phase 36: a stroke is a gesture (input/gesture.ts) — release / blur commit, Esc / pointercancel /
+  // unmount cancel; Esc no longer ALSO leaves the brush tool.
+  const gesture = useRef<Gesture | null>(null);
 
   const end = useCallback((commit: boolean) => {
     const s = stroke.current;
     stroke.current = null;
-    orbit.unlock();
     if (s && commit) commitPlan(s.plan, useEditorStore.getState().placeItemId);
     setPlan([]);
-  }, [orbit]);
+  }, []);
 
-  useEffect(() => {
-    const up = () => stroke.current && end(true);
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && stroke.current && end(false);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('keydown', key, true);
-    window.addEventListener('blur', up);
-    return () => {
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('keydown', key, true);
-      window.removeEventListener('blur', up);
-      if (stroke.current) end(false);
-    };
-  }, [end]);
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
 
   const extend = (hit: Vec3) => {
     const s = stroke.current;
@@ -102,12 +93,12 @@ export function BrushTool() {
           const hit = groundHitOf(e);
           if (!hit) return;
           e.stopPropagation();
-          orbit.lock();
           stroke.current = {
             scatter: new BrushScatter({ radius: brush.radius, density: brush.density, spacing: brush.spacing, seed: settings.seed }),
             plan: [],
             planned: new FootprintIndex(),
           };
+          gesture.current = beginGesture('brush', { end: (commit) => { gesture.current = null; end(commit); } }, { lockCamera: true });
           extend(hit);
         }}
       />
@@ -141,8 +132,7 @@ export function LineTool() {
   // Enter = place, Backspace = remove the last point (the hotkey layer handles Esc).
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
+      if (isTyping(e) || e.isComposing) return;
       const b = useBuildStore.getState();
       if (e.key === 'Enter' && b.lineSession.points.length >= 2) {
         e.preventDefault();
@@ -250,9 +240,9 @@ export function AreaTool() {
   const terrain = useWorldStore((s) => s.doc.terrain);
   const snap = useEditorStore((s) => s.snap);
   const grid = useBuildStore((s) => s.snapping.grid);
-  const orbit = useOrbitLock();
   const cursor = useRef<Vec3 | null>(null);
   const drag = useRef<{ start: Vec2 } | null>(null);
+  const gesture = useRef<Gesture | null>(null);
 
   const shape = session.shape;
   // Preview follows the options live (spacing, density, seed …) — not while dragging a mask.
@@ -261,20 +251,9 @@ export function AreaTool() {
     [item, shape, session.dragging, settings, area, objects, terrain], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  useEffect(() => {
-    const up = () => {
-      if (!drag.current) return;
-      drag.current = null;
-      orbit.unlock();
-      const s = useBuildStore.getState().areaSession;
-      useBuildStore.getState().setAreaSession({ shape: s.shape, dragging: false });
-    };
-    window.addEventListener('pointerup', up);
-    return () => {
-      window.removeEventListener('pointerup', up);
-      up();
-    };
-  }, [orbit]);
+  // Phase 36: drawing the region is a gesture — release / blur keep it, Esc / pointercancel / unmount
+  // put the region from before the drag back (before, Esc cleared the shape but the drag went on).
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
 
   if (!item) return null;
   const step = gridStep(grid, 1);
@@ -306,9 +285,17 @@ export function AreaTool() {
           const hit = groundHitOf(e);
           if (!hit) return;
           e.stopPropagation();
-          orbit.lock();
           const p = snap2(hit, snap && area.shape !== 'brush', step);
           drag.current = { start: p };
+          const before = useBuildStore.getState().areaSession.shape;
+          gesture.current = beginGesture('area', {
+            end: (commit) => {
+              gesture.current = null;
+              drag.current = null;
+              const s = useBuildStore.getState().areaSession;
+              useBuildStore.getState().setAreaSession({ shape: commit ? s.shape : before, dragging: false });
+            },
+          }, { lockCamera: true });
           if (area.shape === 'brush') {
             // Painting adds to the current region (Shift starts a new one).
             const cur = useBuildStore.getState().areaSession.shape;

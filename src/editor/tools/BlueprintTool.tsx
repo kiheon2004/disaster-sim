@@ -32,7 +32,9 @@ import { perimeterMean, shapePolygon, validPolygon } from '@/blueprints/selectio
 import { footprintOf, preFeatureAt } from '@/blueprints/place';
 import type { UnifiedBlueprint } from '@/blueprints/types';
 import { RoadOutlines } from './RoadTool';
-import { DrapedLine, GroundCatcher, groundHitOf, useOrbitLock, useSampler } from './shared';
+import { DrapedLine, GroundCatcher, groundHitOf, useSampler } from './shared';
+import { beginGesture, type Gesture } from '../input/gesture';
+import { isTyping } from '../input/keys';
 
 /** Above this many objects the pinned preview keeps the rigid ghost (see PlaceTool). */
 const EXACT_GHOST_LIMIT = 600;
@@ -50,27 +52,27 @@ export function BlueprintTool() {
 
 function CaptureTool() {
   const c = useBlueprintStore((s) => s.capture);
-  const orbit = useOrbitLock();
   const drag = useRef<P2 | null>(null);
+  const gesture = useRef<Gesture | null>(null);
   const [live, setLive] = useState<P2 | null>(null);
   const hit = (e: ThreeEvent<PointerEvent | MouseEvent>): P2 | null => {
     const p = groundHitOf(e);
     return p ? snapPoint(p[0], p[2]) : null;
   };
-  useEffect(() => {
-    const up = () => {
-      if (!drag.current) return;
-      orbit.unlock();
-      const a = drag.current;
-      drag.current = null;
-      const b = useBlueprintStore.getState().capture.shape;
-      if (b && b.kind === 'rect' && Math.abs(b.x1 - b.x0) >= 2 && Math.abs(b.z1 - b.z0) >= 2) setCaptureShape(b);
-      else useBlueprintStore.getState().setCapture({ shape: null });
-      void a;
-    };
-    window.addEventListener('pointerup', up);
-    return () => window.removeEventListener('pointerup', up);
-  }, [orbit]);
+  // The capture rectangle is a gesture (Phase 36): release / blur capture it, Esc / pointercancel /
+  // unmount drop it (before, Esc mid-drag left the camera locked).
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
+  const startRect = () => {
+    gesture.current = beginGesture('capture-rect', {
+      end: (commit) => {
+        gesture.current = null;
+        drag.current = null;
+        const b = useBlueprintStore.getState().capture.shape;
+        if (commit && b && b.kind === 'rect' && Math.abs(b.x1 - b.x0) >= 2 && Math.abs(b.z1 - b.z0) >= 2) setCaptureShape(b);
+        else useBlueprintStore.getState().setCapture({ shape: null });
+      },
+    }, { lockCamera: true });
+  };
 
   const outline = useMemo(() => (c.shape ? shapePolygon(c.shape) : null), [c.shape]);
   const result = c.result;
@@ -84,9 +86,9 @@ function CaptureTool() {
           const p = hit(e);
           if (!p) return;
           e.stopPropagation();
-          orbit.lock();
           drag.current = p;
           useBlueprintStore.getState().setCapture({ shape: { kind: 'rect', x0: p[0], z0: p[1], x1: p[0], z1: p[1] }, result: null });
+          startRect();
         }}
         onMove={(e) => {
           const p = hit(e);
@@ -282,8 +284,7 @@ function PinMarker({ at }: { at: P2 }) {
 function EnterToConfirm() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
+      if (isTyping(e) || e.isComposing) return;
       if (e.key === 'Enter' && useEditorStore.getState().tool === 'blueprint' && useBlueprintStore.getState().place.pinned) {
         e.preventDefault();
         confirmPlacement();

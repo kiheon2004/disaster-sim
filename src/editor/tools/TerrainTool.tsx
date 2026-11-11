@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Vec3 } from '@/core/types';
 import { WORLD_SIZE } from '@/core/units';
@@ -7,6 +7,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import type { TerrainBrushOp } from '@/terrain/TerrainEditor';
 import { markTerrainDirty } from '@/rendering/terrain/terrainDirty';
+import { beginGesture, type Gesture } from '../input/gesture';
 import { useEditorStore, type TerrainToolId } from '../editorStore';
 
 const RING_SEGMENTS = 72;
@@ -46,7 +47,6 @@ function heightIn(h: Float32Array, t: { nx: number; nz: number; cellSize: number
 export function TerrainTool() {
   const tool = useEditorStore((s) => s.terrainTool);
   const probe = useEditorStore((s) => s.terrainProbe);
-  const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
   const cursor = useRef<Vec3 | null>(null);
   const held = useRef<{ op: TerrainBrushOp; target: number; ax: number; az: number; start: Float32Array | null } | null>(null);
   const lastDelta = useRef(0);
@@ -71,25 +71,11 @@ export function TerrainTool() {
     return sampler.inside(out[0], out[2]) ? out : null;
   };
 
-  const controlsRef = useRef(controls);
-  controlsRef.current = controls;
-
-  useEffect(() => {
-    const endStroke = () => {
-      if (!held.current) return;
-      held.current = null;
-      useEditorStore.getState().setStrokeDelta(useWorldStore.getState().strokeDelta());
-      useWorldStore.getState().endTerrainStroke();
-      if (controlsRef.current) controlsRef.current.enabled = true;
-    };
-    window.addEventListener('pointerup', endStroke);
-    window.addEventListener('blur', endStroke);
-    return () => {
-      window.removeEventListener('pointerup', endStroke);
-      window.removeEventListener('blur', endStroke);
-      endStroke();
-    };
-  }, []);
+  // Phase 36: a stroke is a gesture — release / window blur commit it (one undo step), Esc /
+  // pointercancel / unmount cancel it (the ground from before comes back). Before, Esc left the
+  // tool and COMMITTED the stroke, and after a pointercancel the brush kept sculpting unpressed.
+  const gesture = useRef<Gesture | null>(null);
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
 
   useEffect(() => () => {
     ring.geometry.dispose();
@@ -156,13 +142,27 @@ export function TerrainTool() {
       return;
     }
     if (!isBrushTool(tool)) return;
-    if (controls) controls.enabled = false; // left-drag sculpts instead of orbiting
     const op = (tool === 'soil' ? 'paintSoil' : tool) as TerrainBrushOp;
     // Slope: the ramp starts at the press point; its far end follows the cursor (heights as
     // they were when the stroke started).
     held.current = { op, target: hit[1], ax: hit[0], az: hit[2], start: op === 'slope' ? useWorldStore.getState().doc.terrain.heights.slice() : null };
     useEditorStore.getState().setStrokeDelta(null);
     useWorldStore.getState().beginTerrainStroke();
+    // Left-drag sculpts instead of orbiting (owned camera lock for the gesture's lifetime).
+    gesture.current = beginGesture('terrain', {
+      end: (commit) => {
+        gesture.current = null;
+        held.current = null;
+        const world = useWorldStore.getState();
+        if (commit) {
+          useEditorStore.getState().setStrokeDelta(world.strokeDelta());
+          world.endTerrainStroke();
+        } else {
+          useEditorStore.getState().setStrokeDelta(null);
+          markTerrainDirty(world.cancelTerrainStroke());
+        }
+      },
+    }, { lockCamera: true });
   };
 
   return (

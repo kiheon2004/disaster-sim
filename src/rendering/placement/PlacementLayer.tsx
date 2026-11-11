@@ -24,6 +24,7 @@ import { useSimStore } from '@/simulation/simStore';
 import { catalogOf, nearestEdge, placeable, type Footprint } from '@/phenomena/catalog';
 import { phenomena } from '@/phenomena/registry';
 import { mapHalf, moveInstance, placeAt } from '@/app/placementActions';
+import { beginGesture, type Gesture } from '@/editor/input/gesture';
 import { useT } from '@/i18n/i18n';
 import type { EventSpec } from '@/events/specs';
 import type { PhenomenonInstance } from '@/phenomena/types';
@@ -115,11 +116,15 @@ export function PlacementLayer() {
   const rightOpen = useUiStore((s) => s.rightOpen);
   const instances = useWorldStore((s) => s.doc.scenario.experiment?.instances);
   const events = useSimStore((s) => s.events);
-  const { gl, camera, controls } = useThree();
+  const { gl, camera } = useThree();
   const ray = useRef(new THREE.Raycaster());
 
   const showPlaced = type !== null || selected !== null || drag !== null || (rightOpen && tab === 'phenomena');
   const running = useMemo(() => new Map(events.map((e) => [e.key, e.status])), [events]);
+  // Read through a ref: the pointer listeners must not be re-registered on every scheduler change
+  // (that dropped a pin drag in progress and released its camera lock mid-drag — Phase 36).
+  const runningRef = useRef(running);
+  runningRef.current = running;
   const placed = useMemo<Placed[]>(() => {
     if (!showPlaced) return [];
     const out: Placed[] = [];
@@ -166,22 +171,10 @@ export function PlacementLayer() {
       return best;
     };
     let consumed = false;
-    let dragStart: [number, number] | null = null;
-    const orbit = controls as unknown as { enabled: boolean } | null;
-    // Only the lock this layer took is released (other tools lock the camera too — e.g. the blueprint capture drag).
-    let locked = false;
-    const lock = (on: boolean) => {
-      if (!orbit) return;
-      if (on && orbit.enabled) { orbit.enabled = false; locked = true; }
-      else if (!on && locked) { orbit.enabled = true; locked = false; }
-    };
+    let gesture: Gesture | null = null;
     const onMove = (ev: PointerEvent) => {
       const st = usePlacementStore.getState();
-      if (st.drag) {
-        const p = pointAt(ev);
-        if (p) st.setDrag({ id: st.drag.id, p });
-        return;
-      }
+      if (st.drag) return; // the drag gesture moves the pin
       if (st.type && ev.target === el) st.setHover(pointAt(ev));
       else if (st.type) st.setHover(null);
     };
@@ -202,23 +195,33 @@ export function PlacementLayer() {
       st.select(pin.inst.id);
       useUiStore.getState().setRightTab('phenomena');
       // A running instance cannot be dragged: its pin only selects, and the click goes on to the world (ground probe, objects, camera).
-      if (running.has(pin.inst.id)) return;
+      if (runningRef.current.has(pin.inst.id)) return;
       consumed = true;
       ev.stopImmediatePropagation();
       ev.preventDefault();
-      dragStart = pin.at;
-      st.setDrag({ id: pin.inst.id, p: pin.at });
-      lock(true);
+      const id = pin.inst.id;
+      const from = pin.at;
+      st.setDrag({ id, p: from });
+      // Phase 36: the pin drag is a gesture — release / window blur move the instance (one undo
+      // step), Esc / pointercancel / unmount put the pin back (before: no Esc, and after a blur the
+      // pin followed the cursor with no button pressed). Owned camera lock.
+      gesture = beginGesture('pin', {
+        move: (e) => {
+          const p = pointAt(e);
+          if (p) usePlacementStore.getState().setDrag({ id, p });
+        },
+        end: (commit) => {
+          gesture = null;
+          const s = usePlacementStore.getState();
+          const p = s.drag?.id === id ? s.drag.p : from;
+          s.setDrag(null);
+          if (commit && Math.hypot(p[0] - from[0], p[1] - from[1]) > 0.2) moveInstance(id, p);
+        },
+      }, { lockCamera: true });
     };
     const onUp = (ev: PointerEvent) => {
-      const st = usePlacementStore.getState();
-      if (st.drag) {
-        const { id, p } = st.drag;
-        st.setDrag(null);
-        lock(false);
-        if (dragStart && Math.hypot(p[0] - dragStart[0], p[1] - dragStart[1]) > 0.2) moveInstance(id, p);
-        dragStart = null;
-      }
+      // End the drag here: the swallow below stops the event before the gesture's own (bubble) listener.
+      gesture?.finish(true, 'up');
       if (consumed && ev.target === el) ev.stopImmediatePropagation();
     };
     const swallow = (ev: MouseEvent) => {
@@ -235,9 +238,9 @@ export function PlacementLayer() {
       window.removeEventListener('pointerup', onUp, true);
       window.removeEventListener('click', swallow, true);
       window.removeEventListener('dblclick', swallow, true);
-      lock(false);
+      gesture?.finish(false, 'abort');
     };
-  }, [gl, camera, controls, running]);
+  }, [gl, camera]);
 
   useEffect(() => {
     gl.domElement.style.cursor = type ? 'crosshair' : '';

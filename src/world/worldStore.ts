@@ -82,7 +82,16 @@ interface TerrainStroke {
   before: ReturnType<typeof snapshotLayers>;
   rect: GridRect | null;
 }
-let stroke: TerrainStroke | null = null;
+
+/**
+ * Open object transaction (Phase 36): a continuous edit (gizmo drag, field scrub) writes with
+ * `history: false`; the state it started from is kept here and becomes ONE undo step on commit —
+ * or comes back on cancel. Nothing is recorded when nothing changed (no empty undo steps).
+ */
+interface ObjectTransaction {
+  objects: Objects;
+  docVersion: number;
+}
 
 /**
  * One atomic world edit (Phase 16): bulk placement, multi-object transforms, duplicate, delete,
@@ -165,14 +174,29 @@ export interface WorldState {
   beginTerrainStroke: () => void;
   terrainDab: (opts: DabOptions) => GridRect | null;
   endTerrainStroke: () => void;
+  /**
+   * Phase 36: drop the stroke in progress (Esc / pointercancel) — the terrain from before it comes
+   * back, no undo step. Returns the restored vertex rectangle (the renderer refreshes it like a dab).
+   */
+  cancelTerrainStroke: () => GridRect | null;
   /** Height change of the stroke in progress: max raise / lowering (m) and changed area (m²). */
   strokeDelta: () => { up: number; down: number; area: number } | null;
   applyTerrainPreset: (preset: TerrainPresetId, seed: number) => void;
   setWaterLevel: (level: number | null) => void;
   /** Replace the natural features (one undo step; the terrain is recomposed locally). */
   setFeatures: (features: Feature[], next?: number) => void;
-  /** Record the current state as an undo step (call once before a continuous edit). */
+  /** Record the current state as an undo step (call once before a continuous edit). Prefer begin/commitTransaction. */
   checkpoint: () => void;
+  /**
+   * Continuous object edit (Phase 36): begin → writes with `{ history: false }` → commit (one undo
+   * step, none if nothing changed) or cancel (the objects from before come back, no step).
+   * Undo / redo are refused while a transaction or a terrain stroke is open.
+   */
+  beginTransaction: () => void;
+  commitTransaction: () => boolean;
+  cancelTransaction: () => void;
+  /** A terrain stroke or an object transaction is open (undo / redo would tear it). */
+  busy: () => boolean;
   undo: () => void;
   redo: () => void;
 }
@@ -255,6 +279,10 @@ function samplerOver(t: TerrainData, layers: ReturnType<typeof snapshotLayers>):
  * composition, road baking, seating, history.
  */
 const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
+  // Per store (Phase 36): the scratch stores that build templates / built-in blueprints must not
+  // share — and clear — the app store's open brush stroke (it was module-level before).
+  let stroke: TerrainStroke | null = null;
+  let tx: ObjectTransaction | null = null;
   /** Shared write path: optionally records history, then replaces objects immutably. */
   const commit = (next: Objects, opts?: MutationOptions) => {
     const { doc, past, locked } = get();
@@ -634,6 +662,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     replaceDocument: (doc) => {
       if (get().locked) return;
       stroke = null;
+      tx = null;
       // Layers must compose to the terrain (documents built by older code paths may not).
       const landscape = adoptTerrain(doc.terrain, doc.roads, doc.landscape);
       if (landscape !== doc.landscape) doc = { ...doc, landscape };
@@ -643,6 +672,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     newDocument: () => {
       if (get().locked) return;
       stroke = null;
+      tx = null;
       set({ doc: createEmptyDocument(), past: [], future: [], docVersion: get().docVersion + 1 });
     },
 
@@ -684,6 +714,24 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (s?.rect) commitTerrain(s.before, s.rect);
     },
 
+    cancelTerrainStroke: () => {
+      const s = stroke;
+      stroke = null;
+      if (!s?.rect) return null;
+      // The dabs edited the final terrain in place; nothing reached the layers yet — copy the
+      // touched rectangle back from the stroke's snapshot.
+      const t = get().doc.terrain;
+      const r = s.rect;
+      for (let iz = r.z0; iz <= r.z1; iz++) {
+        const a = iz * t.nx + r.x0, b = iz * t.nx + r.x1 + 1;
+        t.heights.set(s.before.heights.subarray(a, b), a);
+        t.ground.set(s.before.ground.subarray(a, b), a);
+        t.soil.set(s.before.soil.subarray(a, b), a);
+      }
+      t.revision++;
+      return r;
+    },
+
     applyTerrainPreset: (preset, seed) => {
       if (get().locked) return;
       // A preset is a new BASE terrain: sculpt and paint are cleared, natural features stay.
@@ -713,6 +761,34 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       set({ past: [...past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
     },
 
+    beginTransaction: () => {
+      const { doc, locked, docVersion } = get();
+      if (locked) return;
+      tx = { objects: doc.objects, docVersion };
+    },
+
+    commitTransaction: () => {
+      const t0 = tx;
+      tx = null;
+      const { doc, past, locked, docVersion } = get();
+      if (!t0 || locked || t0.docVersion !== docVersion) return false;
+      if (doc.objects === t0.objects) return false;
+      // The step restores the objects from before the gesture (object transactions edit nothing else).
+      set({ past: [...past, { objects: t0.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }].slice(-HISTORY_LIMIT), future: [] });
+      return true;
+    },
+
+    cancelTransaction: () => {
+      const t0 = tx;
+      tx = null;
+      const { doc, locked, docVersion } = get();
+      if (!t0 || locked || t0.docVersion !== docVersion) return;
+      if (doc.objects === t0.objects) return;
+      set({ doc: touch(doc, t0.objects) });
+    },
+
+    busy: () => stroke !== null || tx !== null,
+
     setFeatures: (features, next) => {
       if (get().locked) return;
       get().applyEdit({ landscape: { features, next } });
@@ -721,7 +797,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     undo: () => {
       const { doc, past, future, locked } = get();
       const prev = past[past.length - 1];
-      if (!prev || stroke || locked) return;
+      if (!prev || stroke || tx || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
       if (prev.config) current.config = { settings: doc.settings, scenario: doc.scenario };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future], terrainRect: prev.terrain?.rect ?? null });
@@ -730,7 +806,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     redo: () => {
       const { doc, past, future, locked } = get();
       const next = future[0];
-      if (!next || stroke || locked) return;
+      if (!next || stroke || tx || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
       if (next.config) current.config = { settings: doc.settings, scenario: doc.scenario };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });

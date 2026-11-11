@@ -45,6 +45,7 @@ import { CelestialPreview } from '../celestial/CelestialPreview';
 import type { ClimateSpec } from '@/climate/types';
 import type { FireSpec } from '@/fire/types';
 import type { PhenomenonInstance } from '@/phenomena/types';
+import { isTyping } from '@/editor/input/keys';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -181,20 +182,23 @@ export function GroundPicker() {
       ev.stopImmediatePropagation();
       if (mode === 'polygon') closePolygon();
     };
+    // Capture phase + stop (Phase 36): a key the picker handles goes no further — Esc used to also
+    // clear the selection / leave the tool, and Backspace was swallowed inside text fields.
     const onKey = (ev: KeyboardEvent) => {
+      if (isTyping(ev)) return;
       if (ev.key === 'Escape') done();
       else if (mode === 'polygon' && ev.key === 'Enter') closePolygon();
-      else if (mode === 'polygon' && ev.key === 'Backspace') {
-        ev.preventDefault();
-        setCorners((c) => c.slice(0, -1));
-      }
+      else if (mode === 'polygon' && ev.key === 'Backspace') setCorners((c) => c.slice(0, -1));
+      else return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
     };
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', swallow, true);
     window.addEventListener('click', swallow, true);
     window.addEventListener('dblclick', onDbl, true);
-    window.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
     el.style.cursor = 'crosshair';
     return () => {
       window.removeEventListener('pointermove', onMove, true);
@@ -202,7 +206,7 @@ export function GroundPicker() {
       window.removeEventListener('pointerup', swallow, true);
       window.removeEventListener('click', swallow, true);
       window.removeEventListener('dblclick', onDbl, true);
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       el.style.cursor = '';
       setHover(null);
       setCorners([]);

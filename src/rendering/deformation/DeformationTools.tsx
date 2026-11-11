@@ -21,6 +21,7 @@ import { updatePhenomenon } from '@/app/actions';
 import { currentDeformation } from '../terrain/runtimeGround';
 import { FieldPatch } from './fieldMesh';
 import { displacementAlpha, displacementColor, displacementScale } from './deformColors';
+import { isTyping } from '@/editor/input/keys';
 
 function groundTerrain() {
   return currentDeformation()?.terrain ?? useWorldStore.getState().doc.terrain;
@@ -87,21 +88,25 @@ export function DeformationPicker() {
     const swallow = (ev: MouseEvent) => {
       if (ev.target === el) ev.stopImmediatePropagation();
     };
+    // Capture phase + stop (Phase 36): Esc cancels the pick and nothing else.
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') useViewStore.getState().setDeformPick(null);
+      if (ev.key !== 'Escape' || isTyping(ev)) return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      useViewStore.getState().setDeformPick(null);
     };
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', swallow, true);
     window.addEventListener('click', swallow, true);
-    window.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
     el.style.cursor = 'crosshair';
     return () => {
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('pointerup', swallow, true);
       window.removeEventListener('click', swallow, true);
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       el.style.cursor = '';
       setHover(null);
     };

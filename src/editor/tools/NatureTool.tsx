@@ -10,7 +10,8 @@ import type { Feature, P2 } from '@/landscape/types';
 import { useEditorStore } from '../editorStore';
 import { useNatureStore } from '../natureStore';
 import { beginForestStroke, commitForest, featureAt, finishNatureDraft, forestDab, moveFeaturePoint, placePeak } from '@/app/natureActions';
-import { GroundCatcher, groundHitOf, useOrbitLock } from './shared';
+import { GroundCatcher, groundHitOf } from './shared';
+import { beginGesture, type Gesture } from '../input/gesture';
 import { PreviewLines } from './RoadTool';
 
 const COLORS = { line: '#7fd37a', water: '#5fb4ff', sea: '#3d8bd6', sel: '#ffd166', forest: '#3fa34d', handle: '#ffd166' };
@@ -32,7 +33,6 @@ export function NatureTool() {
   const features = useWorldStore((s) => s.doc.landscape.features);
   const terrain = useWorldStore((s) => s.doc.terrain);
   const sampler = samplerFor(terrain);
-  const orbit = useOrbitLock();
   const lines = useMemo(() => new PreviewLines(), []);
   useEffect(() => () => lines.dispose(), [lines]);
   const [hover, setHover] = useState<P2 | null>(null);
@@ -43,27 +43,34 @@ export function NatureTool() {
   const dragRef = useRef(drag);
   dragRef.current = drag;
 
-  useEffect(() => {
-    const up = () => {
-      if (painting.current) {
+  // Phase 36: forest painting and handle drags are gestures — release / blur commit (one undo step),
+  // Esc / pointercancel / unmount drop them (before, Esc left the tool, discarded the stroke and kept
+  // the camera locked).
+  const gesture = useRef<Gesture | null>(null);
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
+  const startPaint = () => {
+    gesture.current = beginGesture('forest', {
+      end: (commit) => {
+        gesture.current = null;
         painting.current = false;
-        orbit.unlock();
         // Commit outside any React state update (store writes must not run while rendering).
         const pts = forestRef.current;
         forestRef.current = [];
         setForestPts([]);
-        commitForest(pts);
-      }
-      const d = dragRef.current;
-      if (d) {
+        if (commit) commitForest(pts);
+      },
+    }, { lockCamera: true });
+  };
+  const startHandle = () => {
+    gesture.current = beginGesture('feature-handle', {
+      end: (commit) => {
+        gesture.current = null;
+        const d = dragRef.current;
         setDrag(null);
-        orbit.unlock();
-        moveFeaturePoint(d.id, d.index, d.x, d.z);
-      }
-    };
-    window.addEventListener('pointerup', up);
-    return () => window.removeEventListener('pointerup', up);
-  }, [orbit]);
+        if (d && commit) moveFeaturePoint(d.id, d.index, d.x, d.z);
+      },
+    }, { lockCamera: true });
+  };
 
   const sel = features.find((f) => f.id === selected) ?? null;
   const isPath = (PATH_TOOLS as readonly string[]).includes(tool);
@@ -128,9 +135,9 @@ export function NatureTool() {
     const p = hit(e);
     if (!p) return;
     e.stopPropagation();
-    orbit.lock();
     painting.current = true;
     beginForestStroke();
+    startPaint();
     forestRef.current = forestDab(p[0], p[1]);
     setForestPts(forestRef.current);
   };
@@ -166,8 +173,8 @@ export function NatureTool() {
             onPointerDown={(e) => {
               e.stopPropagation();
               if (e.button !== 0 || !sel) return;
-              orbit.lock();
               setDrag({ id: sel.id, index: h.index, x: h.x, z: h.z });
+              startHandle();
             }}>
             <sphereGeometry args={[1, 16, 12]} />
             <meshBasicMaterial color={COLORS.handle} depthTest={false} transparent opacity={0.95} />

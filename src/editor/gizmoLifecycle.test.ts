@@ -32,9 +32,9 @@ describe('gizmo lifecycle', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the wrapper disposes the controls on unmount', () => {
+  it('the wrapper disposes the controls on unmount (Phase 36: after cancelling a drag in progress)', () => {
     const text = fs.readFileSync(path.join(SRC, 'editor/ManagedTransformControls.tsx'), 'utf8');
-    expect(text).toMatch(/useEffect\(\(\) => \(\) => {\s*instance\.current\?\.dispose\(\)/);
+    expect(text).toMatch(/useEffect\(\(\) => \(\) => {\s*gesture\.current\?\.finish\(false, 'abort'\);[\s\S]{0,300}?c\.dispose\(\);/);
   });
 
   it('selection outline geometry frees its temporary box and is disposable', () => {

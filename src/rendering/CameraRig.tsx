@@ -6,6 +6,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useViewStore } from './viewStore';
 import { radToDeg } from '@/core/math';
 import { simulationController } from '@/simulation/SimulationController';
+import { attachCameraLock } from '@/editor/input/cameraLock';
 
 const followDelta = new THREE.Vector3();
 
@@ -19,6 +20,9 @@ export function CameraRig() {
   const anim = useRef<{ fromT: THREE.Vector3; toT: THREE.Vector3; fromP: THREE.Vector3; toP: THREE.Vector3; t: number } | null>(null);
   const focusRequest = useViewStore((s) => s.focusRequest);
   const lastAz = useRef(999);
+  const defaultControls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
+  // Phase 36: `enabled` comes from the camera lock registry (owned locks, input/cameraLock.ts).
+  useEffect(() => attachCameraLock(defaultControls), [defaultControls]);
 
   useEffect(() => {
     if (!focusRequest || !controls.current) return;

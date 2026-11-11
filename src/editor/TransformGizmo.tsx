@@ -10,7 +10,11 @@ import { entityNodeName } from '@/rendering/objectNames';
 import { samplerFor } from '@/terrain/TerrainSampler';
 import { isGrounded, reseat } from '@/terrain/groundPlacement';
 
-/** Move / rotate / scale gizmo bound to the selected object. Writes back to the world store. */
+/**
+ * Move / rotate / scale gizmo bound to the selected object. Writes back to the world store live
+ * (inside a transaction): release = one undo step (none if nothing moved), Esc / pointercancel /
+ * unmount = the transform from before the drag comes back (Phase 36).
+ */
 export function TransformGizmo() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const mode = useEditorStore((s) => s.transformMode);
@@ -76,15 +80,29 @@ export function TransformGizmo() {
       rotationSnap={snap ? degToRad(snapping.rotationStep) : null}
       scaleSnap={snap ? 0.1 : null}
       ref={controlsRef as never}
-      onMouseDown={() => {
+      owner="gizmo:object"
+      onDragStart={() => {
         const world = useWorldStore.getState();
         const obj = world.doc.objects[selectedId];
         grounded.current = !!obj && mode !== 'scale' && isGrounded(obj, samplerFor(world.doc.terrain));
-        world.checkpoint();
+        world.beginTransaction();
         useEditorStore.getState().setDragging(true);
       }}
-      onMouseUp={() => {
-        write();
+      onDragEnd={(commit) => {
+        const world = useWorldStore.getState();
+        if (commit && world.doc.objects[selectedId]) {
+          write();
+          world.commitTransaction();
+        } else {
+          world.cancelTransaction();
+          // The node follows the restored document on the next render; put it back now as well.
+          const o = world.doc.objects[selectedId];
+          if (o) {
+            target.position.set(...o.transform.position);
+            target.rotation.set(...o.transform.rotation);
+            target.scale.set(...o.transform.scale);
+          }
+        }
         // Let the click that ends the drag pass without changing the selection.
         setTimeout(() => useEditorStore.getState().setDragging(false), 0);
       }}

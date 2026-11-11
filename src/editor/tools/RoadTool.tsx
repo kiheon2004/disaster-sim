@@ -11,7 +11,8 @@ import { blockAt, blocksOf } from '@/roads/blocks';
 import type { RoadNetwork, RoadProfile } from '@/roads/types';
 import { deleteRoadSegments, finishDraft, moveRoadControl, moveRoadNode, placeNeighborhood, splitRoadAt } from '@/app/roadActions';
 import { useRoadStore, EMPTY_SELECTION } from '../roadStore';
-import { GroundCatcher, groundHitOf, useOrbitLock } from './shared';
+import { GroundCatcher, groundHitOf } from './shared';
+import { beginGesture, type Gesture } from '../input/gesture';
 
 const LIFT = 0.25;
 const COLORS = {
@@ -142,7 +143,6 @@ export function RoadTool() {
   const roads = useWorldStore((s) => s.doc.roads);
   const terrain = useWorldStore((s) => s.doc.terrain);
   const sampler = samplerFor(terrain);
-  const orbit = useOrbitLock();
   const lines = useMemo(() => new PreviewLines(), []);
   useEffect(() => () => lines.dispose(), [lines]);
   const [hover, setHover] = useState<Snap | null>(null);
@@ -151,23 +151,27 @@ export function RoadTool() {
   const dragRef = useRef(drag);
   dragRef.current = drag;
 
-  // Finish a handle drag on release (one undo step), wherever the pointer is.
-  useEffect(() => {
-    const up = () => {
-      const d = dragRef.current;
-      if (!d) return;
-      setDrag(null);
-      orbit.unlock();
-      try {
-        if (d.kind === 'node') moveRoadNode(d.id, d.x, d.z);
-        else moveRoadControl(d.seg, d.index, d.x, d.z);
-      } catch {
-        /* reported by the action */
-      }
-    };
-    window.addEventListener('pointerup', up);
-    return () => window.removeEventListener('pointerup', up);
-  }, [orbit]);
+  // A handle drag is a gesture (Phase 36): release / blur move the node (one undo step) wherever the
+  // pointer is; Esc / pointercancel / unmount drop it (before, a second Esc left road mode with the
+  // camera still locked).
+  const gesture = useRef<Gesture | null>(null);
+  useEffect(() => () => gesture.current?.finish(false, 'abort'), []);
+  const startDrag = () => {
+    gesture.current = beginGesture('road-handle', {
+      end: (commit) => {
+        gesture.current = null;
+        const d = dragRef.current;
+        setDrag(null);
+        if (!d || !commit) return;
+        try {
+          if (d.kind === 'node') moveRoadNode(d.id, d.x, d.z);
+          else moveRoadControl(d.seg, d.index, d.x, d.z);
+        } catch {
+          /* reported by the action */
+        }
+      },
+    }, { lockCamera: true });
+  };
 
   // Preview network of the current draft + hover point (what a click / finish would build).
   /** Draft + hover point (unless the hover sits on the last placed point). */
@@ -375,8 +379,8 @@ export function RoadTool() {
             onPointerDown={(e) => {
               e.stopPropagation();
               if (e.button !== 0) return;
-              orbit.lock();
               setDrag({ ...h });
+              startDrag();
               if (h.kind === 'node') useRoadStore.getState().select({ node: h.id });
             }}
             onPointerOver={() => (document.body.style.cursor = 'grab')}

@@ -9,6 +9,7 @@ import { useWorldStore } from '@/world/worldStore';
 import { SimRenderAdapter } from '@/rendering/sim/SimRenderAdapter';
 import { staticRuntime } from '@/rendering/editor/EditorBatches';
 import { flatSampler } from '@/terrain/TerrainSampler';
+import { yawOf } from '@/terrain/groundPlacement';
 import { analysisOf } from '@/buildings/design';
 import { rotateEuler } from '@/buildings/geometry';
 import { floorElevation, newMember, snapToGrid, snapToStructure, storyAt } from '@/buildings/edit';
@@ -232,7 +233,8 @@ function MemberGizmo({ design, members, camera }: { design: BuildingDesign; memb
   const commit = () => {
     if (!proxy) return;
     if (gizmo === 'rotate') {
-      let yaw = proxy.rotation.y;
+      // Heading from the whole rotation (a 180° turn is (π, 0, π) in Euler angles — Phase 36 fix).
+      let yaw = yawOf([proxy.rotation.x, proxy.rotation.y, proxy.rotation.z]);
       const step = degToRad(snap.structure ? 90 : 15);
       yaw = Math.round(yaw / step) * step;
       if (Math.abs(yaw) > 1e-6) rotateSelectedMembers(yaw, [center[0], center[2]]);
@@ -268,9 +270,14 @@ function MemberGizmo({ design, members, camera }: { design: BuildingDesign; memb
           showX={gizmo === 'translate'}
           showZ={gizmo === 'translate'}
           showY
-          onMouseDown={() => useEditorStore.getState().setDragging(true)}
-          onMouseUp={() => {
-            commit();
+          owner="gizmo:member"
+          onDragStart={() => useEditorStore.getState().setDragging(true)}
+          onDragEnd={(ok) => {
+            if (ok) commit();
+            else {
+              proxy.position.set(center[0], center[1], center[2]);
+              proxy.rotation.set(0, 0, 0);
+            }
             setTimeout(() => useEditorStore.getState().setDragging(false), 0);
           }}
         />

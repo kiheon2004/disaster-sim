@@ -20,6 +20,10 @@ import { deleteSelectedMembers, duplicateSelectedMembers, exitBuildingEdit, modu
 import { useBlueprintStore } from '@/editor/blueprintStore';
 import { backToLibrary, pinPlacement, rotatePlacement } from '@/app/blueprintActions';
 import { closePolygon } from '@/editor/tools/BlueprintTool';
+import { activeGesture } from '@/editor/input/gesture';
+import { isTyping, keyOf } from '@/editor/input/keys';
+
+export { isTyping, keyOf };
 
 /** Building Edit Mode keys. Returns true when the key was handled. */
 function buildingKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
@@ -66,11 +70,9 @@ function buildingKeys(e: KeyboardEvent, key: string, mod: boolean): boolean {
   return false;
 }
 
-function isTyping(e: KeyboardEvent) {
-  const el = e.target as HTMLElement | null;
-  if (!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+/** A modal dialog (help, results, comparison, blueprint dialogs) owns the keyboard while open. */
+function modalOpen(): boolean {
+  return typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]') !== null;
 }
 
 /** Text selected on the page: Ctrl+C / Ctrl+A keep their browser meaning then. */
@@ -232,12 +234,15 @@ const TOOL_KEYS: Record<string, 'select' | 'place' | 'brush' | 'line' | 'area'> 
 export function useEditorHotkeys() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e)) return;
+      if (isTyping(e) || e.isComposing) return;
+      // Phase 36: no shortcut acts behind a modal dialog, and none during a drag (Delete / Ctrl+Z /
+      // tool keys used to unmount a gizmo mid-drag; Esc of a drag is handled by the gesture itself).
+      if (modalOpen() || activeGesture()) return;
       const ed = useEditorStore.getState();
       const world = useWorldStore.getState();
       const build = useBuildStore.getState();
       const mod = e.metaKey || e.ctrlKey;
-      const key = e.key.toLowerCase();
+      const key = keyOf(e);
 
       // Phase 35.5: disaster placement keys come first, in both modes.
       if (placementKeys(e, key, mod)) return;

@@ -16,6 +16,7 @@ import { samplerFor, type TerrainSampler } from '@/terrain/TerrainSampler';
 import { SimRenderAdapter } from '@/rendering/sim/SimRenderAdapter';
 import { staticRuntime } from '@/rendering/editor/EditorBatches';
 import { ghostFor, type MaterialMode } from '@/rendering/materials';
+import { lockCamera, unlockCamera } from '../input/cameraLock';
 import type { PlannedObject } from '../build/placementPlan';
 import type { AreaShape, Vec2 } from '../build/distribution';
 
@@ -33,16 +34,21 @@ export function groundHitOf(e: ThreeEvent<PointerEvent | MouseEvent>): Vec3 | nu
   return sampler.raycast([o.x, o.y, o.z], [d.x, d.y, d.z], 3000, out) ? out : null;
 }
 
-/** Disable / restore the orbit controls while a tool drags with the left button. */
+let orbitLockSeq = 0;
+
+/**
+ * Disable / restore the orbit controls while a tool drags with the left button. The lock is OWNED
+ * by this hook instance (input/cameraLock.ts): unlocking releases only this tool's lock, and an
+ * unmount mid-drag releases it too (Phase 36 — before, it stayed on and the camera froze).
+ */
 export function useOrbitLock() {
-  const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
-  const ref = useRef(controls);
-  ref.current = controls;
+  const id = useMemo(() => `orbitLock#${++orbitLockSeq}`, []);
+  useEffect(() => () => unlockCamera(id), [id]);
   // Stable identity: tools use it in effect dependencies.
   return useMemo(() => ({
-    lock: () => { if (ref.current) ref.current.enabled = false; },
-    unlock: () => { if (ref.current) ref.current.enabled = true; },
-  }), []);
+    lock: () => lockCamera(id),
+    unlock: () => unlockCamera(id),
+  }), [id]);
 }
 
 /** Big invisible plane under the world that receives the tool's pointer events. */
