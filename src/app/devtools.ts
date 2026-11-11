@@ -105,6 +105,8 @@ import type { HeatSourceSpec } from '@/thermal/types';
 import { thermalOutlook } from '@/rendering/thermal/ThermalPreview';
 
 import * as placementActions from './placementActions';
+import { cameraLockIgnoredWrites, cameraLockOwners, cameraLocked } from '@/editor/input/cameraLock';
+import { activeGesture } from '@/editor/input/gesture';
 import { usePlacementStore } from '@/ui/placement/placementStore';
 
 export function installDevtools() {
@@ -140,6 +142,8 @@ export function installDevtools() {
     actions,
     /** Phase 35.5 placement / multi-instance UI (browser verification). */
     placement: placementActions,
+    /** Phase 36 input ownership (browser verification): lock owners, the gesture in progress. */
+    input: { cameraLockOwners, cameraLocked, cameraLockIgnoredWrites, activeGesture },
     placementStore: usePlacementStore,
     view: useViewStore,
     sim: simulationController,

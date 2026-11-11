@@ -34,7 +34,9 @@ describe('gizmo lifecycle', () => {
 
   it('the wrapper disposes the controls on unmount (Phase 36: after cancelling a drag in progress)', () => {
     const text = fs.readFileSync(path.join(SRC, 'editor/ManagedTransformControls.tsx'), 'utf8');
-    expect(text).toMatch(/useEffect\(\(\) => \(\) => {\s*gesture\.current\?\.finish\(false, 'abort'\);[\s\S]{0,300}?c\.dispose\(\);/);
+    // The cleanup cancels a drag, then disposes after one task (cancelled by a StrictMode remount).
+    expect(text).toMatch(/return \(\) => {\s*gesture\.current\?\.finish\(false, 'abort'\);\s*pendingDispose\.current = setTimeout\(\(\) => {[\s\S]{0,300}?c\.dispose\(\);/);
+    expect(text).toMatch(/if \(pendingDispose\.current\) clearTimeout\(pendingDispose\.current\);/);
   });
 
   it('selection outline geometry frees its temporary box and is disposable', () => {

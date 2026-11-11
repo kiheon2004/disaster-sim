@@ -81,15 +81,27 @@ export const ManagedTransformControls = forwardRef<unknown, Props>(function Mana
   );
   // The controls instance lives as long as the camera / dom element (drei memo) — in practice the
   // lifetime of this component. Cancel a drag in progress, then dispose the last instance seen.
-  useEffect(() => () => {
-    gesture.current?.finish(false, 'abort');
-    const c = instance.current;
-    if (c) {
-      c.removeEventListener('mouseDown', listeners.current.down);
-      c.removeEventListener('mouseUp', listeners.current.up);
-      c.dispose();
-    }
-    instance.current = null;
+  // Disposal is deferred by one task and cancelled by a remount: React StrictMode (dev) runs this
+  // cleanup once right after mounting and mounts again with the SAME controls instance — disposing
+  // it there removed its pointer listeners, so in `npm run dev` no gizmo handle could be grabbed
+  // (Phase 17–35.5; found by the Phase 36 Chrome checks — production builds were not affected).
+  const pendingDispose = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (pendingDispose.current) clearTimeout(pendingDispose.current);
+    pendingDispose.current = null;
+    return () => {
+      gesture.current?.finish(false, 'abort');
+      pendingDispose.current = setTimeout(() => {
+        pendingDispose.current = null;
+        const c = instance.current;
+        if (c) {
+          c.removeEventListener('mouseDown', listeners.current.down);
+          c.removeEventListener('mouseUp', listeners.current.up);
+          c.dispose();
+        }
+        instance.current = null;
+      }, 0);
+    };
   }, []);
   return <TransformControls {...(rest as DreiProps)} ref={setRef as never} />;
 });
