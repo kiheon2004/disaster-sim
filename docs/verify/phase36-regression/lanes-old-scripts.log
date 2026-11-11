@@ -1,0 +1,51 @@
+2026-11-10 22:10:21 [1] verify-atmosphere ko rc=0 151s | 46/46 passed; 0 page errors; heap 37.8 → 67.6 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:12:40 [1] verify-atmosphere en rc=0 139s | 46/46 passed; 0 page errors; heap 38.4 → 67.7 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:13:11 [1] verify-blast ko rc=0 31s | 22/22 passed; 0 page errors; heap 37.8 → 56.5 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:13:51 [1] verify-blast en rc=0 40s | 22/22 passed; 0 page errors; heap 38.3 → 56.5 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:15:40 [1] verify-blueprints ko rc=0 109s | 22/22 passed | fails=0
+2026-11-10 22:17:30 [1] verify-blueprints en rc=0 110s | 22/22 passed | fails=0
+2026-11-10 22:17:56 [1] verify-build ko rc=0 26s |  | fails=0
+2026-11-10 22:18:22 [1] verify-build en rc=0 26s |  | fails=0
+2026-11-10 22:20:05 [1] verify-buildings ko rc=0 103s | 19/19 passed | fails=0
+2026-11-10 22:21:49 [1] verify-buildings en rc=0 103s | 19/19 passed | fails=0
+2026-11-10 22:24:10 [1] verify-celestial ko rc=0 141s | 62/62 passed; 0 page errors; heap 37.9 → 63.9 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:26:20 [1] verify-celestial en rc=0 130s | 62/62 passed; 0 page errors; heap 38.3 → 64 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 22:29:37 [1] verify-climate ko rc=1 197s |  | fails=0
+2026-11-10 23:19:21 [1] verify-climate en rc=1 2984s |  | fails=0
+2026-11-10 23:34:45 [1] verify-deformation ko rc=0 923s | 22/22 passed; 0 page errors | fails=0
+2026-11-10 23:36:32 [1] verify-deformation en rc=0 107s | 22/22 passed; 0 page errors | fails=0
+2026-11-10 23:37:19 [1] verify-earthquake ko rc=0 47s |  | fails=0
+2026-11-10 23:38:20 [1] verify-earthquake en rc=0 61s |  | fails=0
+2026-11-10 23:39:42 [1] verify-fire ko rc=0 82s | 30/30 passed; 0 page errors; heap 38 → 68.1 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-10 23:40:57 [1] verify-fire en rc=0 75s | 30/30 passed; 0 page errors; heap 38.1 → 68.1 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-10 23:41:54 [1] verify-flood ko rc=0 57s |  | fails=0
+2026-11-10 23:42:53 [1] verify-flood en rc=0 59s |  | fails=0
+2026-11-10 23:46:31 [1] verify-gravity ko rc=0 218s | 57/57 passed; 0 page errors; heap 38 → 58.4 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 23:50:06 [1] verify-gravity en rc=0 215s | 57/57 passed; 0 page errors; heap 38 → 58.5 MB; geometries 21 → 9; crashed false | fails=0
+2026-11-10 23:53:03 [1] verify-ground ko rc=0 177s | 22/22 passed; 0 page errors | fails=0
+2026-11-10 23:55:51 [1] verify-ground en rc=0 168s | 22/22 passed; 0 page errors | fails=0
+2026-11-10 23:56:33 [1] verify-human ko rc=0 42s | 48/48 passed; 0 page errors; geometries 21 → 8; crashed false | fails=0
+2026-11-10 23:57:14 [1] verify-human en rc=0 41s | 48/48 passed; 0 page errors; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:00:47 [1] verify-impact ko rc=0 213s | 22/22 passed; 0 page errors; heap 37.7 → 64.3 MB; crashed false | fails=0
+2026-11-11 00:04:23 [1] verify-impact en rc=0 216s | 22/22 passed; 0 page errors; heap 38.1 → 60.7 MB; crashed false | fails=0
+2026-11-11 00:06:18 [1] verify-nature ko rc=0 115s | 20/20 passed | fails=0
+2026-11-11 00:08:13 [1] verify-nature en rc=0 115s | 20/20 passed | fails=0
+2026-11-11 00:09:01 [1] verify-phenomena ko rc=0 48s |  | fails=0
+2026-11-11 00:09:48 [1] verify-phenomena en rc=0 47s |  | fails=0
+2026-11-11 00:10:44 [1] verify-physiology ko rc=0 55s | 70/70 passed; 0 page errors; geometries 21 → 9; heap 81 MB; crashed false | fails=0
+2026-11-11 00:11:40 [1] verify-physiology en rc=0 55s | 70/70 passed; 0 page errors; geometries 21 → 9; heap 55 MB; crashed false | fails=0
+2026-11-11 00:13:17 [1] verify-roads ko rc=0 97s | 21/21 passed | fails=0
+2026-11-11 00:14:54 [1] verify-roads en rc=0 97s | 21/21 passed | fails=0
+2026-11-11 00:15:18 [1] verify-structure ko rc=0 24s | 25/25 passed; 0 page errors; heap 37.8 → 56.1 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:15:42 [1] verify-structure en rc=0 24s | 25/25 passed; 0 page errors; heap 38.1 → 56.1 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:16:13 [1] verify-thermal ko rc=0 31s | 28/28 passed; 0 page errors; heap 37.8 → 64.6 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:16:46 [1] verify-thermal en rc=0 33s | 28/28 passed; 0 page errors; heap 38.2 → 64.6 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:18:24 [1] verify-ux355 ko rc=0 98s | 26/26 passed; 0 page errors; geometries 20 | fails=0
+2026-11-11 00:20:03 [1] verify-ux355 en rc=0 99s | 26/26 passed; 0 page errors; geometries 24 | fails=0
+2026-11-11 00:20:52 [1] verify-vehicle ko rc=0 49s | 86/86 passed; 0 page errors; geometries 21 → 7; heap 56 MB; crashed false | fails=0
+2026-11-11 00:21:41 [1] verify-vehicle en rc=0 49s | 86/86 passed; 0 page errors; geometries 21 → 7; heap 56 MB; crashed false | fails=0
+2026-11-11 00:23:13 [1] verify-volcano ko rc=0 92s | 36/36 passed; 0 page errors; heap 37.8 → 101.5 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:24:42 [1] verify-volcano en rc=0 89s | 36/36 passed; 0 page errors; heap 38.1 → 101.5 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:37:00 [1] verify-climate ko rc=0 738s | 45/45 passed; 0 page errors; heap 37.7 → 73.7 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:49:35 [1] verify-climate en rc=0 755s | 45/45 passed; 0 page errors; heap 38 → 73.7 MB; geometries 21 → 8; crashed false | fails=0
+2026-11-11 00:49:35 [1] lane done

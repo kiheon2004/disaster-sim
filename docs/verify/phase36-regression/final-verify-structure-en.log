@@ -1,0 +1,27 @@
+PASS 1 a structural member selected in the editor shows its demand / capacity {"dem1":"Utilization axial / bending / shear0.12 / 0.00 / 0.00 (failure 1.25)Capacity axial · bending · shear7500.0 kN · 0.0 kN·m"}
+PASS 2 its load-transfer connections are listed (kind, support, load, capacity) {"rows":[["Foundation T0","fd-mat","924.2","—"]]}
+PASS 4 single-member removal preview: computed with the collapse model, local result, the design is unchanged {"level":"local","followers":3,"removed":["c0-1-0"]}
+PASS 3 the original design is not modified by the preview (fingerprint unchanged) 
+PASS 5 connection failures are computed and recorded (connections out of the load path) {"edges":[12,0],"ms":true}
+PASS 6 load redistribution: members failing because another member failed (trigger recorded) 
+PASS 7 partial collapse stage reached (part of the building standing while part fell) ["damaged","local","partial","intact","global"]
+PASS 8 progressive collapse: falling floors broke through the floors below, in time order 
+PASS 9 roof failure: roof / top-floor members failed and came down 6
+PASS 11 floor slabs failed (bending / support / impact) 
+PASS 12 debris falls: falling blocks inside the building and moving fragments were observed {"blocks":40,"moving":64,"levels":["damaged","local","partial","intact","global"]}
+PASS 13 debris impacts recorded (milestone) 
+PASS 14 vehicles damaged by fragments: secondary records keep the primary hazard and the source building [{"o":"car_abd398ba35","ty":"car","t":"IMPACT","h":"earthquake","c":"impact","sec":{"striker":"frag-2","source":"building_1847f6e630","member":"w4-s-2","energy":9722.897206067099},"f":null,"time":5.316666666666653},{"o":"car_652b57d833","ty":"car","t":"IMPACT","h":"earthquake","c":"impact","sec":{"striker":"frag-18","source":"building_1847f6e630","member":"pp-s-0","energy":15279.349893867398},"f":null,"time":5.433333333333319}]
+PASS 15 the street is blocked by the collapse rubble (separate from sediment) {"height":2.4774099661421527,"blocked":true,"source":"building_1847f6e630"}
+PASS 16 earthquake integration: every structural failure of this run is the earthquake's; mass conserved [-1.257285475730896e-8,-1.4551915228366852e-11]
+PASS 1b a member clicked in the simulation is picked; its computed state is shown {"pick":{"owner":"building_5078d04531","member":12},"memSec":"StateSettled on the groundDamage index100 %Residual capacity99 %Vertical load0.0"}
+PASS 3b load-path overlay of the selected building drawn from the engine state (vertices) {"vertices":280}
+PASS 20 cause / timeline: inspector level + collapse sequence rows, HUD, timeline milestones {"level16":"Global collapse","seqRows":40,"tl":13}
+PASS 20b results: structural destruction summary (classes, members, debris mass, roads, secondary) Structural destruction Collapse sequence CSVBuildings damaged / local failure1Local failure 1Partial
+PASS 22 reset → re-run: the same collapse sequence (members, causes, times) bit for bit {"len":12440}
+PASS 21 leaving the simulation shows the original world exactly (fingerprint) 
+PASS 10 exterior walls / cladding blown off by the wave: detached parts become fragments {"frags":88}
+PASS 17 blast integration: structural failures recorded as the blast's (walls out of plane / story mechanism) [28,37,28]
+PASS 18 ground: the footing whose ground gave way fails; the rest of the building stands {"level":"local","n":4}
+PASS 19 landslide: the sediment load damages the ground-story members (ground hazard only) {"maxD":0.47398177548875464,"hz":["ground"]}
+
+25/25 passed; 0 page errors; heap 38.2 → 56.1 MB; geometries 21 → 8; crashed false

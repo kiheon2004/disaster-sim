@@ -1,0 +1,209 @@
+{
+  "date": "2026-11-10T16:52:05.200Z",
+  "url": "http://localhost:4198/",
+  "mode": "leak",
+  "rows": [
+    {
+      "n": 1000,
+      "iterations": 100,
+      "ops": [
+        "objects",
+        "terrain",
+        "road",
+        "disaster",
+        "simSwitch",
+        "saveLoad"
+      ],
+      "samples": [
+        {
+          "i": 0,
+          "geometries": 34,
+          "textures": 58,
+          "programs": 14,
+          "sceneObjects": 64,
+          "pageHeapMB": 54.7,
+          "heapMB": 31.1,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 10,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 69.5,
+          "heapMB": 44.9,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 20,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70,
+          "heapMB": 45.3,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 30,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.2,
+          "heapMB": 45.3,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 40,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.3,
+          "heapMB": 45.4,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 50,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.5,
+          "heapMB": 45.6,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 60,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.6,
+          "heapMB": 45.7,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 70,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.7,
+          "heapMB": 45.8,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 80,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.8,
+          "heapMB": 45.8,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 90,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 71.2,
+          "heapMB": 45.7,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        },
+        {
+          "i": 100,
+          "geometries": 36,
+          "textures": 58,
+          "programs": 15,
+          "sceneObjects": 64,
+          "pageHeapMB": 70.9,
+          "heapMB": 46,
+          "listeners": {
+            "window": 9,
+            "document": 2
+          }
+        }
+      ],
+      "iterMs": {
+        "objects": {
+          "mean": 110.61,
+          "p50": 98.9,
+          "p95": 175,
+          "max": 337.3
+        },
+        "terrain": {
+          "mean": 156.51,
+          "p50": 145.2,
+          "p95": 214.5,
+          "max": 310.1
+        },
+        "road": {
+          "mean": 158.7,
+          "p50": 149.9,
+          "p95": 231.9,
+          "max": 262
+        },
+        "disaster": {
+          "mean": 61.75,
+          "p50": 61.6,
+          "p95": 68.1,
+          "max": 136.1
+        },
+        "simSwitch": {
+          "mean": 251.62,
+          "p50": 242.9,
+          "p95": 328.2,
+          "max": 613.8
+        },
+        "saveLoad": {
+          "mean": 80.8,
+          "p50": 75.3,
+          "p95": 115,
+          "max": 170.5
+        }
+      },
+      "growth": {
+        "geometries": 2,
+        "textures": 0,
+        "heapMB": 14.9,
+        "windowListeners": 0,
+        "documentListeners": 0
+      }
+    }
+  ]
+}

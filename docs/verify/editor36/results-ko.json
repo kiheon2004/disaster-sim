@@ -1,0 +1,511 @@
+{
+ "lang": "ko",
+ "results": [
+  {
+   "name": "input-1 click selects the building",
+   "ok": true,
+   "detail": {
+    "s": [
+     "building_ddbb54d43"
+    ],
+    "b": "building_ddbb54d43"
+   }
+  },
+  {
+   "name": "input-2 gizmo drag holds an owned camera lock while dragging",
+   "ok": true,
+   "detail": {
+    "locked": true,
+    "owners": [
+     "gesture:gizmo:object#1"
+    ],
+    "gesture": "gizmo:object",
+    "dragging": true,
+    "tool": "select"
+   }
+  },
+  {
+   "name": "input-3 Esc mid-drag restores the transform, adds no undo step, keeps the selection",
+   "ok": true,
+   "detail": {
+    "before": [
+     2,
+     0,
+     -13
+    ],
+    "moved": [
+     5.6,
+     0.060388030111858795,
+     -12.45
+    ],
+    "after": [
+     2,
+     0,
+     -13
+    ]
+   }
+  },
+  {
+   "name": "input-4 after the cancelled drag: camera free, not dragging",
+   "ok": true,
+   "detail": {
+    "locked": false,
+    "owners": [],
+    "gesture": null,
+    "dragging": false,
+    "tool": "select"
+   }
+  },
+  {
+   "name": "input-5 a completed drag moves the object as ONE undo step",
+   "ok": true,
+   "detail": {
+    "p2": [
+     5.6,
+     0.060388030111873,
+     -12.45
+    ],
+    "steps": 1
+   }
+  },
+  {
+   "name": "input-6 Ctrl+Z restores it",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "name": "input-11 Q toggles object axes, X locks the gizmo to X (shown in the hint), pressing again undoes it",
+   "ok": true,
+   "detail": {
+    "g1": {
+     "space": "local",
+     "lock": "x",
+     "hint": "객체 축 (Q) · X축만"
+    },
+    "g2": {
+     "space": "world",
+     "lock": null
+    }
+   }
+  },
+  {
+   "name": "input-7 left-drag on empty ground orbits the camera",
+   "ok": true,
+   "detail": {
+    "c0": [
+     0,
+     90,
+     60
+    ],
+    "c1": [
+     44.41,
+     90,
+     40.34
+    ]
+   }
+  },
+  {
+   "name": "input-8 pin drag follows the mouse, Esc puts the pin back",
+   "ok": true,
+   "detail": {
+    "pd": {
+     "id": "p1",
+     "p": [
+      -35.4,
+      41.9
+     ]
+    },
+    "pinAt": [
+     -40,
+     40
+    ],
+    "pinAt2": [
+     -40,
+     40
+    ],
+    "st2": {
+     "locked": false,
+     "owners": [],
+     "gesture": null,
+     "dragging": false,
+     "tool": "select"
+    }
+   }
+  },
+  {
+   "name": "input-9 disaster placement and editor tools disarm each other",
+   "ok": true,
+   "detail": {
+    "t1": {
+     "locked": false,
+     "owners": [],
+     "gesture": null,
+     "dragging": false,
+     "tool": "select"
+    },
+    "armed": null
+   }
+  },
+  {
+   "name": "input-10 selecting an object drops the pin selection (Delete can no longer hit the disaster)",
+   "ok": true,
+   "detail": {
+    "pinSel": "p1",
+    "pinSel2": null
+   }
+  },
+  {
+   "name": "S1-1 new empty world",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "S1-2 road drawn by clicks + Enter (from −55 to 55)",
+   "ok": true,
+   "detail": {
+    "segs": 2,
+    "xs": [
+     -55,
+     0,
+     55
+    ]
+   }
+  },
+  {
+   "name": "S1-3 two buildings placed with the mouse",
+   "ok": true,
+   "detail": {
+    "n": 2
+   }
+  },
+  {
+   "name": "S3-1 the house snapped to the road frontage (1 m behind the sidewalk), facing the road",
+   "ok": true,
+   "detail": {
+    "z": -10.379999999999999,
+    "realFront": -10.379999999999999,
+    "hint": "roadFront",
+    "yaw": [
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "S3-2 the second house snapped flush against the first along the street (no gap, no overlap)",
+   "ok": true,
+   "detail": {
+    "x0": -30,
+    "x1": -21.6,
+    "w": 8.4
+   }
+  },
+  {
+   "name": "S2-1 X typed in the inspector moves the building exactly",
+   "ok": true,
+   "detail": {
+    "xi": 1,
+    "p": [
+     -45.5,
+     0.01709999961778544,
+     -10.379999999999999
+    ],
+    "labels": [
+     "이름",
+     "위치 (m) X",
+     "위치 (m) Y",
+     "위치 (m) Z",
+     "지면 위 높이",
+     "회전 (°) — X 기울기 · Y 방향 · Z 기울기 X",
+     "회전 (°) — X 기울기 · Y 방향 · Z 기울기 Y",
+     "회전 (°) — X 기울기 · Y 방향 · Z 기울기 Z"
+    ]
+   }
+  },
+  {
+   "name": "S4-1 Shift+click adds to the selection",
+   "ok": true,
+   "detail": {
+    "s4": [
+     "building_f2ebe2be31",
+     "building_a6e5f18333"
+    ]
+   }
+  },
+  {
+   "name": "S4-2 the group drag moves both by the same delta (one undo step)",
+   "ok": true,
+   "detail": {
+    "d1": [
+     0.04999999999999716,
+     4.379999999999999
+    ],
+    "d2": [
+     0.04999999999999716,
+     4.379999999999999
+    ]
+   }
+  },
+  {
+   "name": "S5-1 Ctrl+G groups the two buildings",
+   "ok": true,
+   "detail": {
+    "g": [
+     "grp_d116eaf835",
+     "grp_d116eaf835"
+    ]
+   }
+  },
+  {
+   "name": "S5-2 group renamed in the outliner",
+   "ok": true,
+   "detail": {
+    "gname": [
+     "Block A"
+    ]
+   }
+  },
+  {
+   "name": "S5-3 Ctrl+D duplicates the group as a new group",
+   "ok": true,
+   "detail": {
+    "n": 4,
+    "groups5": 2
+   }
+  },
+  {
+   "name": "S15-1 three undos and three redos return to the same world",
+   "ok": true,
+   "detail": {
+    "depth": 9,
+    "back": 6
+   }
+  },
+  {
+   "name": "S16-1 reload restores the world (autosave), group names included",
+   "ok": true,
+   "detail": {
+    "before16": {
+     "n": 4,
+     "names": {
+      "grp_d116eaf835": {
+       "name": "Block A"
+      }
+     }
+    },
+    "after16": {
+     "n": 4,
+     "names": {
+      "grp_d116eaf835": {
+       "name": "Block A"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "S17-1 after a simulation the editor world is the original one",
+   "ok": true,
+   "detail": {
+    "inSim": "simulation"
+   }
+  },
+  {
+   "name": "S7-1 a 7 m road joined to the 10 m street: no height step across the joint (≤ 3 cm per metre)",
+   "ok": true,
+   "detail": {
+    "worst": 0,
+    "segs": 4
+   }
+  },
+  {
+   "name": "S8-1 drawing across the main street makes a cross junction (and the T stays)",
+   "ok": true,
+   "detail": {
+    "ints": [
+     3,
+     4
+    ]
+   }
+  },
+  {
+   "name": "S6-1 brush preview shown before the stroke",
+   "ok": true,
+   "detail": {
+    "before": false,
+    "after": true
+   }
+  },
+  {
+   "name": "S6-2 a stroke under a building raises the ground and the building stays seated on it",
+   "ok": true,
+   "detail": {
+    "y0": 0.05199999883770903,
+    "y1": 1.8087499558925655,
+    "ground": 1.5800000429153442
+   }
+  },
+  {
+   "name": "S9-1 structure lab: one building per structural type",
+   "ok": true,
+   "detail": {
+    "lab": [
+     "structuralSteel",
+     "reinforcedConcrete",
+     "masonry",
+     "timber"
+    ]
+   }
+  },
+  {
+   "name": "S9-2 structural type picker lists steel / rc / masonry / timber (no \"light\")",
+   "ok": true,
+   "detail": {
+    "typeOptions": [
+     "steel",
+     "rc",
+     "masonry",
+     "timber"
+    ]
+   }
+  },
+  {
+   "name": "S9-3 member type change window → door (validated)",
+   "ok": true,
+   "detail": {
+    "mt": "door"
+   }
+  },
+  {
+   "name": "S9-4 a brace drawn joint → joint with two clicks (one undo step)",
+   "ok": true,
+   "detail": {
+    "braces0": 0,
+    "n": 1,
+    "size": [
+     5.185556864985669,
+     0.15,
+     0.15
+    ]
+   }
+  },
+  {
+   "name": "S10-1 the corner gives way: the collider is rebuilt from the cells that still stand (v2) before the building goes",
+   "ok": true,
+   "detail": {
+    "bay": 45,
+    "rebuilds": 1,
+    "boxes": 3,
+    "collapsed": true,
+    "failedByType": {
+     "column": 48,
+     "beam": 72,
+     "wall": 48,
+     "window": 52,
+     "door": 1,
+     "slab": 27,
+     "roof": 9
+    },
+    "t": 16.800000000000328,
+    "bodyShapes": null,
+    "st": false
+   }
+  },
+  {
+   "name": "S11-1 the drawn sway comes per storey from the storey model (not one uniform shear)",
+   "ok": true,
+   "detail": {
+    "top": 0.12827585991839754,
+    "mag": [
+     0.05536606596629329,
+     0.10759772944657452,
+     0.12827585991839754
+    ],
+    "ratio": 2.316867880706777
+   }
+  },
+  {
+   "name": "S12-1 a captured block (blueprint) placed at another spot with the mouse",
+   "ok": true,
+   "detail": {
+    "entry": true,
+    "n0": 70,
+    "n": 72,
+    "near": 2
+   }
+  },
+  {
+   "name": "S13-1 three blasts placed by clicking (three independent instances)",
+   "ok": true,
+   "detail": {
+    "n": 3
+   }
+  },
+  {
+   "name": "S14-1 quake + blasts + fire run together",
+   "ok": true,
+   "detail": {
+    "types": [
+     "blast",
+     "blast",
+     "blast",
+     "earthquake",
+     "fire"
+    ],
+    "st14": [
+     "active",
+     "active",
+     "active",
+     "active",
+     "active"
+    ]
+   }
+  },
+  {
+   "name": "S19-1920x1080 viewport ≥ 35 % of the window, no panel over it, no horizontal scroll",
+   "ok": true,
+   "detail": {
+    "share": 0.6334548611111112,
+    "overlap": 0,
+    "clipped": [],
+    "hscroll": false
+   }
+  },
+  {
+   "name": "S19-1440x900 viewport ≥ 35 % of the window, no panel over it, no horizontal scroll",
+   "ok": true,
+   "detail": {
+    "share": 0.5340833333333334,
+    "overlap": 0,
+    "clipped": [],
+    "hscroll": false
+   }
+  },
+  {
+   "name": "S19-1366x768 viewport ≥ 35 % of the window, no panel over it, no horizontal scroll",
+   "ok": true,
+   "detail": {
+    "share": 0.5274581350658858,
+    "overlap": 0,
+    "clipped": [],
+    "hscroll": false
+   }
+  },
+  {
+   "name": "S19-1280x720 viewport ≥ 35 % of the window, no panel over it, no horizontal scroll",
+   "ok": true,
+   "detail": {
+    "share": 0.4998828125,
+    "overlap": 0,
+    "clipped": [],
+    "hscroll": false
+   }
+  }
+ ],
+ "errors": [],
+ "gl": {
+  "geometries": 21,
+  "textures": 15
+ }
+}

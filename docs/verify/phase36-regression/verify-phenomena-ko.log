@@ -1,0 +1,60 @@
+{
+  "plan": [
+    {
+      "id": "p1",
+      "type": "wind",
+      "start": {
+        "at": 0
+      }
+    },
+    {
+      "id": "p2",
+      "type": "earthquake",
+      "start": {
+        "after": "p1",
+        "anchor": "start",
+        "offset": 10
+      }
+    },
+    {
+      "id": "p3",
+      "type": "rain",
+      "start": {
+        "after": "p1",
+        "anchor": "start",
+        "offset": 20
+      }
+    }
+  ],
+  "samples": [
+    {
+      "t": 12.4,
+      "active": [
+        "wind",
+        "earthquake"
+      ],
+      "milestones": 5,
+      "events": 196,
+      "duplicates": 0
+    },
+    {
+      "t": 30.7,
+      "active": [
+        "wind",
+        "rain"
+      ],
+      "milestones": 7,
+      "events": 391,
+      "duplicates": 0
+    }
+  ],
+  "resultsOk": true,
+  "comparison": [
+    "p1 바람 / 태풍 54 0 19 0m² 257 25s 69.3ms/s 257 / 0 / 0",
+    "p2 지진 23 0 1 0m² 56 25s 21.8ms/s 0 / 56 / 0",
+    "p3 폭우 0 0 0 0m² 0 25s 18.0ms/s 0 / 0 / 0",
+    "모두 함께 (p1 바람 / 태풍 + p2 지진 + p3 폭우) 54 0 22 0m² 383 25s 80.5ms/s 261 / 122 / 0"
+  ],
+  "preview": "미구현 현상: 블랙홀·극한 중력원 · 필요한 시스템:",
+  "errors": []
+}

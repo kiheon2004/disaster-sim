@@ -1,0 +1,331 @@
+{
+  "date": "2026-11-10T16:31:59.838Z",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "load": [
+    4.6,
+    5.1,
+    5.9
+  ],
+  "simSeconds": 600,
+  "budgetS": 900,
+  "rows": [
+    {
+      "scene": "mix",
+      "simSeconds": 600,
+      "reached": 600,
+      "complete": true,
+      "wallS": 15.1,
+      "worstStepMs": 55,
+      "loadStart": 4.4,
+      "loadEnd": 4.6,
+      "keys": [
+        "earthquake#1",
+        "earthquake#2",
+        "blast#1",
+        "blast#2",
+        "blast#3",
+        "fire#1",
+        "fire#2",
+        "fire#3",
+        "fire#4",
+        "sinkhole#1",
+        "sinkhole#2"
+      ],
+      "ops": [],
+      "statuses": [
+        [
+          "earthquake#1",
+          "done"
+        ],
+        [
+          "earthquake#2",
+          "done"
+        ],
+        [
+          "blast#1",
+          "done"
+        ],
+        [
+          "blast#2",
+          "done"
+        ],
+        [
+          "blast#3",
+          "done"
+        ],
+        [
+          "fire#1",
+          "active"
+        ],
+        [
+          "fire#2",
+          "active"
+        ],
+        [
+          "fire#3",
+          "active"
+        ],
+        [
+          "fire#4",
+          "active"
+        ],
+        [
+          "sinkhole#1",
+          "done"
+        ],
+        [
+          "sinkhole#2",
+          "done"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "top": [
+        {
+          "ms": 54.9,
+          "step": 901,
+          "second": 15,
+          "simTime": 15.017,
+          "sections": {
+            "dispatch": 54.57,
+            "physics": 0.06,
+            "damage.entities": 0.02,
+            "sys.damage": 0.02,
+            "sys.metrics": 0.02,
+            "sys.structural": 0.05,
+            "sys.seismicDamage": 0.03,
+            "sys.groundMotion": 0.03,
+            "fire.incident": 0.55,
+            "fire.burn": 1.81,
+            "fire.geom": 0.88,
+            "fire.steps": 1.73,
+            "fire.combustion": 9.28,
+            "thermal.solve": 2.76,
+            "fire.after": 1.38,
+            "thermal.couple": 1.32,
+            "thermal.total": 54.04,
+            "sys.thermal": 54.38
+          },
+          "entities": 31,
+          "bodies": 31,
+          "fragments": 0,
+          "debris": 0,
+          "active": [
+            "earthquake#1",
+            "blast#1",
+            "fire#1"
+          ],
+          "blastWaves": 1,
+          "collapseEvents": 0,
+          "heapMB": 129.4,
+          "majorPageFaults": 0,
+          "gcPauses": 0,
+          "gcMs": 0,
+          "gcKinds": []
+        },
+        {
+          "ms": 19.06,
+          "step": 304,
+          "second": 5,
+          "simTime": 5.067,
+          "sections": {
+            "dispatch": 18.82,
+            "physics": 0.13,
+            "sys.poseSync": 0.02,
+            "sys.sway": 0.02,
+            "damage.entities": 0.9,
+            "sys.damage": 0.91,
+            "sys.metrics": 0.22,
+            "blast.shielding": 0.1,
+            "blast.buildParts": 0.89,
+            "blast.respond.car": 0.15,
+            "blast.respond.building": 10.24,
+            "sys.blast": 11.72,
+            "struct.create.bearing": 0.11,
+            "struct.create": 7.4,
+            "blast.partFail": 9.51,
+            "sys.structural": 1.14,
+            "sys.seismicDamage": 1.41,
+            "struct.model": 0.91,
+            "struct.ev.events": 0.28,
+            "struct.ev.piles": 0.06,
+            "struct.ev.sync": 0.06,
+            "struct.ev.standing": 1.64,
+            "struct.events": 2.05,
+            "struct.fragments": 0.19,
+            "sys.structuralCollapse": 3.34
+          },
+          "entities": 31,
+          "bodies": 31,
+          "fragments": 0,
+          "debris": 0,
+          "active": [
+            "blast#1"
+          ],
+          "blastWaves": 1,
+          "collapseEvents": 0,
+          "heapMB": 144,
+          "majorPageFaults": 3,
+          "gcPauses": 0,
+          "gcMs": 0,
+          "gcKinds": []
+        },
+        {
+          "ms": 11.04,
+          "step": 302,
+          "second": 5,
+          "simTime": 5.033,
+          "sections": {
+            "dispatch": 9.92,
+            "physics": 0.16,
+            "damage.entities": 0.19,
+            "sys.damage": 0.19,
+            "blast.shielding": 0.95,
+            "blast.buildParts": 2.99,
+            "blast.respond.car": 1.7,
+            "blast.respond.building": 0.38,
+            "blast.debris": 0.19,
+            "sys.blast": 9.68
+          },
+          "entities": 31,
+          "bodies": 31,
+          "fragments": 0,
+          "debris": 0,
+          "active": [
+            "blast#1"
+          ],
+          "blastWaves": 1,
+          "collapseEvents": 0,
+          "heapMB": 140.7,
+          "majorPageFaults": 0,
+          "gcPauses": 0,
+          "gcMs": 0,
+          "gcKinds": []
+        },
+        {
+          "ms": 10.98,
+          "step": 1207,
+          "second": 20,
+          "simTime": 20.117,
+          "sections": {
+            "dispatch": 10.2,
+            "physics": 0.77,
+            "sys.poseSync": 0.01,
+            "damage.entities": 0.02,
+            "sys.damage": 0.03,
+            "sys.structural": 0.05,
+            "sys.seismicDamage": 0.05,
+            "sys.groundMotion": 0.08,
+            "fire.incident": 0.02,
+            "fire.burn": 0.03,
+            "fire.steps": 0.02,
+            "fire.combustion": 0.09,
+            "thermal.solve": 0.11,
+            "fire.after": 0.03,
+            "thermal.couple": 0.02,
+            "thermal.total": 0.31,
+            "sys.thermal": 0.32,
+            "sys.groundFailure": 4.52,
+            "sys.deformation": 5.12
+          },
+          "entities": 31,
+          "bodies": 31,
+          "fragments": 0,
+          "debris": 0,
+          "active": [
+            "earthquake#1",
+            "fire#1",
+            "sinkhole#1"
+          ],
+          "blastWaves": 1,
+          "collapseEvents": 0,
+          "heapMB": 175.2,
+          "majorPageFaults": 0,
+          "gcPauses": 0,
+          "gcMs": 0,
+          "gcKinds": []
+        },
+        {
+          "ms": 8.69,
+          "step": 1201,
+          "second": 20,
+          "simTime": 20.017,
+          "sections": {
+            "dispatch": 4.76,
+            "physics": 0.07,
+            "damage.entities": 0.02,
+            "sys.damage": 0.03,
+            "sys.structural": 0.05,
+            "sys.seismicDamage": 0.04,
+            "sys.groundMotion": 0.03,
+            "fire.incident": 0.02,
+            "fire.burn": 0.04,
+            "fire.steps": 0.02,
+            "fire.combustion": 0.09,
+            "thermal.solve": 0.12,
+            "fire.after": 0.03,
+            "thermal.couple": 0.03,
+            "thermal.total": 0.29,
+            "sys.thermal": 0.29,
+            "sys.groundFailure": 3.13,
+            "sys.deformation": 1.14
+          },
+          "entities": 31,
+          "bodies": 31,
+          "fragments": 0,
+          "debris": 0,
+          "active": [
+            "earthquake#1",
+            "fire#1",
+            "sinkhole#1"
+          ],
+          "blastWaves": 1,
+          "collapseEvents": 0,
+          "heapMB": 167.9,
+          "majorPageFaults": 0,
+          "gcPauses": 0,
+          "gcMs": 0,
+          "gcKinds": []
+        }
+      ],
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 31,
+        "bodies": 31,
+        "events": 193,
+        "active": 5,
+        "duplicates": 0,
+        "heapMB": 98
+      },
+      "last": {
+        "t": 600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 31,
+        "bodies": 31,
+        "events": 217,
+        "active": 4,
+        "duplicates": 0,
+        "heapMB": 98.7
+      },
+      "eventsAt": [
+        217
+      ],
+      "activeAt": [
+        4
+      ],
+      "heapAt": [
+        98.7
+      ]
+    }
+  ]
+}

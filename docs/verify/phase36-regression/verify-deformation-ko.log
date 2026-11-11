@@ -1,0 +1,24 @@
+PASS 1 add deformation; only applicable parameters shown {"f0":["kind","radius","amount","x","z","profile","duration","falloff","supportLoss"],"f1":["kind","radius","amount","x","z","profile","duration","falloff","stages","supportLoss"],"f2":["kind","radius","amount","x","z","profile","duration","stages","length","bearing","supportLoss"]}
+PASS 2 centre picked by a world click {"center":[-15,10],"sel2":[]}
+PASS 3 parameters edited in the GUI; predicted numbers shown {"spec":{"event":"terrainDeformation","kind":"subsidence","center":[-15,10],"radius":22,"amount":1.6,"duration":4,"profile":"smooth","falloff":"smooth"},"summary3":"예상 최대 |변위| 1.60 m · 최대 경사 6° · 순 체적 -723 m³"}
+PASS 4 preview drawn; nothing in the world changed {"preview":1}
+PASS 5 validation: steep-slope warning with its reason; invalid radius flagged {"invalid5":true}
+PASS 6 run: runtime ground lowered by the prescribed amount, document untouched {"maxAbs":1.600000023841858,"h6":-1.600000023841858}
+PASS 7 rendered terrain mesh matches the runtime heights {"worst":0,"n":40401}
+PASS 8 overlay modes; exaggeration applies to arrows only and is labelled {"arrows8":80}
+PASS 9 car followed the ground down by contact {"y":-1.2508525848388672,"g":-1.2896650214713645,"y0":0}
+PASS 10 building ground response in the inspector (settlement, tilt, β, contact, class) 평균 침하(+ 위)−0.599 m기울기1.83° (1/31)각변위 β1/47 (최대 1/47)부등침하 등급파괴 수준(> 1/50, 외삽)기초 접촉96 % (최저 96 %)지반 지지력변화 없음지지력 이용률(초기 → 현재)0.03 → 0.04지반 손상 지수1.000
+PASS 11 foundation contact rings drawn for buildings on moving ground {"rings11":1}
+PASS 12 ground probe shows original / current elevation, displacement and its source 위치-15.0, 10.0원래 고도0.000 m현재 고도-1.600 m변위(+ 위)−1.600 m지반 지지력변화 없음변형 원인p1 · 침하 −1.60 m (지정 입력)주변 건물 · 5 m · 침하 −0.60 m · β 1/47 · 접촉 96%
+PASS 13 deformation milestones on the timeline; log entries translated {"ms13":["start","firstDamage","collapse","memberFailure","loadRedistribution","globalCollapse","deformPeak","end"]}
+PASS 14 reset restores the original ground exactly; fingerprint unchanged on exit {"engine":false,"flat":true,"mesh":true}
+PASS 15 staged uplift steps (0.25 m increments) and a cyclic ridge {"steps15":[0,0.25,0.5,1]}
+PASS 16 road cut by a step (impassable), shown in the road panel; network unchanged {"cut":1}
+PASS 17 lake over subsiding ground: water moves with the bed, mass budget closes, designs unchanged {"bed":302.88656051953416,"err":4.326725974939008e-14}
+PASS 18 flood + deformation: rain collects in the subsided bowl {"c":0.006827200808804168,"o":0.0011437927406164439}
+PASS 19 multi-hazard: ground damage reported separately from the earthquake {"hazards":["ground","earthquake"]}
+PASS 20 experiment saved and reloaded (schema unchanged); mid-run water over deformed ground refused with a reason {"version":7,"ok":true,"inst":[["earthquake",null],["terrainDeformation","subsidence"]]}
+PASS 21 a disabled deformation does nothing (no engine, no HUD) {"engine":false,"hud":false}
+PASS residual B: left-panel tabs fully visible [{"text":"오브젝트","clipped":false},{"text":"건물","clipped":false},{"text":"지형","clipped":false},{"text":"도로","clipped":false},{"text":"설계도","clipped":false},{"text":"장면 (0)","clipped":false},{"text":"선택","clipped":false},{"text":"재난","clipped":false},{"text":"분석","clipped":false},{"text":"설정","clipped":false},{"text":"전체","clipped":false},{"text":"★ 즐겨찾기","clipped":false},{"text":"최근","clipped":false},{"text":"기상","clipped":false},{"text":"지질","clipped":false},{"text":"수문","clipped":false},{"text":"화재·열","clipped":false},{"text":"충격·폭발","clipped":false},{"text":"우주·중력","clipped":false},{"text":"환경·대기","clipped":false}]
+
+22/22 passed; 0 page errors

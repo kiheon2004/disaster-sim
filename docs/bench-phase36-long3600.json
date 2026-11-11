@@ -1,0 +1,589 @@
+{
+  "date": "2026-11-10T16:43:52.123Z",
+  "node": "v24.21.0",
+  "cpus": "Apple M3",
+  "load": [
+    5.1,
+    4.9,
+    5.3
+  ],
+  "simSeconds": 3600,
+  "budgetS": 1800,
+  "rows": [
+    {
+      "scene": "mix",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 188.4,
+      "worstStepMs": 123,
+      "loadStart": 4.6,
+      "loadEnd": 4.3,
+      "keys": [
+        "earthquake#1",
+        "earthquake#2",
+        "blast#1",
+        "blast#2",
+        "blast#3",
+        "fire#1",
+        "fire#2",
+        "fire#3",
+        "fire#4",
+        "sinkhole#1",
+        "sinkhole#2"
+      ],
+      "ops": [],
+      "statuses": [
+        [
+          "earthquake#1",
+          "done"
+        ],
+        [
+          "earthquake#2",
+          "done"
+        ],
+        [
+          "blast#1",
+          "done"
+        ],
+        [
+          "blast#2",
+          "done"
+        ],
+        [
+          "blast#3",
+          "done"
+        ],
+        [
+          "fire#1",
+          "done"
+        ],
+        [
+          "fire#2",
+          "done"
+        ],
+        [
+          "fire#3",
+          "done"
+        ],
+        [
+          "fire#4",
+          "done"
+        ],
+        [
+          "sinkhole#1",
+          "done"
+        ],
+        [
+          "sinkhole#2",
+          "done"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 31,
+        "bodies": 31,
+        "events": 193,
+        "active": 5,
+        "duplicates": 0,
+        "heapMB": 169.1
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 31,
+        "bodies": 27,
+        "events": 314,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 157.3
+      },
+      "eventsAt": [
+        217,
+        217,
+        217,
+        221,
+        268,
+        314
+      ],
+      "activeAt": [
+        4,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        177.3,
+        217.2,
+        224.8,
+        241.4,
+        172.9,
+        157.3
+      ]
+    },
+    {
+      "scene": "vortices",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 65,
+      "worstStepMs": 40,
+      "loadStart": 4.3,
+      "loadEnd": 5.4,
+      "keys": [
+        "tornado#1",
+        "tornado#2"
+      ],
+      "ops": [
+        {
+          "t": 300,
+          "key": "tornado#1",
+          "op": "stop",
+          "ok": true,
+          "statusAfter": "stopped"
+        }
+      ],
+      "statuses": [
+        [
+          "tornado#1",
+          "stopped"
+        ],
+        [
+          "tornado#2",
+          "active"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 14.38,
+      "peakSpin": 1.1,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 11.66,
+        "maxSpin": 1.1,
+        "outside": false,
+        "entities": 15,
+        "bodies": 15,
+        "events": 131,
+        "active": 2,
+        "duplicates": 0,
+        "heapMB": 173.8
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 15,
+        "bodies": 9,
+        "events": 414,
+        "active": 1,
+        "duplicates": 0,
+        "heapMB": 215.7
+      },
+      "eventsAt": [
+        386,
+        411,
+        411,
+        411,
+        411,
+        414
+      ],
+      "activeAt": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "heapAt": [
+        263.7,
+        269.8,
+        253,
+        220.7,
+        202.6,
+        215.7
+      ]
+    },
+    {
+      "scene": "controls",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 373.8,
+      "worstStepMs": 205,
+      "loadStart": 5.4,
+      "loadEnd": 5.4,
+      "keys": [
+        "earthquake#1",
+        "waterSource#1",
+        "heatSource#1",
+        "blast#1"
+      ],
+      "ops": [
+        {
+          "t": 10,
+          "key": "blast#1",
+          "op": "cancel",
+          "ok": true,
+          "statusAfter": "cancelled"
+        },
+        {
+          "t": 30,
+          "key": "earthquake#1",
+          "op": "pause",
+          "ok": true,
+          "statusAfter": "paused"
+        },
+        {
+          "t": 90,
+          "key": "earthquake#1",
+          "op": "resume",
+          "ok": true,
+          "statusAfter": "active"
+        },
+        {
+          "t": 100,
+          "key": "heatSource#1",
+          "op": "pause",
+          "ok": false,
+          "statusAfter": "active"
+        },
+        {
+          "t": 400,
+          "key": "heatSource#1",
+          "op": "resume",
+          "ok": false,
+          "statusAfter": "active"
+        },
+        {
+          "t": 800,
+          "key": "heatSource#1",
+          "op": "stop",
+          "ok": true,
+          "statusAfter": "stopped"
+        },
+        {
+          "t": 900,
+          "key": "waterSource#1",
+          "op": "stop",
+          "ok": true,
+          "statusAfter": "stopped"
+        }
+      ],
+      "statuses": [
+        [
+          "earthquake#1",
+          "done"
+        ],
+        [
+          "waterSource#1",
+          "stopped"
+        ],
+        [
+          "heatSource#1",
+          "stopped"
+        ],
+        [
+          "blast#1",
+          "cancelled"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 15,
+        "bodies": 15,
+        "events": 0,
+        "active": 2,
+        "duplicates": 0,
+        "heapMB": 263.2
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 15,
+        "bodies": 15,
+        "events": 0,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 160
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "activeAt": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        307.9,
+        399.7,
+        412.4,
+        114.8,
+        199.5,
+        160
+      ]
+    },
+    {
+      "scene": "rainCells",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 36.4,
+      "worstStepMs": 40,
+      "loadStart": 5.4,
+      "loadEnd": 5.3,
+      "keys": [
+        "rain#1",
+        "rain#2",
+        "rain#3"
+      ],
+      "ops": [],
+      "statuses": [
+        [
+          "rain#1",
+          "done"
+        ],
+        [
+          "rain#2",
+          "done"
+        ],
+        [
+          "rain#3",
+          "done"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 9,
+        "bodies": 9,
+        "events": 0,
+        "active": 1,
+        "duplicates": 0,
+        "heapMB": 144.4
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 9,
+        "bodies": 9,
+        "events": 0,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 136.1
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "activeAt": [
+        3,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        128.2,
+        157.1,
+        120.2,
+        147,
+        173.4,
+        136.1
+      ]
+    },
+    {
+      "scene": "sinkholeUnder",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 31,
+      "worstStepMs": 30,
+      "loadStart": 5.3,
+      "loadEnd": 4.5,
+      "keys": [
+        "sinkhole#1"
+      ],
+      "ops": [],
+      "statuses": [
+        [
+          "sinkhole#1",
+          "done"
+        ]
+      ],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 1,
+        "bodies": 0,
+        "events": 16,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 125.2
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 1,
+        "bodies": 0,
+        "events": 16,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 192.1
+      },
+      "eventsAt": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "activeAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        172.4,
+        190.2,
+        142.6,
+        159.4,
+        175.7,
+        192.1
+      ]
+    },
+    {
+      "scene": "defaultWorld",
+      "simSeconds": 3600,
+      "reached": 3600,
+      "complete": true,
+      "wallS": 14.2,
+      "worstStepMs": 25,
+      "loadStart": 4.5,
+      "loadEnd": 5.1,
+      "keys": [],
+      "ops": [],
+      "statuses": [],
+      "bad": [],
+      "peakSpeed": 0,
+      "peakSpin": 0,
+      "duplicatesMax": 0,
+      "first": {
+        "t": 60,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 70,
+        "bodies": 70,
+        "events": 0,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 167
+      },
+      "last": {
+        "t": 3600,
+        "nonFinite": false,
+        "maxSpeed": 0,
+        "maxSpin": 0,
+        "outside": false,
+        "entities": 70,
+        "bodies": 70,
+        "events": 0,
+        "active": 0,
+        "duplicates": 0,
+        "heapMB": 391.7
+      },
+      "eventsAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "activeAt": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "heapAt": [
+        184.6,
+        188.1,
+        255,
+        321.9,
+        324.8,
+        391.7
+      ]
+    }
+  ]
+}

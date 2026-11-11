@@ -1,0 +1,24 @@
+PASS 1 mountain by click [{"id":"f1","kind":"mountain"}]
+PASS 2 valley drawn (path + double-click) {"h":-5.829999923706055}
+PASS 3 brush stroke goes into the sculpt layer; height change shown {"sculpt":"61.7","delta":"This stroke: max +0.47 m / −0.00 m · area 401 m²"}
+PASS 4 river drawn; channel carved {"h":-1.5}
+PASS 5 river path changed by dragging its handle (one undo step) {"before":[-30.06,0.1],"after":[-30.06,-19.9]}
+PASS 6 lake: basin carved, water surface below the shore, initial water {"surface":-6.32,"water":3626}
+PASS 7 coastline: sea side drops below sea level {"sea":-1.1200000047683716,"land":-5.829999923706055}
+PASS 8 surface material painted (paint layer, rock) {"painted":268}
+PASS 9 forest painted with the forest brush {"trees":27}
+PASS 10 road crosses the river: culvert opening keeps the channel (water passes) {"segments":1,"channelVertices":14,"keptNatural":14}
+PASS 11 buildings placed along the road near the river (kept out of the channel) {"n":6,"inChannel":0}
+PASS 12 terrain change under a building: refit (moved with the ground) and foundation check {"y0":0,"y1":3.5539016112805535,"warned":true}
+PASS 13 undo all → empty flat world; redo all → identical {"steps":14,"empty":{"f":0,"flat":true,"o":0}}
+PASS 14 save / load round trip identical (schema v7, layers recomposed exactly) {"ok":true,"same":true,"schema":7,"report":{"droppedFeatures":0,"rebuilt":false,"recomposedVertices":0},"kb":337}
+PASS 15 rain: river / lake water present, mass budget closed {"water":36825,"err":1.2369127944111824e-10,"roads":{"total":1,"cracked":0,"severe":0,"inundated":1,"impassable":1,"scoured":0,"steep":0,"cut":0,"rubble":0},"trees":0,"events":3}
+PASS 16 flood: rising sea + rain inundate the low ground {"water":58291,"err":-1.5279510989785194e-10,"roads":{"total":1,"cracked":0,"severe":0,"inundated":1,"impassable":1,"scoured":0,"steep":0,"cut":0,"rubble":0},"trees":0,"events":20}
+PASS 17 typhoon: trees respond to the wind {"water":36917,"err":2.4010660126805305e-10,"roads":{"total":1,"cracked":0,"severe":0,"inundated":1,"impassable":1,"scoured":0,"steep":0,"cut":0,"rubble":0},"trees":29,"events":174}
+PASS 18 earthquake: roads crack on the natural terrain {"water":36819,"err":2.4010660126805305e-10,"roads":{"total":1,"cracked":1,"severe":1,"inundated":1,"impassable":1,"scoured":0,"steep":0,"cut":0,"rubble":0},"trees":0,"events":147}
+PASS 19 multi-hazard run (wind + earthquake + rain) {"water":36821,"err":1.7462298274040222e-10,"roads":{"total":1,"cracked":0,"severe":0,"inundated":1,"impassable":1,"scoured":0,"steep":0,"cut":0,"rubble":0},"trees":33,"events":149}
+PASS 20 original world restored after every run (terrain, layers, roads, objects identical) 
+{
+ "errors": []
+}
+20/20 passed

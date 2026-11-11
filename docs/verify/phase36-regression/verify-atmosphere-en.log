@@ -1,0 +1,49 @@
+PASS 1 atmosphere experiment added from the Experiment tab (reference state, boundary, removal, air left behind, restoration, opt-in couplings) — density is not an input ["removal","altitude","pressure","temperature","boundary","thermo","restore","coupleBlast","coupleMeteor"]
+PASS 2 reference state: temperature entered in °C (stored in K), the density derived ρ = p/RT; a negative pressure is rejected with its reason {"T":293.15,"sum":"Datum 101.33 kPa, 20.0 °C → ρ 1.204 kg/m³ (derived) · scale height 8.58 km · sound 343 m/sOver this terrain: 101.11 kPa ","invalid2":"⚠ A pressure must be positive (an absolute pressure)"}
+PASS 3 removal and restoration set in the fields: to 20 % over 120 s, then the surroundings recover from 150 s over 120 s {"event":"atmosphere","altitude":0,"boundary":"open","thermo":"adiabatic","removal":"linear","extent":"uniform","target":0.2,"duration":120,"restore":"boundary","restoreAt":150,"restoreDuration":120,"restoreTarget":1,"position":[0,0],"radius":25}
+PASS 4 preview: initial pressure field over the terrain, the boundary, the planned air-mass path; end state (pressure, adiabatic temperature, density) and boiling point Datum 101.33 kPa, 15.0 °C → ρ 1.225 kg/m³ (derived) · scale height 8.43 km · sound 340 m/sOver this terrain: 101.11 kPa … 101.35 kPa · ρ 1.222 … 1.225 kg/m³Air column 10329 kg/m² · air over the world 
+PASS 5 temperature shown with its ISA auto value and editable; the air left behind adiabatic by default 
+PASS 7 wind boundary: an open boundary with the world wind as the prescribed background 
+PASS 3b pressure shown: mean surface pressure follows the planned path from 101.3 kPa (HUD) {"p":99968.63393209928}
+PASS 4b density shown: ρ = p/RT ≈ 1.22 kg/m³ {"rho":1.2125264883716336}
+PASS 5b temperature shown: the layer at the datum temperature, cooled adiabatically by the removal so far {"T":287.04926716815754,"expected":287.0474586606256}
+PASS 6b probe rows readable (labels not squeezed by long values) []
+PASS 6 pressure falls with altitude: the mound summit has a lower pressure (hydrostatic, ≈ 12 Pa/m); the probe shows the vertical profile {"valley":99962.09810079541,"summit":99752.1021136003,"hs":17.731250286102295}
+PASS 8 airflow visualized: flow arrows and streamlines of the computed transport velocity (wind + computed flow) {"drawn":6801}
+PASS 11 removal started at its start time (milestone) ["atmosStart","removalStart","floodArea","pressureMilestone","ignition","heatRelease","heatRelease","plumeDevelopment","firstDamage","airflowPeak","pressureMilestone","fireDecay","peakTemperature"]
+PASS 12 air mass falls: real mass removed (ledger), share ≈ 60 % at 60 s {"share":0.5999999999999825,"removed":165251068.5731389}
+PASS 13 pressure falls with the mass (p = σ·g) {"p":60791.73685059973}
+PASS 14 density falls — with the adiabatic cooling ρ/ρ₀ ≈ (p/p₀)^(1/γ) (0.85 kg/m³ at 60 %); the air aloft cooled {"rho":0.8470406234221868,"Tcol":249.03120190824103}
+PASS 15 vehicles in thin air: wind load ∝ local ρ·v² (load / ρv² unchanged), lower total load {"kRatio":[1.0103284157718118,0.9950189581214519,0.9816971978943793],"before":373.29413028797023,"now":239.12716591399823}
+PASS 16 trees in thin air: wind load ∝ local ρ·v², lower total {"kRatio":[0.9858136833350699],"before":3085.3682424920808,"now":1007.2590575754817}
+PASS 17 buildings in thin air: load ratio ∝ ρ·v² against the sea-level design capacity, lower {"kRatio":[1.0000000000000002,0.9999999999999998,0.9999999999999998],"before":0.050195130579146346,"now":0.0357419825532235}
+PASS 18 O₂ supply: the O₂ mass in the layer fell with the air (fraction kept) {"o2":26508.322585433678,"o2a":112092.8838710708,"frac":0.23199886503829253}
+PASS 19 fire responds to the air: the fire model runs with the O₂ supply limit of the thinned air {"burning":3,"o2Limit":true,"ever":0,"consumed":68.60517734439759}
+PASS 20 smoke carried by the layer flow (wind + computed flow), smoke ledger closed; smoke overlay with its mg/m³ legend {"fl20":{"produced":1.0290776601659526,"moved":1.027513707150809,"res":1.941934531940974e-15},"leg":"FieldOffPressurePressure changeDensityTemperatureAir speedAi"}
+PASS 25 water and air pressure: the lake keeps its water (no disappearance at low pressure); the lower boiling point is reported, not modelled {"boiling":62.70580876104998,"w25":4406.617341122537}
+PASS 29 pressure overlay with its fixed kPa legend FieldOffPressurePressure changeDensityTemperatureAir speedAir massO₂SmokeVolcani
+PASS 30 density overlay with its fixed kg/m³ legend FieldOffPressurePressure changeDensityTemperatureAir speedAir massO₂SmokeVolcani
+PASS 31 temperature overlay with its fixed °C legend FieldOffPressurePressure changeDensityTemperatureAir speedAir massO₂SmokeVolcani
+PASS 32 oxygen overlay with its fixed kg/m³ legend FieldOffPressurePressure changeDensityTemperatureAir speedAir massO₂SmokeVolcani
+PASS 33 inspector: local pressure, density, temperature, computed flow, O₂, dynamic pressure, what changes the air; labels not squeezed {"text":"Pressure23.639 kPaPressure change-77.683 kPaDensity0.4292 kg/m³ · 35.0 %Air temperature-81.3 °CComputed flow0.016 m/sO₂0","narrow33":[]}
+PASS 26 restoration: the surroundings recover, air flows in through the edges, the mass is back (milestones) {"share":0.9999999998356315,"in":330588493.68765527,"removed":330502137.13802445}
+PASS 27 mass ledger closes (removed, boundary in / out, residual at round-off) {"res":-1.0277253146978535e-11}
+PASS 28 energy ledger closes (removed with the air, pressure work, heat in, boundary) {"res":-1.0330647400113695e-13,"work":4446134537074.556}
+PASS 34 timeline milestones: start, removal, pressure levels, low density, restoration ["atmosStart","removalStart","floodArea","pressureMilestone","ignition","heatRelease","heatRelease","plumeDevelopment","firstDamage","airflowPeak","pressureMilestone","fireDecay","peakTemperature","pressureMilestone","lowDensity","pressureMilestone","fireOut","restorationStart","restorationComplete"]
+PASS 35 results: cards, atmosphere CSV (ledgers, history), JSON summary; text not cut {"res":"Atmosphere Atmosphere CSVDatum pressure101.32kPafrom 101.33 kPa · lowest surface","clip35":[]}
+PASS 35b HUD and overlay text not cut; remaining-air indicator shown (no darkening of the scene) []
+PASS 38 same conditions again (reset): the same air mass, flow, temperatures and ledgers {"r38":{"a":true,"t":0},"h38a":"1.65648060225953e+7|1.37315199073663e+11|3.30502137138024e+8|1.38468006711109e+14","h38b":"1.65648060225953e+7|1.37315199073663e+11|3.30502137138024e+8|1.38468006711109e+14"}
+PASS 37 leaving the simulation leaves the original world untouched (fingerprint) 
+PASS 9 pressure difference drives air: lower pressure at the sink, the layer flows toward it from both sides; log-scale pressure-change legend {"west":3.5251815211429847,"east":-3.525180343820779,"dpCentre":-0.011060630012343609,"dpEdge":0.0007555450048130297}
+PASS 10 thermal plume: heated air rises (updraft), the plume milestone {"w":2.003959934700417}
+PASS 21 volcanic ash in thin air: released ash airborne and settling (puffs), separate from gas and smoke {"v21":{"puffs":52,"ash":62400.00000004176,"gas":1560.0000000010587},"share":0.30000000390858245}
+PASS 22 volcanic gas / plume: the atmosphere received exactly the volcano's gas (tracer, ledger), gas overlay {"emitted":1560.0000000010587,"volcano":1560.0000000010587,"airborne":223.087771472123}
+PASS 23 meteor entry (opt-in): the thinner column → less drag, a faster arrival than the standard entry {"opted":16487.848761438792,"standard":16485.254003099453}
+PASS 24 blast compatibility (opt-in): the blast takes the local background pressure; its overpressure keeps its own model and legend {"blastP":40000}
+PASS 36 atmosphere experiment saved and reloaded (schema 7): scheduled removal, reservoir restoration, isothermal, altitude {"ok":true,"version":7,"spec":{"event":"atmosphere","altitude":1500,"boundary":"closed","thermo":"isothermal","removal":"scheduled","target":0.5,"duration":600,"schedule":[[0,100],[300,400]],"restore":"reservoir","restoreAt":700,"restoreDuration":300,"restoreTarget":0.9}}
+PASS 39 large town (1000 houses) with removal + wind: interactive frame rate {"fps":55.4,"worstFrameMs":33.4,"atmosMs":0.30000000074505806,"gl39":{"calls":17,"geometries":22,"textures":2}}
+PASS 40 repeated runs release their resources: GPU geometries back, heap flat {"geoA":9,"geoB":9,"heaps40":[65.5,66.1,66.2]}
+PASS whole run: no page errors, the tab alive, GPU geometries back to the start {"errors":0,"geo0":21,"geo1":9}
+{"heap0":38.4,"heap1":67.7,"geo0":21,"geo1":9,"crashed":false}
+
+46/46 passed; 0 page errors; heap 38.4 → 67.7 MB; geometries 21 → 9; crashed false

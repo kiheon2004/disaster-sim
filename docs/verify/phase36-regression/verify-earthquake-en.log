@@ -1,0 +1,54 @@
+{
+  "samples": [
+    {
+      "t": 4.016666666666658,
+      "accel": 0.19472610886880823,
+      "phase": "s",
+      "events": 0,
+      "quakeEvents": 0
+    },
+    {
+      "t": 9.000000000000027,
+      "accel": 0.5687213177223203,
+      "phase": "s",
+      "events": 147,
+      "quakeEvents": 147
+    },
+    {
+      "t": 14.000000000000275,
+      "accel": 0.05233586775824219,
+      "phase": "s",
+      "events": 186,
+      "quakeEvents": 186
+    },
+    {
+      "t": 22.000000000000032,
+      "accel": 0.010587145987376432,
+      "phase": "coda",
+      "events": 199,
+      "quakeEvents": 199
+    }
+  ],
+  "summary": {
+    "earthquake": {
+      "duration": 25.016666666666527,
+      "inputPga": 0.7,
+      "magnitude": 7,
+      "peakGroundAcceleration": 0.6997648252470905,
+      "peakGroundObject": "sign_24f535964b",
+      "maxBuildingDisplacement": 0.28241474862660887,
+      "maxDisplacementObject": "building_fb2563cc35",
+      "maxDrift": 0.031992742358317644,
+      "maxDriftObject": "building_3c7b97fa36",
+      "maxFloorAcceleration": 0.6108673765916363,
+      "buildingsDamaged": 8,
+      "buildingsCollapsed": 6,
+      "infrastructureFallen": 3,
+      "peopleFallen": 12,
+      "earthquakeEvents": 199,
+      "windEvents": 0
+    },
+    "totalEvents": 199
+  },
+  "errors": []
+}
