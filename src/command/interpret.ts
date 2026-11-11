@@ -11,7 +11,7 @@ import { parseCommand } from './parse';
 export type AskSlot = 'direction' | 'amount' | 'target' | 'kind' | 'name' | 'field' | 'axis' | 'place';
 
 export type Interpretation =
-  | { kind: 'ok'; intents: Intent[]; canonical: string[]; source: 'canonical' | 'rules' | 'legacy'; notes: Msg[] }
+  | { kind: 'ok'; intents: Intent[]; canonical: string[]; source: 'canonical' | 'rules' | 'legacy' | 'provider'; notes: Msg[] }
   | { kind: 'ask'; slot: AskSlot; question: Msg; understood: string }
   | { kind: 'unknown'; reason: Msg; suggestions: string[] };
 
