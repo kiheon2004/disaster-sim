@@ -7,7 +7,7 @@ import { msg, type Env } from './context';
 import { formatCanonical } from './canonical';
 import { intentProblem, type Intent } from './intent';
 import { planDisaster, planInstance, planSim, planSpeed } from './planDisaster';
-import { planAlign, planCopy, planDelete, planDeselect, planDistribute, planDuplicate, planFlag, planGroup, planMatch, planMove, planRename, planRotate, planScale, planSelect, planUngroup } from './planEdit';
+import { planAlign, planCopy, planDelete, planDeselect, planDistribute, planDuplicate, planFlag, planGroup, planMatch, planMove, planRename, planRotate, planScale, planSelect, planSet, planUngroup } from './planEdit';
 import { planPlace } from './planPlace';
 import { planFocus, planQuery } from './planQuery';
 import { newDraft, PlanStop, type Draft, type Plan, type PlanClarify, type PlanOptions, type PlanResult } from './planTypes';
@@ -41,7 +41,7 @@ function dispatch(i: Intent, env: Env, o: PlanOptions, d: Draft): void {
     case 'move': return planMove(i, env, d);
     case 'rotate': return planRotate(i, env, d);
     case 'scale': return planScale(i, env, d);
-    case 'set': throw new PlanStop({ error: msg('cmd37.err.notYet', { command: 'set' }) });
+    case 'set': return planSet(i, env, d);
     case 'align': return planAlign(i, env, d);
     case 'distribute': return planDistribute(i, env, d);
     case 'match': return planMatch(i, env, d);

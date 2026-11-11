@@ -11,6 +11,7 @@ import type { EntityId } from '@/core/types';
 import type { WorldDocument } from '@/core/model';
 import type { BuildingDesign } from '@/buildings/types';
 import { forkDocument } from '@/world/fork';
+import { applyStamp } from '@/world/stamp';
 import { scratchWorld, type WorldState } from '@/world/worldStore';
 import { envOf, msg, pruneResults, pushResult, type CommandContext, type Msg } from './context';
 import { diffDocuments, type DocDiff } from './diff';
@@ -32,9 +33,13 @@ export function applyOps(store: WorldStore, ops: readonly PlanOp[]): EntityId[] 
         if (op.result === 'added') added.push(...ids);
         break;
       }
-      case 'stamp':
-        added.push(...S.applyEdit({ add: op.inputs }));
+      case 'stamp': {
+        // (inside the run's batch `applyStamp` joins it: copies and their car settings are part of the one step)
+        const ids = applyStamp(store, { add: op.inputs }, op.cars ?? undefined, op.keys);
+        if (!ids) throw new Error('The copies could not be applied');
+        added.push(...ids);
         break;
+      }
       case 'groupName':
         S.setGroupName(op.group, op.name);
         break;

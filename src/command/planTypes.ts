@@ -8,6 +8,7 @@ import type { WorldObject } from '@/core/model';
 import type { PhenomenonInstance } from '@/phenomena/types';
 import type { SnapKind } from '@/editor/snap/snapEngine';
 import type { PlacementWarning } from '@/editor/build/placementCheck';
+import type { VehicleCar } from '@/vehicle/settings';
 import type { CreateObjectInput } from '@/world/WorldDocument';
 import type { WorldEdit } from '@/world/worldStore';
 import type { Highlight, Msg } from './context';
@@ -43,8 +44,12 @@ export interface ProgramStroke {
 export type PlanOp =
   /** `applyEdit` — `result` says which ids become the result set: the ones it adds, the ones it updates, or none. */
   | { op: 'edit'; edit: WorldEdit; result: 'added' | 'updated' | 'none' }
-  /** Copies of existing objects (duplicate): `sources[i]` is what `inputs[i]` copies — settings bound to ids follow. */
-  | { op: 'stamp'; inputs: CreateObjectInput[]; sources: EntityId[] }
+  /**
+   * Copies of existing objects (duplicate), committed like the editor's stamps (world/stamp.ts `applyStamp`): the car
+   * settings the copied cars carry (`cars`, by the stamp's keys; `keys[k]` belongs to `inputs[k]`) are written under
+   * the new ids in the same step.
+   */
+  | { op: 'stamp'; inputs: CreateObjectInput[]; cars: Record<string, VehicleCar> | null; keys: string[] }
   | { op: 'groupName'; group: string; name: string }
   /** The experiment plan's instances (placed disasters), as a whole. */
   | { op: 'experiment'; instances: PhenomenonInstance[] }

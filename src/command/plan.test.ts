@@ -414,9 +414,38 @@ describe('edits of existing objects', () => {
     expect(part.counts.remove).toBe(1);
     expect(keys(part.warnings)).toContain('cmd37.warn.partialGroup');
     const dup = ok(S().doc, 'duplicate selection offset=0,30', sel(of('car').slice(0, 2)));
-    expect(dup.ops[0]).toMatchObject({ op: 'stamp', sources: of('car').slice(0, 2).map((c) => c.id) });
+    expect(dup.ops[0]).toMatchObject({ op: 'stamp', keys: ['0', '1'], cars: null });
     expect(added(dup).map((c) => c.transform.position[2])).toEqual(of('car').slice(0, 2).map((c) => c.transform.position[2] + 30));
     expect(errorKey(plan(S().doc, 'duplicate selection offset=0,200', sel(of('car').slice(0, 2))))).toBe('cmd37.err.stampOutside');
+  });
+
+  it('set: the same value into a field of every object — the multi-selection Inspector\'s common fields', () => {
+    const { S, of } = setup();
+    const cars = of('car').slice(0, 3);
+    const p = ok(S().doc, 'set selection x=40 heading=90', sel(cars));
+    expect(updated(p).map((o) => o.transform.position[0])).toEqual([40, 40, 40]);
+    expect(updated(p).every((o) => Math.abs(yawOf(o.transform.rotation) - Math.PI / 2) < 1e-3)).toBe(true);
+    // z is left alone; the cars stood on the road and stand on the ground where they land.
+    expect(updated(p).map((o) => o.transform.position[2])).toEqual(cars.map((c) => c.transform.position[2]));
+    // Height above the ground under each object.
+    const lifted = updated(ok(S().doc, 'set selection lift=0.5', sel(cars)));
+    lifted.forEach((o, k) => expect(o.transform.position[1] - cars[k].transform.position[1]).toBeCloseTo(0.5, 6));
+    // Out of range: a height below the lowest terrain is limited (and said); a position whose footprint would leave
+    // the world is refused; modular buildings keep their size under scale.
+    const deep = ok(S().doc, 'set selection y=-100', sel(cars.slice(0, 1)));
+    expect(updated(deep)[0].transform.position[1]).toBe(-40);
+    expect(deep.warnings).toContainEqual({ key: 'cmd37.warn.setClamped', params: { fields: 'y' } });
+    expect(errorKey(plan(S().doc, 'set selection x=500', sel(cars.slice(0, 1))))).toBe('cmd37.err.allOutside');
+    const scaled = ok(S().doc, 'set selection scale=1.5', sel([cars[0], of('building')[0]]));
+    expect(updated(scaled).length).toBe(1);
+    expect(keys(scaled.notes)).toContain('cmd37.note.modularScale');
+    // The value they already have: nothing to do.
+    expect(ok(S().doc, `set selection z=${cars[0].transform.position[2]}`, sel(cars.slice(0, 1))).ops).toEqual([]);
+    // Locked objects are skipped and counted.
+    S().applyEdit({ update: [{ ...cars[0], locked: true }] });
+    const two = ok(S().doc, 'set selection x=41', sel(cars));
+    expect(updated(two).length).toBe(2);
+    expect(two.notes).toContainEqual({ key: 'cmd37.note.lockedSkipped', params: { count: 1 } });
   });
 
   it('a rank that ends in a tie: a question for an edit, all of them for a query', () => {

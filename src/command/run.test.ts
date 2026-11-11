@@ -183,6 +183,39 @@ describe('one command = one undo step', () => {
   });
 });
 
+describe('copies of cars', () => {
+  it('"duplicate" takes the cars\' simulation settings along in the same step (the driver only when copied too)', () => {
+    const st = town();
+    const S = () => st.getState();
+    const objs = Object.values(S().doc.objects);
+    const [carA, carB] = objs.filter((o) => o.type === 'car');
+    const [driver, passenger] = objs.filter((o) => o.type === 'human');
+    S().updateSimulationSettings({ vehicles: { model: 'dynamics', cars: {
+      [carA.id]: { drive: 'awd', autopilot: { path: [[0, 0], [20, 0]], speed: 5 } },
+      [carB.id]: { drive: 'fwd', occupants: [{ human: driver.id, seat: 'driver', restrained: true }, { human: passenger.id, seat: 'passenger', restrained: false }] },
+    } } as never });
+    const before = bits(S().doc);
+    const steps = S().past.length;
+    const ctx: CommandContext = { ...emptyContext(), selection: [carA.id, carB.id, driver.id] };
+    const r = okRun(runIntents(st, intents('duplicate selection offset=0,20'), ctx));
+    expect(S().past.length).toBe(steps + 1);
+    const cars = S().doc.settings.simulation.vehicles!.cars!;
+    const added = r.lines[0].added.map((id) => S().doc.objects[id]);
+    const copyA = added.find((o) => o.type === 'car' && cars[o.id]?.drive === 'awd')!;
+    const copyB = added.find((o) => o.type === 'car' && cars[o.id]?.drive === 'fwd')!;
+    const copyDriver = added.find((o) => o.type === 'human')!;
+    expect(cars[copyA.id]).toMatchObject({ drive: 'awd', autopilot: { speed: 5, path: [[0, 0], [20, 0]] } });
+    // The driver was copied too: the copy drives the copied car. The passenger was not: dropped.
+    expect(cars[copyB.id].occupants).toEqual([{ human: copyDriver.id, seat: 'driver', restrained: true }]);
+    // The sources are untouched.
+    expect(cars[carB.id].occupants?.length).toBe(2);
+    expect(r.lines[0].plan.notes).toContainEqual({ key: 'cmd37.note.carSettings', params: { count: 2 } });
+    S().undo();
+    expect(bits(S().doc)).toBe(before);
+    expect(Object.keys(S().doc.settings.simulation.vehicles!.cars!).sort()).toEqual([carA.id, carB.id].sort());
+  });
+});
+
 describe('preview', () => {
   it('runs on a fork: the document, its history and its arrays are untouched; the difference is what confirming does', () => {
     const st = street();

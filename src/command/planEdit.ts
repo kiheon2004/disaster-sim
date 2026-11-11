@@ -12,7 +12,8 @@ import type { EntityId, Vec3 } from '@/core/types';
 import type { WorldObject } from '@/core/model';
 import { degToRad, hashString } from '@/core/math';
 import { getDefinition } from '@/objects/registry';
-import { createBlueprint, instantiateBlueprint } from '@/editor/build/blueprint';
+import { createBlueprint, instantiateBlueprint, stampKeys } from '@/editor/build/blueprint';
+import { setCommonTransform } from '@/editor/build/numericTransform';
 import { subSeed } from '@/editor/build/distribution';
 import { FootprintIndex } from '@/editor/build/footprint';
 import { alignObjects, distributeGaps, distributeObjects, matchObjects, selectionPivot, transformObjects } from '@/editor/build/groupTransform';
@@ -137,6 +138,22 @@ export function planScale(i: IntentOf<'scale'>, env: Env, d: Draft): void {
   const modular = objs.filter((o) => o.building).length;
   if (modular) d.notes.push(msg('cmd37.note.modularScale', { count: modular }));
   update(d, objs, transformObjects(objs, selectionPivot(objs), { dx: 0, dy: 0, dz: 0, dyaw: 0, scale: i.factor }, env.terrain));
+}
+
+/**
+ * The same value into a transform field of every object — the multi-selection Inspector's common fields
+ * (`setCommonTransform`): x / z inside the world square, objects that stood on the ground are seated again where they
+ * land, lifted ones keep their height; `lift` = height above the ground under each object.
+ */
+export function planSet(i: IntentOf<'set'>, env: Env, d: Draft): void {
+  const objs = editable(targetOf(i.target, env, d, true), d);
+  const { kind: _kind, target: _target, ...patch } = i;
+  void _kind; void _target;
+  const r = setCommonTransform(objs, patch, env.terrain);
+  if (r.clamped.length) d.warnings.push(msg('cmd37.warn.setClamped', { fields: r.clamped.join(', ') }));
+  if (r.keptSize) d.notes.push(msg('cmd37.note.modularScale', { count: r.keptSize }));
+  const byId = new Map(objs.map((o) => [o.id, o]));
+  update(d, r.objects.map((o) => byId.get(o.id) ?? o), r.objects);
 }
 
 // ── Align · distribute · match · copy ────────────────────────────────────────────────
@@ -316,7 +333,8 @@ export function planDuplicate(i: IntentOf<'duplicate'>, env: Env, d: Draft): voi
   if (objs.length > MAX_ITEMS) stop(msg('cmd37.err.tooMany', { count: objs.length, max: MAX_ITEMS }));
   const [dx, dz] = i.offset ?? DUPLICATE_OFFSET;
   if (!i.offset) d.notes.push(msg('cmd37.note.duplicateOffset', { dx, dz }));
-  const bp = createBlueprint(objs, env.terrain);
+  // The copied cars take their simulation settings along (occupants: only people copied with them).
+  const bp = createBlueprint(objs, env.terrain, '', undefined, env.doc.settings.simulation.vehicles?.cars);
   const pivot = selectionPivot(objs);
   const inputs = instantiateBlueprint(bp, pivot.x + dx, pivot.z + dz, 0, env.terrain);
   // Like a paste: a stamp that reaches outside the world is refused; overlaps are warnings.
@@ -325,9 +343,8 @@ export function planDuplicate(i: IntentOf<'duplicate'>, env: Env, d: Draft): voi
   const overlaps = check.items.filter((x) => x.warnings.includes('overlap')).length;
   if (overlaps) d.warnings.push(msg('cmd37.warn.overlap', { count: overlaps }));
   inputs.forEach((input, k) => d.items.push({ status: check.items[k].warnings.length ? 'warn' : 'ok', x: input.transform.position[0], z: input.transform.position[2], reasons: check.items[k].warnings }));
-  // (the blueprint lists the objects in its own order — type, running number, id: `sources` follows it, one per input)
-  const sources = [...objs].sort((a, b) => a.type.localeCompare(b.type) || a.serial - b.serial || a.id.localeCompare(b.id)).map((o) => o.id);
-  d.ops.push({ op: 'stamp', inputs, sources });
+  if (bp.cars) d.notes.push(msg('cmd37.note.carSettings', { count: Object.keys(bp.cars).length }));
+  d.ops.push({ op: 'stamp', inputs, cars: bp.cars ?? null, keys: stampKeys(bp) });
   d.counts.create = inputs.length;
   if (inputs.length >= CONFIRM_ITEMS) d.confirm = msg('cmd37.confirm.many', { count: inputs.length });
 }

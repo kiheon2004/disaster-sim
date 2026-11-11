@@ -209,4 +209,6 @@ export const koP37Cmd: Record<keyof typeof enP37Cmd, string> = {
   'cmd37.col.time': '시각 (s)',
   'cmd37.err.busy': '브러시 획이나 끌기가 진행 중입니다 — 먼저 끝내세요.',
   'cmd37.err.internal': '명령이 실패했고 아무것도 바뀌지 않았습니다: {message}',
+  'cmd37.note.carSettings': '복제한 차 {count}대의 시뮬 설정이 따라갑니다(자율 주행 경로는 그대로).',
+  'cmd37.warn.setClamped': '범위를 벗어나 제한했습니다: {fields}.',
 };

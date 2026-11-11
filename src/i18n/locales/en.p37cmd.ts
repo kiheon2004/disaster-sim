@@ -211,4 +211,6 @@ export const enP37Cmd = {
   'cmd37.col.time': 'Time (s)',
   'cmd37.err.busy': 'A brush stroke or a drag is in progress — finish it first.',
   'cmd37.err.internal': 'The command failed and nothing was changed: {message}',
+  'cmd37.note.carSettings': '{count} copied cars take their simulation settings along (autopilot paths stay where they were).',
+  'cmd37.warn.setClamped': 'Out of range and limited: {fields}.',
 };
