@@ -141,6 +141,39 @@ export function applyLayerPatch(land: Landscape, nx: number, p: LayerPatch, side
   }
 }
 
+/** Every per-vertex layer of a landscape (the base layers change only when the base terrain is replaced). */
+export const ALL_LAYERS: readonly LayerName[] = ['baseHeights', 'baseGround', 'sculpt', 'paint', 'naturalHeights', 'naturalGround', 'naturalCulvert', 'naturalRoadBase'];
+
+/**
+ * Phase 37 (batch undo): ONE patch of everything that differs from full copies of the layers taken earlier
+ * (`snapshotLandscape(land, ALL_LAYERS)`): only the layers that changed, over the smallest rectangle that covers every
+ * changed vertex of any of them. Null when nothing changed.
+ */
+export function diffLayerPatch(land: Landscape, nx: number, before: LayerSnapshot): LayerPatch | null {
+  let x0 = Infinity, z0 = Infinity, x1 = -1, z1 = -1;
+  const changed: LayerSnapshot = {};
+  for (const name of Object.keys(before) as LayerName[]) {
+    const a = before[name]!, b = layer(land, name);
+    let any = false;
+    for (let i = 0; i < b.length; i++) {
+      if (Object.is(a[i], b[i])) continue;
+      any = true;
+      const x = i % nx, z = (i - x) / nx;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (z < z0) z0 = z;
+      if (z > z1) z1 = z;
+    }
+    if (any) changed[name] = a;
+  }
+  return x1 < 0 ? null : makeLayerPatch(land, nx, changed, { x0, z0, x1, z1 });
+}
+
+/** Put full copies of layers back (in place): the inverse of every layer edit since the copies were taken. */
+export function restoreLandscape(land: Landscape, before: LayerSnapshot) {
+  for (const name of Object.keys(before) as LayerName[]) layer(land, name).set(before[name]!);
+}
+
 /**
  * A document whose terrain was written directly (older code paths, tools, tests) may carry layers
  * that no longer compose to it. Rebuild the landscape from the terrain in that case (natural =

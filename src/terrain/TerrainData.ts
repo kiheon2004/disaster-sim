@@ -163,6 +163,38 @@ export function applyPatch(t: TerrainData, p: TerrainPatch, side: 'before' | 'af
   t.revision++;
 }
 
+/**
+ * Phase 37 (batch undo): the smallest vertex rectangle in which the terrain now differs from a full copy of its layers
+ * taken earlier (`snapshotLayers`), or null when no vertex changed. A batch of edits becomes ONE patch over this
+ * rectangle (`makePatch(t, before, rect)`), however many strokes / road bakes it was made of.
+ */
+export function changedRect(t: TerrainData, before: { heights: Float32Array; ground: Uint8Array; soil: Uint8Array }): GridRect | null {
+  const { nx, nz, heights, ground, soil } = t;
+  let x0 = nx, z0 = nz, x1 = -1, z1 = -1;
+  for (let z = 0; z < nz; z++) {
+    const row = z * nx;
+    for (let x = 0; x < nx; x++) {
+      const i = row + x;
+      // (Object.is: a NaN height would otherwise look changed forever; −0 / 0 are different bits and count)
+      if (Object.is(heights[i], before.heights[i]) && ground[i] === before.ground[i] && soil[i] === before.soil[i]) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (z < z0) z0 = z;
+      z1 = z;
+    }
+  }
+  return x1 < 0 ? null : { x0, z0, x1, z1 };
+}
+
+/** Put a full copy of the layers back (in place) and bump the revision — the inverse of every edit since the copy. */
+export function restoreLayers(t: TerrainData, before: { heights: Float32Array; ground: Uint8Array; soil: Uint8Array; settings: TerrainSettings }) {
+  t.heights.set(before.heights);
+  t.ground.set(before.ground);
+  t.soil.set(before.soil);
+  t.settings = { ...before.settings };
+  t.revision++;
+}
+
 export function snapshotLayers(t: TerrainData) {
   return { heights: t.heights.slice(), ground: t.ground.slice(), soil: t.soil.slice(), settings: { ...t.settings } };
 }

@@ -17,7 +17,7 @@ import {
   nextSerial,
   type CreateObjectInput,
 } from './WorldDocument';
-import { applyPatch, makePatch, snapshotLayers, unionRect, type GridRect, type TerrainPatch } from '@/terrain/TerrainData';
+import { applyPatch, changedRect, makePatch, restoreLayers, snapshotLayers, unionRect, type GridRect, type TerrainPatch } from '@/terrain/TerrainData';
 import { applyDab, type DabOptions } from '@/terrain/TerrainEditor';
 import { generateTerrain } from '@/terrain/TerrainPresets';
 import { TerrainSampler, samplerFor } from '@/terrain/TerrainSampler';
@@ -31,7 +31,7 @@ import { followRoads, relinkMoved } from '@/roads/links';
 import type { Feature } from '@/landscape/types';
 import { NO_PAINT } from '@/landscape/types';
 import { expandForRivers, featureChangeRect, fullGridRect, unionRects } from '@/landscape/compose';
-import { adoptTerrain, applyLayerPatch, makeLayerPatch, makeLayerPatchFromRect, naturalProvider, recompose, snapshotLandscape, snapshotLandscapeRect, type LayerPatch, type LayerSnapshot, type RectLayerSnapshot } from '@/landscape/apply';
+import { adoptTerrain, ALL_LAYERS, applyLayerPatch, diffLayerPatch, makeLayerPatch, makeLayerPatchFromRect, naturalProvider, recompose, restoreLandscape, snapshotLandscape, snapshotLandscapeRect, type LayerPatch, type LayerSnapshot, type RectLayerSnapshot } from '@/landscape/apply';
 import { roadStats } from '@/roads/stats';
 
 const HISTORY_LIMIT = 100;
@@ -58,9 +58,11 @@ export interface HistoryEntry {
   /**
    * Phase 21: environment settings and the saved scenario (experiment / hazard setup) as they
    * were — present only on steps that changed them (template applied to the current world), so
-   * undo / redo restore the whole world configuration together with its geometry.
+   * undo / redo restore the whole world configuration together with its geometry. Phase 37: each half
+   * only when THAT half changed in the step — undoing a placed disaster (scenario) no longer puts back
+   * the simulation settings as they were at that step (settings edits are not undo steps of their own).
    */
-  config?: { settings: WorldDocument['settings']; scenario: WorldDocument['scenario'] };
+  config?: { settings?: WorldDocument['settings']; scenario?: WorldDocument['scenario'] };
   /** Phase 36: the group names as they were — present only on steps that renamed a group. */
   groupNames?: { value: WorldDocument['groups'] };
 }
@@ -128,6 +130,36 @@ interface ObjectTransaction {
   objects: Objects;
   docVersion: number;
 }
+
+/**
+ * Open batch (Phase 37): every undo step recorded while it is open lands in `entries` instead of the history. The
+ * document as it was when the batch opened is kept — the immutable parts by reference, the terrain and layer arrays
+ * (edited in place) as full copies (27 B per vertex: 1.1 MB on the 200 m map). Commit compares the document with it and
+ * records ONE history entry of what really changed; a failure copies everything back — whatever the edits inside did
+ * or left half done (road baking and brush commits change the terrain in place before they record their step).
+ */
+interface Batch {
+  entries: HistoryEntry[];
+  terrain: ReturnType<typeof snapshotLayers>;
+  layers: LayerSnapshot;
+  objects: Objects;
+  roads: RoadNetwork;
+  features: Feature[];
+  next: number;
+  settings: WorldDocument['settings'];
+  scenario: WorldDocument['scenario'];
+  groups: WorldDocument['groups'];
+  meta: WorldDocument['meta'];
+}
+
+/**
+ * Result of `batch(fn)` (Phase 37). `changed` is false when the batch recorded nothing (no undo step was added).
+ * A refused or failed batch leaves the document and the history exactly as they were: `locked` — a simulation runs on
+ * the document; `busy` — a brush stroke or an object transaction is open; `error` — `fn` threw (rolled back).
+ */
+export type BatchResult<T> =
+  | { ok: true; value: T; changed: boolean }
+  | { ok: false; reason: 'locked' | 'busy' | 'error'; error?: unknown };
 
 /**
  * One atomic world edit (Phase 16): bulk placement, multi-object transforms, duplicate, delete,
@@ -239,10 +271,32 @@ export interface WorldState {
   beginTransaction: () => void;
   commitTransaction: () => boolean;
   cancelTransaction: () => void;
-  /** A terrain stroke or an object transaction is open (undo / redo would tear it). */
+  /** A terrain stroke, an object transaction or a batch is open (undo / redo would tear it). */
   busy: () => boolean;
+  /**
+   * Phase 37: run `fn` and record everything it edits — objects, roads, terrain, terrain layers, group names, the
+   * scenario (placed disasters) and the settings (car settings …) — as ONE undo step. `fn` is synchronous and calls the
+   * ordinary edit functions (`applyEdit`, `setExperiment`, `setGroupName`, `updateSimulationSettings`, terrain
+   * strokes, transactions). Nothing changed → no step. `fn` throws → the document is put back as it was (terrain
+   * arrays included) and no step is recorded. Refused while the document is locked or a stroke / transaction is open;
+   * `undo` / `redo` are refused inside. A batch inside a batch joins the outer one (its exception rolls back the
+   * outer batch).
+   */
+  batch: <T>(fn: () => T) => BatchResult<T>;
   undo: () => void;
   redo: () => void;
+}
+
+/** Same plain value (settings, scenario, features, a road network: small JSON-like data). */
+const sameValue = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/** Same object map: the same ids holding the very same objects (objects are immutable values). */
+function sameEntries(a: Objects, b: Objects): boolean {
+  if (a === b) return true;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
 }
 
 const touch = (doc: WorldDocument, objects: Objects): WorldDocument => ({
@@ -329,14 +383,26 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
   // share — and clear — the app store's open brush stroke (it was module-level before).
   let stroke: TerrainStroke | null = null;
   let tx: ObjectTransaction | null = null;
+  let batch: Batch | null = null;
+  /**
+   * Record an undo step: the state change that appends it to the history (and clears the redo side) — or, inside a
+   * batch (Phase 37), nothing: the step is kept by the batch and the history is written once, when the batch commits.
+   */
+  const record = (entry: HistoryEntry): { past: HistoryEntry[]; future: HistoryEntry[] } | Record<string, never> => {
+    if (batch) {
+      batch.entries.push(entry);
+      return {};
+    }
+    return { past: pushHistory(get().past, entry), future: [] };
+  };
   /** Shared write path: optionally records history, then replaces objects immutably. */
   const commit = (next: Objects, opts?: MutationOptions) => {
-    const { doc, past, locked } = get();
+    const { doc, locked } = get();
     if (locked) return;
     if (opts?.history === false) {
       set({ doc: touch(doc, next) });
     } else {
-      set({ doc: touch(doc, next), past: pushHistory(past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
+      set({ doc: touch(doc, next), ...record({ objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }) });
     }
   };
 
@@ -346,7 +412,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
    * the natural terrain is recomposed and the roads re-baked over it. One history entry.
    */
   const commitTerrain = (before: ReturnType<typeof snapshotLayers>, rect: GridRect) => {
-    const { doc, past } = get();
+    const { doc } = get();
     // (Terrain arrays are edited in place: callers check `locked` before touching them.)
     const t = doc.terrain;
     const land = doc.landscape;
@@ -366,12 +432,12 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     const r = recompose(t, land, doc.roads, rect, seaLevel(t));
     const finalRect = unionRects(rect, r.final)!;
     // (recompose re-flows exactly expandForRivers(rect): the snapshot covers its natural rectangle.)
-    finishLayered(doc, past, before, lb, finalRect, layerRect, r.roads, doc.objects);
+    finishLayered(doc, before, lb, finalRect, layerRect, r.roads, doc.objects);
   };
 
   /** Commit after the terrain / layers were changed in place: patches, objects follow, history. */
   const finishLayered = (
-    doc: WorldDocument, past: HistoryEntry[], before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | RectLayerSnapshot | null,
+    doc: WorldDocument, before: ReturnType<typeof snapshotLayers>, lb: LayerSnapshot | RectLayerSnapshot | null,
     finalRect: GridRect, layerRect: GridRect | null, roads: RoadNetwork, objects: Objects, featuresBefore = doc.landscape.features, nextBefore = doc.landscape.next, seat?: Seater,
   ) => {
     const t = doc.terrain;
@@ -384,8 +450,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     set({
       doc: { ...touch(doc, out), terrain: { ...t }, roads, landscape: { ...land } },
       terrainRect: finalRect,
-      past: pushHistory(past, { objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }),
-      future: [],
+      ...record({ objects: doc.objects, terrain: patch, roads: doc.roads, landscape: { features: featuresBefore, next: nextBefore, patch: lpatch } }),
     });
   };
 
@@ -395,7 +460,9 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     const l = entry.landscape;
     if (l.patch) applyLayerPatch(doc.landscape, doc.terrain.nx, l.patch, side);
     const landscape = { ...doc.landscape, features: l.features, next: l.next };
-    const config: Partial<WorldDocument> = entry.config ? { settings: entry.config.settings, scenario: entry.config.scenario } : {};
+    const config: Partial<WorldDocument> = {};
+    if (entry.config?.settings) config.settings = entry.config.settings;
+    if (entry.config?.scenario) config.scenario = entry.config.scenario;
     if (entry.groupNames) config.groups = entry.groupNames.value;
     if (!entry.terrain) return { ...touch(doc, entry.objects), roads: entry.roads, landscape, ...config };
     applyPatch(doc.terrain, entry.terrain, side);
@@ -440,7 +507,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
    * error is re-thrown — no half-changed terrain.
    */
   const applyLandscapeEdit = (objects: Objects, e: LandscapeEdit, nextRoads?: RoadNetwork, seat?: Seater) => {
-    const { doc, past } = get();
+    const { doc } = get();
     const t = doc.terrain;
     const land = doc.landscape;
     const before = snapshotLayers(t);
@@ -492,7 +559,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
           roads = { ...nextRoads, underlay: res.underlay };
         } else roads = { ...nextRoads, underlay: roads.underlay };
       }
-      finishLayered(doc, past, before, lb, finalRect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }, layerRect, roads, out, featuresBefore, nextBefore, seat);
+      finishLayered(doc, before, lb, finalRect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }, layerRect, roads, out, featuresBefore, nextBefore, seat);
     } catch (err) {
       // Roll back every array touched so far.
       t.heights.set(before.heights);
@@ -559,14 +626,78 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
           doc: { ...touch(doc, r.objects), terrain: r.patch ? { ...doc.terrain } : doc.terrain, roads: r.roads },
           // Always an undo step: the terrain patch and the network must travel together
           // (road tools preview drags without committing and commit once on release).
-          past: pushHistory(get().past, entry),
-          future: [],
+          ...record(entry),
         });
         return ids;
       }
       if (changed) commit(seat ? seat(objects, samplerFor(get().doc.terrain)) : objects, opts);
       return ids;
       };
+
+  /**
+   * Close a batch (Phase 37): compare the document with the one the batch opened on and record ONE history entry of
+   * what changed — objects / roads / features (by content, not by reference: an edit that rebuilt the same values is
+   * not a change), the terrain and the layers over the smallest rectangle that really differs, and the settings / the
+   * scenario / the group names only when they changed. Parts that did not change get their old references back.
+   * Returns false when nothing changed (no step; the document is the one from before, reference for reference).
+   */
+  const commitBatch = (b: Batch): boolean => {
+    const doc = get().doc;
+    const t = doc.terrain;
+    const land = doc.landscape;
+    // Terrain arrays change only through edits that record a step: without one there is nothing to compare.
+    const touched = b.entries.some((e) => e.terrain || e.landscape.patch);
+    const rect = touched ? changedRect(t, b.terrain) : null;
+    const terrainSettings = touched && !sameValue(t.settings, b.terrain.settings);
+    // (settings-only terrain steps carry a one-vertex patch, like setWaterLevel outside a batch)
+    const terrain = rect || terrainSettings ? makePatch(t, b.terrain, rect ?? { x0: 0, z0: 0, x1: 0, z1: 0 }) : null;
+    const patch = touched ? diffLayerPatch(land, t.nx, b.layers) : null;
+    const objects = sameEntries(doc.objects, b.objects) ? b.objects : doc.objects;
+    const roads = doc.roads === b.roads || (!terrain && sameValue({ ...doc.roads, underlay: 0 }, { ...b.roads, underlay: 0 })) ? b.roads : doc.roads;
+    const features = land.features === b.features || sameValue(land.features, b.features) ? b.features : land.features;
+    const next = features === b.features ? b.next : land.next;
+    const settings = doc.settings === b.settings || sameValue(doc.settings, b.settings) ? b.settings : doc.settings;
+    const scenario = doc.scenario === b.scenario || sameValue(doc.scenario, b.scenario) ? b.scenario : doc.scenario;
+    const groups = doc.groups === b.groups || sameValue(doc.groups ?? null, b.groups ?? null) ? b.groups : doc.groups;
+    const changed = !!terrain || !!patch || objects !== b.objects || roads !== b.roads || features !== b.features || settings !== b.settings || scenario !== b.scenario || groups !== b.groups;
+    const out: WorldDocument = { ...doc, objects, roads, settings, scenario, meta: changed ? doc.meta : b.meta, landscape: features === land.features && next === land.next ? land : { ...land, features, next } };
+    if (groups) out.groups = groups;
+    else delete out.groups;
+    if (!changed) {
+      set({ doc: out });
+      return false;
+    }
+    const entry: HistoryEntry = { objects: b.objects, terrain, roads: b.roads, landscape: { features: b.features, next: b.next, patch } };
+    if (settings !== b.settings || scenario !== b.scenario) entry.config = { ...(settings !== b.settings ? { settings: b.settings } : {}), ...(scenario !== b.scenario ? { scenario: b.scenario } : {}) };
+    if (groups !== b.groups) entry.groupNames = { value: b.groups };
+    // The terrain view refreshes `terrainRect` only: one rectangle for everything the batch changed.
+    set({ doc: out, past: pushHistory(get().past, entry), future: [], ...(terrain ? { terrainRect: terrain.rect } : {}) });
+    return true;
+  };
+
+  /**
+   * Put the document back as it was when the batch opened: the terrain and layer arrays are copied back in place
+   * (whatever was written to them, recorded or not), everything else returns by reference. No history is touched.
+   */
+  const rollbackBatch = (b: Batch) => {
+    stroke = null;
+    tx = null;
+    const doc = get().doc;
+    const t = doc.terrain;
+    const land = doc.landscape;
+    const rect = changedRect(t, b.terrain);
+    const dirty = rect !== null || !sameValue(t.settings, b.terrain.settings);
+    if (dirty) restoreLayers(t, b.terrain);
+    restoreLandscape(land, b.layers);
+    const next: WorldDocument = {
+      ...doc, objects: b.objects, roads: b.roads, settings: b.settings, scenario: b.scenario, meta: b.meta,
+      terrain: dirty ? { ...t } : doc.terrain,
+      landscape: { ...land, features: b.features, next: b.next },
+    };
+    if (b.groups) next.groups = b.groups;
+    else delete next.groups;
+    set({ doc: next, ...(rect ? { terrainRect: rect } : {}) });
+  };
 
   const patchObject = (id: EntityId, fn: (o: WorldObject) => WorldObject, opts?: MutationOptions) => {
     const objects = get().doc.objects;
@@ -598,7 +729,12 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const ids = applyGeometry(edit, opts);
       const d = get().doc;
       const doc: WorldDocument = { ...d, settings: edit.settings ? structuredClone(edit.settings) : d.settings, scenario: edit.scenario ? structuredClone(edit.scenario) : d.scenario };
-      const config = { settings: before.settings, scenario: before.scenario };
+      // Inside a batch the settings / scenario from before it are restored by the batch's one step.
+      if (batch) {
+        set({ doc });
+        return ids;
+      }
+      const config = { ...(edit.settings ? { settings: before.settings } : {}), ...(edit.scenario ? { scenario: before.scenario } : {}) };
       const past = get().past;
       const last = past[past.length - 1];
       const nextPast = last && last !== lastBefore
@@ -659,8 +795,8 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
         void _o;
         const vehicles = { ...doc0.settings.simulation.vehicles!, cars: { ...doc0.settings.simulation.vehicles!.cars, [copy.id]: rest } };
         const settings = { ...doc0.settings, simulation: { ...doc0.settings.simulation, vehicles } };
-        const entry: HistoryEntry = { objects: doc0.objects, terrain: null, roads: doc0.roads, landscape: landEntry(doc0, null), config: { settings: doc0.settings, scenario: doc0.scenario } };
-        set({ doc: { ...touch(doc0, next), settings }, past: pushHistory(get().past, entry), future: [] });
+        const entry: HistoryEntry = { objects: doc0.objects, terrain: null, roads: doc0.roads, landscape: landEntry(doc0, null), config: { settings: doc0.settings } };
+        set({ doc: { ...touch(doc0, next), settings }, ...record(entry) });
         return copy.id;
       }
       commit(next);
@@ -717,7 +853,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     },
 
     setGroupName: (group, name) => {
-      const { doc, past, locked } = get();
+      const { doc, locked } = get();
       if (locked) return;
       const clean = name.trim().slice(0, 80);
       const cur = doc.groups?.[group]?.name ?? '';
@@ -729,19 +865,19 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       const next: WorldDocument = { ...doc, meta: { ...doc.meta, updatedAt: new Date().toISOString() } };
       if (Object.keys(groups).length) next.groups = groups;
       else delete next.groups;
-      set({ doc: next, past: pushHistory(past, entry), future: [] });
+      set({ doc: next, ...record(entry) });
     },
 
     setExperiment: (patch, opts) => {
-      const { doc, past, locked } = get();
+      const { doc, locked } = get();
       const experiment = { ...(doc.scenario.experiment ?? defaultExperiment()), ...structuredClone(patch) };
       const next = { ...doc, scenario: { ...doc.scenario, experiment }, meta: { ...doc.meta, updatedAt: new Date().toISOString() } };
       if (locked || opts?.history === false) {
         set({ doc: next });
         return;
       }
-      const entry: HistoryEntry = { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null), config: { settings: doc.settings, scenario: doc.scenario } };
-      set({ doc: next, past: pushHistory(past, entry), future: [] });
+      const entry: HistoryEntry = { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null), config: { scenario: doc.scenario } };
+      set({ doc: next, ...record(entry) });
     },
 
     setFloodScenario: (patch) => {
@@ -752,6 +888,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
 
     replaceDocument: (doc) => {
       if (get().locked) return;
+      if (batch) throw new Error('The document cannot be replaced inside a batch');
       stroke = null;
       tx = null;
       // Layers must compose to the terrain (documents built by older code paths may not).
@@ -762,9 +899,10 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
 
     newDocument: () => {
       if (get().locked) return;
+      if (batch) throw new Error('The document cannot be replaced inside a batch');
       stroke = null;
       tx = null;
-      set({ doc: createEmptyDocument(), past: [], future: [], docVersion: get().docVersion + 1 });
+      set({ doc: createEmptyDocument(), past: [], future: [], docVersion: get().docVersion + 1, terrainRect: null });
     },
 
     beginTerrainStroke: () => {
@@ -834,7 +972,7 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
 
     setWaterLevel: (level) => {
       if (get().locked) return;
-      const { doc, past } = get();
+      const { doc } = get();
       const t = doc.terrain;
       const before = snapshotLayers(t);
       t.settings = { ...t.settings, waterLevel: level };
@@ -844,14 +982,14 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       if (doc.landscape.features.some((f) => f.kind === 'coast')) {
         const lb = snapshotLandscape(doc.landscape);
         const r = recompose(t, doc.landscape, doc.roads, fullGridRect(t), seaLevel(t));
-        finishLayered(doc, past, before, lb, r.final, r.natural, r.roads, doc.objects);
-      } else finishLayered(doc, past, before, null, { x0: 0, z0: 0, x1: 0, z1: 0 }, null, doc.roads, doc.objects);
+        finishLayered(doc, before, lb, r.final, r.natural, r.roads, doc.objects);
+      } else finishLayered(doc, before, null, { x0: 0, z0: 0, x1: 0, z1: 0 }, null, doc.roads, doc.objects);
     },
 
     checkpoint: () => {
-      const { doc, past, locked } = get();
+      const { doc, locked } = get();
       if (locked) return;
-      set({ past: pushHistory(past, { objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
+      set(record({ objects: doc.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }));
     },
 
     beginTransaction: () => {
@@ -863,11 +1001,11 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     commitTransaction: () => {
       const t0 = tx;
       tx = null;
-      const { doc, past, locked, docVersion } = get();
+      const { doc, locked, docVersion } = get();
       if (!t0 || locked || t0.docVersion !== docVersion) return false;
       if (doc.objects === t0.objects) return false;
       // The step restores the objects from before the gesture (object transactions edit nothing else).
-      set({ past: pushHistory(past, { objects: t0.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }), future: [] });
+      set(record({ objects: t0.objects, terrain: null, roads: doc.roads, landscape: landEntry(doc, null) }));
       return true;
     },
 
@@ -880,7 +1018,40 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
       set({ doc: touch(doc, t0.objects) });
     },
 
-    busy: () => stroke !== null || tx !== null,
+    busy: () => stroke !== null || tx !== null || batch !== null,
+
+    batch: <T,>(fn: () => T): BatchResult<T> => {
+      // Joins the open batch; an exception goes up to it (and rolls the whole batch back).
+      if (batch) return { ok: true, value: fn(), changed: true };
+      if (get().locked) return { ok: false, reason: 'locked' };
+      if (stroke || tx) return { ok: false, reason: 'busy' };
+      const d0 = get().doc;
+      const b: Batch = {
+        entries: [], terrain: snapshotLayers(d0.terrain), layers: snapshotLandscape(d0.landscape, [...ALL_LAYERS]),
+        objects: d0.objects, roads: d0.roads, features: d0.landscape.features, next: d0.landscape.next,
+        settings: d0.settings, scenario: d0.scenario, groups: d0.groups, meta: d0.meta,
+      };
+      batch = b;
+      let value: T;
+      try {
+        value = fn();
+        if (stroke) throw new Error('A terrain stroke was left open inside a batch');
+        if (tx) throw new Error('An object transaction was left open inside a batch');
+      } catch (error) {
+        batch = null;
+        rollbackBatch(b);
+        return { ok: false, reason: 'error', error };
+      }
+      batch = null;
+      let changed: boolean;
+      try {
+        changed = commitBatch(b);
+      } catch (error) {
+        rollbackBatch(b);
+        return { ok: false, reason: 'error', error };
+      }
+      return { ok: true, value, changed };
+    },
 
     setFeatures: (features, next) => {
       if (get().locked) return;
@@ -890,9 +1061,9 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     undo: () => {
       const { doc, past, future, locked } = get();
       const prev = past[past.length - 1];
-      if (!prev || stroke || tx || locked) return;
+      if (!prev || stroke || tx || batch || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: prev.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: prev.landscape.patch } };
-      if (prev.config) current.config = { settings: doc.settings, scenario: doc.scenario };
+      if (prev.config) current.config = { ...(prev.config.settings ? { settings: doc.settings } : {}), ...(prev.config.scenario ? { scenario: doc.scenario } : {}) };
       if (prev.groupNames) current.groupNames = { value: doc.groups };
       set({ doc: travel(prev, 'before'), past: past.slice(0, -1), future: [current, ...future], terrainRect: prev.terrain?.rect ?? null });
     },
@@ -900,9 +1071,9 @@ const worldStoreCreator: StateCreator<WorldState> = (set, get) => {
     redo: () => {
       const { doc, past, future, locked } = get();
       const next = future[0];
-      if (!next || stroke || tx || locked) return;
+      if (!next || stroke || tx || batch || locked) return;
       const current: HistoryEntry = { objects: doc.objects, terrain: next.terrain, roads: doc.roads, landscape: { features: doc.landscape.features, next: doc.landscape.next, patch: next.landscape.patch } };
-      if (next.config) current.config = { settings: doc.settings, scenario: doc.scenario };
+      if (next.config) current.config = { ...(next.config.settings ? { settings: doc.settings } : {}), ...(next.config.scenario ? { scenario: doc.scenario } : {}) };
       if (next.groupNames) current.groupNames = { value: doc.groups };
       set({ doc: travel(next, 'after'), past: [...past, current], future: future.slice(1), terrainRect: next.terrain?.rect ?? null });
     },
