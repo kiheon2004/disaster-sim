@@ -55,6 +55,17 @@ npm run build
 
 검증: 타입 오류 0, 테스트 1303 통과·0 실패·35 건너뜀, 기존 Chrome 검사 23개와 새 시나리오 1–10 모두 한국어·영어 통과, 3600초 장기 실행 6개 장면 모두 위반 0. 근거: [PHASE35_5_USER_EXPERIENCE.md](docs/PHASE35_5_USER_EXPERIENCE.md) §23–25.
 
+## Phase 36: 고급 월드 에디터
+
+좌표를 입력하지 않고 3D 화면에서 마을을 정밀하게 만들도록 편집기를 다듬은 단계입니다. 자세한 내용: [docs/ADVANCED_WORLD_EDITOR.md](docs/ADVANCED_WORLD_EDITOR.md), 사용법: [docs/WORLD_EDITOR_USER_GUIDE.md](docs/WORLD_EDITOR_USER_GUIDE.md)
+
+- **입력과 실행 취소:** 카메라·도구·기즈모 중 하나만 입력을 가져가고, 모든 편집이 한 실행 취소 기록에 남습니다.
+- **정밀 배치:** 수치 변형, 정렬·등간격, 도로·이웃·격자 스냅, 그룹, 장면 아웃라이너.
+- **지형과 도로:** 브러시 미리보기, 도로 폭 전환과 이음매.
+- **구조:** 부분 붕괴 뒤의 충돌체, 가새 부재, 층별 변위 표시.
+
+검증: 타입 오류 0, 테스트 1436 통과·0 실패·36 건너뜀, 새 Chrome 검사 42개와 기존 스크립트 24개 모두 한국어·영어 통과, 구조 설정이 없는 장면은 이전과 비트 동일. 근거: [ADVANCED_WORLD_EDITOR.md](docs/ADVANCED_WORLD_EDITOR.md) §21–24.
+
 ## 작업 과정
 
 Claude Code와 단계별로 다음 순서를 반복했습니다.
